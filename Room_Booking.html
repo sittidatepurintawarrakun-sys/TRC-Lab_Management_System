@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Booking - Lab-TRC-App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff;
+        }
+        :root {
+            --fc-border-color: #e2e8f0;
+            --fc-daygrid-event-dot-width: 8px;
+            --fc-list-event-dot-width: 10px;
+            --fc-event-bg-color: #3b82f6;
+            --fc-event-border-color: #2563eb;
+            --fc-button-bg-color: #3b82f6;
+            --fc-button-active-bg-color: #1d4ed8;
+            --fc-today-bg-color: rgba(59, 130, 246, 0.1);
+        }
+        .fc .fc-button-primary { background-color: #3b82f6; border-color: #3b82f6; }
+        .fc .fc-button-primary:hover { background-color: #2563eb; border-color: #2563eb; }
+    </style>
+</head>
+<body class="antialiased text-slate-700">
+
+    <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
+
+        <div class="mb-6">
+            <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+            </a>
+        </div>
+
+        <div id="login-view" class="max-w-md mx-auto">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <div class="text-center mb-6">
+                    <i class="fas fa-calendar-alt text-blue-600 text-4xl"></i>
+                    <h1 class="text-2xl font-bold text-slate-800 mt-2">Meeting Room Booking</h1>
+                    <p class="text-slate-500">Please sign in or create an account</p>
+                </div>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-slate-600 mb-1">Email</label>
+                        <input type="email" id="login-email" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="you@example.com" required>
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-slate-600 mb-1">Password</label>
+                        <input type="password" id="login-password" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" required>
+                    </div>
+                    <div class="flex items-center gap-4 pt-2">
+                        <button type="button" id="signin-button" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Sign In</button>
+                        <button type="button" id="signup-button" class="w-full bg-slate-600 text-white font-bold py-2 px-4 rounded-md hover:bg-slate-700 transition-colors">Sign Up</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="main-content-view" class="hidden">
+            <div class="flex justify-end items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <span id="user-email" class="text-sm font-medium text-slate-600"></span>
+                    <button id="logout-button" class="bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-1.5 rounded-md hover:bg-slate-300 transition-colors">Logout</button>
+                </div>
+            </div>
+
+            <header class="mb-8 text-center">
+                <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-calendar-check text-blue-600"></i> Book The Meeting Room</h1>
+                <p class="text-slate-500 mt-1">Check the calendar for availability and fill out the form to book.</p>
+            </header>
+            
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="font-bold text-lg text-slate-800 mb-4 border-b pb-3">New Booking Form</h2>
+                    <form id="booking-form" class="space-y-4">
+                        <div>
+                            <label for="title" class="block text-sm font-medium text-slate-600 mb-1">Meeting Title</label>
+                            <input type="text" id="title" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label for="start-time" class="block text-sm font-medium text-slate-600 mb-1">Start Time</label>
+                            <input type="datetime-local" id="start-time" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label for="end-time" class="block text-sm font-medium text-slate-600 mb-1">End Time</label>
+                            <input type="datetime-local" id="end-time" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                         <div>
+                            <label for="attendees" class="block text-sm font-medium text-slate-600 mb-1">Attendees (comma separated emails)</label>
+                            <textarea id="attendees" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="user1@example.com, user2@example.com"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2.5 px-4 rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+                            <i class="fas fa-check-circle mr-2"></i>Book Now
+                        </button>
+                    </form>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                     <div id="calendar"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ✅ PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {
+        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+          authDomain: "lab-trc-management-system.firebaseapp.com",
+          projectId: "lab-trc-management-system",
+          storageBucket: "lab-trc-management-system.firebasestorage.app",
+          messagingSenderId: "43919979160",
+          appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        db.settings({ experimentalForceLongPolling: true });
+        const bookingsCollection = db.collection('bookings');
+
+        // UI Elements
+        const loginView = document.getElementById('login-view');
+        const mainContentView = document.getElementById('main-content-view');
+        const logoutButton = document.getElementById('logout-button');
+        const userEmailSpan = document.getElementById('user-email');
+        const bookingForm = document.getElementById('booking-form');
+        const calendarEl = document.getElementById('calendar');
+        const signinButton = document.getElementById('signin-button');
+        const signupButton = document.getElementById('signup-button');
+
+        let calendar;
+
+        // --- AUTHENTICATION ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                loginView.classList.add('hidden');
+                mainContentView.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+                initializeCalendar();
+            } else {
+                loginView.classList.remove('hidden');
+                mainContentView.classList.add('hidden');
+                if (calendar) {
+                    calendar.destroy();
+                }
+            }
+        });
+        
+        logoutButton.addEventListener('click', () => { auth.signOut(); });
+
+        signinButton.addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if (!email || !password) { alert("Please enter both email and password."); return; }
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    console.error("Sign In Error:", error);
+                    if (error.code === 'auth/user-not-found') { alert('User not found. Please check your email or sign up for a new account.'); } 
+                    else if (error.code === 'auth/wrong-password') { alert('Incorrect password. Please try again.'); } 
+                    else { alert(`Login failed: ${error.message}`); }
+                });
+        });
+
+        signupButton.addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if (!email || !password) { alert("Please enter both email and password to sign up."); return; }
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    alert('Account created successfully! You are now logged in.');
+                    console.log('New user created:', userCredential.user);
+                })
+                .catch((error) => {
+                    console.error("Sign Up Error:", error);
+                    if (error.code === 'auth/weak-password') { alert('The password is too weak. It should be at least 6 characters long.'); } 
+                    else if (error.code === 'auth/email-already-in-use') { alert('This email is already registered. Please sign in instead.'); } 
+                    else { alert(`Sign up failed: ${error.message}`); }
+                });
+        });
+
+        // --- CALENDAR & BOOKING (The rest is the same) ---
+        function initializeCalendar() {
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay' 
+                },
+                weekNumbers: false,
+                hour12: false,
+
+                views: {
+                    dayGridMonth: {
+                        dayHeaderFormat: { weekday: 'short' }
+                    },
+                    timeGridWeek: {
+                        dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true },
+                        slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
+                    },
+                    timeGridDay: {
+                        dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true },
+                        slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
+                    }
+                },
+                eventClick: function(info) {
+                  const bookedByEmail = info.event.extendedProps.bookedBy;
+                  const currentUser = auth.currentUser;
+
+                  if (currentUser && currentUser.email === bookedByEmail) {
+                    if (confirm(`Do you want to cancel the booking for "${info.event.title}"?`)) {
+                      db.collection('bookings').doc(info.event.id).delete()
+                        .then(() => {
+                          alert('Booking cancelled successfully.'); 
+                          calendar.refetchEvents();
+                        })
+                        .catch((error) => {
+                          console.error("Error removing document: ", error);
+                          alert('Failed to cancel booking.');
+                        });
+                    }
+                  } else {
+                    alert("You don't have permission to cancel this booking.");
+                  }
+                },
+                events: async (fetchInfo, successCallback, failureCallback) => {
+                    try {
+                        const snapshot = await bookingsCollection.get();
+                        const events = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            title: doc.data().title,
+                            start: doc.data().start.toDate(),
+                            end: doc.data().end.toDate(),
+                            extendedProps: { bookedBy: doc.data().bookedBy }
+                        }));
+                        successCallback(events);
+                    } catch (error) { failureCallback(error); }
+                }
+            });
+            calendar.render();
+        }
+        bookingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const startTime = new Date(document.getElementById('start-time').value);
+            const endTime = new Date(document.getElementById('end-time').value);
+            const attendees = document.getElementById('attendees').value;
+
+            if (!title || !startTime || !endTime || isNaN(startTime) || isNaN(endTime)) { 
+                alert('Please fill in all fields correctly.'); 
+                return; 
+            }
+            if (startTime >= endTime) { 
+                alert('End time must be after start time.'); 
+                return; 
+            }
+
+            const potentialConflicts = await bookingsCollection.where('end', '>', startTime).get();
+
+            const actualConflicts = potentialConflicts.docs.filter(doc => {
+                const existingBookingStart = doc.data().start.toDate();
+                return existingBookingStart < endTime;
+            });
+
+            if (actualConflicts.length > 0) {
+                alert('This time slot is already booked. Please choose another time.');
+                return;
+            }
+
+            try {
+               const currentUser = auth.currentUser;
+               await bookingsCollection.add({
+                 title: title,
+                 start: startTime,
+                 end: endTime,
+                 attendees: attendees.split(',').map(email => email.trim()),
+                 bookedBy: currentUser.email,
+                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
+               });
+               alert('Booking successful!');
+               bookingForm.reset();
+               calendar.refetchEvents();
+               generateMailtoLink(title, startTime, endTime, attendees, currentUser.email);
+             } catch (error) {
+               console.error("Error adding booking:", error);
+               alert('Failed to create booking. Please try again.');
+             }
+        });
+        function generateMailtoLink(title, start, end, attendees, organizer) {
+            const subject = encodeURIComponent(`Meeting Invitation: ${title}`);
+            const formatDT = (date) => `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}`;
+            let body = `You are invited to the following meeting:\n\nTitle: ${title}\nWhen: ${formatDT(start)} to ${formatDT(end)}\nOrganizer: ${organizer}\n\nPlease accept or decline this invitation.`;
+            const encodedBody = encodeURIComponent(body);
+            const mailtoLink = `mailto:${attendees}?subject=${subject}&body=${encodedBody}`;
+            window.open(mailtoLink, '_blank');
+        }
+    </script>
+</body>
+</html>
