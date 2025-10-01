@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -60,6 +60,9 @@
                         <button type="button" id="signin-button" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Sign In</button>
                         <button type="button" id="signup-button" class="w-full bg-slate-600 text-white font-bold py-2 px-4 rounded-md hover:bg-slate-700 transition-colors">Sign Up</button>
                     </div>
+                    <div class="flex justify-center mt-4">
+                        <a href="#" id="forgot-password-link" class="text-sm text-slate-500 hover:text-blue-600 transition-colors">Forgot Password?</a>
+                    </div>
                 </form>
             </div>
         </div>
@@ -76,7 +79,7 @@
                 <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-calendar-check text-blue-600"></i> Book The Meeting Room</h1>
                 <p class="text-slate-500 mt-1">Check the calendar for availability and fill out the form to book.</p>
             </header>
-            
+
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
                     <h2 class="font-bold text-lg text-slate-800 mb-4 border-b pb-3">New Booking Form</h2>
@@ -115,199 +118,271 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // ✅ PASTE YOUR FIREBASE CONFIG HERE
-        const firebaseConfig = {
-        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-          authDomain: "lab-trc-management-system.firebaseapp.com",
-          projectId: "lab-trc-management-system",
-          storageBucket: "lab-trc-management-system.firebasestorage.app",
-          messagingSenderId: "43919979160",
-          appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
+// ✅ PASTE YOUR FIREBASE CONFIG HERE
+const firebaseConfig = {
+    apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+    authDomain: "lab-trc-management-system.firebaseapp.com",
+    projectId: "lab-trc-management-system",
+    storageBucket: "lab-trc-management-system.firebasestorage.app",
+    messagingSenderId: "43919979160",
+    appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+};
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        db.settings({ experimentalForceLongPolling: true });
-        const bookingsCollection = db.collection('bookings');
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.settings({ experimentalForceLongPolling: true });
+const bookingsCollection = db.collection('bookings');
 
-        // UI Elements
-        const loginView = document.getElementById('login-view');
-        const mainContentView = document.getElementById('main-content-view');
-        const logoutButton = document.getElementById('logout-button');
-        const userEmailSpan = document.getElementById('user-email');
-        const bookingForm = document.getElementById('booking-form');
-        const calendarEl = document.getElementById('calendar');
-        const signinButton = document.getElementById('signin-button');
-        const signupButton = document.getElementById('signup-button');
+// UI Elements
+const loginView = document.getElementById('login-view');
+const mainContentView = document.getElementById('main-content-view');
+const logoutButton = document.getElementById('logout-button');
+const userEmailSpan = document.getElementById('user-email');
+const bookingForm = document.getElementById('booking-form');
+const calendarEl = document.getElementById('calendar');
+const signinButton = document.getElementById('signin-button');
+const signupButton = document.getElementById('signup-button');
+const forgotPasswordLink = document.getElementById('forgot-password-link');
 
-        let calendar;
+let calendar;
 
-        // --- AUTHENTICATION ---
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                loginView.classList.add('hidden');
-                mainContentView.classList.remove('hidden');
-                userEmailSpan.textContent = user.email;
-                initializeCalendar();
-            } else {
-                loginView.classList.remove('hidden');
-                mainContentView.classList.add('hidden');
-                if (calendar) {
-                    calendar.destroy();
-                }
+// --- AUTHENTICATION ---
+auth.onAuthStateChanged(user => {
+    if (user) {
+        loginView.classList.add('hidden');
+        mainContentView.classList.remove('hidden');
+        userEmailSpan.textContent = user.email;
+        initializeCalendar();
+    } else {
+        loginView.classList.remove('hidden');
+        mainContentView.classList.add('hidden');
+        if (calendar) {
+            calendar.destroy();
+        }
+    }
+});
+
+logoutButton.addEventListener('click', () => { auth.signOut(); });
+
+// --- Sign In / Sign Up ---
+signinButton.addEventListener('click', () => {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    if (!email || !password) { alert("Please enter both email and password."); return; }
+    auth.signInWithEmailAndPassword(email, password)
+        .catch(error => {
+            console.error("Sign In Error:", error);
+            if (error.code === 'auth/user-not-found') { alert('User not found. Please check your email or sign up for a new account.'); }
+            else if (error.code === 'auth/wrong-password') { alert('Incorrect password. Please try again.'); }
+            else { alert(`Login failed: ${error.message}`); }
+        });
+});
+
+signupButton.addEventListener('click', () => {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    if (!email || !password) { alert("Please enter both email and password to sign up."); return; }
+    auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            alert('Account created successfully! You are now logged in.');
+            console.log('New user created:', userCredential.user);
+        })
+        .catch((error) => {
+            console.error("Sign Up Error:", error);
+            if (error.code === 'auth/weak-password') { alert('The password is too weak. It should be at least 6 characters long.'); }
+            else if (error.code === 'auth/email-already-in-use') { alert('This email is already registered. Please sign in instead.'); }
+            else { alert(`Sign up failed: ${error.message}`); }
+        });
+});
+
+// ✅ โค้ดสำหรับ Forgot Password
+forgotPasswordLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    if (!email) {
+        alert("Please enter your email address to reset your password.");
+        return;
+    }
+    auth.sendPasswordResetEmail(email)
+        .then(() => {
+            alert("A password reset email has been sent to your email address. Please check your inbox.");
+        })
+        .catch((error) => {
+            console.error("Password Reset Error:", error);
+            alert(`Failed to send password reset email: ${error.message}`);
+        });
+});
+
+// --- CALENDAR & BOOKING ---
+function initializeCalendar() {
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        weekNumbers: false,
+        hour12: false,
+        views: {
+            dayGridMonth: {
+                dayHeaderFormat: { weekday: 'short' }
+            },
+            timeGridWeek: {
+                dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true },
+                slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
+            },
+            timeGridDay: {
+                dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true },
+                slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
             }
-        });
-        
-        logoutButton.addEventListener('click', () => { auth.signOut(); });
+        },
+        eventClick: function(info) {
+            const bookedByEmail = info.event.extendedProps.bookedBy;
+            const currentUser = auth.currentUser;
+            // ✅ กำหนดอีเมลแอดมินที่นี่
+            const adminEmails = ["sittidate.p@adityabirla.com", "datejub@hotmail.com"];
 
-        signinButton.addEventListener('click', () => {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            if (!email || !password) { alert("Please enter both email and password."); return; }
-            auth.signInWithEmailAndPassword(email, password)
-                .catch(error => {
-                    console.error("Sign In Error:", error);
-                    if (error.code === 'auth/user-not-found') { alert('User not found. Please check your email or sign up for a new account.'); } 
-                    else if (error.code === 'auth/wrong-password') { alert('Incorrect password. Please try again.'); } 
-                    else { alert(`Login failed: ${error.message}`); }
-                });
-        });
-
-        signupButton.addEventListener('click', () => {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            if (!email || !password) { alert("Please enter both email and password to sign up."); return; }
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    alert('Account created successfully! You are now logged in.');
-                    console.log('New user created:', userCredential.user);
-                })
-                .catch((error) => {
-                    console.error("Sign Up Error:", error);
-                    if (error.code === 'auth/weak-password') { alert('The password is too weak. It should be at least 6 characters long.'); } 
-                    else if (error.code === 'auth/email-already-in-use') { alert('This email is already registered. Please sign in instead.'); } 
-                    else { alert(`Sign up failed: ${error.message}`); }
-                });
-        });
-
-        // --- CALENDAR & BOOKING (The rest is the same) ---
-        function initializeCalendar() {
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay' 
-                },
-                weekNumbers: false,
-                hour12: false,
-
-                views: {
-                    dayGridMonth: {
-                        dayHeaderFormat: { weekday: 'short' }
-                    },
-                    timeGridWeek: {
-                        dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true },
-                        slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
-                    },
-                    timeGridDay: {
-                        dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true },
-                        slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
-                    }
-                },
-                eventClick: function(info) {
-                  const bookedByEmail = info.event.extendedProps.bookedBy;
-                  const currentUser = auth.currentUser;
-
-                  if (currentUser && currentUser.email === bookedByEmail) {
-                    if (confirm(`Do you want to cancel the booking for "${info.event.title}"?`)) {
-                      db.collection('bookings').doc(info.event.id).delete()
+            // ตรวจสอบว่าผู้ใช้ปัจจุบันคือเจ้าของการจองหรือเป็นแอดมิน
+            if (currentUser && (currentUser.email === bookedByEmail || adminEmails.includes(currentUser.email))) {
+                if (confirm(`Do you want to cancel the booking for "${info.event.title}"?`)) {
+                    db.collection('bookings').doc(info.event.id).delete()
                         .then(() => {
-                          alert('Booking cancelled successfully.'); 
-                          calendar.refetchEvents();
-                        })
-                        .catch((error) => {
-                          console.error("Error removing document: ", error);
-                          alert('Failed to cancel booking.');
-                        });
-                    }
-                  } else {
-                    alert("You don't have permission to cancel this booking.");
-                  }
-                },
-                events: async (fetchInfo, successCallback, failureCallback) => {
-                    try {
-                        const snapshot = await bookingsCollection.get();
-                        const events = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            title: doc.data().title,
-                            start: doc.data().start.toDate(),
-                            end: doc.data().end.toDate(),
-                            extendedProps: { bookedBy: doc.data().bookedBy }
-                        }));
-                        successCallback(events);
-                    } catch (error) { failureCallback(error); }
+                        alert('Booking cancelled successfully.');
+                        calendar.refetchEvents();
+                    })
+                    .catch((error) => {
+                        console.error("Error removing document: ", error);
+                        alert('Failed to cancel booking.');
+                    });
                 }
-            });
-            calendar.render();
-        }
-        bookingForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const title = document.getElementById('title').value;
-            const startTime = new Date(document.getElementById('start-time').value);
-            const endTime = new Date(document.getElementById('end-time').value);
-            const attendees = document.getElementById('attendees').value;
-
-            if (!title || !startTime || !endTime || isNaN(startTime) || isNaN(endTime)) { 
-                alert('Please fill in all fields correctly.'); 
-                return; 
+            } else {
+                alert(`This booking was made by ${bookedByEmail}. You don't have permission to cancel it.`);
             }
-            if (startTime >= endTime) { 
-                alert('End time must be after start time.'); 
-                return; 
-            }
-
-            const potentialConflicts = await bookingsCollection.where('end', '>', startTime).get();
-
-            const actualConflicts = potentialConflicts.docs.filter(doc => {
-                const existingBookingStart = doc.data().start.toDate();
-                return existingBookingStart < endTime;
-            });
-
-            if (actualConflicts.length > 0) {
-                alert('This time slot is already booked. Please choose another time.');
-                return;
-            }
-
+        },
+        events: async (fetchInfo, successCallback, failureCallback) => {
             try {
-               const currentUser = auth.currentUser;
-               await bookingsCollection.add({
-                 title: title,
-                 start: startTime,
-                 end: endTime,
-                 attendees: attendees.split(',').map(email => email.trim()),
-                 bookedBy: currentUser.email,
-                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-               });
-               alert('Booking successful!');
-               bookingForm.reset();
-               calendar.refetchEvents();
-               generateMailtoLink(title, startTime, endTime, attendees, currentUser.email);
-             } catch (error) {
-               console.error("Error adding booking:", error);
-               alert('Failed to create booking. Please try again.');
-             }
-        });
-        function generateMailtoLink(title, start, end, attendees, organizer) {
-            const subject = encodeURIComponent(`Meeting Invitation: ${title}`);
-            const formatDT = (date) => `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}`;
-            let body = `You are invited to the following meeting:\n\nTitle: ${title}\nWhen: ${formatDT(start)} to ${formatDT(end)}\nOrganizer: ${organizer}\n\nPlease accept or decline this invitation.`;
-            const encodedBody = encodeURIComponent(body);
-            const mailtoLink = `mailto:${attendees}?subject=${subject}&body=${encodedBody}`;
-            window.open(mailtoLink, '_blank');
+                const snapshot = await bookingsCollection.get();
+                const events = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const eventTitle = `${data.title}\n(${data.bookedBy})`;
+                    return {
+                        id: doc.id,
+                        title: eventTitle,
+                        start: data.start.toDate(),
+                        end: data.end.toDate(),
+                        extendedProps: {
+                            bookedBy: data.bookedBy
+                        }
+                    };
+                });
+
+                // ✅ เพิ่ม Recurring Event สำหรับ Plant Daily Meeting
+                events.push({
+                    title: 'Plant Daily Meeting (จองโดยระบบ)',
+                    startTime: '10:30:00',
+                    endTime: '12:00:00',
+                    daysOfWeek: [1, 3, 5], // 1 = จันทร์, 3 = พุธ, 5 = ศุกร์
+                    color: '#8b5cf6', // สีม่วง
+                    textColor: 'white',
+                    borderColor: '#7c3aed',
+                    editable: false, // ป้องกันการแก้ไข
+                    classNames: ['pointer-events-none'] // ป้องกันการคลิก
+                });
+
+                successCallback(events);
+            } catch (error) { failureCallback(error); }
         }
-    </script>
+    });
+    calendar.render();
+}
+bookingForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('title').value;
+    const startTime = new Date(document.getElementById('start-time').value);
+    const endTime = new Date(document.getElementById('end-time').value);
+    const attendees = document.getElementById('attendees').value;
+
+    if (!title || !startTime || !endTime || isNaN(startTime) || isNaN(endTime)) {
+        alert('Please fill in all fields correctly.');
+        return;
+    }
+    if (startTime >= endTime) {
+        alert('End time must be after start time.');
+        return;
+    }
+
+    // ✅ ตรวจสอบการจองซ้ำกับ Recurring Event
+    const recEvent = { startTime: '10:30', endTime: '12:00', daysOfWeek: [1, 3, 5] };
+    const selectedDay = startTime.getDay();
+    const selectedTime = startTime.getHours() * 60 + startTime.getMinutes();
+    const selectedEndTime = endTime.getHours() * 60 + endTime.getMinutes();
+
+    // ตรวจสอบว่าวันที่เลือกตรงกับวันของ Recurring Event หรือไม่
+    if (recEvent.daysOfWeek.includes(selectedDay)) {
+        // คำนวณเวลาเริ่มต้นและสิ้นสุดของ Recurring Event ในหน่วยนาที
+        const recStart = 10 * 60 + 30; // 10:30
+        const recEnd = 12 * 60;       // 12:00
+
+        // ตรวจสอบการซ้อนทับของช่วงเวลา
+        if (selectedTime < recEnd && recStart < selectedEndTime) {
+            alert('This time slot conflicts with a recurring meeting (Plant Daily Meeting). Please choose another time.');
+            return;
+        }
+    }
+
+    // ✅ ตรวจสอบการจองทับซ้อนกับข้อมูลใน Firebase ด้วยวิธีใหม่
+    try {
+        const potentialConflictsSnapshot = await bookingsCollection
+            .where('start', '<', endTime)
+            .get();
+
+        const actualConflicts = potentialConflictsSnapshot.docs.filter(doc => {
+            const existingBookingStart = doc.data().start.toDate();
+            const existingBookingEnd = doc.data().end.toDate();
+            return existingBookingStart < endTime && existingBookingEnd > startTime;
+        });
+
+        if (actualConflicts.length > 0) {
+            alert('This time slot is already booked. Please choose another time.');
+            return;
+        }
+    } catch (error) {
+        console.error("Error checking for conflicts:", error);
+        alert('Failed to check for booking conflicts. Please try again.');
+        return;
+    }
+
+
+    try {
+        const currentUser = auth.currentUser;
+        await bookingsCollection.add({
+            title: title,
+            start: startTime,
+            end: endTime,
+            attendees: attendees.split(',').map(email => email.trim()),
+            bookedBy: currentUser.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert('Booking successful!');
+        bookingForm.reset();
+        calendar.refetchEvents();
+        generateMailtoLink(title, startTime, endTime, attendees, currentUser.email);
+    } catch (error) {
+        console.error("Error adding booking:", error);
+        alert('Failed to create booking. Please try again.');
+    }
+});
+function generateMailtoLink(title, start, end, attendees, organizer) {
+    const subject = encodeURIComponent(`Meeting Invitation: ${title}`);
+    const formatDT = (date) => `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    let body = `You are invited to the following meeting:\n\nTitle: ${title}\nWhen: ${formatDT(start)} to ${formatDT(end)}\nOrganizer: ${organizer}\n\nPlease accept or decline this invitation.`;
+    const encodedBody = encodeURIComponent(body);
+    const mailtoLink = `mailto:${attendees}?subject=${subject}&body=${encodedBody}`;
+    window.open(mailtoLink, '_blank');
+}
+</script>
 </body>
 </html>

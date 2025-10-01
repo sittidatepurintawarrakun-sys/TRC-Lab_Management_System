@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab-TRC-App - Laboratory Dashboard</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <style>
         /* Professional Theme (Deep Blue & White) */
@@ -28,7 +32,8 @@
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
             transition: all 0.3s ease;
         }
-        .card:hover {
+        /* No hover effect on calendar card */
+        .card:not(.calendar-card):hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
         }
@@ -39,119 +44,220 @@
         .stat-card.alert .stat-number { color: #be123c; }
         .module-card { padding: 1.5rem; }
         .module-card h2 { color: #1e40af; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; }
-        .module-link { display: flex; align-items: center; padding: 0.75rem; border-radius: 0.5rem; color: #334155; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease; cursor: pointer; }
+        .module-link { display: flex; align-items: center; padding: 0.75rem; border-radius: 0.5rem; color: #334155; font-weight: 500;
+        transition: background-color 0.2s ease, color 0.2s ease; cursor: pointer; }
         .module-link:hover { background-color: #e0f2fe; color: #0c4a6e; }
         .module-link i { width: 2rem; color: #60a5fa; }
+
+        /* CSS to shrink the calendar */
+        #dashboard-calendar {
+            font-size: 0.8rem; /* Reduce overall font size */
+        }
+        .fc .fc-toolbar-title {
+            font-size: 1em; /* Adjust month title font size */
+        }
+        .fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion {
+            font-size: 0.9em; /* Adjust day number and header font size */
+        }
     </style>
 </head>
 <body class="antialiased">
+    <div id="app-container" class="relative min-h-screen p-4 sm:p-6 lg:p-8">
+        <div id="datetime-display" class="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 text-right text-sm font-medium"></div>
+        <section id="lobby-page">
+            <header class="text-center mb-12">
+                <h1 class="text-4xl sm:text-5xl font-bold tracking-tight"><i class="fas fa-flask-vial"></i> Laboratory</h1>
+                <p class="mt-2 text-lg">Quality Control & Laboratory Management System</p>
+            </header>
 
-<div id="app-container" class="relative min-h-screen p-4 sm:p-6 lg:p-8">
-
-    <div id="datetime-display" class="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 text-right text-sm font-medium"></div>
-
-    <section id="lobby-page">
-        <header class="text-center mb-12">
-            <h1 class="text-4xl sm:text-5xl font-bold tracking-tight"><i class="fas fa-flask-vial"></i> Laboratory</h1>
-            <p class="mt-2 text-lg">Quality Control & Laboratory Management System</p>
-        </header>
-        
-        <main class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2">
-                    <h2 class="text-2xl font-bold text-slate-700 mb-4">Dashboard Overview</h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                        <div id="samples-in-progress-card" class="card stat-card"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Samples in Progress</p><p id="samples-in-progress-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-vials"></i></div></div></div>
-                        <div id="overdue-calibrations-card" class="card stat-card alert"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Overdue Calibrations</p><p id="overdue-calibrations-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-tools"></i></div></div></div>
-                        <div id="open-ncrs-card" class="card stat-card"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Open NCRs</p><p id="open-ncrs-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-triangle-exclamation"></i></div></div></div>
+            <main class="max-w-7xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        
+                        <div class="card calendar-card p-4 mb-6">
+                            <h3 class="font-bold text-slate-700 mb-3 text-lg"><i class="fas fa-calendar-alt mr-2 text-blue-600"></i>This Month's Bookings</h3>
+                            <div id="dashboard-calendar"></div>
+                        </div>
+                        
+                        <h2 class="text-2xl font-bold text-slate-700 mb-4">Dashboard Overview</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            <div id="samples-in-progress-card" class="card stat-card"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Samples in Progress</p><p id="samples-in-progress-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-vials"></i></div></div></div>
+                            <div id="overdue-calibrations-card" class="card stat-card alert"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Overdue Calibrations</p><p id="overdue-calibrations-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-tools"></i></div></div></div>
+                            <div id="open-ncrs-card" class="card stat-card"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Open NCRs</p><p id="open-ncrs-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-triangle-exclamation"></i></div></div></div>
+                        </div>
+                        <div class="card mt-6 p-6"><h3 class="font-semibold text-slate-700 mb-4">Test Result Trends</h3><div class="text-center text-slate-400 py-12"><i class="fas fa-chart-line text-4xl mb-2"></i><p>(Basic data visualization charts will be displayed here)</p></div></div>
                     </div>
-                    <div class="card mt-6 p-6"><h3 class="font-semibold text-slate-700 mb-4">Test Result Trends</h3><div class="text-center text-slate-400 py-12"><i class="fas fa-chart-line text-4xl mb-2"></i><p>(Basic data visualization charts will be displayed here)</p></div></div>
+                    <div class="lg:col-span-1 flex flex-col gap-8">
+                        <h2 class="text-2xl font-bold text-slate-700 mb-0 lg:mb-4">System Modules</h2>
+                        <div class="card module-card">
+                            <h2><i class="fas fa-tasks w-6 mr-2 text-sky-600"></i> Core Operations</h2>
+                            <nav class="flex flex-col gap-1">
+                                <a class="module-link"><i class="fas fa-flask"></i> Sample Tracking</a>
+                                <a href="Bale_Checking.html" class="module-link"><i class="fas fa-barcode"></i> Bale Checking</a>
+                                <a id="nav-test-results" class="module-link"><i class="fas fa-file-invoice"></i> Test Results</a>
+                            </nav>
+                        </div>
+                        <div class="card module-card">
+                            <h2><i class="fas fa-shield-halved w-6 mr-2 text-teal-600"></i> Quality & Assets</h2>
+                            <nav class="flex flex-col gap-1">
+                                <a class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR Management</a>
+                                <a class="module-link"><i class="fas fa-tools"></i> Equipment</a>
+                                <a class="module-link"><i class="fas fa-prescription-bottle"></i> Chemical Inventory</a>
+                                <a href="View_Test_Results_Reports.html" class="module-link"><i class="fas fa-file-alt"></i> View Test Results / Reports</a>
+                            </nav>
+                        </div>
+                        <div class="card module-card">
+                            <h2><i class="fas fa-cog w-6 mr-2 text-slate-500"></i> System & Admin</h2>
+                            <nav class="flex flex-col gap-1">
+                                <a href="Room_Booking.html" class="module-link"><i class="fas fa-calendar-alt"></i> Room Booking</a>
+                                <a class="module-link"><i class="fas fa-file-pdf"></i> Report Generation</a>
+                                <a class="module-link"><i class="fas fa-users-cog"></i> User Management</a>
+                            </nav>
+                        </div>
+                    </div>
                 </div>
-                <div class="lg:col-span-1 flex flex-col gap-8">
-                    <h2 class="text-2xl font-bold text-slate-700 mb-0 lg:mb-4">System Modules</h2>
-                    <div class="card module-card">
-                        <h2><i class="fas fa-tasks w-6 mr-2 text-sky-600"></i> Core Operations</h2>
-                        <nav class="flex flex-col gap-1">
-                            <a class="module-link"><i class="fas fa-flask"></i> Sample Tracking</a>
-                            <a href="Bale_Checking.html" class="module-link"><i class="fas fa-barcode"></i> Bale Checking</a>
-                            <a id="nav-test-results" class="module-link"><i class="fas fa-file-invoice"></i> Test Results</a>
-                        </nav>
-                    </div>
-                    <div class="card module-card">
-                        <h2><i class="fas fa-shield-halved w-6 mr-2 text-teal-600"></i> Quality & Assets</h2>
-                        <nav class="flex flex-col gap-1">
-                            <a class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR Management</a>
-                            <a class="module-link"><i class="fas fa-tools"></i> Equipment</a>
-                            <a class="module-link"><i class="fas fa-prescription-bottle"></i> Chemical Inventory</a>
-                        </nav>
-                    </div>
-                    <div class="card module-card">
-                        <h2><i class="fas fa-cog w-6 mr-2 text-slate-500"></i> System & Admin</h2>
-                        <nav class="flex flex-col gap-1">
-                            <a href="Room_Booking.html" class="module-link"><i class="fas fa-calendar-alt"></i> Room Booking</a>
-                            <a class="module-link"><i class="fas fa-file-pdf"></i> Report Generation</a>
-                            <a class="module-link"><i class="fas fa-users-cog"></i> User Management</a>
-                        </nav>
-                    </div>
+            </main>
+        </section>
+        <section id="report-page" class="hidden max-w-7xl mx-auto">
+            <div class="mb-6">
+                <a class="back-to-lobby text-slate-600 hover:text-blue-700 font-semibold text-sm cursor-pointer">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+            <header class="mb-8">
+                <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-file-invoice text-teal-600"></i> Test Results & Reports</h1>
+            </header>
+            <div class="card p-8">
+                <div class="text-center text-slate-500 py-16">
+                    <i class="fas fa-search text-5xl mb-4"></i>
+                    <p class="text-xl">Report viewing interface will be built here.</p>
+                    <p>This section will contain search filters, data tables, and PDF export options.</p>
                 </div>
             </div>
-        </main>
-    </section>
+        </section>
+        <footer class="w-full text-center mt-12">
+            <p class="text-sm text-slate-500">&copy; 2025 Sittidate Purintawarrakun</p>
+        </footer>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Date/Time Update ---
+            const updateDateTime = () => {
+                const datetimeDisplay = document.getElementById('datetime-display');
+                if (!datetimeDisplay) return;
+                const now = new Date();
+                const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const dateString = now.toLocaleDateString('en-US', optionsDate);
+                const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit'});
+                datetimeDisplay.innerHTML = `<div>${dateString}</div><div>${timeString}</div>`;
+            };
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
 
-    <section id="report-page" class="hidden max-w-7xl mx-auto">
-        <div class="mb-6">
-            <a class="back-to-lobby text-slate-600 hover:text-blue-700 font-semibold text-sm cursor-pointer">
-                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-            </a>
-        </div>
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-file-invoice text-teal-600"></i> Test Results & Reports</h1>
-        </header>
-        <div class="card p-8">
-            <div class="text-center text-slate-500 py-16">
-                 <i class="fas fa-search text-5xl mb-4"></i>
-                 <p class="text-xl">Report viewing interface will be built here.</p>
-                 <p>This section will contain search filters, data tables, and PDF export options.</p>
-            </div>
-        </div>
-    </section>
+            // --- Page Navigation Logic ---
+            const lobbyPage = document.getElementById('lobby-page');
+            const reportPage = document.getElementById('report-page');
+            const allPages = [lobbyPage, reportPage].filter(p => p);
+            const showPage = (pageToShow) => {
+                allPages.forEach(page => page.classList.add('hidden'));
+                if (pageToShow) pageToShow.classList.remove('hidden');
+            };
+            document.getElementById('nav-test-results')?.addEventListener('click', () => showPage(reportPage));
+            document.querySelectorAll('.back-to-lobby').forEach(button => {
+                button.addEventListener('click', () => showPage(lobbyPage));
+            });
 
-    <footer class="w-full text-center mt-12">
-        <p class="text-sm text-slate-500">&copy; 2025 Sittidate Purintawarrakun</p>
-    </footer>
-</div>
+            // --- Calendar Logic ---
+            const firebaseConfig = {
+                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                authDomain: "lab-trc-management-system.firebaseapp.com",
+                projectId: "lab-trc-management-system",
+                storageBucket: "lab-trc-management-system.firebasestorage.app",
+                messagingSenderId: "43919979160",
+                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+            };
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- Date/Time Update ---
-        const updateDateTime = () => {
-            const datetimeDisplay = document.getElementById('datetime-display');
-            if (!datetimeDisplay) return;
-            const now = new Date();
-            const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const dateString = now.toLocaleDateString('en-US', optionsDate);
-            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit'});
-            datetimeDisplay.innerHTML = `<div>${dateString}</div><div>${timeString}</div>`;
-        };
-        updateDateTime();
-        setInterval(updateDateTime, 1000);
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            const db = firebase.firestore();
 
-        // --- Page Navigation Logic ---
-        const lobbyPage = document.getElementById('lobby-page');
-        const reportPage = document.getElementById('report-page');
-        const allPages = [lobbyPage, reportPage].filter(p => p);
+            // Add this line to fix connection issues on restricted networks
+            db.settings({ experimentalForceLongPolling: true }); 
 
-        const showPage = (pageToShow) => {
-            allPages.forEach(page => page.classList.add('hidden'));
-            if (pageToShow) pageToShow.classList.remove('hidden');
-        };
+            const bookingsCollection = db.collection('bookings');
 
-        document.getElementById('nav-test-results')?.addEventListener('click', () => showPage(reportPage));
-        document.querySelectorAll('.back-to-lobby').forEach(button => {
-            button.addEventListener('click', () => showPage(lobbyPage));
+            const initializeDashboardCalendar = () => {
+                const calendarEl = document.getElementById('dashboard-calendar');
+                if (!calendarEl) return;
+
+                const calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: {
+                        left: 'title',
+                        center: '',
+                        right: ''
+                    },
+                    editable: false,
+                    selectable: false,
+                    dayMaxEvents: true, 
+                    
+                    eventSources: [
+                        // Source 1: Hardcoded events (loads instantly)
+                        {
+                            events: [
+                                {
+                                    title: 'Plant Daily Meeting',
+                                    startTime: '10:30:00',
+                                    endTime: '12:00:00',
+                                    daysOfWeek: [1, 3, 5], 
+                                    color: '#8b5cf6',
+                                    classNames: ['pointer-events-none']
+                                }
+                            ]
+                        },
+                        // Source 2: Events from Firebase (loads asynchronously)
+                        {
+                            events: async (fetchInfo, successCallback, failureCallback) => {
+                                console.log("Fetching bookings from Firebase...");
+                                try {
+                                    const snapshot = await bookingsCollection.get();
+                                    console.log(`Found ${snapshot.docs.length} documents in 'bookings' collection.`);
+
+                                    const firebaseEvents = snapshot.docs.map(doc => {
+                                        const data = doc.data();
+                                        // Check data integrity before processing
+                                        if (data.start && typeof data.start.toDate === 'function' &&
+                                            data.end && typeof data.end.toDate === 'function') {
+                                            return {
+                                                id: doc.id,
+                                                title: data.title,
+                                                start: data.start.toDate(),
+                                                end: data.end.toDate(),
+                                            };
+                                        } else {
+                                            console.warn(`Skipping document ${doc.id} due to missing or invalid date fields.`, data);
+                                            return null;
+                                        }
+                                    }).filter(event => event !== null); // Filter out invalid items
+
+                                    console.log(`Successfully mapped ${firebaseEvents.length} events.`);
+                                    successCallback(firebaseEvents);
+                                } catch (error) {
+                                    console.error("Error fetching bookings from Firebase:", error);
+                                    failureCallback(error);
+                                }
+                            }
+                        }
+                    ]
+                });
+
+                calendar.render();
+            };
+
+            initializeDashboardCalendar(); 
         });
-    });
-</script>
-
+    </script>
 </body>
 </html>

@@ -9,6 +9,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
         .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
@@ -17,16 +23,11 @@
         .btn-primary { background-color: #2563eb; color: white; font-weight: 600; border-radius: 0.5rem; padding: 0.75rem 1.5rem; transition: background-color 0.3s ease; cursor: pointer; }
         .btn-primary:hover { background-color: #1d4ed8; }
         .btn-primary:disabled { background-color: #94a3b8; cursor: not-allowed; }
-        .form-file-button {
-            background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #334155;
-            padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer;
-            transition: background-color 0.2s;
-        }
+        .form-file-button { background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.2s; }
         .form-file-button:hover { background-color: #e2e8f0; }
     </style>
 </head>
 <body class="antialiased">
-
 <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
     <div class="max-w-4xl mx-auto">
         <div class="mb-6">
@@ -38,13 +39,14 @@
             <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-barcode text-blue-700"></i> Bale Checking</h1>
         </header>
         <div class="card p-8">
+            <div id="auth-message" class="hidden text-center p-8 bg-yellow-100 text-yellow-800 rounded-lg">
+                <p>Please log in as an admin on the <a href="Bale_Check_Report.html" class="font-bold underline">Report Page</a> to edit this record.</p>
+            </div>
             <form id="bale-entry-form" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-
-                <div>
+                 <div>
                     <label for="inspectionDate" class="font-semibold text-slate-700">Date & Time</label>
                     <input type="datetime-local" id="inspectionDate" name="inspectionDate" class="form-input mt-2" required>
                 </div>
-
                 <div>
                     <label for="department" class="font-semibold text-slate-700">Department</label>
                     <select id="department" name="department" class="form-select mt-2" required>
@@ -53,43 +55,47 @@
                         <option value="Warehouse">Warehouse</option>
                     </select>
                 </div>
-
                 <div class="md:col-span-2">
                     <label for="customerName" class="font-semibold text-slate-700">Customer Name</label>
                     <input type="text" id="customerName" name="customerName" class="form-input mt-2" required>
                 </div>
-                
                 <div>
                     <label for="baleNumber" class="font-semibold text-slate-700">Bale Number</label>
                     <input type="text" id="baleNumber" name="baleNumber" class="form-input mt-2" required>
                 </div>
-
                 <div>
                     <label for="checkedBy" class="font-semibold text-slate-700">Checked By</label>
                     <input type="text" id="checkedBy" name="checkedBy" class="form-input mt-2" required>
                 </div>
-
                 <div class="md:col-span-2">
                     <label for="issueProblem" class="font-semibold text-slate-700">Issue Problem</label>
                     <select id="issueProblem" name="issueProblem" class="form-select mt-2" required>
                         <option value="" disabled selected>-- Select Issue --</option>
                         <option value="Dirty Patch/Dirty Fiber">Dirty Patch/Dirty Fiber</option>
                         <option value="Dirty Bale/Packaging">Dirty Bale/Packaging</option>
+                        <option value="Black Particles in Bale/Fiber">Black Particles in Bale/Fiber</option>
+                        <option value="Black Particles in Packaging">Black Particles in Packaging</option>
                         <option value="Yellow Patch">Yellow Patch</option>
                         <option value="Unopened Fiber">Unopened Fiber</option>
                         <option value="Insect Contamination">Insect Contamination</option>
                         <option value="Hair Contamination">Hair Contamination</option>
+                        <option value="Metal Contamination">Metal Contamination</option>
                         <option value="Oil Contamination">Oil Contamination</option>
                         <option value="Other Contamination">Other Contamination</option>
+                        <option value="Barcode Damage">Barcode Damage</option>
                         <option value="Packaging Damage">Packaging Damage</option>
                         <option value="Heat Sealing Damage">Heat Sealing Damage</option>
                         <option value="Strap Issue">Strap Issue</option>
                         <option value="Other Issue">Other Issue</option>
                     </select>
                 </div>
-
                 <div class="md:col-span-2">
                     <label for="photoReference" class="font-semibold text-slate-700">Photo Reference</label>
+                    <div id="image-preview-container" class="hidden mt-2">
+                        <p class="text-sm text-slate-600 mb-2">Current Image:</p>
+                        <img id="image-preview" src="" alt="Current Bale Image" class="max-w-xs max-h-48 rounded-lg shadow-md">
+                        <p class="text-xs text-slate-500 mt-2">To replace this image, choose a new one below.</p>
+                    </div>
                     <div class="mt-2 flex items-center gap-4">
                         <input type="file" id="photoReference" name="photoReference" class="hidden" accept="image/*">
                         <label for="photoReference" class="form-file-button">
@@ -98,98 +104,181 @@
                         <span id="fileName" class="text-sm text-slate-500">No file selected</span>
                     </div>
                 </div>
-
                 <div class="md:col-span-2">
                     <label for="notes" class="font-semibold text-slate-700">Notes / Comments</label>
                     <textarea id="notes" name="notes" rows="4" class="form-input mt-2"></textarea>
                 </div>
-
                 <div class="md:col-span-2 text-right mt-4">
                     <button type="submit" class="btn-primary">Submit Record</button>
                 </div>
-
             </form>
         </div>
     </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- Firebase Configuration ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-            authDomain: "lab-trc-management-system.firebaseapp.com",
-            projectId: "lab-trc-management-system",
-            storageBucket: "lab-trc-management-system.firebasestorage.app",
-            messagingSenderId: "43919979160",
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        db.settings({ experimentalForceLongPolling: true });
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Firebase Configuration ---
+    const mainAppConfig = {
+        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+        authDomain: "lab-trc-management-system.firebaseapp.com",
+        projectId: "lab-trc-management-system",
+        storageBucket: "lab-trc-management-system.firebasestorage.app",
+        messagingSenderId: "43919979160",
+        appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+    };
+    const photoAppConfig = {
+        apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
+        authDomain: "trc-photo-data.firebaseapp.com",
+        projectId: "trc-photo-data",
+        storageBucket: "trc-photo-data.firebasestorage.app",
+        messagingSenderId: "656245706360",
+        appId: "1:656245706360:web:6de7bd9d296158bc57678d"
+    };
+    const mainApp = firebase.initializeApp(mainAppConfig);
+    const photoApp = firebase.initializeApp(photoAppConfig, 'photoStorageApp');
+    const db = mainApp.firestore();
+    const storage = photoApp.storage();
+    const auth = mainApp.auth();
+    db.settings({ experimentalForceLongPolling: true });
 
-        // --- UI Element Logic ---
-        const photoInput = document.getElementById('photoReference');
-        const fileNameSpan = document.getElementById('fileName');
-        if (photoInput) {
-            photoInput.addEventListener('change', () => {
-                if (photoInput.files.length > 0) {
-                    fileNameSpan.textContent = photoInput.files[0].name;
-                } else {
-                    fileNameSpan.textContent = 'No file selected';
-                }
-            });
+    // --- DOM Elements ---
+    const baleForm = document.getElementById('bale-entry-form');
+    const pageTitle = document.querySelector('h1');
+    const submitButton = baleForm.querySelector('button[type="submit"]');
+    const photoInput = document.getElementById('photoReference');
+    const fileNameSpan = document.getElementById('fileName');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const authMessage = document.getElementById('auth-message');
+    
+    // --- State Variables ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const recordId = urlParams.get('id');
+    const isEditMode = Boolean(recordId);
+    let originalRecordData = null;
+    const adminEmail = "sittidate.p@adityabirla.com";
+
+    const populateForm = (data) => {
+        baleForm.inspectionDate.value = data.inspectionDate;
+        baleForm.department.value = data.department;
+        baleForm.customerName.value = data.customerName;
+        baleForm.baleNumber.value = data.baleNumber;
+        baleForm.checkedBy.value = data.checkedBy;
+        baleForm.issueProblem.value = data.issueProblem;
+        baleForm.notes.value = data.notes || '';
+        if (data.photoURL) {
+            imagePreview.src = data.photoURL;
+            imagePreviewContainer.classList.remove('hidden');
         }
+    };
 
-        // --- Form Submission Logic ---
-        const baleForm = document.getElementById('bale-entry-form');
-        if (baleForm) {
-            baleForm.addEventListener('submit', (event) => {
-                event.preventDefault();
-                const submitButton = baleForm.querySelector('button[type="submit"]');
-                const record = {
-                    inspectionDate: baleForm.inspectionDate.value,
-                    department: baleForm.department.value,
-                    customerName: baleForm.customerName.value,
-                    baleNumber: baleForm.baleNumber.value,
-                    checkedBy: baleForm.checkedBy.value,
-                    issueProblem: baleForm.issueProblem.value,
-                    notes: baleForm.notes.value,
-                    status: "In Progress",
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                };
+    photoInput.addEventListener('change', () => {
+        fileNameSpan.textContent = photoInput.files.length > 0 ? photoInput.files[0].name : 'No file selected';
+    });
 
-                if (!record.inspectionDate || !record.department || !record.customerName || !record.baleNumber || !record.checkedBy || !record.issueProblem) {
-                    alert('Please fill in all required fields.');
-                    return;
-                }
+    // --- Main Logic Controller (Auth-aware) ---
+    auth.onAuthStateChanged(user => {
+        if (isEditMode) {
+            const isAdmin = user && user.email.toLowerCase() === adminEmail.toLowerCase();
+            if (isAdmin) {
+                baleForm.classList.remove('hidden');
+                authMessage.classList.add('hidden');
+                
+                pageTitle.innerHTML = '<i class="fas fa-edit text-blue-700"></i> Edit Record';
+                submitButton.textContent = 'Update Record';
 
-                submitButton.disabled = true;
-                submitButton.textContent = 'Saving...';
-
-                db.collection("bale_checking_records").add(record)
-                    .then(() => {
-                        alert("Record saved successfully!");
-                        baleForm.reset();
-                        fileNameSpan.textContent = 'No file selected';
-                    })
-                    .catch((error) => {
-                        console.error("Error adding document: ", error);
-                        alert("Failed to save record. Please try again.");
-                    })
-                    .finally(() => {
-                        // ✅  จุดแก้ไข: บล็อกนี้จะทำงาน "เสมอ"
-                        // ไม่ว่าข้อมูลจะบันทึกสำเร็จหรือล้มเหลวก็ตาม
-                        // ทำให้ปุ่มกลับมาเป็นปกติทุกครั้ง
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Submit Record';
+                db.collection("bale_checking_records").doc(recordId).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            originalRecordData = doc.data();
+                            populateForm(originalRecordData);
+                        } else {
+                            alert("Error: Record not found.");
+                            pageTitle.textContent = "Record Not Found";
+                            baleForm.classList.add('hidden');
+                        }
+                    }).catch(error => {
+                        console.error("Error getting document:", error);
+                        alert("Error loading record data.");
                     });
-            });
+            } else {
+                baleForm.classList.add('hidden');
+                authMessage.classList.remove('hidden');
+            }
         }
     });
-    </script>
+    
+    // --- Form Submission Logic (Handles both Create and Update) ---
+    baleForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
 
+        const updatedData = {
+            inspectionDate: baleForm.inspectionDate.value,
+            department: baleForm.department.value,
+            customerName: baleForm.customerName.value,
+            baleNumber: baleForm.baleNumber.value,
+            checkedBy: baleForm.checkedBy.value,
+            issueProblem: baleForm.issueProblem.value,
+            notes: baleForm.notes.value,
+        };
+
+        if (!updatedData.inspectionDate || !updatedData.department || !updatedData.customerName || !updatedData.baleNumber || !updatedData.checkedBy || !updatedData.issueProblem) {
+            return alert('Please fill in all required fields.');
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = 'Saving...';
+
+        try {
+            const newFile = photoInput.files[0];
+            
+            if (newFile) {
+                submitButton.textContent = 'Uploading Image...';
+                const uniqueFileName = Date.now() + '-' + newFile.name;
+                const storageRef = storage.ref('bale_images/' + uniqueFileName);
+                
+                const uploadTask = await storageRef.put(newFile);
+                const downloadURL = await uploadTask.ref.getDownloadURL();
+
+                updatedData.photoURL = downloadURL;
+                updatedData.photoFileName = uniqueFileName;
+
+                if (isEditMode && originalRecordData && originalRecordData.photoFileName) {
+                    const oldPhotoRef = storage.ref(`bale_images/${originalRecordData.photoFileName}`);
+                    await oldPhotoRef.delete().catch(err => console.warn("Old photo deletion failed (might not exist):", err));
+                }
+            } else if (isEditMode) {
+                updatedData.photoURL = originalRecordData.photoURL || "";
+                updatedData.photoFileName = originalRecordData.photoFileName || "";
+            }
+
+            if (isEditMode) {
+                submitButton.textContent = 'Updating Record...';
+                await db.collection("bale_checking_records").doc(recordId).update(updatedData);
+                alert("Record updated successfully!");
+                window.location.href = 'Bale_Check_Report.html';
+            } else {
+                updatedData.status = "In Progress";
+                updatedData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                
+                submitButton.textContent = 'Saving Record...';
+                await db.collection("bale_checking_records").add(updatedData);
+                alert("Record saved successfully!");
+                baleForm.reset();
+                fileNameSpan.textContent = 'No file selected';
+                imagePreviewContainer.classList.add('hidden');
+            }
+
+        } catch (error) {
+            console.error("An error occurred: ", error);
+            alert("Failed to save record. Please check the console for details.");
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = isEditMode ? 'Update Record' : 'Submit Record';
+        }
+    });
+});
+</script>
 </body>
 </html>
