@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCF Report - Lab Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .btn { font-weight: 600; border-radius: 0.5rem; padding: 0.6rem 1.2rem; transition: background-color 0.3s ease; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn:disabled { cursor: not-allowed; background-color: #94a3b8; }
+        .btn-primary { background-color: #2563eb; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
+        .btn-secondary { background-color: #64748b; color: white; }
+        .btn-secondary:hover:not(:disabled) { background-color: #475569; }
+        .form-input { width: 100%; background-color: #f9fafb; border: 1px solid #d1d5db; color: #111827; border-radius: 0.5rem; padding: 0.75rem; }
+        
+        /* Existing Sidebar Styles */
+        #detailsSidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
+        #detailsSidebar.open { transform: translateX(0); }
+        
+        /* AI Copilot Sidebar Styles */
+        #copilot-sidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
+        #copilot-sidebar.open { transform: translateX(0); }
+        #close-copilot-btn { font-size: 2rem; line-height: 1; }
+        .prose h3 { font-size: 1.1em; margin-top: 1em; margin-bottom: 0.5em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; }
+        .prose p { margin: 0.5em 0; }
+
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-issued { background-color: #eff6ff; color: #1d4ed8; }
+        .status-responded { background-color: #fefce8; color: #a16207; }
+        .status-completed { background-color: #f0fdf4; color: #15803d; }
+        .sidebar-section { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1.5rem; }
+        .sidebar-label { font-weight: 600; color: #4b5563; margin-bottom: 0.25rem; display: block; }
+        .sidebar-value { color: #111827; }
+        .sidebar-input { width: 100%; border-gray-300 rounded-md shadow-sm; }
+    </style>
+</head>
+<body>
+    <div class="flex h-screen bg-gray-100">
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+                <div class="container mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-4">
+                             <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-file-circle-exclamation text-blue-700"></i> Nonconformance Report</h1>
+                             <button id="analyze-btn" class="btn btn-primary">
+                                <i class="fas fa-sparkles"></i> Analyze with AI
+                             </button>
+                        </div>
+                        <a href="index.html" class="bg-white text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 transition">
+                            &#8592; Back to Dashboard
+                        </a>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">Monthly Issued NCF Trend</h3>
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">Department Status Overview</h3>
+                        <div id="departmentStatusChartsContainer" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center">
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                        <div>
+                            <label for="searchInput" class="text-sm font-medium text-gray-700">Search NCF Number:</label>
+                            <input type="text" id="searchInput" placeholder="e.g., 25-AUX-1235" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="filterDepartment" class="text-sm font-medium text-gray-700">Filter by Department:</label>
+                            <select id="filterDepartment" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="all">All Departments</option>
+                                <option value="AUX">Auxiliary</option>
+                                <option value="VIS">Viscose</option>
+                                <option value="SPG">Spinning</option>
+                                <option value="ETP">ETP&WTP</option>
+                                <option value="ABEC">ABEC</option>
+                                <option value="FIBER">FIBER</option>
+                                <option value="RM">Raw Material</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filterStatus" class="text-sm font-medium text-gray-700">Filter by Status:</label>
+                            <select id="filterStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="all">All Statuses</option>
+                                <option value="Issued">Issued (Open)</option>
+                                <option value="Responded">Responded</option>
+                                <option value="Completed">Completed (Closed)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">NCF Number</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">To Dept.</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Area Process</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Detail</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Issue Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Follow Up Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ncfTableBody" class="bg-white divide-y divide-gray-200">
+                                <tr><td colspan="6" class="text-center p-8 text-gray-500">Loading data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="detailsSidebar" class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white shadow-2xl z-50 overflow-y-auto">
+        <div class="p-8">
+            <button id="closeSidebarBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            <div id="sidebarContent"></div>
+        </div>
+    </div>
+    
+    <button id="copilot-btn" class="fixed bottom-8 right-8 bg-purple-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-2xl z-40 hover:bg-purple-700 transition-transform transform hover:scale-110">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+    </button>
+    <div id="copilot-sidebar" class="fixed top-0 right-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out">
+        <div class="flex flex-col h-full">
+            <header class="p-4 border-b flex justify-between items-center bg-slate-50 flex-shrink-0">
+                <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i> AI Analysis</h2>
+                <button id="close-copilot-btn" class="text-slate-500 hover:text-slate-800">&times;</button>
+            </header>
+            <div id="copilot-content" class="flex-grow p-4 overflow-y-auto prose prose-sm max-w-none">
+                <div class="text-center text-slate-500">
+                    <p>Click "Analyze with AI" on the main page to get insights, or ask me a question below.</p>
+                </div>
+            </div>
+            <footer class="p-4 border-t bg-slate-50 flex-shrink-0">
+                <div class="flex gap-2">
+                    <input type="text" id="copilot-chat-input" placeholder="Ask a follow-up question..." class="form-input flex-grow">
+                    <button id="copilot-chat-submit-btn" class="btn btn-secondary">Send</button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        const GEMINI_API_KEY = "AIzaSyBSwjq_-voEyaMHHz0boCWlcsx5dVChc-Y"; // กรุณาใช้ Key ของคุณ
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.register(ChartDataLabels);
+            const firebaseConfig = {
+                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                authDomain: "lab-trc-management-system.firebaseapp.com",
+                projectId: "lab-trc-management-system",
+                storageBucket: "lab-trc-management-system.appspot.com",
+                messagingSenderId: "43919979160",
+                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+            };
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            db.settings({ experimentalForceLongPolling: true });
+
+            // --- DOM Elements ---
+            const tableBody = document.getElementById('ncfTableBody');
+            const searchInput = document.getElementById('searchInput');
+            const filterDepartment = document.getElementById('filterDepartment');
+            const filterStatus = document.getElementById('filterStatus');
+            const detailsSidebar = document.getElementById('detailsSidebar');
+            const sidebarContent = document.getElementById('sidebarContent');
+            const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+            const monthlyTrendCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+            const departmentStatusContainer = document.getElementById('departmentStatusChartsContainer');
+
+            // AI Copilot DOM Elements
+            const copilotBtn = $('#copilot-btn');
+            const copilotSidebar = $('#copilot-sidebar');
+            const closeCopilotBtn = $('#close-copilot-btn');
+            const copilotContent = $('#copilot-content');
+            const copilotChatInput = $('#copilot-chat-input');
+            const copilotChatSubmitBtn = $('#copilot-chat-submit-btn');
+            const analyzeBtn = $('#analyze-btn');
+
+            // --- State Variables ---
+            let monthlyTrendChart;
+            let departmentCharts = {};
+            let allRecords = [];
+            let currentFilteredRecords = [];
+            let currentRecord = null;
+
+            // --- AI Copilot Logic ---
+            copilotBtn.on('click', () => copilotSidebar.addClass('open'));
+            closeCopilotBtn.on('click', () => copilotSidebar.removeClass('open'));
+
+            analyzeBtn.on('click', function() {
+                copilotSidebar.addClass('open');
+                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Analyzing...');
+                if (currentFilteredRecords.length === 0) {
+                    copilotContent.html('<p class="text-orange-500">No data in the table to analyze.</p>');
+                    $(this).prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                    return;
+                }
+                getGeminiInsights(currentFilteredRecords, $(this));
+            });
+
+            const getGeminiInsights = async (records, btn) => {
+                copilotContent.html('<p class="text-center"> ✨  Analyzing data... Please wait a moment.</p>');
+                if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_GEMINI_API_KEY")) {
+                    copilotContent.html('<p class="text-red-500">Error: Gemini API Key is missing. Please configure it in the script.</p>');
+                    btn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                    return;
+                }
+                try {
+                    const simplifiedRecords = records.map(({ id, ...rest }) => rest);
+                    const prompt = `
+    # Role and Expertise
+    You are "Insight-AI," a world-class Quality Assurance Analyst and Data Scientist specializing in sharp, rapid analysis of Nonconformance (NCF) data. Your goal is to transform NCF records into actionable summaries for busy QA managers and department heads.
+
+    # Data Context
+    - **Data Type:** 'Nonconformance Report (NCF)' from a manufacturing/lab environment.
+    - **Analysis Goal:** To identify trends in nonconformance, recurring issues by department or process area, evaluate response effectiveness, and detect any unusual patterns.
+    - **Additional Key Info:** The 'followUpStatus' field ('Issued', 'Responded', 'Completed') is crucial for understanding the lifecycle of an NCF. The details in 'part1' describe the problem, and 'part2' contains the response.
+
+    # Task
+    Given the NCF dataset below, perform a comprehensive, multi-dimensional analysis and generate a summary report covering all the following sections:
+    1.  **Executive Summary:** Summarize the most critical points in 2-3 sentences. What is the single most important takeaway?
+    2.  **Key Highlights & Insights:** Find the most interesting findings, patterns, or unexpected discoveries (e.g., a spike in issues, a department with very fast/slow responses).
+    3.  **Anomalies & Outliers:** Identify any data points that are out of spec, unusual, or inconsistent. Specify what they are and why they are suspicious.
+    4.  **Trend Analysis:** Analyze if any specific 'departmentCode', 'areaProcess', or problem 'details' show a significant trend over time.
+    5.  **Correlations & Relationships:** Analyze potential relationships. For example, 'Does a specific department have a higher rate of a particular issue type?' or 'Are certain process areas linked to more severe or recurring NCFs?'
+    6.  **Priority & Actionable Recommendations:** Based on all analyses, provide a prioritized list of the top 1-3 things the team should do next, with clear, actionable steps.
+
+    # Data for Analysis
+    \`\`\`json
+    ${JSON.stringify(simplifiedRecords, null, 2)}
+    \`\`\`
+
+    # Output Format
+    Please generate the response in clean, well-structured Markdown using the following headings and emojis:
+    ##  🔍  Executive Summary
+    [Content]
+    ##  ✨  Key Highlights & Insights
+    - [Point 1]
+    - [Point 2]
+    ##  ⚠️  Anomalies & Outliers
+    - [Point 1]
+    - [Point 2]
+    ##  📈  Trend Analysis
+    - [Point 1]
+    - [Point 2]
+    ##  🔗  Correlations & Relationships
+    - [Point 1]
+    - [Point 2]
+    ##  🎯  Priority & Actionable Recommendations
+    1.  **[Action Item Title]:** [Description and rationale]
+    2.  **[Action Item Title]:** [Description and rationale]
+    `;
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+                    }
+                    const data = await response.json();
+                    const text = data.candidates[0].content.parts[0].text;
+                    copilotContent.html(marked.parse(text));
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    copilotContent.html(`<p class="text-red-500">Sorry, the AI analysis failed. Error: ${error.message}</p>`);
+                } finally {
+                    btn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                }
+            };
+
+            copilotChatSubmitBtn.on('click', async function() {
+            const question = copilotChatInput.val().trim();
+            if (!question) return;
+            const chatBtn = $(this);
+            chatBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+            const userQuestionHtml = `<div class="user-question mb-2 border-t pt-4 mt-4"><p class="font-semibold text-slate-800">You:</p><p>${question}</p></div>`;
+            copilotContent.append(userQuestionHtml);
+            const thinkingHtmlId = `thinking-${Date.now()}`;
+            const thinkingHtml = `<div id="${thinkingHtmlId}" class="ai-answer"><p class="font-semibold text-purple-600">AI:</p><p> 🤔  Thinking...</p></div>`;
+            copilotContent.append(thinkingHtml);
+
+            copilotContent.scrollTop(copilotContent[0].scrollHeight);
+            copilotChatInput.val('');
+            try {
+                                // --- THIS IS THE FIX ---
+                                // Use 'currentFilteredRecords' which is the correct variable for this file.
+                                const recordsForAnalysis = currentFilteredRecords.length > 500 ? currentFilteredRecords.slice(0, 500) : currentFilteredRecords;
+            const simplifiedRecords = recordsForAnalysis.map(({ id, ...rest }) => rest);
+            const prompt = `Based on this Nonconformance Report (NCF) data: ${JSON.stringify(simplifiedRecords, null, 2)}\nAnswer this question: ${question}\nProvide a clear, concise answer using Markdown formatting.`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+
+            if (!response.ok) {
+                                    const errorData = await response.json().catch(() => null);
+                                    const errorMessage = errorData?.error?.message || response.statusText || 'Chat API request failed';
+                                    throw new Error(errorMessage);
+                                }
+
+            const data = await response.json();
+            const text = data.candidates[0].content.parts[0].text;
+            $(`#${thinkingHtmlId}`).html(`<p class="font-semibold text-purple-600">AI:</p><div>${marked.parse(text)}</div>`);
+            } catch (error) {
+            $(`#${thinkingHtmlId}`).html(`<p class="text-red-500">Error: ${error.message}</p>`);
+            } finally {
+            chatBtn.prop('disabled', false).html('Send');
+            copilotContent.scrollTop(copilotContent[0].scrollHeight);
+            }
+            });
+
+            // --- Main Application Logic ---
+            const fetchRecords = () => {
+                db.collection("non_conformance_records").orderBy("createdAt", "desc").onSnapshot(querySnapshot => {
+                    allRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    applyFiltersAndRender();
+                    updateDashboard(allRecords);
+                }, error => {
+                    console.error("Error fetching records: ", error);
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-red-500">Failed to load data.</td></tr>`;
+                });
+            };
+
+            const renderTable = (records) => {
+                tableBody.innerHTML = '';
+                if (records.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-500">No records found.</td></tr>`;
+                    return;
+                }
+                records.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50 cursor-pointer';
+                    tr.setAttribute('data-id', record.id);
+                    const status = record.followUpStatus || 'Issued';
+                    let statusBadge = '';
+                    if (status === 'Issued') {
+                        statusBadge = `<span class="status-badge status-issued">Issued</span>`;
+                    } else if (status === 'Responded') {
+                        statusBadge = `<span class="status-badge status-responded">Responded</span>`;
+                    } else if (status === 'Completed') {
+                        statusBadge = `<span class="status-badge status-completed">Completed</span>`;
+                    }
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-indigo-600">${record.ncfNumber}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${record.to.department}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.part1.areaProcess || ''}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate" style="max-width: 300px;">${record.part1.details}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.documentDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                    tr.addEventListener('click', () => {
+                        currentRecord = allRecords.find(r => r.id === record.id);
+                        populateAndShowSidebar(currentRecord);
+                    });
+                });
+            };
+
+            const applyFiltersAndRender = () => {
+                const searchValue = searchInput.value.toLowerCase();
+                const deptValue = filterDepartment.value;
+                const statusValue = filterStatus.value;
+                let filteredRecords = allRecords;
+
+                if (deptValue !== 'all') {
+                    filteredRecords = filteredRecords.filter(r => r.departmentCode === deptValue);
+                }
+                if (statusValue !== 'all') {
+                    filteredRecords = filteredRecords.filter(r => (r.followUpStatus || 'Issued') === statusValue);
+                }
+                if (searchValue) {
+                    filteredRecords = filteredRecords.filter(r => r.ncfNumber && r.ncfNumber.toLowerCase().includes(searchValue));
+                }
+                currentFilteredRecords = filteredRecords;
+                renderTable(filteredRecords);
+            };
+
+            const updateDashboard = (records) => {
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+                sixMonthsAgo.setDate(1);
+                const monthLabels = [];
+                for (let i = 0; i < 6; i++) {
+                    const date = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth() + i, 1);
+                    monthLabels.push(date.toLocaleString('en-US', { month: 'short', year: '2-digit' }));
+                }
+
+                const monthlyDataByDept = {};
+                const departments = [...new Set(records.map(r => r.departmentCode).filter(Boolean))];
+
+                departments.forEach(dept => {
+                    monthlyDataByDept[dept] = Array(6).fill(0);
+                });
+
+                records.forEach(record => {
+                    if (record.createdAt && record.createdAt.toDate && record.departmentCode) {
+                        const issuedDate = record.createdAt.toDate();
+                        if (issuedDate >= sixMonthsAgo) {
+                            const monthDiff = (issuedDate.getFullYear() - sixMonthsAgo.getFullYear()) * 12 + (issuedDate.getMonth() - sixMonthsAgo.getMonth());
+                            if (monthDiff >= 0 && monthDiff < 6) {
+                                monthlyDataByDept[record.departmentCode][monthDiff]++;
+                            }
+                        }
+                    }
+                });
+
+                const departmentColors = {
+                    'AUX': 'rgba(239, 68, 68, 1)', 'VIS': 'rgba(59, 130, 246, 1)',
+                    'SPG': 'rgba(245, 158, 11, 1)', 'ETP': 'rgba(34, 197, 94, 1)',
+                    'ABEC': 'rgba(139, 92, 246, 1)', 'FIBER': 'rgba(236, 72, 153, 1)',
+                    'RM': 'rgba(107, 114, 128, 1)'
+                };
+
+                const datasets = departments.map(dept => ({
+                    label: dept,
+                    data: monthlyDataByDept[dept],
+                    borderColor: departmentColors[dept] || 'rgba(0,0,0,1)',
+                    backgroundColor: (departmentColors[dept] || 'rgba(0,0,0,1)').replace('1)', '0.1)'),
+                    fill: true,
+                    tension: 0.3
+                }));
+
+                if (monthlyTrendChart) monthlyTrendChart.destroy();
+                monthlyTrendChart = new Chart(monthlyTrendCtx, {
+                    type: 'line',
+                    data: { labels: monthLabels, datasets: datasets },
+                    options: { plugins: { legend: { position: 'top' } } }
+                });
+
+                const deptStatusData = {};
+                records.forEach(record => {
+                    const dept = record.departmentCode;
+                    if (!dept) return;
+                    if (!deptStatusData[dept]) {
+                        deptStatusData[dept] = { Issued: 0, Responded: 0, Completed: 0 };
+                    }
+                    const status = record.followUpStatus || 'Pending Response';
+                    if (status === 'Pending Response') deptStatusData[dept].Issued++;
+                    else if (status === 'Responded') deptStatusData[dept].Responded++;
+                    else if (status === 'Completed') deptStatusData[dept].Completed++;
+                });
+
+                departmentStatusContainer.innerHTML = '';
+                Object.keys(departmentCharts).forEach(key => departmentCharts[key].destroy());
+
+                Object.keys(deptStatusData).sort().forEach(dept => {
+                    const data = deptStatusData[dept];
+                    const total = data.Issued + data.Responded + data.Completed;
+
+                    const chartWrapper = document.createElement('div');
+                    chartWrapper.innerHTML = `<h4 class="font-bold text-gray-800">${dept}</h4><canvas id="chart-${dept}"></canvas><div class="font-semibold text-sm text-gray-600 mt-1">Total: ${total}</div>`;
+                    departmentStatusContainer.appendChild(chartWrapper);
+
+                    const ctx = document.getElementById(`chart-${dept}`).getContext('2d');
+                    departmentCharts[dept] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Issued', 'Responded', 'Completed'],
+                            datasets: [{
+                                data: [data.Issued, data.Responded, data.Completed],
+                                backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(34, 197, 94, 0.7)'],
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${context.label}: ${context.raw} units`;
+                                        }
+                                    }
+                                },
+                                datalabels: {
+                                    formatter: (value, ctx) => {
+                                        if (value === 0) return '';
+                                        let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                        let percentage = (value * 100 / sum).toFixed(0) + "%";
+                                        return percentage;
+                                    },
+                                    color: '#fff',
+                                    font: { weight: 'bold' }
+                                }
+                            }
+                        }
+                    });
+                });
+            };
+
+            const populateAndShowSidebar = (record) => {
+                const status = record.followUpStatus || 'Issued';
+                const issuedAt = record.findingDateTime ? new Date(record.findingDateTime).toLocaleString('th-TH') : 'N/A';
+                let contentHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-1">NCF: ${record.ncfNumber}</h2><p class="text-sm text-gray-500 mb-6">Issued on: ${issuedAt}</p>`;
+                contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 1: Description</h3><div class="grid grid-cols-2 gap-4"><div><span class="sidebar-label">To Department</span><span class="sidebar-value">${record.to.department}</span></div><div><span class="sidebar-label">Area / Process</span><span class="sidebar-value">${record.part1.areaProcess}</span></div><div class="col-span-2"><span class="sidebar-label">Details</span><p class="sidebar-value" style="white-space: pre-wrap;">${record.part1.details}</p></div><div><span class="sidebar-label">Issuer</span><span class="sidebar-value">${record.part1.issuer}</span></div></div></div>`;
+                contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 2: Response</h3>`;
+                if (status === 'Issued') {
+                    contentHTML += `<form id="responseForm" class="space-y-4"><div><label for="containmentAction" class="sidebar-label">Containment Action:</label><textarea id="containmentAction" rows="3" class="sidebar-input border p-2"></textarea></div><div><label for="rootCause" class="sidebar-label">Root Cause:</label><textarea id="rootCause" rows="3" class="sidebar-input border p-2"></textarea></div><div><label for="correctiveAction" class="sidebar-label">Corrective Action:</label><textarea id="correctiveAction" rows="3" class="sidebar-input border p-2"></textarea></div><div><label for="responderName" class="sidebar-label">Responder Name:</label><input type="text" id="responderName" class="sidebar-input border p-2"></div></form>`;
+                } else {
+                    const part2 = record.part2 || {};
+                    const respondedAt = part2.respondedAt ? new Date(part2.respondedAt.toDate()).toLocaleString('th-TH') : 'N/A';
+                    contentHTML += `<div class="space-y-4"><div><span class="sidebar-label">Containment Action</span><p class="sidebar-value">${part2.containmentAction || 'N/A'}</p></div><div><span class="sidebar-label">Root Cause</span><p class="sidebar-value">${part2.rootCause || 'N/A'}</p></div><div><span class="sidebar-label">Corrective Action</span><p class="sidebar-value">${part2.correctiveAction || 'N/A'}</p></div><div class="grid grid-cols-2 gap-4"><div><span class="sidebar-label">Responder Name</span><span class="sidebar-value">${part2.responder || 'N/A'}</span></div><div><span class="sidebar-label">Responded At</span><span class="sidebar-value">${respondedAt}</span></div></div></div>`;
+                }
+                contentHTML += `</div>`;
+                if (status !== 'Issued') {
+                    contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 3: Follow Up</h3>`;
+                    if (status === 'Responded') {
+                        contentHTML += `<form id="closeForm" class="space-y-4"><div><span class="sidebar-label">Verification Result:</span><div class="flex gap-4 mt-2"><label><input type="radio" name="followUpResult" value="Satisfaction" required> Satisfaction</label><label><input type="radio" name="followUpResult" value="Unsatisfaction"> Unsatisfaction</label></div></div><div><label for="closingIssuer" class="sidebar-label">Verified By:</label><input type="text" id="closingIssuer" class="sidebar-input border p-2"></div></form>`;
+                    } else {
+                        const part3 = record.part3 || {};
+                        const completedAt = part3.completedAt ? new Date(part3.completedAt.toDate()).toLocaleString('th-TH') : 'N/A';
+                        contentHTML += `<div class="space-y-4"><div class="grid grid-cols-2 gap-4"><div><span class="sidebar-label">Verification Result</span><p class="sidebar-value">${part3.followUpResult || 'N/A'}</p></div><div><span class="sidebar-label">Verified By</span><p class="sidebar-value">${part3.closingIssuerSign || 'N/A'}</p></div></div><div><span class="sidebar-label">Completed At</span><p class="sidebar-value">${completedAt}</p></div></div>`;
+                    }
+                    contentHTML += `</div>`;
+                }
+                contentHTML += `<div id="sidebarActions" class="mt-8 text-right space-x-2">`;
+                if (status === 'Issued') {
+                    contentHTML += `<button id="submitResponseBtn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Submit Response</button>`;
+                } else if (status === 'Responded') {
+                    contentHTML += `<button id="submitCloseBtn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Mark as Completed & Close</button>`;
+                } else {
+                    contentHTML += `<span class="text-green-700 font-bold">This NCF has been closed.</span>`;
+                }
+                contentHTML += `</div>`;
+                sidebarContent.innerHTML = contentHTML;
+                detailsSidebar.classList.add('open');
+            };
+
+            detailsSidebar.addEventListener('click', async (e) => {
+                if (e.target.id === 'submitResponseBtn') {
+                    const btn = e.target;
+                    btn.disabled = true;
+                    btn.textContent = 'Submitting...';
+                    try {
+                        await db.collection("non_conformance_records").doc(currentRecord.id).update({
+                            'part2.containmentAction': document.getElementById('containmentAction').value,
+                            'part2.rootCause': document.getElementById('rootCause').value,
+                            'part2.correctiveAction': document.getElementById('correctiveAction').value,
+                            'part2.responder': document.getElementById('responderName').value,
+                            'part2.respondedAt': firebase.firestore.FieldValue.serverTimestamp(),
+                            followUpStatus: 'Responded'
+                        });
+                        detailsSidebar.classList.remove('open');
+                    } catch (error) {
+                        console.error("Error submitting response: ", error);
+                        alert("Failed to submit response.");
+                        btn.disabled = false;
+                        btn.textContent = 'Submit Response';
+                    }
+                }
+                if (e.target.id === 'submitCloseBtn') {
+                    const btn = e.target;
+                    btn.disabled = true;
+                    btn.textContent = 'Closing...';
+                    try {
+                        await db.collection("non_conformance_records").doc(currentRecord.id).update({
+                            'part3.followUpResult': document.querySelector('input[name="followUpResult"]:checked').value,
+                            'part3.closingIssuerSign': document.getElementById('closingIssuer').value,
+                            'part3.completedAt': firebase.firestore.FieldValue.serverTimestamp(),
+                            followUpStatus: 'Completed'
+                        });
+                        detailsSidebar.classList.remove('open');
+                    } catch (error) {
+                        console.error("Error closing NCF: ", error);
+                        alert("Failed to close NCF.");
+                        btn.disabled = false;
+                        btn.textContent = 'Mark as Completed & Close';
+                    }
+                }
+            });
+
+            // --- Initial Calls & Event Listeners ---
+            fetchRecords();
+            searchInput.addEventListener('input', applyFiltersAndRender);
+            filterDepartment.addEventListener('change', applyFiltersAndRender);
+            filterStatus.addEventListener('change', applyFiltersAndRender);
+            closeSidebarBtn.addEventListener('click', () => detailsSidebar.classList.remove('open'));
+        });
+    </script>
+</body>
+</html>

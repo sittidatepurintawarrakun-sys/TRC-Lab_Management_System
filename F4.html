@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Nonconformance Form (F4)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .form-label { font-weight: 600; color: #374151; }
+        .auto-field { background-color: #f3f4f6; color: #4b5563; border: 1px dashed #d1d5db; padding: 0.5rem; border-radius: 0.375rem; min-height: 2.5rem; display: inline-block; }
+    </style>
+</head>
+    <body class="bg-gray-50">
+
+    <div class="container mx-auto p-8">
+
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">สร้างเอกสาร Nonconformance (F4)</h1>
+
+            <a href="index.html" 
+               class="bg-white text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 transition duration-300">
+                &#8592; Back to Dashboard
+            </a>
+        </div>
+
+        <form id="ncfForm" class="bg-white p-8 rounded-lg shadow-lg space-y-8">
+
+            <div>
+                <label for="toDepartmentSelector" class="form-label text-lg">1. เลือกแผนกที่ต้องการแจ้ง (To Department):</label>
+                <select id="toDepartmentSelector" class="mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-base p-3">
+                    <option value="">-- กรุณาเลือก --</option>
+                    <option value="AUX">Auxiliary</option>
+                    <option value="VIS">Viscose</option>
+                    <option value="SPG">Spinning</option>
+                    <option value="ETP">ETP&WTP</option>
+                    <option value="ABEC">ABEC</option>
+                    <option value="FIBER">FIBER</option>
+                    <option value="RM">Raw Material</option>
+                </select>
+            </div>
+
+            <fieldset class="border p-4 rounded-md">
+                <legend class="text-lg font-semibold text-gray-600 px-2">Header Information (ข้อมูลอัตโนมัติ)</legend>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm items-center">
+                    <div><strong>To:</strong> <span id="autoTo" class="auto-field">N/A</span></div>
+                    <div><strong>From:</strong> <span id="autoFrom" class="auto-field">LABORATORY D.H.</span></div>
+                    <div><strong>Department:</strong> <span id="autoToDept" class="auto-field">N/A</span></div>
+                    <div><strong>Department:</strong> <span id="autoFromDept" class="auto-field">Laboratory</span></div>
+                    <div><strong>Section:</strong> <span id="autoToSection" class="auto-field">N/A</span></div>
+                    <div><strong>Section:</strong> <span id="autoFromSection" class="auto-field">N/A</span></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="border p-4 rounded-md">
+                <legend class="text-lg font-semibold text-gray-600 px-2">Part 1: Description of Nonconformance</legend>
+                <div class="space-y-6">
+
+                    <div>
+                        <label class="form-label">Type of NC:</label>
+                        <div class="mt-2 space-x-4">
+                            <label><input type="radio" name="ncType" value="Actual" class="focus:ring-indigo-500" required> Actual</label>
+                            <label><input type="radio" name="ncType" value="Potential" class="focus:ring-indigo-500"> Potential</label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Nonconformance is related to:</label>
+                        <div class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <label><input type="checkbox" name="ncRelated" value="Incoming product"> Incoming product</label>
+                            <label><input type="checkbox" name="ncRelated" value="In-process product"> In-process product</label>
+                            <label><input type="checkbox" name="ncRelated" value="Finished or By product"> Finished or By product</label>
+                            <label><input type="checkbox" name="ncRelated" value="Process parameter/condition"> Process parameter/condition</label>
+                            <label><input type="checkbox" name="ncRelated" value="Legal / requirement"> Legal / requirement</label>
+                            <label><input type="checkbox" name="ncRelated" value="Unsafe act/con. or illness"> Unsafe act/con. or illness</label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="areaProcess" class="form-label">Area / Process:</label>
+                        <select id="areaProcess" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" disabled required>
+                            <option value="">-- โปรดเลือกแผนกก่อน --</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="details" class="form-label">Detail:</label>
+                        <textarea id="details" rows="4" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required></textarea>
+                    </div>
+
+                     <div>
+                        <label for="issuer" class="form-label">Issuer:</label>
+                        <input type="text" id="issuer" placeholder="ชื่อผู้บันทึก" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="text-right">
+                <button type="submit" id="submitButton" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition duration-300 text-lg">
+                    Issue NCF
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // ===================================================================================
+        // JAVASCRIPT SECTION (ส่วนนี้ไม่ต้องแก้ไข เหมือนเดิมทุกอย่าง)
+        // ===================================================================================
+
+        // ***** ใส่ Firebase Config ของคุณที่นี่ *****
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.firebasestorage.app",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ***** ✅ จุดแก้ไข: เพิ่มโค้ดบรรทัดนี้เข้ามา *****
+        // บังคับให้ใช้ Long Polling เพื่อแก้ปัญหา Firewall ในเครือข่ายบริษัท
+        db.settings({ experimentalForceLongPolling: true });
+
+// ===================================================================================
+// ***** จุดที่ 1: ตั้งค่าข้อมูลแผนก *****
+// แก้ไข/เพิ่มเติมข้อมูลของแต่ละแผนกได้ที่นี่
+// Key (เช่น 'VIS') ต้องตรงกับ value ใน <option> ของ HTML ด้านบน
+// ===================================================================================
+const departmentDetails = {
+    'VIS': { dh: 'VISCOSE D.H.', dept: 'VISCOSE', section: 'PROCESS CONTROL' },
+    'SPG': { dh: 'SPINNING D.H.', dept: 'SPINNING', section: 'PROCESS CONTROL' },
+    'AUX': { dh: 'AUXILIARY D.H.', dept: 'AUXILIARY', section: 'PROCESS CONTROL' },
+    'ETP': { dh: 'ETP&WTP D.H.', dept: 'ETP&WTP', section: 'PROCESS CONTROL' },
+    'ABEC': { dh: 'ABEC D.H.', dept: 'ABEC', section: 'PROCESS CONTROL' },
+    'FIBER': { dh: 'SPINNING D.H.', dept: 'SPINNING', section: 'PROCESS CONTROL' },
+    'RM': { dh: 'PURCHASE D.H.', dept: 'PURCHASE', section: 'INCOMING PRODUCT' }
+};
+
+        // ===================================================================================
+        // ***** จุดที่ 2: ตั้งค่า Area/Process ของแต่ละแผนก *****
+        // แก้ไข Key ให้ตรงกับ value ใน HTML dropdown
+        // ===================================================================================
+        const areaProcessLists = {
+            'VIS': [ // <--- แก้จาก 'Viscose'
+                'Steep Lye',
+                'Strong Lye',
+                'Mat Drum Exit',
+                'Viscose Dissolver',
+                'Viscose Receiving',
+                'Viscose Machine',
+                'Drain',
+                'Fibre',
+                'CS2 Viscose'
+            ],
+            'AUX': [ // <--- แก้จาก 'Aux'
+                'Spin Bath',
+                'NFL',
+                'Glauber Salt',
+                'Intermediate',
+                'Dry End',
+                'Sodium Sulphate',
+                'Drain'
+            ],
+            'SPG': [ // <--- แก้จาก 'Spinning'
+                'Hot Stretch Bath',
+                'Desulp Bath',
+                'Bleach Bath',
+                'Soft Finish Bath',
+                'Drain',
+                'Sumpzone',
+                'NaOH in Bleach Bath',
+                'Return Spin Bath'
+            ],
+            'ABEC': [
+                'Acid Plant',
+                'Boiler',
+                'CAP',
+                'Water Treatment'
+            ],
+            'RM': [
+                'Pulp',
+                'Coal',
+                'Caustic Soda',
+                'Sulphur',
+                'Soda Ash',
+                'Sodium Hypochlorite',
+                'H2O2',
+                'Poly Aluminium Chloride',
+                'Hydrated Lime',
+                'CS2',
+                'Stokomin',
+                'Bag PP',
+                'Roll, Vertical',
+                'Roll, Horizontal'
+            ],
+            'FIBER': [ // <--- แก้จาก 'Fibre'
+                'MC2',
+                'MC3',
+                'MC4',
+                'MC5 Grey',
+                'MC5 NW',
+                'MC6 Grey',
+                'MC6 NW'
+            ],
+            'ETP': [ // เพิ่ม ETP ที่ขาดไป
+                'ETP Process',
+                'WTP Process'
+            ]
+        };
+
+// ===================================================================================
+// ***** จุดที่ 3: ตั้งค่าเลข RUNNING NUMBER เริ่มต้น (สำคัญมาก!) *****
+// ให้ใส่ "เลขล่าสุด" ของแต่ละแผนกจากระบบ Excel ของคุณที่นี่
+// เช่น ถ้าใน Excel แผนก VIS ล่าสุดคือ 25-VIS-10999 ให้ใส่ 10999
+// เมื่อสร้าง NC ของ VIS ครั้งแรกในเว็บ ระบบจะใช้เลข 11000
+// ===================================================================================
+const departmentStartNumbers = {
+    'VIS': 10999,
+    'SPG': 8761,
+    'AUX': 1234,
+    'ETP': 0, // ใส่เลขล่าสุด หรือ 0 ถ้ายังไม่มี
+    'ABEC': 0,
+    'FIBER': 0,
+    'RM': 0
+};
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const departmentSelector = document.getElementById('toDepartmentSelector');
+    const areaProcessDropdown = document.getElementById('areaProcess');
+    const ncfForm = document.getElementById('ncfForm');
+
+    // --- ส่วนจัดการ Logic ของฟอร์มแบบ Dynamic ---
+    // เมื่อมีการเลือกแผนก ฟังก์ชันนี้จะทำงาน
+    departmentSelector.addEventListener('change', () => {
+        const selectedDeptCode = departmentSelector.value;
+        const details = departmentDetails[selectedDeptCode];
+
+        // อัปเดตข้อมูลอัตโนมัติในส่วน Header
+        if (details) {
+            document.getElementById('autoTo').textContent = details.dh;
+            document.getElementById('autoToDept').textContent = details.dept;
+            document.getElementById('autoToSection').textContent = details.section;
+            document.getElementById('autoFromSection').textContent = details.section;
+            
+            // อัปเดตรายการใน Dropdown 'Area Process'
+            areaProcessDropdown.disabled = false;
+            areaProcessDropdown.innerHTML = '<option value="">-- เลือก Area/Process --</option>';
+            const areas = areaProcessLists[selectedDeptCode] || [];
+            areas.forEach(area => {
+                const option = document.createElement('option');
+                option.value = area;
+                option.textContent = area;
+                areaProcessDropdown.appendChild(option);
+            });
+        } else {
+            // กรณีไม่ได้เลือก ให้ Reset ฟอร์ม
+            document.getElementById('autoTo').textContent = 'N/A';
+            document.getElementById('autoToDept').textContent = 'N/A';
+            document.getElementById('autoToSection').textContent = 'N/A';
+            document.getElementById('autoFromSection').textContent = 'N/A';
+            areaProcessDropdown.disabled = true;
+            areaProcessDropdown.innerHTML = '<option value="">-- โปรดเลือกแผนกก่อน --</option>';
+        }
+    });
+
+    // --- ส่วนจัดการการบันทึกข้อมูล (Form Submission) ---
+    ncfForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Issuing...';
+
+        try {
+            const deptCode = departmentSelector.value;
+            if (!deptCode) {
+                alert('กรุณาเลือกแผนกที่ต้องการแจ้ง');
+                throw new Error("Department not selected");
+            }
+            
+            // --- ส่วนสร้าง NCF Number อัตโนมัติ (แก้ไขใหม่) ---
+            const year = new Date().getFullYear().toString().slice(-2);
+            
+            // 1. ค้นหาเอกสารล่าสุดของแผนกนี้ใน Firebase
+            const query = db.collection('non_conformance_records')
+                            .where('departmentCode', '==', deptCode)
+                            .orderBy('createdAt', 'desc')
+                            .limit(1);
+            const snapshot = await query.get();
+            
+            let newItemNumber;
+            if (snapshot.empty) {
+                // 2. ถ้าไม่เจอใน Firebase เลย ให้ใช้เลขจากที่เราตั้งค่าไว้ + 1
+                newItemNumber = (departmentStartNumbers[deptCode] || 0) + 1;
+            } else {
+                // 3. ถ้าเจอใน Firebase ให้ใช้เลขล่าสุด + 1
+                const lastRecord = snapshot.docs[0].data();
+                newItemNumber = (lastRecord.itemNumber || 0) + 1;
+            }
+            const ncfNumber = `${year}-${deptCode}-${newItemNumber}`;
+            
+            // --- ส่วนรวบรวมข้อมูลจากฟอร์ม ---
+            const ncRelated = Array.from(document.querySelectorAll('input[name="ncRelated"]:checked')).map(el => el.value);
+            
+            const recordData = {
+                ncfNumber: ncfNumber,
+                itemNumber: newItemNumber,
+                departmentCode: deptCode,
+                documentDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+                findingDateTime: new Date().toISOString(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                issueStatus: "Issued",
+                followUpStatus: "Pending Response",
+                to: {
+                    dh: departmentDetails[deptCode].dh,
+                    department: departmentDetails[deptCode].dept,
+                    section: departmentDetails[deptCode].section,
+                },
+                from: {
+                    dh: "LABORATORY D.H.",
+                    department: "LABORATORY",
+                    section: departmentDetails[deptCode].section,
+                },
+                part1: {
+                    ncType: document.querySelector('input[name="ncType"]:checked')?.value || '',
+                    ncRelatedTo: ncRelated,
+                    areaProcess: document.getElementById('areaProcess').value,
+                    details: document.getElementById('details').value,
+                    issuer: document.getElementById('issuer').value,
+                    receiver: "",
+                }
+            };
+
+            await db.collection("non_conformance_records").add(recordData);
+            alert(`NCF Document (${ncfNumber}) has been issued successfully!`);
+            ncfForm.reset();
+            departmentSelector.value = '';
+            departmentSelector.dispatchEvent(new Event('change'));
+
+        } catch (error) {
+            console.error("Error issuing NCF: ", error);
+            alert("Failed to issue NCF. Please check console for details.");
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Issue NCF';
+        }
+    });
+});
+
+</script>
+
+</body>
+</html>

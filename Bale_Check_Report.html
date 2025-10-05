@@ -9,25 +9,20 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.tailwindcss.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.tailwindcss.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
         .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
@@ -38,10 +33,8 @@
         .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
         .btn-secondary { background-color: #64748b; color: white; }
         .btn-secondary:hover:not(:disabled) { background-color: #475569; }
-        .table-wrapper { max-height: none; }
         th { position: sticky; top: 0; background-color: #f1f5f9; z-index: 10; }
         .thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 0.5rem; }
-        .action-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; }
         .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { margin-bottom: 1rem; }
         .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { padding-top: 1rem; font-size: 0.875rem; }
         .dataTables_wrapper .dataTables_filter input { width: 250px !important; margin-left: 0.5rem; }
@@ -49,404 +42,414 @@
         thead .filter-row input, thead .filter-row select { width: 100%; }
         .prose h3 { font-size: 1.1em; margin-top: 1em; margin-bottom: 0.5em; }
         .prose ul { list-style-type: disc; padding-left: 1.5em; }
+        .prose p { margin: 0.5em 0; }
+        #close-copilot-btn { font-size: 2rem; line-height: 1; }
+        #copilot-content { word-wrap: break-word; }
+        .user-question p:first-child, .ai-answer p:first-child { margin-top: 0; }
     </style>
 </head>
 <body class="antialiased">
-
-<div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
-    <div class="max-w-7xl mx-auto">
-        <div class="mb-6">
-            <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
-                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-            </a>
-        </div>
-        <header class="mb-8 flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-chart-pie text-blue-700"></i> Bale Checking Report</h1>
-            <div id="auth-container">
-                <div id="user-info" class="hidden items-center gap-4">
-                    <span id="user-email" class="text-slate-600 text-sm"></span>
-                    <button id="logout-btn" class="btn btn-primary text-sm">Logout</button>
+    <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-6">
+                <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+            <header class="mb-8 flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-chart-pie text-blue-700"></i> Bale Checking Report</h1>
+                <div id="auth-container">
+                    <div id="user-info" class="hidden items-center gap-4">
+                        <span id="user-email" class="text-slate-600 text-sm"></span>
+                        <button id="logout-btn" class="btn btn-primary text-sm">Logout</button>
+                    </div>
+                    <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
                 </div>
-                <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
-            </div>
-        </header>
+            </header>
 
-        <div class="card p-6 mb-8 hidden" id="gemini-card">
-            <div class="flex items-center gap-3 mb-4">
-                <i class="fas fa-sparkles text-2xl text-purple-500"></i>
-                <h2 class="text-xl font-bold text-slate-800">AI-Powered Insights</h2>
-            </div>
-            <div id="gemini-insights-content" class="text-slate-600 prose prose-sm max-w-none"></div>
-            <div id="chat-container" class="mt-6 border-t pt-4 hidden">
-                <h3 class="font-semibold text-slate-700 mb-2">Ask a follow-up question:</h3>
-                <div class="flex gap-2">
-                    <input type="text" id="chat-input" placeholder="e.g., Which customer has the most issues?" class="form-input flex-grow">
-                    <button id="chat-submit-btn" class="btn btn-secondary">Send</button>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="card p-6 h-96 flex flex-col">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Total Issues</h2>
+                    <div class="relative flex-grow"><canvas id="totalIssuesChart"></canvas></div>
                 </div>
-                <div id="chat-response" class="mt-4 text-slate-600 prose prose-sm max-w-none"></div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-             <div class="card p-6 h-96 flex flex-col">
-                <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Total Issues</h2>
-                <div class="relative flex-grow"><canvas id="totalIssuesChart"></canvas></div>
-            </div>
-            <div class="card p-6 h-96 flex flex-col">
-                <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Spinning Dept. Issues</h2>
-                <div class="relative flex-grow"><canvas id="spinningIssuesChart"></canvas></div>
-            </div>
-            <div class="card p-6 h-96 flex flex-col">
-                <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Warehouse Dept. Issues</h2>
-                 <div class="relative flex-grow"><canvas id="warehouseIssuesChart"></canvas></div>
-            </div>
-        </div>
-
-        <div class="card p-6 overflow-x-auto">
-             <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                <div class="flex items-center">
-                    <h2 class="text-xl font-bold text-slate-800">All Records</h2>
-                    <button id="analyze-btn" class="btn btn-primary ml-4">
-                        <i class="fas fa-sparkles"></i> Analyze with AI
-                    </button>
+                <div class="card p-6 h-96 flex flex-col">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Spinning Dept. Issues</h2>
+                    <div class="relative flex-grow"><canvas id="spinningIssuesChart"></canvas></div>
                 </div>
-                 <div class="flex items-center gap-4">
-                    <div class="font-semibold text-slate-700 text-sm">Export by date range:</div>
-                    <input type="date" id="exportStartDate" class="form-input" style="width: 160px;">
-                    <input type="date" id="exportEndDate" class="form-input" style="width: 160px;">
-                    <button id="clearFiltersBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear All Filters</button>
-                    <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel"></i> Export Excel</button>
-                    <button id="exportPdf" class="btn btn-primary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                <div class="card p-6 h-96 flex flex-col">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Warehouse Dept. Issues</h2>
+                    <div class="relative flex-grow"><canvas id="warehouseIssuesChart"></canvas></div>
                 </div>
             </div>
-            <div id="loadingIndicator" class="text-center py-8">Loading data...</div>
-            <div class="table-wrapper hidden" id="table-container">
-                <table class="w-full text-sm text-left text-slate-500" id="recordsTable">
-                    <thead class="text-xs text-slate-700 uppercase bg-slate-100">
-                        <tr>
-                            <th class="px-6 py-3">Inspection Date</th>
-                            <th class="px-6 py-3">Department</th>
-                            <th class="px-6 py-3">Photo Ref</th>
-                            <th class="px-6 py-3">Customer</th>
-                            <th class="px-6 py-3">Bale No.</th>
-                            <th class="px-6 py-3">Checked By</th>
-                            <th class="px-6 py-3">Issue Problem</th>
-                            <th class="px-6 py-3">Notes</th>
-                            <th class="px-6 py-3">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+
+            <div class="card p-6 overflow-x-auto">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <div class="flex items-center">
+                        <h2 class="text-xl font-bold text-slate-800">All Records</h2>
+                        <button id="analyze-btn" class="btn btn-primary ml-4">
+                            <i class="fas fa-sparkles"></i> Analyze with AI
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="font-semibold text-slate-700 text-sm">Export by date range:</div>
+                        <input type="date" id="exportStartDate" class="form-input" style="width: 160px;">
+                        <input type="date" id="exportEndDate" class="form-input" style="width: 160px;">
+                        <button id="clearFiltersBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear All Filters</button>
+                        <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel"></i> Export Excel</button>
+                        <button id="exportPdf" class="btn btn-primary"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                    </div>
+                </div>
+                <div id="loadingIndicator" class="text-center py-8">Loading data...</div>
+                <div class="table-wrapper hidden" id="table-container">
+                    <table class="w-full text-sm text-left text-slate-500" id="recordsTable">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                            <tr>
+                                <th class="px-6 py-3">Inspection Date</th>
+                                <th class="px-6 py-3">Department</th>
+                                <th class="px-6 py-3">Photo Ref</th>
+                                <th class="px-6 py-3">Customer</th>
+                                <th class="px-6 py-3">Bale No.</th>
+                                <th class="px-6 py-3">Checked By</th>
+                                <th class="px-6 py-3">Issue Problem</th>
+                                <th class="px-6 py-3">Notes</th>
+                                <th class="px-6 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    <button id="copilot-btn" class="fixed bottom-8 right-8 bg-purple-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-2xl z-40 hover:bg-purple-700 transition-transform transform hover:scale-110">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+    </button>
+    
+    <div id="copilot-sidebar" class="fixed top-0 right-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out translate-x-full">
+        <div class="flex flex-col h-full">
+            <header class="p-4 border-b flex justify-between items-center bg-slate-50 flex-shrink-0">
+                <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i> AI Analysis</h2>
+                <button id="close-copilot-btn" class="text-slate-500 hover:text-slate-800">&times;</button>
+            </header>
+            
+            <div id="copilot-content" class="flex-grow p-4 overflow-y-auto prose prose-sm max-w-none">
+                <div class="text-center text-slate-500">
+                    <p>Click "Analyze with AI" on the main page to get insights, or ask me a question below.</p>
+                </div>
+            </div>
+
+            <footer class="p-4 border-t bg-slate-50 flex-shrink-0">
+                <div class="flex gap-2">
+                    <input type="text" id="copilot-chat-input" placeholder="Ask a follow-up question..." class="form-input flex-grow">
+                    <button id="copilot-chat-submit-btn" class="btn btn-secondary">Send</button>
+                </div>
+            </footer>
+        </div>
+    </div>
 
 <script>
-// *** ประกาศ GEMINI_API_KEY ก่อน $(document).ready() ***
-const GEMINI_API_KEY = "AIzaSyBSwjq_-voEyaMHHz0boCWlcsx5dVChc-Y";
-
-$(document).ready(function() {
-    // --- Firebase Configuration ---
-    const mainFirebaseConfig = {
-        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-        authDomain: "lab-trc-management-system.firebaseapp.com",
-        projectId: "lab-trc-management-system",
-        storageBucket: "lab-trc-management-system.firebasestorage.app",
-        messagingSenderId: "43919979160",
-        appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-    };
-    const photoFirebaseConfig = {
-        apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
-        authDomain: "trc-photo-data.firebaseapp.com",
-        projectId: "trc-photo-data",
-        storageBucket: "trc-photo-data.firebasestorage.app",
-        messagingSenderId: "656245706360",
-        appId: "1:656245706360:web:6de7bd9d296158bc57678d"
-    };
-
-    const mainApp = firebase.initializeApp(mainFirebaseConfig);
-    const photoApp = firebase.initializeApp(photoFirebaseConfig, 'photoStorageApp');
-    const db = mainApp.firestore();
-    const storage = photoApp.storage();
-    const auth = mainApp.auth();
-    db.settings({ experimentalForceLongPolling: true });
-
-    const loadingIndicator = $('#loadingIndicator');
-    const tableContainer = $('#table-container');
-    const loginPromptBtn = $('#login-prompt-btn');
-    const logoutBtn = $('#logout-btn');
-    const userInfoDiv = $('#user-info');
-    const userEmailSpan = $('#user-email');
-    const exportStartDateInput = document.getElementById('exportStartDate');
-    const exportEndDateInput = document.getElementById('exportEndDate');
-    const clearFiltersBtn = $('#clearFiltersBtn');
-    const adminEmail = "sittidate.p@adityabirla.com";
-    let currentUser = null;
-    let recordsTable;
-
-    Chart.register(ChartDataLabels);
+    const GEMINI_API_KEY = "AIzaSyBSwjq_-voEyaMHHz0boCWlcsx5dVChc-Y"; // กรุณาใช้ Key ของคุณ
     
-    $('#analyze-btn').on('click', function() {
-        const analyzeBtn = $(this);
-        $('#gemini-card').removeClass('hidden');
-        analyzeBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Analyzing...');
-        const currentTableData = recordsTable.rows({ search: 'applied' }).data().toArray();
-        if (currentTableData.length === 0) {
-            $('#gemini-insights-content').html('<p class="text-orange-500">No data in the table to analyze.</p>');
-            analyzeBtn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
-            return;
-        }
-        getGeminiInsights(currentTableData);
-    });
+    $(document).ready(function() {
+        const mainFirebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.firebasestorage.app",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        const photoFirebaseConfig = {
+            apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
+            authDomain: "trc-photo-data.firebaseapp.com",
+            projectId: "trc-photo-data",
+            storageBucket: "trc-photo-data.firebasestorage.app",
+            messagingSenderId: "656245706360",
+            appId: "1:656245706360:web:6de7bd9d296158bc57678d"
+        };
+        const mainApp = firebase.initializeApp(mainFirebaseConfig);
+        const photoApp = firebase.initializeApp(photoFirebaseConfig, 'photoStorageApp');
+        const db = mainApp.firestore();
+        const storage = photoApp.storage();
+        const auth = mainApp.auth();
+        db.settings({ experimentalForceLongPolling: true });
 
-    loginPromptBtn.on('click', () => {
-        const email = prompt("Please enter your admin email:");
-        if (email) {
-            const password = prompt("Please enter your password:");
-            if (password) {
-                auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
+        const loadingIndicator = $('#loadingIndicator');
+        const tableContainer = $('#table-container');
+        const loginPromptBtn = $('#login-prompt-btn');
+        const logoutBtn = $('#logout-btn');
+        const userInfoDiv = $('#user-info');
+        const userEmailSpan = $('#user-email');
+        const exportStartDateInput = document.getElementById('exportStartDate');
+        const exportEndDateInput = document.getElementById('exportEndDate');
+        const clearFiltersBtn = $('#clearFiltersBtn');
+        const adminEmail = "sittidate.p@adityabirla.com";
+        let currentUser = null;
+        let recordsTable;
+        Chart.register(ChartDataLabels);
+        
+        const copilotBtn = $('#copilot-btn');
+        const copilotSidebar = $('#copilot-sidebar');
+        const closeCopilotBtn = $('#close-copilot-btn');
+        const copilotContent = $('#copilot-content');
+        const copilotChatInput = $('#copilot-chat-input');
+        const copilotChatSubmitBtn = $('#copilot-chat-submit-btn');
+
+        // FIXED: Use toggleClass with a class that handles transform
+        copilotBtn.on('click', () => copilotSidebar.toggleClass('translate-x-full'));
+        closeCopilotBtn.on('click', () => copilotSidebar.addClass('translate-x-full'));
+
+        $('#analyze-btn').on('click', function() {
+            const analyzeBtn = $(this);
+            copilotSidebar.removeClass('translate-x-full');
+            analyzeBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Analyzing...');
+            
+            const currentTableData = recordsTable.rows({ search: 'applied' }).data().toArray();
+            if (currentTableData.length === 0) {
+                copilotContent.html('<p class="text-orange-500">No data in the table to analyze.</p>');
+                analyzeBtn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                return;
             }
-        }
-    });
-    logoutBtn.on('click', () => auth.signOut());
-    auth.onAuthStateChanged(user => {
-        currentUser = user;
-        if (user) {
-            loginPromptBtn.hide();
-            userInfoDiv.show().css('display', 'flex');
-            userEmailSpan.text(user.email);
-        } else {
-            loginPromptBtn.show();
-            userInfoDiv.hide();
-        }
-        if (recordsTable) {
-            const isAdmin = currentUser && currentUser.email.toLowerCase() === adminEmail.toLowerCase();
-            recordsTable.column(8).visible(isAdmin);
-        }
-    });
-    
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day}/${month}/${year}, ${hours}:${minutes}`;
-    };
+            getGeminiInsights(currentTableData, analyzeBtn);
+        });
 
-    // *** ฟังก์ชัน getGeminiInsights ที่แก้ไขแล้ว ***
-    const getGeminiInsights = async (records) => {
-        const insightContainer = $('#gemini-insights-content');
-        const analyzeBtn = $('#analyze-btn');
-        const chatContainer = $('#chat-container');
+        loginPromptBtn.on('click', () => {
+            const email = prompt("Please enter your admin email:");
+            if (email) {
+                const password = prompt("Please enter your password:");
+                if (password) {
+                    auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
+                }
+            }
+        });
+        logoutBtn.on('click', () => auth.signOut());
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            if (user) {
+                loginPromptBtn.hide();
+                userInfoDiv.show().css('display', 'flex');
+                userEmailSpan.text(user.email);
+            } else {
+                loginPromptBtn.show();
+                userInfoDiv.hide();
+            }
+            if (recordsTable) {
+                const isAdmin = currentUser && currentUser.email.toLowerCase() === adminEmail.toLowerCase();
+                recordsTable.column(8).visible(isAdmin);
+            }
+        });
 
-        insightContainer.html('<p>✨ Analyzing data... Please wait a moment.</p>');
-        chatContainer.addClass('hidden');
+        const formatDate = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year}, ${hours}:${minutes}`;
+        };
+        
+        const getGeminiInsights = async (records, analyzeBtn) => {
+            copilotContent.html('<p class="text-center">✨ Analyzing data... Please wait a moment.</p>');
+            
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+                copilotContent.html('<p class="text-red-500">Error: Gemini API Key is missing. Please configure it in the script.</p>');
+                analyzeBtn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                return;
+            }
+            try {
+                const recordsForAnalysis = records.length > 500 ? records.slice(0, 500) : records;
+                const simplifiedRecords = recordsForAnalysis.map(({ id, photoURL, photoFileName, ...rest }) => rest);
+                
+                // --- PROMPT ฉบับปรับปรุงใหม่ ---
+                const prompt = `
+                # Role and Expertise
+                You are "Insight-AI," a world-class Data Scientist and Quality Control Expert specializing in sharp, rapid analysis of laboratory data. Your goal is to transform complex raw data into actionable summaries for busy lab managers and technicians.
 
-        if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
-            insightContainer.html('<p class="text-red-500">Error: Gemini API Key is missing. Please configure it in the script.</p>');
-            analyzeBtn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
-            return;
-        }
+                # Data Context
+                - **Data Type:** 'Bale Checking Inspection Report'
+                - **Analysis Goal:** 'To identify contamination trends, recurring issues from specific customers or departments, and detect any unusual patterns in the bale inspection process.'
+                - **Additional Key Info:** The 'issueProblem' field is the primary indicator of a quality failure. All records are currently marked as 'In Progress' for their status.
 
-        try {
-            const recordsForAnalysis = records.length > 500 ? records.slice(0, 500) : records;
-            const simplifiedRecords = recordsForAnalysis.map(({ id, photoURL, photoFileName, ...rest }) => rest);
+                # Task
+                Given the dataset below, perform a comprehensive, multi-dimensional analysis and generate a summary report covering all the following sections:
+                1.  **Executive Summary:** Summarize the most critical points in 2-3 sentences. What is the single most important takeaway?
+                2.  **Key Highlights & Insights:** Find the most interesting findings, patterns, or unexpected discoveries.
+                3.  **Anomalies & Outliers:** Identify any data points that are out of spec, unusual, or inconsistent. Specify what they are and why they are suspicious.
+                4.  **Trend Analysis:** Analyze if any specific 'issueProblem', 'customerName', or 'department' shows a significant trend.
+                5.  **Correlations & Relationships:** Analyze potential relationships. For example, 'Does a specific department have a higher rate of a particular issue type?' or 'Are certain customers associated with specific contamination problems?'
+                6.  **Priority & Actionable Recommendations:** Based on all analyses, provide a prioritized list of the top 1-3 things the team should do next, with clear, actionable steps.
 
-            const prompt = `
-                You are an expert Data Analyst for a quality control lab.
-                Analyze the following dataset from a 'Bale Checking' report, provided in JSON format. Your goal is to provide quick, scannable insights for a manager.
-                Based on the data, please provide the following in your analysis:
-                1.  **Executive Summary:** A brief, high-level overview of the data in 2-3 sentences.
-                2.  **Key Insights:** List the top 3-5 most significant findings. What stands out the most?
-                3.  **Trend Analysis:** Identify any emerging trends or patterns. For example, is a specific 'issueProblem' becoming more frequent? Is one 'customerName' associated with more issues than others?
-                4.  **Anomaly Detection:** Point out any outliers or unusual data points that might require further investigation.
-                5.  **Actionable Recommendations:** Conclude with a clear, bulleted list of suggested actions based on your analysis.
-                Format your entire response using Markdown for clear readability (headings, bold text, and bullet points).
-                Here is the data:
+                # Data for Analysis
                 \`\`\`json
                 ${JSON.stringify(simplifiedRecords, null, 2)}
                 \`\`\`
-            `;
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }]
-                })
-            });
+                # Output Format
+                Please generate the response in clean, well-structured Markdown using the following headings and emojis:
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+                ## 🔍 Executive Summary
+                [Content]
+
+                ## ✨ Key Highlights & Insights
+                - [Point 1]
+                - [Point 2]
+
+                ## ⚠️ Anomalies & Outliers
+                - [Point 1]
+                - [Point 2]
+
+                ## 📈 Trend Analysis
+                - [Point 1]
+                - [Point 2]
+
+                ## 🔗 Correlations & Relationships
+                - [Point 1]
+                - [Point 2]
+
+                ## 🎯 Priority & Actionable Recommendations
+                1.  **[Action Item Title]:** [Description and rationale]
+                2.  **[Action Item Title]:** [Description and rationale]
+                `;
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+                }
+                const data = await response.json();
+                const text = data.candidates[0].content.parts[0].text;
+                copilotContent.html(marked.parse(text));
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                copilotContent.html(`<p class="text-red-500">Sorry, the AI analysis failed. Error: ${error.message}</p>`);
+            } finally {
+                analyzeBtn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
             }
+        };
 
-            const data = await response.json();
-            const text = data.candidates[0].content.parts[0].text;
-
-            const formattedHtml = marked.parse(text);
-            insightContainer.html(formattedHtml);
-            chatContainer.removeClass('hidden');
-
-        } catch (error) {
-            console.error("Error calling Gemini API:", error);
-            insightContainer.html(`<p class="text-red-500">Sorry, the AI analysis failed. Please check the console for details. Error: ${error.message}</p>`);
-        } finally {
-            analyzeBtn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
-        }
-    };
-
-    // *** ฟังก์ชัน Chat ที่เพิ่มเข้ามา ***
-    $('#chat-submit-btn').on('click', async function() {
-        const question = $('#chat-input').val().trim();
+        copilotChatSubmitBtn.on('click', async function() {
+        const question = copilotChatInput.val().trim();
         if (!question) return;
-
         const chatBtn = $(this);
-        const chatResponse = $('#chat-response');
-
         chatBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-        chatResponse.html('<p>🤔 Thinking...</p>');
 
+        const userQuestionHtml = `<div class="user-question mb-2 border-t pt-4 mt-4"><p class="font-semibold text-slate-800">You:</p><p>${question}</p></div>`;
+        copilotContent.append(userQuestionHtml);
+        const thinkingHtmlId = `thinking-${Date.now()}`;
+        const thinkingHtml = `<div id="${thinkingHtmlId}" class="ai-answer"><p class="font-semibold text-purple-600">AI:</p><p> 🤔  Thinking...</p></div>`;
+        copilotContent.append(thinkingHtml);
+
+        copilotContent.scrollTop(copilotContent[0].scrollHeight);
+        copilotChatInput.val('');
         try {
-            const currentTableData = recordsTable.rows({ search: 'applied' }).data().toArray();
-            const simplifiedRecords = currentTableData.map(({ id, photoURL, photoFileName, ...rest }) => rest);
+                            // --- THIS IS THE FIX ---
+                            // Limit the number of records sent in the chat to prevent API errors
+                            const recordsForAnalysis = currentFilteredRecords.length > 500 ? currentFilteredRecords.slice(0, 500) : currentFilteredRecords;
+        const simplifiedRecords = recordsForAnalysis.map(({ id, ...rest }) => rest);
+        const prompt = `Based on this Nonconformance Report (NCF) data: ${JSON.stringify(simplifiedRecords, null, 2)}\nAnswer this question: ${question}\nProvide a clear, concise answer using Markdown formatting.`;
 
-            const prompt = `Based on this bale checking data: ${JSON.stringify(simplifiedRecords, null, 2)}
-
-            Answer this question: ${question}
-
-            Provide a clear, concise answer using Markdown formatting.`;
-
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
-                })
-            });
-
-            if (!response.ok) throw new Error('Chat API request failed');
-
-            const data = await response.json();
-            const text = data.candidates[0].content.parts[0].text;
-            chatResponse.html(marked.parse(text));
-            $('#chat-input').val('');
-
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        if (!response.ok) {
+                                const errorData = await response.json().catch(() => null);
+                                const errorMessage = errorData?.error?.message || response.statusText || 'Chat API request failed';
+                                throw new Error(errorMessage);
+                            }
+        const data = await response.json();
+        const text = data.candidates[0].content.parts[0].text;
+        $(`#${thinkingHtmlId}`).html(`<p class="font-semibold text-purple-600">AI:</p><div>${marked.parse(text)}</div>`);
         } catch (error) {
-            chatResponse.html(`<p class="text-red-500">Error: ${error.message}</p>`);
+        $(`#${thinkingHtmlId}`).html(`<p class="text-red-500">Error: ${error.message}</p>`);
         } finally {
-            chatBtn.prop('disabled', false).html('Send');
+        chatBtn.prop('disabled', false).html('Send');
+        copilotContent.scrollTop(copilotContent[0].scrollHeight);
         }
-    });
-
-    const fetchAndRenderData = async () => {
-        loadingIndicator.show();
-        tableContainer.hide();
-        try {
-            const snapshot = await db.collection("bale_checking_records").get();
-            let records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            const allRecords = await Promise.all(records.map(async (record) => {
-                if (record.photoFileName) {
-                    try {
-                        const photoRef = storage.ref(`bale_images/${record.photoFileName}`);
-                        record.photoURL = await photoRef.getDownloadURL();
-                    } catch (error) { record.photoURL = null; }
-                }
-                return record;
-            }));
-            updateDashboards(allRecords);
-            initializeDataTable(allRecords);
-        } catch (error) {
-            console.error("Error fetching records:", error);
-            loadingIndicator.text('Error loading data.').addClass('text-red-500');
-        } finally {
-            loadingIndicator.hide();
-            tableContainer.show();
-        }
-    };
-
-    const initializeDataTable = (data) => {
-        if (recordsTable) {
-            recordsTable.destroy();
-            $('#recordsTable thead tr.filter-row').remove();
-        }
+        });
         
-        const filterRow = $('<tr class="filter-row"></tr>').appendTo('#recordsTable thead');
-        $('#recordsTable thead tr:first-child th').each(() => filterRow.append('<th></th>'));
-
-        recordsTable = $('#recordsTable').DataTable({
-            data: data,
-            pageLength: 30,
-            order: [[0, 'desc']],
-            columns: [
-                { data: 'inspectionDate', render: (d) => formatDate(d) },
-                { data: 'department' },
-                { data: 'photoURL', orderable: false, searchable: false, render: (url) => url ? `<a href="${url}" target="_blank"><img src="${url}" class="thumbnail" alt="Bale Image"></a>` : 'No Photo' },
-                { data: 'customerName' },
-                { data: 'baleNumber' },
-                { data: 'checkedBy' },
-                { data: 'issueProblem' },
-                { data: 'notes', render: (d) => d || '' },
-                {
-                    data: null, orderable: false, searchable: false,
-                    render: (data, type, row) => `
-                        <div class="flex justify-center items-center gap-2">
-                            <button onclick="editRecord('${row.id}')" class="action-btn" title="Edit Record"><i class="fas fa-edit text-blue-500 hover:text-blue-700 fa-lg"></i></button>
-                            <button onclick="deleteRecord('${row.id}', '${row.photoFileName || ''}')" class="action-btn" title="Delete Record"><i class="fas fa-trash-alt text-red-500 hover:text-red-700 fa-lg"></i></button>
-                        </div>
-                    `
-                }
-            ],
-            columnDefs: [{
-                targets: 8,
-                visible: false,
-                width: "80px"
-            }],
-            initComplete: function () {
-                this.api().columns([1, 3, 6]).every(function (index) {
-                    const column = this;
-                    const filterCell = $(filterRow.find('th').eq(column.index()));
-                    const select = $('<select class="form-input text-xs p-1"><option value="">All</option></select>')
-                        .appendTo(filterCell)
-                        .on('change', function () {
+        const fetchAndRenderData = async () => {
+            loadingIndicator.show();
+            tableContainer.hide();
+            try {
+                const snapshot = await db.collection("bale_checking_records").get();
+                let records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const allRecords = await Promise.all(records.map(async (record) => {
+                    if (record.photoFileName) {
+                        try {
+                            const photoRef = storage.ref(`bale_images/${record.photoFileName}`);
+                            record.photoURL = await photoRef.getDownloadURL();
+                        } catch (error) { record.photoURL = null; }
+                    }
+                    return record;
+                }));
+                updateDashboards(allRecords);
+                initializeDataTable(allRecords);
+            } catch (error) {
+                console.error("Error fetching records:", error);
+                loadingIndicator.text('Error loading data.').addClass('text-red-500');
+            } finally {
+                loadingIndicator.hide();
+                tableContainer.show();
+            }
+        };
+        const initializeDataTable = (data) => {
+            if (recordsTable) {
+                recordsTable.destroy();
+                $('#recordsTable thead tr.filter-row').remove();
+            }
+            const filterRow = $('<tr class="filter-row"></tr>').appendTo('#recordsTable thead');
+            $('#recordsTable thead tr:first-child th').each(() => filterRow.append('<th></th>'));
+            recordsTable = $('#recordsTable').DataTable({
+                data: data,
+                pageLength: 30,
+                order: [[0, 'desc']],
+                columns: [
+                    { data: 'inspectionDate', render: (d) => formatDate(d) },
+                    { data: 'department' },
+                    { data: 'photoURL', orderable: false, searchable: false, render: (url) => url ? `<a href="${url}" target="_blank"><img src="${url}" class="thumbnail" alt="Bale Image"></a>` : 'No Photo' },
+                    { data: 'customerName' },
+                    { data: 'baleNumber' },
+                    { data: 'checkedBy' },
+                    { data: 'issueProblem' },
+                    { data: 'notes', render: (d) => d || '' },
+                    { data: null, orderable: false, searchable: false, render: (data, type, row) => `<div class="flex justify-center items-center gap-2"><button onclick="editRecord('${row.id}')" class="action-btn" title="Edit Record"><i class="fas fa-edit text-blue-500 hover:text-blue-700 fa-lg"></i></button><button onclick="deleteRecord('${row.id}', '${row.photoFileName || ''}')" class="action-btn" title="Delete Record"><i class="fas fa-trash-alt text-red-500 hover:text-red-700 fa-lg"></i></button></div>` }
+                ],
+                columnDefs: [{ targets: 8, visible: false, width: "80px" }],
+                initComplete: function () {
+                    this.api().columns([1, 3, 6]).every(function (index) {
+                        const column = this;
+                        const filterCell = $(filterRow.find('th').eq(column.index()));
+                        const select = $('<select class="form-input text-xs p-1"><option value="">All</option></select>').appendTo(filterCell).on('change', function () {
                             const val = $.fn.dataTable.util.escapeRegex($(this).val());
                             column.search(val ? '^' + val + '$' : '', true, false).draw();
                         });
-                    column.data().unique().sort().each((d) => {
-                        if(d) select.append('<option value="' + d + '">' + d + '</option>')
+                        column.data().unique().sort().each((d) => {
+                            if(d) select.append('<option value="' + d + '">' + d + '</option>')
+                        });
                     });
-                });
-            }
-        });
-        const isAdmin = currentUser && currentUser.email.toLowerCase() === adminEmail.toLowerCase();
-        recordsTable.column(8).visible(isAdmin);
-    };
-
-    window.editRecord = (recordId) => {
-        window.location.href = `Bale_Checking.html?id=${recordId}`;
-    };
-    window.deleteRecord = (recordId, photoFileName) => {
-        if (!confirm(`Are you sure you want to delete this record?\nID: ${recordId}`)) return;
-        const deleteFirestoreRecord = () => db.collection("bale_checking_records").doc(recordId).delete();
-        if (photoFileName) {
-            const photoRef = storage.ref(`bale_images/${photoFileName}`);
-            photoRef.delete()
-                .then(() => deleteFirestoreRecord())
-                .then(() => {
+                }
+            });
+            const isAdmin = currentUser && currentUser.email.toLowerCase() === adminEmail.toLowerCase();
+            recordsTable.column(8).visible(isAdmin);
+        };
+        window.editRecord = (recordId) => { window.location.href = `Bale_Checking.html?id=${recordId}`; };
+        window.deleteRecord = (recordId, photoFileName) => {
+            if (!confirm(`Are you sure you want to delete this record?\nID: ${recordId}`)) return;
+            const deleteFirestoreRecord = () => db.collection("bale_checking_records").doc(recordId).delete();
+            if (photoFileName) {
+                const photoRef = storage.ref(`bale_images/${photoFileName}`);
+                photoRef.delete().then(() => deleteFirestoreRecord()).then(() => {
                     alert("Record and photo deleted successfully!");
-                    fetchAndRenderData(); 
-                })
-                .catch(error => {
+                    fetchAndRenderData();
+                }).catch(error => {
                     if (error.code === 'storage/object-not-found') {
                         deleteFirestoreRecord().then(() => {
                             alert("Record deleted (photo not found in storage).");
@@ -454,98 +457,75 @@ $(document).ready(function() {
                         }).catch(dbError => alert("Error: " + dbError.message));
                     } else { alert("Error: " + error.message); }
                 });
-        } else {
-            deleteFirestoreRecord().then(() => {
-                alert("Record deleted successfully!");
-                fetchAndRenderData();
-            }).catch(error => alert("Error: " + error.message));
-        }
-    };
-    
-    let chartInstances = {};
-    const createIssueChart = (canvasId, chartInstanceName, data) => {
-        const issueCounts = data.reduce((acc, record) => { if(record.issueProblem) acc[record.issueProblem] = (acc[record.issueProblem] || 0) + 1; return acc; }, {});
-        const labels = Object.keys(issueCounts);
-        const counts = Object.values(issueCounts);
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        if (chartInstances[chartInstanceName]) chartInstances[chartInstanceName].destroy();
-        chartInstances[chartInstanceName] = new Chart(ctx, {
-            type: 'pie', data: { labels: labels, datasets: [{ data: counts, backgroundColor: ['#60a5fa', '#f87171', '#fbbf24', '#34d399', '#a78bfa', '#f472b6', '#818cf8'], borderWidth: 2 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', align: 'center', labels: { padding: 15, boxWidth: 12 }}, datalabels: { formatter: (value, ctx) => { let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); if (sum === 0) return '0.0%'; return ((value * 100) / sum).toFixed(1) + '%'; }, color: '#fff', font: { weight: 'bold', size: 12 }}}}
+            } else {
+                deleteFirestoreRecord().then(() => {
+                    alert("Record deleted successfully!");
+                    fetchAndRenderData();
+                }).catch(error => alert("Error: " + error.message));
+            }
+        };
+        let chartInstances = {};
+        const createIssueChart = (canvasId, chartInstanceName, data) => {
+            const issueCounts = data.reduce((acc, record) => { if(record.issueProblem) acc[record.issueProblem] = (acc[record.issueProblem] || 0) + 1; return acc; }, {});
+            const labels = Object.keys(issueCounts);
+            const counts = Object.values(issueCounts);
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (chartInstances[chartInstanceName]) chartInstances[chartInstanceName].destroy();
+            chartInstances[chartInstanceName] = new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ data: counts, backgroundColor: ['#60a5fa', '#f87171', '#fbbf24', '#34d399', '#a78bfa', '#f472b6', '#818cf8'], borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', align: 'center', labels: { padding: 15, boxWidth: 12 }}, datalabels: { formatter: (value, ctx) => { let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); if (sum === 0) return '0.0%'; return ((value * 100) / sum).toFixed(1) + '%'; }, color: '#fff', font: { weight: 'bold', size: 12 }}}} });
+        };
+        const updateDashboards = (records) => {
+            const spinningRecords = records.filter(r => r.department === 'Spinning');
+            const warehouseRecords = records.filter(r => r.department === 'Warehouse');
+            createIssueChart('totalIssuesChart', 'totalChart', records);
+            createIssueChart('spinningIssuesChart', 'spinningChart', spinningRecords);
+            createIssueChart('warehouseIssuesChart', 'warehouseChart', warehouseRecords);
+        };
+        const getFilteredDataForExport = () => {
+            const allData = recordsTable.rows({ search: 'applied' }).data().toArray();
+            const startDate = exportStartDateInput.value;
+            const endDate = exportEndDateInput.value;
+            if (!startDate && !endDate) return allData;
+            return allData.filter(record => {
+                const recordDate = new Date(record.inspectionDate);
+                const start = startDate ? new Date(startDate).setHours(0,0,0,0) : -Infinity;
+                const end = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
+                return recordDate.getTime() >= start && recordDate.getTime() <= end;
+            });
+        };
+        clearFiltersBtn.on('click', function() {
+            exportStartDateInput.value = '';
+            exportEndDateInput.value = '';
+            $('#recordsTable thead .filter-row select').val('');
+            recordsTable.search('').columns().search('').draw();
         });
-    };
-    const updateDashboards = (records) => {
-        const spinningRecords = records.filter(r => r.department === 'Spinning');
-        const warehouseRecords = records.filter(r => r.department === 'Warehouse');
-        createIssueChart('totalIssuesChart', 'totalChart', records);
-        createIssueChart('spinningIssuesChart', 'spinningChart', spinningRecords);
-        createIssueChart('warehouseIssuesChart', 'warehouseChart', warehouseRecords);
-    };
-
-    const getFilteredDataForExport = () => {
-        const allData = recordsTable.rows({ search: 'applied' }).data().toArray();
-        const startDate = exportStartDateInput.value;
-        const endDate = exportEndDateInput.value;
-        if (!startDate && !endDate) return allData;
-        return allData.filter(record => {
-            const recordDate = new Date(record.inspectionDate);
-            const start = startDate ? new Date(startDate).setHours(0,0,0,0) : -Infinity;
-            const end = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
-            return recordDate.getTime() >= start && recordDate.getTime() <= end;
+        $('#exportExcel').on('click', () => {
+            const dataToExport = getFilteredDataForExport();
+            if (dataToExport.length === 0) return alert("No data to export for the selected date range.");
+            const formattedData = dataToExport.map(record => ({ "Date": formatDate(record.inspectionDate), "Department": record.department, "Customer": record.customerName, "Bale No.": record.baleNumber, "Checked By": record.checkedBy, "Issue": record.issueProblem, "Notes": record.notes || '', "Photo Link": record.photoURL ? { t: 's', v: 'View Image', l: { Target: record.photoURL, Tooltip : "Click to view image" }} : '' }));
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            worksheet['!cols'] = [{wch:22},{wch:15},{wch:20},{wch:15},{wch:15},{wch:25},{wch:30},{wch:15}];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, worksheet, "Bale Records");
+            XLSX.writeFile(wb, "Bale_Checking_Report_Filtered.xlsx");
         });
-    };
-    
-    clearFiltersBtn.on('click', function() {
-        exportStartDateInput.value = '';
-        exportEndDateInput.value = '';
-        $('#recordsTable thead .filter-row select').val('');
-        recordsTable.search('').columns().search('').draw();
+        $('#exportPdf').on('click', () => {
+            const dataToExport = getFilteredDataForExport();
+            if (dataToExport.length === 0) return alert("No data to export for the selected date range.");
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+            const tableColumn = ["Date", "Dept.", "Photo", "Customer", "Bale No.", "Checked By", "Issue", "Notes"];
+            const tableRows = dataToExport.map(item => {
+                const row = [ formatDate(item.inspectionDate), item.department, item.photoURL ? 'View' : '', item.customerName, item.baleNumber, item.checkedBy, item.issueProblem, item.notes || '' ];
+                row.meta = { photoURL: item.photoURL };
+                return row;
+            });
+            doc.autoTable({ head: [tableColumn], body: tableRows, startY: 20, theme: 'grid', columnStyles: { 2: { cellWidth: 18, halign: 'center' } }, didDrawCell: function(data) { if (data.section === 'body' && data.column.index === 2 && data.cell.text[0]) { const url = data.row.raw.meta.photoURL; if (url) { doc.setTextColor(40, 99, 239); doc.textWithLink(data.cell.text[0], data.cell.x + 5, data.cell.y + (data.cell.height / 2) + 3, { url: url }); } } } });
+            doc.text("Bale Checking Report (Filtered)", 14, 15);
+            doc.save('Bale_Checking_Report_Filtered.pdf');
+        });
+        
+        fetchAndRenderData();
     });
-
-    $('#exportExcel').on('click', () => {
-        const dataToExport = getFilteredDataForExport();
-        if (dataToExport.length === 0) return alert("No data to export for the selected date range.");
-        const formattedData = dataToExport.map(record => ({ "Date": formatDate(record.inspectionDate), "Department": record.department, "Customer": record.customerName, "Bale No.": record.baleNumber, "Checked By": record.checkedBy, "Issue": record.issueProblem, "Notes": record.notes || '', "Photo Link": record.photoURL ? { t: 's', v: 'View Image', l: { Target: record.photoURL, Tooltip : "Click to view image" }} : '' }));
-                                                                                                                                                                                                                                                                                                                                            const worksheet = XLSX.utils.json_to_sheet(formattedData);
-                                                                                                                                                                                                                                                                                                                                            worksheet['!cols'] = [{wch:22},{wch:15},{wch:20},{wch:15},{wch:15},{wch:25},{wch:30},{wch:15}];
-                                                                                                                                                                                                                                                                                                                                            const wb = XLSX.utils.book_new();
-                                                                                                                                                                                                                                                                                                                                            XLSX.utils.book_append_sheet(wb, worksheet, "Bale Records");
-                                                                                                                                                                                                                                                                                                                                            XLSX.writeFile(wb, "Bale_Checking_Report_Filtered.xlsx");
-                                                                                                                                                                                                                                                                                                                                        });
-
-                                                                                                                                                                                                                                                                                                                                        $('#exportPdf').on('click', () => {
-                                                                                                                                                                                                                                                                                                                                            const dataToExport = getFilteredDataForExport();
-                                                                                                                                                                                                                                                                                                                                            if (dataToExport.length === 0) return alert("No data to export for the selected date range.");
-
-                                                                                                                                                                                                                                                                                                                                            const { jsPDF } = window.jspdf;
-                                                                                                                                                                                                                                                                                                                                            const doc = new jsPDF({ orientation: 'landscape' });
-                                                                                                                                                                                                                                                                                                                                            const tableColumn = ["Date", "Dept.", "Photo", "Customer", "Bale No.", "Checked By", "Issue", "Notes"];
-                                                                                                                                                                                                                                                                                                                                            const tableRows = dataToExport.map(item => {
-                                                                                                                                                                                                                                                                                                                                                const row = [ formatDate(item.inspectionDate), item.department, item.photoURL ? 'View' : '', item.customerName, item.baleNumber, item.checkedBy, item.issueProblem, item.notes || '' ];
-                                                                                                                                                                                                                                                                                                                                                row.meta = { photoURL: item.photoURL }; 
-                                                                                                                                                                                                                                                                                                                                                return row;
-                                                                                                                                                                                                                                                                                                                                            });
-
-                                                                                                                                                                                                                                                                                                                                            doc.autoTable({
-                                                                                                                                                                                                                                                                                                                                                head: [tableColumn], body: tableRows, startY: 20, theme: 'grid',
-                                                                                                                                                                                                                                                                                                                                                columnStyles: { 2: { cellWidth: 18, halign: 'center' } },
-                                                                                                                                                                                                                                                                                                                                                didDrawCell: function(data) {
-                                                                                                                                                                                                                                                                                                                                                    if (data.section === 'body' && data.column.index === 2 && data.cell.text[0]) {
-                                                                                                                                                                                                                                                                                                                                                        const url = data.row.raw.meta.photoURL;
-                                                                                                                                                                                                                                                                                                                                                        if (url) {
-                                                                                                                                                                                                                                                                                                                                                            doc.setTextColor(40, 99, 239);
-                                                                                                                                                                                                                                                                                                                                                            doc.textWithLink(data.cell.text[0], data.cell.x + 5, data.cell.y + (data.cell.height / 2) + 3, { url: url });
-                                                                                                                                                                                                                                                                                                                                                        }
-                                                                                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                                                                            });
-
-                                                                                                                                                                                                                                                                                                                                            doc.text("Bale Checking Report (Filtered)", 14, 15);
-                                                                                                                                                                                                                                                                                                                                            doc.save('Bale_Checking_Report_Filtered.pdf');
-                                                                                                                                                                                                                                                                                                                                        });
-
-                                                                                                                                                                                                                                                                                                                                        fetchAndRenderData();
-                                                                                                                                                                                                                                                                                                                                    });
-                                                                                                                                                                                                                                                                                                                                    </script>
-                                                                                                                                                                                                                                                                                                                                    </body>
-                                                                                                                                                                                                                                                                                                                                    </html>
+</script>
+</body>
+</html>
