@@ -106,8 +106,15 @@
             </div>
         </form>
     </div>
+        <script>
+            if (sessionStorage.getItem('isF4Authenticated') !== 'true') {
+                alert("Access Denied. Please access this page via the main dashboard.");
+                window.location.href = 'index.html';
+            }
+        </script>
 
     <script>
+        
         // ===================================================================================
         // JAVASCRIPT SECTION (ส่วนนี้ไม่ต้องแก้ไข เหมือนเดิมทุกอย่าง)
         // ===================================================================================

@@ -95,7 +95,7 @@
                                 <a class="module-link"><i class="fas fa-flask"></i> Sample Tracking</a>
                                 <a href="Bale_Checking.html" class="module-link"><i class="fas fa-barcode"></i> Bale Checking</a>
                                 <a id="nav-test-results" class="module-link"><i class="fas fa-file-invoice"></i> Test Results</a>
-                                <a href="F4.html" class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR (F4) Register</a>
+                                <a href="F4.html" id="ncr-link" class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR (F4) Register</a>
                             </nav>
                         </div>
                         <div class="card module-card">
@@ -260,5 +260,34 @@
             initializeDashboardCalendar(); 
         });
     </script>
-</body>
-</html>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ncrLink = document.getElementById('ncr-link');
+
+            // เช็คให้แน่ใจว่าเจอปุ่มก่อนจะเพิ่ม event
+            if (ncrLink) {
+                ncrLink.addEventListener('click', function(event) {
+                    // หยุดการทำงานปกติของลิงก์ (ไม่ให้ไปหน้า F4 ทันที)
+                    event.preventDefault();
+
+                    // ตั้งรหัสผ่านของคุณที่นี่
+                    const correctPassword = "123456789"; 
+
+                    // แสดงหน้าต่างให้กรอกรหัสผ่าน
+                    const enteredPassword = prompt("Please enter the password to access NCR Register:");
+
+                    if (enteredPassword === correctPassword) {
+                        // ถ้ารหัสผ่านถูกต้อง ให้เก็บ "กุญแจ" ไว้ใน sessionStorage
+                        sessionStorage.setItem('isF4Authenticated', 'true');
+                        // แล้วค่อยพาไปที่หน้า F4.html
+                        window.location.href = ncrLink.href;
+                    } else if (enteredPassword !== null) { // เช็คว่าผู้ใช้ไม่ได้กด Cancel
+                        // ถ้ารหัสผ่านผิด
+                        alert("Incorrect password. Access denied.");
+                    }
+                });
+            }
+        });
+    </script>
+    </body>
+    </html>
