@@ -135,6 +135,15 @@
                             </tbody>
                         </table>
                     </div>
+                    <div id="pagination-controls" class="flex justify-between items-center mt-4 px-4 py-2 bg-white rounded-lg shadow-md">
+                        <button id="prevPageBtn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span id="pageInfo" class="text-sm font-semibold text-gray-700">Page 1 of 1</span>
+                        <button id="nextPageBtn" class="btn btn-secondary" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
             </main>
         </div>
@@ -217,6 +226,8 @@
             let currentFilteredRecords = [];
             let currentRecord = null;
             let isInitialLoad = true; // <-- เพิ่มตัวแปรสำหรับเช็คการโหลดครั้งแรก
+            let currentPage = 1;      // <-- เพิ่มเข้ามา: ตัวแปรเก็บหน้าปัจจุบัน
+            const rowsPerPage = 30;   // <-- เพิ่มเข้ามา: กำหนดจำนวนแถวต่อหน้า
 
             // ปิดปุ่ม Export ไว้ก่อนตอนเริ่มโหลดหน้า
             exportExcelBtn.disabled = true;
@@ -374,6 +385,40 @@
                     copilotContent.scrollTop(copilotContent[0].scrollHeight);
                 }
             });
+            // --- เพิ่มฟังก์ชันใหม่สำหรับจัดการ Pagination ---
+            const prevPageBtn = document.getElementById('prevPageBtn');
+            const nextPageBtn = document.getElementById('nextPageBtn');
+            const pageInfo = document.getElementById('pageInfo');
+
+            const updatePaginationUI = (totalRecords) => {
+                const totalPages = Math.ceil(totalRecords / rowsPerPage);
+                pageInfo.textContent = `Page ${currentPage} of ${totalPages > 0 ? totalPages : 1}`;
+
+                // จัดการปุ่ม Previous
+                prevPageBtn.disabled = currentPage === 1;
+
+                // จัดการปุ่ม Next
+                nextPageBtn.disabled = currentPage >= totalPages;
+            };
+
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    applyFiltersAndRender();
+                }
+            });
+
+            nextPageBtn.addEventListener('click', () => {
+                const totalFilteredRecordsForDisplay = (filterStatus.value === 'all')
+                    ? currentFilteredRecords.filter(r => r.followUpStatus !== 'Completed').length
+                    : currentFilteredRecords.length;
+
+                const totalPages = Math.ceil(totalFilteredRecordsForDisplay / rowsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    applyFiltersAndRender();
+                }
+            });
 
             // --- Main Application Logic ---
             const fetchRecords = () => {
@@ -431,7 +476,10 @@
                 const statusValue = filterStatus.value;
                 const startDateValue = exportStartDate.value;
                 const endDateValue = exportEndDate.value;
+
                 let filteredRecords = allRecords;
+
+                // --- เริ่มการกรองข้อมูลตาม UI Filters ---
                 if (deptValue !== 'all') {
                     filteredRecords = filteredRecords.filter(r => r.departmentCode === deptValue);
                 }
@@ -439,7 +487,7 @@
                     filteredRecords = filteredRecords.filter(r => {
                         const currentStatus = r.followUpStatus || 'Pending Response';
                         if (statusValue === 'Issued') return currentStatus === 'Pending Response';
-                        else return currentStatus === statusValue;
+                        return currentStatus === statusValue;
                     });
                 }
                 if (searchValue) {
@@ -454,8 +502,32 @@
                         return recordDate >= start && recordDate <= end;
                     });
                 }
-                currentFilteredRecords = filteredRecords;
-                renderTable(filteredRecords);
+
+                // --- สิ้นสุดการกรองข้อมูลตาม UI Filters ---
+
+                // **สำคัญ:** เก็บผลลัพธ์การกรองทั้งหมดไว้สำหรับ Export
+                currentFilteredRecords = filteredRecords; 
+
+                // --- เริ่ม Logic ใหม่สำหรับการแสดงผล (Display) เท่านั้น ---
+
+                // 1. สร้างชุดข้อมูลสำหรับการแสดงผลโดยเฉพาะ
+                let recordsForDisplay = [...filteredRecords];
+
+                // 2. ใช้ Default Filter: ถ้าผู้ใช้ไม่ได้เลือกสถานะใดๆ (All Statuses) ให้ซ่อน 'Completed'
+                if (statusValue === 'all') {
+                    recordsForDisplay = recordsForDisplay.filter(r => r.followUpStatus !== 'Completed');
+                }
+
+                // 3. อัปเดต UI ของ Pagination
+                updatePaginationUI(recordsForDisplay.length);
+
+                // 4. คำนวณข้อมูลที่จะแสดงในหน้านี้
+                const startIndex = (currentPage - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const paginatedRecords = recordsForDisplay.slice(startIndex, endIndex);
+
+                // 5. แสดงผลข้อมูลที่แบ่งหน้าแล้ว
+                renderTable(paginatedRecords); 
             };
             const updateDashboard = (records) => {
                 const sixMonthsAgo = new Date();
@@ -657,19 +729,25 @@
                 }
             });
             fetchRecords();
-            searchInput.addEventListener('input', applyFiltersAndRender);
-            filterDepartment.addEventListener('change', applyFiltersAndRender);
-            filterStatus.addEventListener('change', applyFiltersAndRender);
+            const resetAndRender = () => {
+                currentPage = 1; // <-- เพิ่มเข้ามา: รีเซ็ตหน้ากลับไปที่ 1 เสมอเมื่อมีการกรองใหม่
+                applyFiltersAndRender();
+            };
+
+            searchInput.addEventListener('input', resetAndRender);
+            filterDepartment.addEventListener('change', resetAndRender);
+            filterStatus.addEventListener('change', resetAndRender);
             closeSidebarBtn.addEventListener('click', () => detailsSidebar.classList.remove('open'));
-            exportStartDate.addEventListener('change', applyFiltersAndRender);
-            exportEndDate.addEventListener('change', applyFiltersAndRender);
+            exportStartDate.addEventListener('change', resetAndRender);
+            exportEndDate.addEventListener('change', resetAndRender);
+
             clearFiltersBtn.addEventListener('click', () => {
                 searchInput.value = '';
                 filterDepartment.value = 'all';
                 filterStatus.value = 'all';
                 exportStartDate.value = '';
                 exportEndDate.value = '';
-                applyFiltersAndRender();
+                resetAndRender(); // <-- เรียกใช้ฟังก์ชันใหม่
             });
             const formatTimestamp = (timestamp) => {
                 if (timestamp && typeof timestamp.toDate === 'function') {

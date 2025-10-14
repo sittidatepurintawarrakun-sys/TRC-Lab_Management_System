@@ -107,10 +107,24 @@
         </form>
     </div>
         <script>
-            if (sessionStorage.getItem('isF4Authenticated') !== 'true') {
-                alert("Access Denied. Please access this page via the main dashboard.");
-                window.location.href = 'index.html';
-            }
+            <script>
+                // เช็คว่ามี "กุญแจ" ใน sessionStorage หรือยัง
+                if (sessionStorage.getItem('isF4Authenticated') !== 'true') {
+
+                    // ถ้ายังไม่มี ให้แสดงหน้าต่างถามรหัสผ่าน
+                    const correctPassword = "123456789"; // รหัสผ่านของคุณ
+                    const enteredPassword = prompt("Please enter the password to access this page:");
+
+                    // ตรวจสอบรหัสผ่าน
+                    if (enteredPassword === correctPassword) {
+                        // ถ้ารหัสผ่านถูกต้อง, สร้าง "กุญแจ" ขึ้นมา
+                        sessionStorage.setItem('isF4Authenticated', 'true');
+                    } else {
+                        // ถ้ารหัสผิด หรือกด Cancel, แจ้งเตือนและส่งกลับไปหน้าแรก
+                        alert("Incorrect password or access cancelled. Redirecting to dashboard.");
+                        window.location.href = 'index.html';
+                    }
+                }
         </script>
 
     <script>
