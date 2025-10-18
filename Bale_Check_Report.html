@@ -1,552 +1,496 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bale Checking Report - Lab-TRC-App</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.tailwindcss.css">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
-<script src="https://cdn.datatables.net/2.0.8/js/dataTables.tailwindcss.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" defer></script>
-<style>
-body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
-.card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem;
-box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
-.kpi-card { background: #ffffff; border-radius: 1rem; padding: 1.5rem; text-align: center; }
-.kpi-card .value { font-size: 1.75rem; font-weight: 700; color: #1e293b; line-height: 2.25rem; }
-.kpi-card .label { font-size: 0.875rem; color: #64748b; margin-top: 0.25rem; }
-.form-input { width: 100%; background-color: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b; border-radius: 0.5rem; padding: 0.75rem; }
-.btn { font-weight: 600; border-radius: 0.5rem; padding: 0.6rem 1.2rem; transition: background-color 0.3s ease; cursor: pointer; display: inline-flex; align-items: center;
-gap: 0.5rem; }
-.btn:disabled { cursor: not-allowed; background-color: #94a3b8; }
-.btn-primary { background-color: #2563eb; color: white; }
-.btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
-.btn-secondary { background-color: #64748b; color: white; }
-.btn-secondary:hover:not(:disabled) { background-color: #475569; }
-th { position: sticky; top: 0; background-color: #f1f5f9; z-index: 10; }
-.thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 0.5rem; }
-.dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { margin-bottom: 1rem; }
-.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { padding-top: 1rem; font-size: 0.875rem; }
-.dataTables_wrapper .dataTables_filter input { width: 250px !important; margin-left: 0.5rem; }
-thead .filter-row th { padding: 8px; font-weight: normal; vertical-align: top; }
-thead .filter-row input, thead .filter-row select { width: 100%; }
-.prose h3 { font-size: 1.1em; margin-top: 1em; margin-bottom: 0.5em; }
-.prose ul { list-style-type: disc; padding-left: 1.5em; }
-.prose p { margin: 0.5em 0; }
-#close-copilot-btn { font-size: 2rem; line-height: 1; }
-#copilot-content { word-wrap: break-word; }
-.user-question p:first-child, .ai-answer p:first-child { margin-top: 0; }
-#recordsTable .notes-column {
-max-width: 250px;
-word-wrap: break-word;
-white-space: normal !important;
-}
-</style>
-</head>
-<body class="antialiased">
-<div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
-<div class="max-w-7xl mx-auto">
-<div class="mb-6">
-<a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
-<i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-</a>
-</div>
-<header class="mb-8 flex justify-between items-center">
-<h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-chart-pie text-blue-700"></i> Bale Checking Report</h1>
-<div id="auth-container">
-<div id="user-info" class="hidden items-center gap-4">
-<span id="user-email" class="text-slate-600 text-sm"></span>
-<button id="logout-btn" class="btn btn-primary text-sm">Logout</button>
-</div>
-<button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
-</div>
-</header>
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-<div class="kpi-card card">
-<div id="kpi-total-issues" class="value">-</div>
-<div class="label">Total Issues</div>
-</div>
-<div class="kpi-card card">
-<div id="kpi-top-issue" class="value truncate">-</div>
-<div class="label">Most Frequent Issue</div>
-</div>
-<div class="card p-4 flex flex-col justify-center">
-<label class="text-sm font-semibold text-slate-600 mb-2 text-center"> 📊  Chart Date Filter</label>
-<div class="flex items-center gap-2">
-<input type="date" id="chartStartDate" class="form-input text-sm p-2">
-<input type="date" id="chartEndDate" class="form-input text-sm p-2">
-<button id="chartFilterResetBtn" class="btn btn-secondary p-2" title="Reset Chart Filter">
-<i class="fas fa-sync-alt"></i>
-</button>
-</div>
-</div>
-</div>
-<div class="grid grid-cols-1 gap-6 mb-8">
-<div class="card p-6 h-[450px] flex flex-col">
-<h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Top 10 Issues</h2>
-<div class="relative flex-grow"><canvas id="topIssuesChart"></canvas></div>
-</div>
-<div class="card p-6 h-[450px] flex flex-col">
-<h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Comparison by Department</h2>
-<div class="relative flex-grow"><canvas id="departmentComparisonChart"></canvas></div>
-</div>
-</div>
-<div class="card p-6 h-[450px] flex flex-col mb-8">
-<h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Trend (Last 3 Active Months)</h2>
-<div class="relative flex-grow"><canvas id="issueTrendChart"></canvas></div>
-</div>
-<div class="card p-6 overflow-x-auto">
-<div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-<div class="flex items-center">
-<h2 class="text-xl font-bold text-slate-800">All Records</h2>
-</div>
-<div class="flex items-center gap-4">
-<div class="font-semibold text-slate-700 text-sm">Export by date range:</div>
-<input type="date" id="exportStartDate" class="form-input" style="width: 160px;">
-<input type="date" id="exportEndDate" class="form-input" style="width: 160px;">
-<button id="clearFiltersBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear All Filters</button>
-<button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel"></i> Export Excel</button>
-</div>
-</div>
-<div class="table-wrapper" id="table-container">
-<table class="w-full text-sm text-left text-slate-500" id="recordsTable">
-<thead class="text-xs text-slate-700 uppercase bg-slate-100">
-<tr>
-<th class="px-6 py-3">Inspection Date</th>
-<th class="px-6 py-3">Department</th>
-<th class="px-6 py-3">Photo Ref</th>
-<th class="px-6 py-3">Customer</th>
-<th class="px-6 py-3">Bale No.</th>
-<th class="px-6 py-3">Checked By</th>
-<th class="px-6 py-3">Issue Problem</th>
-<th class="px-6 py-3">Notes</th>
-<th class="px-6 py-3">Actions</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-<script>
-$(document).ready(function() {
-    const mainFirebaseConfig = {
-        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-        authDomain: "lab-trc-management-system.firebaseapp.com",
-        projectId: "lab-trc-management-system",
-        storageBucket: "lab-trc-management-system.firebasestorage.app",
-        messagingSenderId: "43919979160",
-        appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-    };
-    const photoFirebaseConfig = {
-        apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
-        authDomain: "trc-photo-data.firebaseapp.com",
-        projectId: "trc-photo-data",
-        storageBucket: "trc-photo-data.firebasestorage.app",
-        messagingSenderId: "656245706360",
-        appId: "1:656245706360:web:6de7bd9d296158bc57678d"
-    };
-    const mainApp = firebase.initializeApp(mainFirebaseConfig);
-    const photoApp = firebase.initializeApp(photoFirebaseConfig, 'photoStorageApp');
-    const db = mainApp.firestore();
-    const storage = photoApp.storage();
-    const auth = mainApp.auth();
-    db.settings({ experimentalForceLongPolling: true });
+                     <!DOCTYPE html>
+                     <html lang="en">
+                     <head>
+                     <meta charset="UTF-8">
+                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                     <title>Bale Checking Report - Lab-TRC-App</title>
+                     <script src="https://cdn.tailwindcss.com"></script>
+                     <link rel="preconnect" href="https://fonts.googleapis.com">
+                     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+                     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.tailwindcss.css">
+                     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+                     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+                     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+                     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.tailwindcss.js"></script>
+                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+                     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+                     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+                     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+                     <style>
+                     body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
+                     .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem;
+                     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
+                     .kpi-card { background: #ffffff; border-radius: 1rem; padding: 1.5rem; text-align: center; }
+                     .kpi-card .value { font-size: 1.75rem; font-weight: 700; color: #1e293b; line-height: 2.25rem; }
+                     .kpi-card .label { font-size: 0.875rem; color: #64748b; margin-top: 0.25rem; }
+                     .form-input { width: 100%; background-color: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b; border-radius: 0.5rem; padding: 0.75rem; }
+                     .btn { font-weight: 600; border-radius: 0.5rem; padding: 0.6rem 1.2rem; transition: background-color 0.3s ease; cursor: pointer; display: inline-flex; align-items: center;
+                     gap: 0.5rem; }
+                     .btn:disabled { cursor: not-allowed; background-color: #94a3b8; }
+                     .btn-primary { background-color: #2563eb; color: white; }
+                     .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
+                     .btn-secondary { background-color: #64748b; color: white; }
+                     .btn-secondary:hover:not(:disabled) { background-color: #475569; }
+                         th { top: 0; background-color: #f1f5f9; z-index: 10; }
+                     .thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 0.5rem; }
+                     .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { margin-bottom: 1rem; }
+                     .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { padding-top: 1rem; font-size: 0.875rem; }
+                     .dataTables_wrapper .dataTables_filter input { width: 250px !important; margin-left: 0.5rem; }
+                     thead .filter-row th { padding: 8px; font-weight: normal; vertical-align: top; }
+                     thead .filter-row input, thead .filter-row select { width: 100%; }
+                     .prose h3 { font-size: 1.1em; margin-top: 1em; margin-bottom: 0.5em; }
+                     .prose ul { list-style-type: disc; padding-left: 1.5em; }
+                     .prose p { margin: 0.5em 0; }
+                     #close-copilot-btn { font-size: 2rem; line-height: 1; }
+                     #copilot-content { word-wrap: break-word; }
+                     .user-question p:first-child, .ai-answer p:first-child { margin-top: 0; }
+                         #recordsTable .notes-column {
+                           max-width: 250px;       /* จำกัดความกว้างเหมือนเดิม */
+                           max-height: 60px;       /* ⭐ เพิ่ม: จำกัดความสูงของช่อง (ประมาณ 3 บรรทัด) */
+                           overflow-y: auto;       /* ⭐ เพิ่ม: ถ้าข้อความสูงเกิน ให้มี scrollbar */
+                           word-wrap: break-word;
+                           white-space: normal !important;
+                           display: block;         /* ⭐ เพิ่ม: เพื่อให้ max-height ทำงานได้ถูกต้อง */
+                         }
+                     </style>
+                     </head>
+                     <body class="antialiased">
+                     <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
+                     <div class="max-w-7xl mx-auto">
+                     <div class="mb-6">
+                     <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
+                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                     </a>
+                     </div>
+                     <header class="mb-8 flex justify-between items-center">
+                     <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-chart-pie text-blue-700"></i> Bale Checking Report</h1>
+                     <div id="auth-container">
+                     <div id="user-info" class="hidden items-center gap-4">
+                     <span id="user-email" class="text-slate-600 text-sm"></span>
+                     <button id="logout-btn" class="btn btn-primary text-sm">Logout</button>
+                     </div>
+                     <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
+                     </div>
+                     </header>
+                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                     <div class="kpi-card card">
+                     <div id="kpi-total-issues" class="value">-</div>
+                     <div class="label">Total Issues</div>
+                     </div>
+                     <div class="kpi-card card">
+                     <div id="kpi-top-issue" class="value truncate">-</div>
+                     <div class="label">Most Frequent Issue</div>
+                     </div>
+                     </div>
+                     <div class="grid grid-cols-1 gap-6 mb-8">
+                     <div class="card p-6 h-[450px] flex flex-col">
+                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Top 10 Issues</h2>
+                     <div class="relative flex-grow"><canvas id="topIssuesChart"></canvas></div>
+                     </div>
+                     <div class="card p-6 h-[450px] flex flex-col">
+                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Comparison by Department</h2>
+                     <div class="relative flex-grow"><canvas id="departmentComparisonChart"></canvas></div>
+                     </div>
+                     </div>
+                     <div class="card p-6 h-[450px] flex flex-col mb-8">
+                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Trend (Last 3 Active Months)</h2>
+                     <div class="relative flex-grow"><canvas id="issueTrendChart"></canvas></div>
+                     </div>
+                     <div class="card p-6 overflow-x-auto">
+                     <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                     <div class="flex items-center">
+                     <h2 class="text-xl font-bold text-slate-800">All Records</h2>
+                     </div>
+                     <div class="flex items-center gap-4">
+                     <div class="font-semibold text-slate-700 text-sm">Export by date range:</div>
+                     <input type="date" id="exportStartDate" class="form-input" style="width: 160px;">
+                     <input type="date" id="exportEndDate" class="form-input" style="width: 160px;">
+                     <button id="clearFiltersBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear All Filters</button>
+                     <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel"></i> Export Excel</button>
+                     </div>
+                     </div>
+                     <div class="table-wrapper" id="table-container">
+                     <table class="w-full text-sm text-left text-slate-500" id="recordsTable">
+                     <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                     <tr>
+                     <th class="px-6 py-3">Inspection Date</th>
+                     <th class="px-6 py-3">Department</th>
+                     <th class="px-6 py-3">Photo Ref</th>
+                     <th class="px-6 py-3">Customer</th>
+                     <th class="px-6 py-3">Bale No.</th>
+                     <th class="px-6 py-3">Checked By</th>
+                     <th class="px-6 py-3">Issue Problem</th>
+                     <th class="px-6 py-3">Notes</th>
+                     <th class="px-6 py-3">Actions</th>
+                     </tr>
+                     </thead>
+                     <tbody></tbody>
+                     </table>
+                     </div>
+                     </div>
+                     </div>
+                     </div>
+                         <script>
+                         $(document).ready(function() {
+                             // ===================================================================================
+                             // 1. SETUP FIREBASE & VARIABLES
+                             //    (กำหนดค่าเชื่อมต่อ Firebase, ตัวแปร Global, และค่าเริ่มต้นต่างๆ)
+                             // ===================================================================================
+                             const mainFirebaseConfig = {
+                                 apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                                 authDomain: "lab-trc-management-system.firebaseapp.com",
+                                 projectId: "lab-trc-management-system",
+                                 storageBucket: "lab-trc-management-system.firebasestorage.app",
+                                 messagingSenderId: "43919979160",
+                                 appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+                             };
+                             const photoFirebaseConfig = {
+                                 apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
+                                 authDomain: "trc-photo-data.firebaseapp.com",
+                                 projectId: "trc-photo-data",
+                                 storageBucket: "trc-photo-data.firebasestorage.app",
+                                 messagingSenderId: "656245706360",
+                                 appId: "1:656245706360:web:6de7bd9d296158bc57678d"
+                             };
 
-    const loginPromptBtn = $('#login-prompt-btn');
-    const logoutBtn = $('#logout-btn');
-    const userInfoDiv = $('#user-info');
-    const userEmailSpan = $('#user-email');
-    const exportStartDateInput = document.getElementById('exportStartDate');
-    const exportEndDateInput = document.getElementById('exportEndDate');
-    const clearFiltersBtn = $('#clearFiltersBtn');
-    const chartStartDateInput = document.getElementById('chartStartDate');
-    const chartEndDateInput = document.getElementById('chartEndDate');
-    const chartFilterResetBtn = document.getElementById('chartFilterResetBtn');
+                             const mainApp = firebase.initializeApp(mainFirebaseConfig);
+                             const photoApp = firebase.initializeApp(photoFirebaseConfig, 'photoStorageApp');
+                             const db = mainApp.firestore();
+                             const storage = photoApp.storage();
+                             const auth = mainApp.auth();
+                             db.settings({ experimentalForceLongPolling: true });
 
-    const adminEmails = [
-        "sittidate.p@adityabirla.com",
-        "trc-qcl.laboratory@adityabirla.com",
-        "laboratory.trc@adityabirla.com",
-        "waraporn.jindanath@adityabirla.com"
-    ];
+                             // DOM Variables
+                             const loginPromptBtn = $('#login-prompt-btn');
+                             const logoutBtn = $('#logout-btn');
+                             const userInfoDiv = $('#user-info');
+                             const userEmailSpan = $('#user-email');
+                             const exportStartDateInput = document.getElementById('exportStartDate');
+                             const exportEndDateInput = document.getElementById('exportEndDate');
+                             const clearFiltersBtn = $('#clearFiltersBtn');
 
-    let currentUser = null;
-    let recordsTable;
-    let dashboardRecords = []; // ตัวแปรสำหรับเก็บข้อมูลของ Dashboard โดยเฉพาะ
+                             // State Variables
+                             const adminEmails = ["sittidate.p@adityabirla.com", "trc-qcl.laboratory@adityabirla.com", "laboratory.trc@adityabirla.com", "waraporn.jindanath@adityabirla.com"];
+                             let currentUser = null;
+                             let recordsTable;
+                             let dashboardRecords = []; // (คงไว้ - แม้ Hybrid Model จะไม่ได้ใช้ แต่เผื่ออนาคต)
+                             let chartInstances = {};
 
-    loginPromptBtn.on('click', () => {
-        const email = prompt("Please enter your admin email:");
-        if (email) {
-            const password = prompt("Please enter your password:");
-            if (password) {
-                auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
-            }
-        }
-    });
+                             // ===================================================================================
+                             // 2. AUTHENTICATION LOGIC
+                             //    (จัดการการ Login, Logout, และการแสดงผลปุ่ม/ข้อมูลผู้ใช้)
+                             // ===================================================================================
+                             loginPromptBtn.on('click', () => {
+                                 const email = prompt("Please enter your admin email:");
+                                 if (email) {
+                                     const password = prompt("Please enter your password:");
+                                     if (password) {
+                                         auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
+                                     }
+                                 }
+                             });
+                             logoutBtn.on('click', () => auth.signOut());
+                             auth.onAuthStateChanged(user => {
+                                 currentUser = user;
+                                 if (user) {
+                                     loginPromptBtn.hide();
+                                     userInfoDiv.show().css('display', 'flex');
+                                     userEmailSpan.text(user.email);
+                                 } else {
+                                     loginPromptBtn.show();
+                                     userInfoDiv.hide();
+                                 }
+                                 if (recordsTable) {
+                                     const isAdmin = currentUser && adminEmails.includes(currentUser.email.toLowerCase());
+                                     recordsTable.column(8).visible(isAdmin);
+                                 }
+                             });
 
-    logoutBtn.on('click', () => auth.signOut());
+                             // ===================================================================================
+                             // 3. HELPER & CHART/KPI FUNCTIONS (DEFINITIONS)
+                             //    (ส่วนนี้คือ "คำสั่ง" หรือ "ฟังก์ชัน" ที่เราสร้างไว้ แต่ยังไม่ถูกเรียกใช้งาน)
+                             // ===================================================================================
 
-    auth.onAuthStateChanged(user => {
-        currentUser = user;
-        if (user) {
-            loginPromptBtn.hide();
-            userInfoDiv.show().css('display', 'flex');
-            userEmailSpan.text(user.email);
-        } else {
-            loginPromptBtn.show();
-            userInfoDiv.hide();
-        }
-        if (recordsTable) {
-            const isAdmin = currentUser && adminEmails.includes(currentUser.email.toLowerCase());
-            recordsTable.column(8).visible(isAdmin);
-        }
-    });
+                             // --- 3.1 Helper Function (Format Date) ---
+                             const formatDate = (dateString) => {
+                                 if (!dateString) return '';
+                                 const date = new Date(dateString);
+                                 return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}, ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                             };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day}/${month}/${year}, ${hours}:${minutes}`;
-    };
+                             // --- 3.2 KPI Cards (Total Issues & Most Frequent Issue) ---
+                             const updateKpiCards = (summaryData) => {
+                                 const totalIssues = summaryData.totalIssues || 0;
+                                 const topIssue = summaryData.topIssue || '-';
+                                 $('#kpi-total-issues').text(totalIssues);
+                                 $('#kpi-top-issue').text(topIssue);
+                             };
 
-    // --- CHART FILTER FUNCTIONS ---
-    const handleChartFilterChange = () => {
-        const startDate = chartStartDateInput.value;
-        const endDate = chartEndDateInput.value;
+                             // --- 3.3 Top 10 Issues Chart ---
+                             const createTopIssuesChart = (issueCounts) => {
+                                 if (!issueCounts || Object.keys(issueCounts).length === 0) issueCounts = {};
+                                 const issueTotals = Object.entries(issueCounts).map(([issue, total]) => ({ issue, total }));
+                                 const sortedIssues = issueTotals.sort((a, b) => b.total - a.total).slice(0, 10);
+                                 const labels = sortedIssues.map(item => item.issue);
+                                 const data = sortedIssues.map(item => item.total);
+                                 const totalRecordsCount = issueTotals.reduce((sum, item) => sum + item.total, 0);
+                                 const ctx = document.getElementById('topIssuesChart').getContext('2d');
+                                 if (chartInstances.topIssues) chartInstances.topIssues.destroy();
+                                 chartInstances.topIssues = new Chart(ctx, {
+                                     type: 'bar',
+                                     data: { labels: labels, datasets: [{ label: 'Issue Count', data: data, backgroundColor: '#3b82f6' }] },
+                                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { const count = context.raw;
+                                     const percentage = totalRecordsCount > 0 ? (count / totalRecordsCount * 100).toFixed(1) : 0; return `Count: ${count} (${percentage}%)`;
+                                     } } } }, scales: { x: { beginAtZero: true } } }
+                                 });
+                             };
 
-        if (!startDate && !endDate) {
-            updateDashboards(dashboardRecords);
-            return;
-        }
+                             // --- 3.4 Department Comparison Chart ---
+                             const createDepartmentComparisonChart = (departmentData) => {
+                                 if (!departmentData || Object.keys(departmentData).length === 0) departmentData = {};
+                                 const labels = Object.keys(departmentData);
+                                 const spinningData = labels.map(issue => departmentData[issue]['Spinning'] || 0);
+                                 const warehouseData = labels.map(issue => departmentData[issue]['Warehouse'] || 0);
+                                 const ctx = document.getElementById('departmentComparisonChart').getContext('2d');
+                                 if (chartInstances.deptCompare) chartInstances.deptCompare.destroy();
+                                 chartInstances.deptCompare = new Chart(ctx, {
+                                     type: 'bar',
+                                     data: { labels: labels, datasets: [{ label: 'Spinning', data: spinningData, backgroundColor: '#f97316' }, { label: 'Warehouse', data: warehouseData, backgroundColor: '#8b5cf6' }] },
+                                     options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } } }
+                                 });
+                             };
 
-        const filteredChartData = dashboardRecords.filter(record => {
-            if (!record.inspectionDate) return false;
-            const recordDate = new Date(record.inspectionDate);
-            const start = startDate ? new Date(startDate).setHours(0, 0, 0, 0) : -Infinity;
-            const end = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : Infinity;
-            return recordDate.getTime() >= start && recordDate.getTime() <= end;
-        });
-        updateDashboards(filteredChartData);
-    };
+                             // --- 3.5 Issue Trend (Last 3 Active Months) Chart ---
+                             //     ( ⭐  CLEANUP: ลบ Debug Console.log ออก )
+                             const createIssueTrendChart = async () => {
+                                 const ctx = document.getElementById('issueTrendChart').getContext('2d');
+                                 if (chartInstances.issueTrend) chartInstances.issueTrend.destroy();
 
-    $(chartStartDateInput).on('change', handleChartFilterChange);
-    $(chartEndDateInput).on('change', handleChartFilterChange);
-    $(chartFilterResetBtn).on('click', () => {
-        chartStartDateInput.value = '';
-        chartEndDateInput.value = '';
-        handleChartFilterChange();
-    });
+                                 try {
+                                     // 1. ดึงข้อมูล 3 เดือนล่าสุด
+                                     const trendQuery = db.collection("dashboard_monthly_summary")
+                                                          .orderBy(firebase.firestore.FieldPath.documentId(), "desc")
+                                                          .limit(3);
+                                     const snapshot = await trendQuery.get();
 
+                                     if (snapshot.empty) {
+                                         console.warn("createIssueTrendChart: Snapshot is EMPTY.");
+                                         chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
+                                         return;
+                                     }
 
-    // --- DATA FETCHING & RENDERING (NEW LOGIC) ---
-    const fetchAndRenderData = async () => {
-        // 1. ดึงข้อมูลทั้งหมดสำหรับ Dashboard (ยังคงทำงานเหมือนเดิม)
-        try {
-            const snapshot = await db.collection("bale_checking_records").get();
-            dashboardRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            updateDashboards(dashboardRecords);
-        } catch (error) {
-            console.error("Error fetching data for dashboards:", error);
-            updateDashboards([]); // แสดง Dashboard ว่างๆ
-        }
-        // 2. เริ่มสร้างตาราง (ซึ่งจะไปดึงข้อมูลของตัวเอง)
-        initializeDataTable();
-    };
+                                     // 2. แปลงข้อมูล
+                                     const monthlyDocs = snapshot.docs.map(doc => doc.data()).reverse();
+                                     const lastThreeMonths = snapshot.docs.map(doc => doc.id).reverse(); // ใช้ doc.id ซึ่งควรจะเป็น "YYYY-MM"
 
-    // --- INITIALIZE DATATABLE WITH SERVER-SIDE PROCESSING ---
-    const initializeDataTable = () => {
-        const filterRow = $('<tr class="filter-row"></tr>').appendTo('#recordsTable thead');
-        $('#recordsTable thead tr:first-child th').each(() => filterRow.append('<th></th>'));
+                                     // 3. รวมคะแนน
+                                     const metadataFields = ['docId', 'year', 'month', 'totalIssues', 'issueCounts']; 
+                                     const totalCountsInPeriod = {};
 
-        recordsTable = $('#recordsTable').DataTable({
-            // --- 🚀 CORE SSP CHANGES ---
-            serverSide: true,
-            processing: true,
-            pageLength: 15,
-            order: [[0, 'desc']],
-            ajax: async (data, callback, settings) => {
-                try {
-                    let query = db.collection("bale_checking_records");
+                                     monthlyDocs.forEach(doc => {
+                                         for (const issue in doc) {
+                                             if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
+                                                 totalCountsInPeriod[issue] = (totalCountsInPeriod[issue] || 0) + doc[issue];
+                                             }
+                                         }
+                                     });
 
-                    // --- การกรอง (Filtering) ---
-                    // 1. กรองตาม Date Range
-                    const startDate = exportStartDateInput.value;
-                    if (startDate) {
-                        query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
-                    }
-                    const endDate = exportEndDateInput.value;
-                    if (endDate) {
-                        const endOfDay = new Date(endDate);
-                        endOfDay.setHours(23, 59, 59, 999);
-                        query = query.where('inspectionDate', '<=', endOfDay.toISOString());
-                    }
+                                     // 4. หา Top 7
+                                     const topIssues = Object.entries(totalCountsInPeriod).sort(([, a], [, b]) => b - a).slice(0, 7).map(entry => entry[0]);
+                                     const DISTINCT_COLORS = ['#E6194B', '#3CB44B', '#4363D8', '#F58231', '#911EB4', '#46F0F0', '#FABEBE', '#008080', '#E6BEFF', '#9A6324'];
+                                     const POINT_STYLES = ['circle', 'rect', 'triangle', 'rectRot', 'star', 'cross', 'rectRounded'];
 
-                    // 2. กรองตาม Column Filters (Select2)
-                    $('.filter-row .select2').each(function() {
-                        const selectedValues = $(this).val();
-                        if (selectedValues && selectedValues.length > 0) {
-                            const colIndex = $(this).closest('th').index();
-                             const dataProperty = recordsTable.column(colIndex).dataSrc();
-                            query = query.where(dataProperty, 'in', selectedValues);
-                        }
-                    });
+                                     // 5. สร้าง Datasets
+                                     let datasets = topIssues.map((issue, index) => {
+                                         const data = monthlyDocs.map(doc => doc[issue] || 0); 
+                                         return { label: issue, data: data, borderColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length], backgroundColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length] + '33', pointStyle: POINT_STYLES[index % POINT_STYLES.length], pointRadius: 6, tension: 0.1, fill: false };
+                                     });
 
-                    // --- การเรียงลำดับ (Sorting) ---
-                    const orderSettings = data.order[0];
-                    const orderColumnIndex = orderSettings.column;
-                    const orderDirection = orderSettings.dir;
-                    // **สำคัญ:** แก้ไขชื่อ field ให้ตรงกับใน Firestore ของคุณ
-                    const orderColumnName = ['inspectionDate', 'department', null, 'customerName', 'baleNumber', 'checkedBy', 'issueProblem'][orderColumnIndex];
-                    if (orderColumnName) {
-                        query = query.orderBy(orderColumnName, orderDirection);
-                    }
-                    
-                    // --- ดึงจำนวนข้อมูลทั้งหมดที่ผ่านการกรอง (สำหรับ Pagination) ---
-                    const totalRecordsSnapshot = await query.get();
-                    const recordsFiltered = totalRecordsSnapshot.size;
+                                     // 6. คำนวณ Other Issues
+                                     const otherIssuesData = monthlyDocs.map(doc => {
+                                         let otherCount = 0;
+                                         for (const issue in doc) {
+                                             if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
+                                                 if (!topIssues.includes(issue)) {
+                                                     otherCount += doc[issue];
+                                                 }
+                                             }
+                                         }
+                                         return otherCount;
+                                     });
+                                     if (otherIssuesData.some(count => count > 0)) {
+                                         datasets.push({ label: 'Other Issues', data: otherIssuesData, borderColor: '#808080', backgroundColor: '#80808033', borderDash: [5, 5], pointStyle: 'line', pointRadius: 5, tension: 0.1, fill: false });
+                                     }
 
-                    // --- การแบ่งหน้า (Pagination) ---
-                    if (data.start > 0) {
-                        const firstDocSnapshot = await query.limit(data.start).get();
-                        const lastVisible = firstDocSnapshot.docs[firstDocSnapshot.docs.length - 1];
-                        query = query.startAfter(lastVisible);
-                    }
-                    
-                    // --- ดึงข้อมูลเฉพาะหน้าที่ต้องการ ---
-                    const pagedSnapshot = await query.limit(data.length).get();
-                    
-                    // --- ดึง URL รูปภาพสำหรับข้อมูลหน้านี้เท่านั้น ---
-                    const recordsData = await Promise.all(pagedSnapshot.docs.map(async (doc) => {
-                        let record = { id: doc.id, ...doc.data() };
-                        if (record.photoFileName) {
-                            try {
-                                const photoRef = storage.ref(`bale_images/${record.photoFileName}`);
-                                record.photoURL = await photoRef.getDownloadURL();
-                            } catch (error) { record.photoURL = null; }
-                        }
-                        return record;
-                    }));
+                                     // 7. สร้าง Chart
+                                     chartInstances.issueTrend = new Chart(ctx, {
+                                         type: 'line',
+                                         data: {
+                                             labels: lastThreeMonths.map(m => new Date(m + '-02').toLocaleString('default', { month: 'short', year: '2-digit' })), 
+                                             datasets: datasets
+                                         },
+                                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, } }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Number of Issues' } } } }
+                                     });
 
-                    // --- ส่งข้อมูลกลับไปให้ DataTables ---
-                    callback({
-                        draw: data.draw,
-                        recordsTotal: recordsFiltered, // ใช้ค่าเดียวกันในขั้นตอนนี้
-                        recordsFiltered: recordsFiltered,
-                        data: recordsData,
-                    });
+                                 } catch (error) {
+                                     console.error("createIssueTrendChart: CRITICAL ERROR:", error);
+                                     chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
+                                 }
+                             };
 
-                } catch (error) {
-                    console.error("Error fetching data for DataTable:", error);
-                    alert("An error occurred while fetching data for the table. Please check console for details.");
-                    callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-                }
-            },
-            // --- 🚀 END OF CORE SSP CHANGES ---
+                             // ===================================================================================
+                             // 4. DATATABLE, FILTERS & EXPORT (DEFINITIONS & HANDLERS)
+                             //    (ฟังก์ชันและการตั้งค่าที่เกี่ยวข้องกับตารางข้อมูล "All Records")
+                             // ===================================================================================
 
-            columns: [
-                { data: 'inspectionDate', render: (d) => formatDate(d) },
-                { data: 'department' },
-                { data: 'photoURL', orderable: false, searchable: false, render: (url) => url ? `<a href="${url}" target="_blank"><img src="${url}" class="thumbnail" alt="Bale Image"></a>` : 'No Photo' },
-                { data: 'customerName' },
-                { data: 'baleNumber' },
-                { data: 'checkedBy' },
-                { data: 'issueProblem' },
-                { data: 'notes', render: (d) => d || '', className: 'notes-column' },
-                { data: null, orderable: false, searchable: false, render: (data, type, row) => `<div class="flex justify-center items-center gap-2"><button onclick="editRecord('${row.id}')" class="action-btn" title="Edit Record"><i class="fas fa-edit text-blue-500 hover:text-blue-700 fa-lg"></i></button><button onclick="deleteRecord('${row.id}', '${row.photoFileName || ''}')" class="action-btn" title="Delete Record"><i class="fas fa-trash-alt text-red-500 hover:text-red-700 fa-lg"></i></button></div>` }
-            ],
-            columnDefs: [{ targets: 8, visible: false, width: "80px" }],
-            // สร้าง Filter Dropdowns (ทำงานเหมือนเดิม แต่จะไปกระตุ้น SSP)
-            initComplete: function () {
-                const api = this.api();
-                 api.columns([1, 3, 5, 6]).every(function () {
-                     const column = this;
-                     const filterCell = $(filterRow.find('th').eq(column.index()));
-                     filterCell.on('click', (e) => e.stopPropagation());
-                     const select = $('<select class="select2 form-input text-xs p-1" multiple="multiple" style="width: 100%;"></select>').appendTo(filterCell);
-                     
-                     // ดึงข้อมูล Unique สำหรับ Dropdown จากข้อมูลทั้งหมดของ Dashboard
-                     const dataProperty = column.dataSrc();
-                     if (typeof dataProperty === 'string') {
-                         const uniqueData = [...new Set(dashboardRecords.map(item => item[dataProperty]).filter(value => value))];
-                         uniqueData.sort().forEach((d) => {
-                             select.append($('<option></option>').attr('value', d).text(d));
+                             // --- 4.1 "All Records" Table Initialization (รวม Filter Dropdowns) ---
+                             //     (  ⭐   UPDATE: ลบ filterRow, ลบการอ่าน filter ใน ajax, ลบการสร้าง filter ใน initComplete)
+                                 const initializeDataTable = (summaryData) => { 
+                                 recordsTable = $('#recordsTable').DataTable({
+                                     //  ⭐   UPDATE: เพิ่มบรรทัดนี้เพื่อซ่อนช่อง Search
+                                     searching: false, 
+                                     autoWidth: false,
+                                     scrollY: '50vh',
+                                     scrollCollapse: true,
+                                     serverSide: true, processing: true, pageLength: 15, order: [[0, 'desc']],
+                                     ajax: async (data, callback, settings) => {
+                                         try {
+                                             let query = db.collection("bale_checking_records");
+                                             const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
+                                             const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
+                                             query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
+
+                                             const orderSettings = data.order[0]; const orderColumnIndex = orderSettings.column; const orderDirection = orderSettings.dir;
+                                             const orderColumnName = ['inspectionDate', 'department', null, 'customerName', 'baleNumber', 'checkedBy', 'issueProblem'][orderColumnIndex]; if (orderColumnName) query = query.orderBy(orderColumnName, orderDirection);
+                                             const totalRecordsSnapshot = await query.get(); const recordsFiltered = totalRecordsSnapshot.size;
+                                             if (data.start > 0) { const firstDocSnapshot = await query.limit(data.start).get(); const lastVisible = firstDocSnapshot.docs[firstDocSnapshot.docs.length - 1]; query = query.startAfter(lastVisible); }
+                                             const pagedSnapshot = await query.limit(data.length).get();
+                                             const recordsData = pagedSnapshot.docs.map(doc => {
+                                                 return { id: doc.id, ...doc.data() };
+                                             });
+                                             callback({ draw: data.draw, recordsTotal: recordsFiltered, recordsFiltered: recordsFiltered, data: recordsData });
+                                         } catch (error) { console.error("Error fetching data for DataTable:", error); callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
+                                         }
+                                     },
+                                     columns: [ { data: 'inspectionDate', render: (d) => formatDate(d) }, { data: 'department' }, { data: 'photoURL', orderable: false, searchable: false, render: (url) => url ?
+                                     `<a href="${url}" target="_blank"><img src="${url}" class="thumbnail" alt="Bale Image"></a>` : 'No Photo' }, { data: 'customerName' }, { data: 'baleNumber' }, { data: 'checkedBy' }, { data: 'issueProblem' }, { data: 'notes', render: (d) => `<div class="notes-column">${d ||
+                                     ''}</div>` }, { data: null, orderable: false, searchable: false, render: (data, type, row) => `<div class="flex justify-center items-center gap-2"><button onclick="editRecord('${row.id}')" class="action-btn" title="Edit Record"><i class="fas fa-edit text-blue-500 hover:text-blue-700 fa-lg"></i></button><button onclick="deleteRecord('${row.id}', '${row.photoFileName || ''}')" class="action-btn" title="Delete Record"><i class="fas fa-trash-alt text-red-500 hover:text-red-700 fa-lg"></i></button</div>` } ],
+                                     columnDefs: [
+                                         { targets: 7, width: "250px" }, // (เพิ่มบรรทัดนี้: กำหนดความกว้างคอลัมน์ "Notes" ให้ตรงกับ CSS)
+                                         { targets: 8, visible: false, width: "80px" } // (อันนี้ของเดิม: คอลัมน์ Actions)
+                                     ],
+                                     initComplete: function () {
+                                         const api = this.api();
+                                         const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase()); api.column(8).visible(isAdmin);
+                                         setTimeout(() => {
+                                             this.api().columns.adjust();
+                                         }, 200);
+                                     }
+                                 });
+                                 };
+
+                             // --- 4.2 Table Actions (Edit / Delete) ---
+                             window.editRecord = (recordId) => { window.location.href = `Bale_Checking.html?id=${recordId}`; };
+                             window.deleteRecord = (recordId, photoFileName) => {
+                                 if (!confirm(`Are you sure you want to delete this record?\nID: ${recordId}`)) return;
+                                 const deleteFirestoreRecord = () => db.collection("bale_checking_records").doc(recordId).delete();
+                                 if (photoFileName) {
+                                     const photoRef = storage.ref(`bale_images/${photoFileName}`);
+                                     photoRef.delete().then(deleteFirestoreRecord)
+                                     .then(() => { alert("Record and photo deleted successfully!"); recordsTable.draw(); })
+                                     .catch(error => {
+                                         if (error.code === 'storage/object-not-found') { deleteFirestoreRecord().then(() => { alert("Record deleted (photo not found in storage)."); recordsTable.draw(); }).catch(dbError => alert("Error: " + dbError.message));
+                                         } else { alert("Error: " + error.message); }
+                                     });
+                                 } else { deleteFirestoreRecord().then(() => { alert("Record deleted successfully!"); recordsTable.draw(); }).catch(error => alert("Error: " + error.message)); }
+                             };
+
+                             // --- 4.3 Filter Event Handlers ---
+                             //     ( ⭐  BUG FIX: ลบโค้ดที่ซ้ำซ้อนออก )
+                             clearFiltersBtn.on('click', function() { 
+                                 exportStartDateInput.value = ''; 
+                                 exportEndDateInput.value = ''; 
+                                 // [ลบ] $('#recordsTable .filter-row .select2')...
+                                 recordsTable.search('').draw(); 
+                             });
+                             //  ⭐   UPDATE: เพิ่มโค้ดนี้กลับเข้ามา
+                             $('#exportStartDate, #exportEndDate').on('change', () => { 
+                                 recordsTable.draw(); 
+                             });
+                          
+                             // --- 4.4 Export to Excel Handler ---
+                             $('#exportExcel').on('click', async () => {
+                                 const exportBtn = $('#exportExcel'); exportBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Exporting...');
+                                 try {
+                                     let query = db.collection("bale_checking_records");
+                                     const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
+                                     const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
+                                     query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
+
+                                     // [ลบ] $('.filter-row .select2').each... (เดิม 463)
+
+                                     query = query.orderBy('inspectionDate', 'desc');
+                                     const snapshot = await query.get();
+                                     if (snapshot.empty) { alert("No data to export for the selected filters."); return; }
+                                     const allFilteredRecords = snapshot.docs.map(doc => doc.data());
+                                     const formattedData = allFilteredRecords.map(record => ({ "Date": formatDate(record.inspectionDate), "Department": record.department, "Customer": record.customerName, "Bale No.": record.baleNumber, "Checked By": record.checkedBy, "Issue": record.issueProblem, "Notes": record.notes || '', "Photo Link": record.photoURL ? { t: 's', v: 'View Image', l: { Target: record.photoURL, Tooltip: "Click to view image" } } : '' }));
+                                     const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                                     worksheet['!cols'] = [{ wch: 22 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 30 }, { wch: 15 }];
+                                     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, worksheet, "Bale Records");
+                                     XLSX.writeFile(wb, "Bale_Checking_Report_Filtered.xlsx");
+                                 } catch (error) { console.error("Error exporting Excel:", error); alert("Failed to export data. Please check the console.");
+                                 } finally { exportBtn.prop('disabled', false).html('<i class="fas fa-file-excel"></i> Export Excel'); }
+                             });
+
+                             // ===================================================================================
+                             // 5. MAIN FUNCTION TO FETCH DATA AND RENDER PAGE (EXECUTION)
+                             //    (นี่คือ "Hybrid Model" ที่ถูกต้อง)
+                             // ===================================================================================
+
+                             // --- 5.1 Main Data Fetch Function ---
+                             const fetchAndRenderData = async () => {
+                                 // --- ส่วนที่ 1: ดึงข้อมูลสรุป (Summary) ---
+                                 const summaryPromise = db.collection("dashboard_summary").doc("main_stats").get(); // ( ✅ 1 read)
+
+                                 try {
+                                     const [summaryDoc] = await Promise.all([summaryPromise]);
+
+                                     let summaryDataForFilters = null;
+
+                                     if (summaryDoc.exists) {
+                                         const summaryData = summaryDoc.data();
+                                         summaryDataForFilters = summaryData; 
+
+                                         updateKpiCards(summaryData);
+                                         createTopIssuesChart(summaryData.issueCounts);
+                                         createDepartmentComparisonChart(summaryData.departmentComparison);
+                                         createIssueTrendChart(); // ( ✅ 3 reads from monthly summary)
+
+                                     } else {
+                                         console.error("Error: main_stats document does not exist!");
+                                     }
+
+                                     // --- เริ่มสร้างตาราง "All Records" ---
+                                     initializeDataTable(summaryDataForFilters); // ( ✅ 15 reads from table ajax)
+
+                                 } catch (error) {
+                                     console.error("An error occurred while fetching data:", error);
+                                     alert("Failed to load page data. Please check the console for errors.");
+                                     initializeDataTable(null); 
+                                 }
+                             }; // (จบฟังก์ชัน fetchAndRenderData)
+
+                             // --- 5.2 Start Execution ---
+                             fetchAndRenderData();
+
                          });
-                     }
-                 });
-                 // แปลงร่างเป็น Select2 และผูก Event ใหม่
-                 $('.select2').select2({
-                     placeholder: "Select options...",
-                     allowClear: true
-                 }).on('change', function() {
-                     recordsTable.draw(); // 🚀 เมื่อค่าเปลี่ยน ให้วาดตารางใหม่
-                 });
-                  const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase());
-                  api.column(8).visible(isAdmin);
-            }
-        });
-
-        // --- ผูก Event กับ Search Box หลัก ---
-        // ใช้ debounce เพื่อไม่ให้ยิง query ถี่เกินไปตอนพิมพ์
-        let searchTimeout;
-        $('.dataTables_filter input').unbind().bind('keyup', function() {
-            clearTimeout(searchTimeout);
-            const searchValue = this.value;
-            searchTimeout = setTimeout(() => {
-                 // **หมายเหตุ:** Firestore ไม่สามารถค้นหาแบบ 'contains' ได้
-                 // การค้นหานี้จะทำงานกับค่าที่ขึ้นต้นด้วยคำค้นหา (Prefix search)
-                 // การค้นหาที่มีประสิทธิภาพที่สุดคือการพิมพ์ Bale Number เต็มๆ
-                recordsTable.search(searchValue).draw(); // 🚀 วาดตารางใหม่
-            }, 500); // รอ 500ms หลังหยุดพิมพ์
-        });
-    };
-
-    window.editRecord = (recordId) => { window.location.href = `Bale_Checking.html?id=${recordId}`; };
-    
-    window.deleteRecord = (recordId, photoFileName) => {
-        if (!confirm(`Are you sure you want to delete this record?\nID: ${recordId}`)) return;
-        const deleteFirestoreRecord = () => db.collection("bale_checking_records").doc(recordId).delete();
-        if (photoFileName) {
-            const photoRef = storage.ref(`bale_images/${photoFileName}`);
-            photoRef.delete().then(deleteFirestoreRecord)
-            .then(() => {
-                alert("Record and photo deleted successfully!");
-                recordsTable.draw(); // 🚀 วาดตารางใหม่
-            }).catch(error => {
-                if (error.code === 'storage/object-not-found') {
-                    deleteFirestoreRecord().then(() => {
-                        alert("Record deleted (photo not found in storage).");
-                        recordsTable.draw(); // 🚀 วาดตารางใหม่
-                    }).catch(dbError => alert("Error: " + dbError.message));
-                } else { alert("Error: " + error.message); }
-            });
-        } else {
-            deleteFirestoreRecord().then(() => {
-                alert("Record deleted successfully!");
-                recordsTable.draw(); // 🚀 วาดตารางใหม่
-            }).catch(error => alert("Error: " + error.message));
-        }
-    };
-
-    // --- DASHBOARD CHART LOGIC (ไม่เปลี่ยนแปลง) ---
-    let chartInstances = {};
-    const getCount = (records, field) => { /* ... โค้ดส่วนนี้เหมือนเดิม ... */ return records.reduce((acc, record) => { const key = record[field]; if (key) acc[key] = (acc[key] || 0) + 1; return acc; }, {}); };
-    const getTopEntry = (counts) => { /* ... โค้ดส่วนนี้เหมือนเดิม ... */ return Object.entries(counts).sort(([,a],[,b]) => b-a)[0] || ['-', 0]; };
-    const updateKpiCards = (records) => { if (!records || records.length === 0) { $('#kpi-total-issues, #kpi-top-issue').text('0'); return; } const issueCounts = getCount(records, 'issueProblem'); const [topIssue] = getTopEntry(issueCounts); $('#kpi-total-issues').text(records.length); $('#kpi-top-issue').text(topIssue); };
-    const createTopIssuesChart = (records, totalRecordsCount) => { const issueCounts = getCount(records, 'issueProblem'); const sortedIssues = Object.entries(issueCounts).sort(([, a], [, b]) => b - a).slice(0, 10); const labels = sortedIssues.map(item => item[0]); const data = sortedIssues.map(item => item[1]); const ctx = document.getElementById('topIssuesChart').getContext('2d'); if (chartInstances.topIssues) chartInstances.topIssues.destroy(); chartInstances.topIssues = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Issue Count', data: data, backgroundColor: '#3b82f6', borderColor: '#1d4ed8', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { const count = context.raw; const percentage = totalRecordsCount > 0 ? (count / totalRecordsCount * 100).toFixed(1) : 0; return `Count: ${count} (${percentage}%)`; } } } }, scales: { x: { beginAtZero: true } } } }); };
-    const createDepartmentComparisonChart = (records) => { const issuesByDept = records.reduce((acc, { department, issueProblem }) => { if (department && issueProblem) { if (!acc[issueProblem]) { acc[issueProblem] = { 'Spinning': 0, 'Warehouse': 0 }; } if (acc[issueProblem][department] !== undefined) { acc[issueProblem][department]++; } } return acc; }, {}); const labels = Object.keys(issuesByDept); const spinningData = labels.map(issue => issuesByDept[issue]['Spinning']); const warehouseData = labels.map(issue => issuesByDept[issue]['Warehouse']); const ctx = document.getElementById('departmentComparisonChart').getContext('2d'); if (chartInstances.deptCompare) chartInstances.deptCompare.destroy(); chartInstances.deptCompare = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [ { label: 'Spinning', data: spinningData, backgroundColor: '#f97316', }, { label: 'Warehouse', data: warehouseData, backgroundColor: '#8b5cf6', } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } } } }); };
-    const createIssueTrendChart = (records) => { if (!records || records.length === 0) return; const monthlyCounts = records.reduce((acc, record) => { if (!record.inspectionDate || !record.issueProblem) return acc; const monthYear = new Date(record.inspectionDate).toISOString().slice(0, 7); if (!acc[monthYear]) acc[monthYear] = {}; if (!acc[monthYear][record.issueProblem]) acc[monthYear][record.issueProblem] = 0; acc[monthYear][record.issueProblem]++; return acc; }, {}); const sortedMonths = Object.keys(monthlyCounts).sort().reverse(); const lastThreeMonths = sortedMonths.slice(0, 3).reverse(); if (lastThreeMonths.length === 0) return; const totalCountsInPeriod = {}; lastThreeMonths.forEach(month => { for (const issue in monthlyCounts[month]) { totalCountsInPeriod[issue] = (totalCountsInPeriod[issue] || 0) + monthlyCounts[month][issue]; } }); const topIssues = Object.entries(totalCountsInPeriod).sort(([, a], [, b]) => b - a).slice(0, 7).map(entry => entry[0]); const DISTINCT_COLORS = ['#E6194B', '#3CB44B', '#4363D8', '#F58231', '#911EB4', '#46F0F0', '#FABEBE', '#008080', '#E6BEFF', '#9A6324']; const POINT_STYLES = ['circle', 'rect', 'triangle', 'rectRot', 'star', 'cross', 'rectRounded']; let datasets = topIssues.map((issue, index) => { const data = lastThreeMonths.map(month => monthlyCounts[month][issue] || 0); return { label: issue, data: data, borderColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length], backgroundColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length] + '33', pointStyle: POINT_STYLES[index % POINT_STYLES.length], pointRadius: 6, tension: 0.1, fill: false }; }); const otherIssuesData = lastThreeMonths.map(month => { let otherCount = 0; for (const issue in monthlyCounts[month]) { if (!topIssues.includes(issue)) { otherCount += monthlyCounts[month][issue]; } } return otherCount; }); if (otherIssuesData.some(count => count > 0)) { datasets.push({ label: 'Other Issues', data: otherIssuesData, borderColor: '#808080', backgroundColor: '#80808033', borderDash: [5, 5], pointStyle: 'line', pointRadius: 5, tension: 0.1, fill: false }); } const ctx = document.getElementById('issueTrendChart').getContext('2d'); if (chartInstances.issueTrend) chartInstances.issueTrend.destroy(); chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: lastThreeMonths.map(m => new Date(m + '-02').toLocaleString('default', { month: 'short', year: '2-digit' })), datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, } }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Number of Issues' } } } } }); };
-    const updateDashboards = (records) => { updateKpiCards(records); createTopIssuesChart(records, records.length); createDepartmentComparisonChart(records); createIssueTrendChart(records); };
-
-
-    // --- EXPORT & FILTER FUNCTIONS (NEW LOGIC) ---
-    clearFiltersBtn.on('click', function() {
-        exportStartDateInput.value = '';
-        exportEndDateInput.value = '';
-        // รีเซ็ต dropdowns แล้ว trigger 'change' เพื่อให้ Select2 อัปเดต UI
-        $('#recordsTable .filter-row .select2').val(null).trigger('change.select2');
-        // รีเซ็ต search box หลัก
-        recordsTable.search('').draw(); // 🚀 วาดตารางใหม่
-    });
-
-    $('#exportStartDate, #exportEndDate').on('change', () => {
-        recordsTable.draw(); // 🚀 เมื่อค่าเปลี่ยน ให้วาดตารางใหม่
-    });
-
-    $('#exportExcel').on('click', async () => {
-        const exportBtn = $('#exportExcel');
-        exportBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Exporting...');
-
-        try {
-            // สร้าง Query สำหรับ Export โดยใช้ Filter เดียวกันกับตาราง
-            let query = db.collection("bale_checking_records");
-
-            // 1. กรองตาม Date Range
-            const startDate = exportStartDateInput.value;
-            if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
-            const endDate = exportEndDateInput.value;
-            if (endDate) {
-                 const endOfDay = new Date(endDate);
-                 endOfDay.setHours(23, 59, 59, 999);
-                 query = query.where('inspectionDate', '<=', endOfDay.toISOString());
-            }
-            // 2. กรองตาม Column Filters
-            $('.filter-row .select2').each(function() {
-                const selectedValues = $(this).val();
-                if (selectedValues && selectedValues.length > 0) {
-                     const colIndex = $(this).closest('th').index();
-                     const dataProperty = recordsTable.column(colIndex).dataSrc();
-                    query = query.where(dataProperty, 'in', selectedValues);
-                }
-            });
-            // 3. เรียงลำดับเหมือนตาราง
-            query = query.orderBy('inspectionDate', 'desc');
-
-            // ดึงข้อมูลทั้งหมดที่ตรงตามเงื่อนไข (ไม่มี limit)
-            const snapshot = await query.get();
-            if (snapshot.empty) {
-                alert("No data to export for the selected filters.");
-                return;
-            }
-
-            // ดึง URL รูปภาพและจัด Format ข้อมูล
-            const allFilteredRecords = await Promise.all(snapshot.docs.map(async doc => {
-                 let record = doc.data();
-                 if (record.photoFileName) {
-                     try {
-                         const photoRef = storage.ref(`bale_images/${record.photoFileName}`);
-                         record.photoURL = await photoRef.getDownloadURL();
-                     } catch (e) { record.photoURL = null; }
-                 }
-                 return record;
-            }));
-
-            const formattedData = allFilteredRecords.map(record => ({
-                "Date": formatDate(record.inspectionDate),
-                "Department": record.department,
-                "Customer": record.customerName,
-                "Bale No.": record.baleNumber,
-                "Checked By": record.checkedBy,
-                "Issue": record.issueProblem,
-                "Notes": record.notes || '',
-                "Photo Link": record.photoURL ? { t: 's', v: 'View Image', l: { Target: record.photoURL, Tooltip : "Click to view image" }} : ''
-            }));
-            const worksheet = XLSX.utils.json_to_sheet(formattedData);
-            worksheet['!cols'] = [{wch:22},{wch:15},{wch:20},{wch:15},{wch:15},{wch:25},{wch:30},{wch:15}];
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, worksheet, "Bale Records");
-            XLSX.writeFile(wb, "Bale_Checking_Report_Filtered.xlsx");
-
-        } catch (error) {
-            console.error("Error exporting Excel:", error);
-            alert("Failed to export data. Please check the console.");
-        } finally {
-            exportBtn.prop('disabled', false).html('<i class="fas fa-file-excel"></i> Export Excel');
-        }
-    });
-
-    fetchAndRenderData();
-});
-</script>
-</body>
-</html>
+                         </script>
+                     </body>
+                     </html>

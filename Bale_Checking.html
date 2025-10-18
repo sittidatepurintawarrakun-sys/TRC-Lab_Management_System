@@ -14,6 +14,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
     
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
@@ -229,18 +230,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         submitButton.disabled = true;
         submitButton.textContent = 'Saving...';
-
         try {
-            const newFile = photoInput.files[0];
-            
-            if (newFile) {
-                submitButton.textContent = 'Uploading Image...';
-                const uniqueFileName = Date.now() + '-' + newFile.name;
-                const storageRef = storage.ref('bale_images/' + uniqueFileName);
-                
-                const uploadTask = await storageRef.put(newFile);
-                const downloadURL = await uploadTask.ref.getDownloadURL();
+            let fileToUpload = photoInput.files[0]; // <-- (1) เปลี่ยนจาก const เป็น let
 
+            // ✅  ===== START: แทรกโค้ดบีบอัดเข้ามาตรงนี้ =====
+            if (fileToUpload) {
+                submitButton.textContent = 'Compressing Image...';
+
+                const options = {
+                    maxSizeMB: 0.5,           // ขนาดไฟล์สูงสุด 0.5 MB (500 KB)
+                    maxWidthOrHeight: 1920, // ความละเอียดสูงสุด
+                    useWebWorker: true,
+                    fileType: 'image/jpeg'
+                };
+
+                try {
+                    const compressedFile = await imageCompression(fileToUpload, options);
+                    fileToUpload = compressedFile; // (2) อัปเดตตัวแปร fileToUpload เป็นไฟล์ใหม่ที่บีบอัดแล้ว
+                    console.log(`Image compressed: ${fileToUpload.size / 1024} KB`);
+                } catch (compressionError) {
+                    console.error("Image compression failed:", compressionError);
+                    alert("Image compression failed. Uploading original file.");
+                    fileToUpload = photoInput.files[0]; // (3) หากล้มเหลว ให้กลับไปใช้ไฟล์เดิม
+                }
+            }
+            // ✅  ===== END: แทรกโค้ดบีบอัด =====
+
+            if (fileToUpload) { // (4) โค้ดที่เหลือจะใช้ตัวแปร fileToUpload (ซึ่งอาจเป็นไฟล์ที่บีบอัดแล้ว)
+                submitButton.textContent = 'Uploading Image...';
+                const uniqueFileName = Date.now() + '-' + fileToUpload.name;
+                const storageRef = storage.ref('bale_images/' + uniqueFileName);
+
+                const uploadTask = await storageRef.put(fileToUpload); // <-- อัปโหลดไฟล์ใหม่
+                const downloadURL = await uploadTask.ref.getDownloadURL();
                 updatedData.photoURL = downloadURL;
                 updatedData.photoFileName = uniqueFileName;
 
