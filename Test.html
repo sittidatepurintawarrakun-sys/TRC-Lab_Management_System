@@ -1,499 +1,1277 @@
-                     <!DOCTYPE html>
-                     <html lang="en">
-                     <head>
-                     <meta charset="UTF-8">
-                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                     <title>Bale Checking Report - Lab-TRC-App</title>
-                     <script src="https://cdn.tailwindcss.com"></script>
-                     <link rel="preconnect" href="https://fonts.googleapis.com">
-                     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-                     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.tailwindcss.css">
-                     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-                     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-                     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
-                     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.tailwindcss.js"></script>
-                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-                     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-                     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
-                     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-                     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-                     <style>
-                     body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
-                     .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem;
-                     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
-                     .kpi-card { background: #ffffff; border-radius: 1rem; padding: 1.5rem; text-align: center; }
-                     .kpi-card .value { font-size: 1.75rem; font-weight: 700; color: #1e293b; line-height: 2.25rem; }
-                     .kpi-card .label { font-size: 0.875rem; color: #64748b; margin-top: 0.25rem; }
-                     .form-input { width: 100%; background-color: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b; border-radius: 0.5rem; padding: 0.75rem; }
-                     .btn { font-weight: 600; border-radius: 0.5rem; padding: 0.6rem 1.2rem; transition: background-color 0.3s ease; cursor: pointer; display: inline-flex; align-items: center;
-                     gap: 0.5rem; }
-                     .btn:disabled { cursor: not-allowed; background-color: #94a3b8; }
-                     .btn-primary { background-color: #2563eb; color: white; }
-                     .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
-                     .btn-secondary { background-color: #64748b; color: white; }
-                     .btn-secondary:hover:not(:disabled) { background-color: #475569; }
-                         th { top: 0; background-color: #f1f5f9; z-index: 10; }
-                     .thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 0.5rem; }
-                     .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { margin-bottom: 1rem; }
-                     .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { padding-top: 1rem; font-size: 0.875rem; }
-                     .dataTables_wrapper .dataTables_filter input { width: 250px !important; margin-left: 0.5rem; }
-                     thead .filter-row th { padding: 8px; font-weight: normal; vertical-align: top; }
-                     thead .filter-row input, thead .filter-row select { width: 100%; }
-                     .prose h3 { font-size: 1.1em; margin-top: 1em; margin-bottom: 0.5em; }
-                     .prose ul { list-style-type: disc; padding-left: 1.5em; }
-                     .prose p { margin: 0.5em 0; }
-                     #close-copilot-btn { font-size: 2rem; line-height: 1; }
-                     #copilot-content { word-wrap: break-word; }
-                     .user-question p:first-child, .ai-answer p:first-child { margin-top: 0; }
-                         #recordsTable .notes-column {
-                           max-width: 250px;       /* จำกัดความกว้างเหมือนเดิม */
-                           max-height: 60px;       /* ⭐ เพิ่ม: จำกัดความสูงของช่อง (ประมาณ 3 บรรทัด) */
-                           overflow-y: auto;       /* ⭐ เพิ่ม: ถ้าข้อความสูงเกิน ให้มี scrollbar */
-                           word-wrap: break-word;
-                           white-space: normal !important;
-                           display: block;         /* ⭐ เพิ่ม: เพื่อให้ max-height ทำงานได้ถูกต้อง */
-                         }
-                     </style>
-                     </head>
-                     <body class="antialiased">
-                     <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
-                     <div class="max-w-7xl mx-auto">
-                     <div class="mb-6">
-                     <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
-                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                     </a>
-                     </div>
-                     <header class="mb-8 flex justify-between items-center">
-                     <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-chart-pie text-blue-700"></i> Bale Checking Report</h1>
-                     <div id="auth-container">
-                     <div id="user-info" class="hidden items-center gap-4">
-                     <span id="user-email" class="text-slate-600 text-sm"></span>
-                     <button id="logout-btn" class="btn btn-primary text-sm">Logout</button>
-                     </div>
-                     <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
-                     </div>
-                     </header>
-                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                     <div class="kpi-card card">
-                     <div id="kpi-total-issues" class="value">-</div>
-                     <div class="label">Total Issues</div>
-                     </div>
-                     <div class="kpi-card card">
-                     <div id="kpi-top-issue" class="value truncate">-</div>
-                     <div class="label">Most Frequent Issue</div>
-                     </div>
-                     </div>
-                     <div class="grid grid-cols-1 gap-6 mb-8">
-                     <div class="card p-6 h-[450px] flex flex-col">
-                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Top 10 Issues</h2>
-                     <div class="relative flex-grow"><canvas id="topIssuesChart"></canvas></div>
-                     </div>
-                     <div class="card p-6 h-[450px] flex flex-col">
-                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Comparison by Department</h2>
-                     <div class="relative flex-grow"><canvas id="departmentComparisonChart"></canvas></div>
-                     </div>
-                     </div>
-                     <div class="card p-6 h-[450px] flex flex-col mb-8">
-                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Trend (Last 3 Active Months)</h2>
-                     <div class="relative flex-grow"><canvas id="issueTrendChart"></canvas></div>
-                     </div>
-                     <div class="card p-6 overflow-x-auto">
-                     <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                     <div class="flex items-center">
-                     <h2 class="text-xl font-bold text-slate-800">All Records</h2>
-                     </div>
-                     <div class="flex items-center gap-4">
-                     <div class="font-semibold text-slate-700 text-sm">Export by date range:</div>
-                     <input type="date" id="exportStartDate" class="form-input" style="width: 160px;">
-                     <input type="date" id="exportEndDate" class="form-input" style="width: 160px;">
-                     <button id="clearFiltersBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear All Filters</button>
-                     <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel"></i> Export Excel</button>
-                     </div>
-                     </div>
-                     <div class="table-wrapper" id="table-container">
-                     <table class="w-full text-sm text-left text-slate-500" id="recordsTable">
-                     <thead class="text-xs text-slate-700 uppercase bg-slate-100">
-                     <tr>
-                     <th class="px-6 py-3">Inspection Date</th>
-                     <th class="px-6 py-3">Department</th>
-                     <th class="px-6 py-3">Photo Ref</th>
-                     <th class="px-6 py-3">Customer</th>
-                     <th class="px-6 py-3">Bale No.</th>
-                     <th class="px-6 py-3">Checked By</th>
-                     <th class="px-6 py-3">Issue Problem</th>
-                     <th class="px-6 py-3">Notes</th>
-                     <th class="px-6 py-3">Actions</th>
-                     </tr>
-                     </thead>
-                     <tbody></tbody>
-                     </table>
-                     </div>
-                     </div>
-                     </div>
-                     </div>
-                         <script>
-                         $(document).ready(function() {
-                             // ===================================================================================
-                             // 1. SETUP FIREBASE & VARIABLES
-                             //    (กำหนดค่าเชื่อมต่อ Firebase, ตัวแปร Global, และค่าเริ่มต้นต่างๆ)
-                             // ===================================================================================
-                             const mainFirebaseConfig = {
-                                 apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-                                 authDomain: "lab-trc-management-system.firebaseapp.com",
-                                 projectId: "lab-trc-management-system",
-                                 storageBucket: "lab-trc-management-system.firebasestorage.app",
-                                 messagingSenderId: "43919979160",
-                                 appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-                             };
-                             const photoFirebaseConfig = {
-                                 apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
-                                 authDomain: "trc-photo-data.firebaseapp.com",
-                                 projectId: "trc-photo-data",
-                                 storageBucket: "trc-photo-data.firebasestorage.app",
-                                 messagingSenderId: "656245706360",
-                                 appId: "1:656245706360:web:6de7bd9d296158bc57678d"
-                             };
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCF Report - Lab Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .btn { font-weight: 600; border-radius: 0.5rem; padding: 0.6rem 1.2rem; transition: background-color 0.3s ease; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn:disabled { cursor: not-allowed; background-color: #94a3b8; }
+        .btn-primary { background-color: #2563eb; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
+        .btn-secondary { background-color: #64748b; color: white; }
+        .btn-secondary:hover:not(:disabled) { background-color: #475569; }
+        .form-input { width: 100%; background-color: #f9fafb; border: 1px solid #d1d5db; color: #111827; border-radius: 0.5rem; padding: 0.75rem; }
 
-                             const mainApp = firebase.initializeApp(mainFirebaseConfig);
-                             const photoApp = firebase.initializeApp(photoFirebaseConfig, 'photoStorageApp');
-                             const db = mainApp.firestore();
-                             const storage = photoApp.storage();
-                             const auth = mainApp.auth();
-                             db.settings({ experimentalForceLongPolling: true });
+        /* Existing Sidebar Styles */
+        #detailsSidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
+        #detailsSidebar.open { transform: translateX(0); }
 
-                             // DOM Variables
-                             const loginPromptBtn = $('#login-prompt-btn');
-                             const logoutBtn = $('#logout-btn');
-                             const userInfoDiv = $('#user-info');
-                             const userEmailSpan = $('#user-email');
-                             const exportStartDateInput = document.getElementById('exportStartDate');
-                             const exportEndDateInput = document.getElementById('exportEndDate');
-                             const clearFiltersBtn = $('#clearFiltersBtn');
+        /* AI Copilot Sidebar Styles */
+        #copilot-sidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
+        #copilot-sidebar.open { transform: translateX(0); }
+        #close-copilot-btn { font-size: 2rem; line-height: 1; }
+        .prose h3 { font-size: 1.1em; margin-top: 1em; margin-bottom: 0.5em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; }
+        .prose p { margin: 0.5em 0; }
 
-                             // State Variables
-                             const adminEmails = ["sittidate.p@adityabirla.com", "trc-qcl.laboratory@adityabirla.com", "laboratory.trc@adityabirla.com", "waraporn.jindanath@adityabirla.com"];
-                             let currentUser = null;
-                             let recordsTable;
-                             let dashboardRecords = []; // (คงไว้ - แม้ Hybrid Model จะไม่ได้ใช้ แต่เผื่ออนาคต)
-                             let chartInstances = {};
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-issued { background-color: #eff6ff; color: #1d4ed8; }
+        .status-responded { background-color: #fefce8; color: #a16207; }
+        .status-completed { background-color: #f0fdf4; color: #15803d; }
+        .sidebar-section { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1.5rem; }
+        .sidebar-label { font-weight: 600; color: #4b5563; margin-bottom: 0.25rem; display: block; }
+        .sidebar-value { color: #111827; }
+        .sidebar-input { width: 100%; border-gray-300 rounded-md shadow-sm; }
+    </style>
+</head>
+<body>
+    <div class="flex h-screen bg-gray-100">
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+                <div class="container mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-4">
+                             <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-file-circle-exclamation text-blue-700"></i> Nonconformance Report</h1>
+                             <button id="analyze-btn" class="btn btn-primary">
+                                <i class="fas fa-sparkles"></i> Analyze with AI
+                             </button>
+                    </div>
+                    <div id="auth-container">
+                        <div id="user-info" class="hidden items-center gap-4">
+                            <span id="user-email" class="text-gray-600 text-sm"></span>
+                            <button id="logout-btn" class="btn btn-secondary text-sm">Logout</button>
+                        </div>
+                        <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
+                    </div>
+                    <a href="index.html" class="bg-white text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 transition">
+                    &#8592; Back to Dashboard
+                    </a>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">Monthly Issued NCF Trend</h3>
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">Department Status Overview</h3>
+                        <div id="departmentStatusChartsContainer" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center">
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                        <div>
+                            <label for="searchInput" class="text-sm font-medium text-gray-700">Search NCF Number:</label>
+                            <input type="text" id="searchInput" placeholder="e.g., 25-AUX-1235" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="filterDepartment" class="text-sm font-medium text-gray-700">Filter by Department:</label>
+                            <select id="filterDepartment" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="all">All Departments</option>
+                                <option value="AUX">Auxiliary</option>
+                                <option value="VIS">Viscose</option>
+                                <option value="SPG">Spinning</option>
+                                <option value="ETP">ETP&WTP</option>
+                                <option value="ABEC">ABEC</option>
+                                <option value="FIBER">FIBER</option>
+                                <option value="RM">Raw Material</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filterStatus" class="text-sm font-medium text-gray-700">Filter by Status:</label>
+                            <select id="filterStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="all">All Statuses</option>
+                                <option value="Issued">Issued (Open)</option>
+                                <option value="Responded">Responded</option>
+                                <option value="Completed">Completed (Closed)</option>
+                            </select>
+                        </div>
+                        <div class="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label for="exportStartDate" class="text-sm font-medium text-gray-700">Start Date:</label>
+                                <input type="date" id="exportStartDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="exportEndDate" class="text-sm font-medium text-gray-700">End Date:</label>
+                                <input type="date" id="exportEndDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div class="md:col-span-2 flex justify-end gap-2">
+                                <button id="clearFiltersBtn" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Clear All Filters
+                                </button>
+                                <button id="exportExcelBtn" class="btn btn-primary">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">NCF Number</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">To Dept.</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Area Process</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Description of Nonconformance</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Issue Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Follow Up Status</th>
+                                    <th class="admin-actions-header px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider" style="display: none;">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="ncfTableBody" class="bg-white divide-y divide-gray-200">
+                                <tr><td colspan="6" class="text-center p-8 text-gray-500">Loading data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="pagination-controls" class="flex justify-between items-center mt-4 px-4 py-2 bg-white rounded-lg shadow-md">
+                        <button id="prevPageBtn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span id="pageInfo" class="text-sm font-semibold text-gray-700">Page 1 of 1</span>
+                        <button id="nextPageBtn" class="btn btn-secondary" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
 
-                             // ===================================================================================
-                             // 2. AUTHENTICATION LOGIC
-                             //    (จัดการการ Login, Logout, และการแสดงผลปุ่ม/ข้อมูลผู้ใช้)
-                             // ===================================================================================
-                             loginPromptBtn.on('click', () => {
-                                 const email = prompt("Please enter your admin email:");
-                                 if (email) {
-                                     const password = prompt("Please enter your password:");
-                                     if (password) {
-                                         auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
-                                     }
-                                 }
-                             });
-                             logoutBtn.on('click', () => auth.signOut());
-                             auth.onAuthStateChanged(user => {
-                                 currentUser = user;
-                                 if (user) {
-                                     loginPromptBtn.hide();
-                                     userInfoDiv.show().css('display', 'flex');
-                                     userEmailSpan.text(user.email);
-                                 } else {
-                                     loginPromptBtn.show();
-                                     userInfoDiv.hide();
-                                 }
-                                 if (recordsTable) {
-                                     const isAdmin = currentUser && adminEmails.includes(currentUser.email.toLowerCase());
-                                     recordsTable.column(8).visible(isAdmin);
-                                 }
-                             });
+    <div id="detailsSidebar" class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white shadow-2xl z-50 overflow-y-auto">
+        <div class="p-8">
+            <button id="closeSidebarBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            <div id="sidebarContent"></div>
+        </div>
+    </div>
 
-                             // ===================================================================================
-                             // 3. HELPER & CHART/KPI FUNCTIONS (DEFINITIONS)
-                             //    (ส่วนนี้คือ "คำสั่ง" หรือ "ฟังก์ชัน" ที่เราสร้างไว้ แต่ยังไม่ถูกเรียกใช้งาน)
-                             // ===================================================================================
+    <button id="copilot-btn" class="fixed bottom-8 right-8 bg-purple-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-2xl z-40 hover:bg-purple-700 transition-transform transform hover:scale-110">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+    </button>
+    <div id="copilot-sidebar" class="fixed top-0 right-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out">
+        <div class="flex flex-col h-full">
+            <header class="p-4 border-b flex justify-between items-center bg-slate-50 flex-shrink-0">
+                <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i> AI Analysis</h2>
+                <button id="close-copilot-btn" class="text-slate-500 hover:text-slate-800">&times;</button>
+            </header>
+            <div id="copilot-content" class="flex-grow p-4 overflow-y-auto prose prose-sm max-w-none">
+                <div class="text-center text-slate-500">
+                    <p>Click "Analyze with AI" on the main page to get insights, or ask me a question below.</p>
+                </div>
+            </div>
+            <footer class="p-4 border-t bg-slate-50 flex-shrink-0">
+                <div class="flex gap-2">
+                    <input type="text" id="copilot-chat-input" placeholder="Ask a follow-up question..." class="form-input flex-grow">
+                    <button id="copilot-chat-submit-btn" class="btn btn-secondary">Send</button>
+                </div>
+            </footer>
+        </div>
+    </div>
 
-                             // --- 3.1 Helper Function (Format Date) ---
-                             const formatDate = (dateString) => {
-                                 if (!dateString) return '';
-                                 const date = new Date(dateString);
-                                 return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}, ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                             };
+    <script>
+        const GEMINI_API_KEY = "AIzaSyBSwjq_-voEyaMHHz0boCWlcsx5dVChc-Y"; // กรุณาใช้ Key ของคุณ
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.register(ChartDataLabels);
+            const firebaseConfig = {
+                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                authDomain: "lab-trc-management-system.firebaseapp.com",
+                projectId: "lab-trc-management-system",
+                storageBucket: "lab-trc-management-system.appspot.com",
+                messagingSenderId: "43919979160",
+                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+            };
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            db.settings({ experimentalForceLongPolling: true });
 
-                             // --- 3.2 KPI Cards (Total Issues & Most Frequent Issue) ---
-                             const updateKpiCards = (summaryData) => {
-                                 const totalIssues = summaryData.totalIssues || 0;
-                                 const topIssue = summaryData.topIssue || '-';
-                                 $('#kpi-total-issues').text(totalIssues);
-                                 $('#kpi-top-issue').text(topIssue);
-                             };
+            // (ใหม่) --- AUTH LOGIC ---
+            const auth = firebase.auth();
+            const adminEmails = ["sittidate.p@adityabirla.com", "trc-qcl.laboratory@adityabirla.com", "laboratory.trc@adityabirla.com", "waraporn.jindanath@adityabirla.com"];
+            let currentUser = null;
 
-                             // --- 3.3 Top 10 Issues Chart ---
-                             const createTopIssuesChart = (issueCounts) => {
-                                 if (!issueCounts || Object.keys(issueCounts).length === 0) issueCounts = {};
-                                 const issueTotals = Object.entries(issueCounts).map(([issue, total]) => ({ issue, total }));
-                                 const sortedIssues = issueTotals.sort((a, b) => b.total - a.total).slice(0, 10);
-                                 const labels = sortedIssues.map(item => item.issue);
-                                 const data = sortedIssues.map(item => item.total);
-                                 const totalRecordsCount = issueTotals.reduce((sum, item) => sum + item.total, 0);
-                                 const ctx = document.getElementById('topIssuesChart').getContext('2d');
-                                 if (chartInstances.topIssues) chartInstances.topIssues.destroy();
-                                 chartInstances.topIssues = new Chart(ctx, {
-                                     type: 'bar',
-                                     data: { labels: labels, datasets: [{ label: 'Issue Count', data: data, backgroundColor: '#3b82f6' }] },
-                                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { const count = context.raw;
-                                     const percentage = totalRecordsCount > 0 ? (count / totalRecordsCount * 100).toFixed(1) : 0; return `Count: ${count} (${percentage}%)`;
-                                     } } } }, scales: { x: { beginAtZero: true } } }
-                                 });
-                             };
+            // (ใหม่) DOM Elements สำหรับ Auth
+            const loginPromptBtn = $('#login-prompt-btn');
+            const logoutBtn = $('#logout-btn');
+            const userInfoDiv = $('#user-info');
+            const userEmailSpan = $('#user-email');
 
-                             // --- 3.4 Department Comparison Chart ---
-                             const createDepartmentComparisonChart = (departmentData) => {
-                                 if (!departmentData || Object.keys(departmentData).length === 0) departmentData = {};
-                                 const labels = Object.keys(departmentData);
-                                 const spinningData = labels.map(issue => departmentData[issue]['Spinning'] || 0);
-                                 const warehouseData = labels.map(issue => departmentData[issue]['Warehouse'] || 0);
-                                 const ctx = document.getElementById('departmentComparisonChart').getContext('2d');
-                                 if (chartInstances.deptCompare) chartInstances.deptCompare.destroy();
-                                 chartInstances.deptCompare = new Chart(ctx, {
-                                     type: 'bar',
-                                     data: { labels: labels, datasets: [{ label: 'Spinning', data: spinningData, backgroundColor: '#f97316' }, { label: 'Warehouse', data: warehouseData, backgroundColor: '#8b5cf6' }] },
-                                     options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } } }
-                                 });
-                             };
+            // (ใหม่) Event Handlers สำหรับ Login/Logout (ใช้ Password ที่คุณกำหนด)
+            // (ใหม่) Event Handlers for Custom Modal
+            const passwordModal = $('#passwordModal');
+            const passwordInput = $('#passwordInput');
+            const modalOkBtn = $('#modalOkBtn');
+            const modalCancelBtn = $('#modalCancelBtn');
+            let loginEmailAttempt = null; // Store email temporarily
 
-                             // --- 3.5 Issue Trend (Last 3 Active Months) Chart ---
-                             //     ( ⭐  CLEANUP: ลบ Debug Console.log ออก )
-                             const createIssueTrendChart = async () => {
-                                 const ctx = document.getElementById('issueTrendChart').getContext('2d');
-                                 if (chartInstances.issueTrend) chartInstances.issueTrend.destroy();
+            loginPromptBtn.on('click', () => {
+                const email = prompt("Please enter your admin email:");
+                if (email) {
+                    loginEmailAttempt = email; // Store the entered email
+                    passwordInput.val('');    // Clear previous password input
+                    passwordModal.show();     // Show the custom modal
+                    passwordInput.focus();    // Focus on the password field
+                }
+            });
 
-                                 try {
-                                     // 1. ดึงข้อมูล 3 เดือนล่าสุด
-                                     const trendQuery = db.collection("dashboard_monthly_summary")
-                                                          .orderBy(firebase.firestore.FieldPath.documentId(), "desc")
-                                                          .limit(3);
-                                     const snapshot = await trendQuery.get();
+            modalOkBtn.on('click', () => {
+                const password = passwordInput.val();
+                if (password && loginEmailAttempt) {
+                    auth.signInWithEmailAndPassword(loginEmailAttempt, password)
+                        .catch(err => alert("Login Failed: " + err.message));
+                }
+                passwordModal.hide(); // Hide modal after attempt
+                loginEmailAttempt = null; // Clear stored email
+            });
 
-                                     if (snapshot.empty) {
-                                         console.warn("createIssueTrendChart: Snapshot is EMPTY.");
-                                         chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
-                                         return;
-                                     }
+            modalCancelBtn.on('click', () => {
+                passwordModal.hide(); // Hide modal on cancel
+                loginEmailAttempt = null; // Clear stored email
+            });
 
-                                     // 2. แปลงข้อมูล
-                                     const monthlyDocs = snapshot.docs.map(doc => doc.data()).reverse();
-                                     const lastThreeMonths = snapshot.docs.map(doc => doc.id).reverse(); // ใช้ doc.id ซึ่งควรจะเป็น "YYYY-MM"
+            // (เพิ่ม) Allow pressing Enter key in password field to submit
+            passwordInput.on('keypress', function(e) {
+                if (e.which === 13) { // 13 is the Enter key code
+                    modalOkBtn.click(); // Trigger the OK button click
+                }
+            });
+            logoutBtn.on('click', () => auth.signOut());
 
-                                     // 3. รวมคะแนน
-                                     const metadataFields = ['docId', 'year', 'month', 'totalIssues', 'issueCounts']; 
-                                     const totalCountsInPeriod = {};
+            // (ใหม่) ตัวจัดการสถานะการ Login
+            auth.onAuthStateChanged(user => {
+                currentUser = user;
+                const isAdmin = user && adminEmails.includes(user.email.toLowerCase());
 
-                                     monthlyDocs.forEach(doc => {
-                                         for (const issue in doc) {
-                                             if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
-                                                 totalCountsInPeriod[issue] = (totalCountsInPeriod[issue] || 0) + doc[issue];
-                                             }
-                                         }
-                                     });
+                if (user) {
+                    loginPromptBtn.hide();
+                    userInfoDiv.show().css('display', 'flex');
+                    userEmailSpan.text(user.email);
+                } else {
+                    loginPromptBtn.show();
+                    userInfoDiv.hide();
+                }
 
-                                     // 4. หา Top 7
-                                     const topIssues = Object.entries(totalCountsInPeriod).sort(([, a], [, b]) => b - a).slice(0, 7).map(entry => entry[0]);
-                                     const DISTINCT_COLORS = ['#E6194B', '#3CB44B', '#4363D8', '#F58231', '#911EB4', '#46F0F0', '#FABEBE', '#008080', '#E6BEFF', '#9A6324'];
-                                     const POINT_STYLES = ['circle', 'rect', 'triangle', 'rectRot', 'star', 'cross', 'rectRounded'];
+                // (ใหม่) ส่วนสำคัญ: แสดง/ซ่อน คอลัมน์ "Actions"
+                // (วิธีนี้ใช้ Vanilla JS เพราะตารางนี้ไม่ได้ใช้ DataTables.js)
+                const headers = document.querySelectorAll('.admin-actions-header');
+                const cells = document.querySelectorAll('.admin-actions-cell');
 
-                                     // 5. สร้าง Datasets
-                                     let datasets = topIssues.map((issue, index) => {
-                                         const data = monthlyDocs.map(doc => doc[issue] || 0); 
-                                         return { label: issue, data: data, borderColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length], backgroundColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length] + '33', pointStyle: POINT_STYLES[index % POINT_STYLES.length], pointRadius: 6, tension: 0.1, fill: false };
-                                     });
+                const displayStyle = isAdmin ? '' : 'none'; // ถ้าเป็น Admin ให้แสดง, ถ้าไม่ ให้ซ่อน
 
-                                     // 6. คำนวณ Other Issues
-                                     const otherIssuesData = monthlyDocs.map(doc => {
-                                         let otherCount = 0;
-                                         for (const issue in doc) {
-                                             if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
-                                                 if (!topIssues.includes(issue)) {
-                                                     otherCount += doc[issue];
-                                                 }
-                                             }
-                                         }
-                                         return otherCount;
-                                     });
-                                     if (otherIssuesData.some(count => count > 0)) {
-                                         datasets.push({ label: 'Other Issues', data: otherIssuesData, borderColor: '#808080', backgroundColor: '#80808033', borderDash: [5, 5], pointStyle: 'line', pointRadius: 5, tension: 0.1, fill: false });
-                                     }
+                headers.forEach(el => el.style.display = displayStyle);
+                cells.forEach(el => el.style.display = displayStyle);
+            });
+            // --- สิ้นสุดส่วน AUTH ---
 
-                                     // 7. สร้าง Chart
-                                     chartInstances.issueTrend = new Chart(ctx, {
-                                         type: 'line',
-                                         data: {
-                                             labels: lastThreeMonths.map(m => new Date(m + '-02').toLocaleString('default', { month: 'short', year: '2-digit' })), 
-                                             datasets: datasets
-                                         },
-                                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, } }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Number of Issues' } } } }
-                                     });
+            // --- DOM Elements ---
+            const tableBody = document.getElementById('ncfTableBody');
+            const searchInput = document.getElementById('searchInput');
+            const filterDepartment = document.getElementById('filterDepartment');
+            const filterStatus = document.getElementById('filterStatus');
+            const detailsSidebar = document.getElementById('detailsSidebar');
+            const sidebarContent = document.getElementById('sidebarContent');
+            const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+            const monthlyTrendCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+            const departmentStatusContainer = document.getElementById('departmentStatusChartsContainer');
+            const exportStartDate = document.getElementById('exportStartDate');
+            const exportEndDate = document.getElementById('exportEndDate');
+            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+            const exportExcelBtn = document.getElementById('exportExcelBtn');
 
-                                 } catch (error) {
-                                     console.error("createIssueTrendChart: CRITICAL ERROR:", error);
-                                     chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
-                                 }
-                             };
+            // AI Copilot DOM Elements
+            const copilotBtn = $('#copilot-btn');
+            const copilotSidebar = $('#copilot-sidebar');
+            const closeCopilotBtn = $('#close-copilot-btn');
+            const copilotContent = $('#copilot-content');
+            const copilotChatInput = $('#copilot-chat-input');
+            const copilotChatSubmitBtn = $('#copilot-chat-submit-btn');
+            const analyzeBtn = $('#analyze-btn');
 
-                             // ===================================================================================
-                             // 4. DATATABLE, FILTERS & EXPORT (DEFINITIONS & HANDLERS)
-                             //    (ฟังก์ชันและการตั้งค่าที่เกี่ยวข้องกับตารางข้อมูล "All Records")
-                             // ===================================================================================
+            // --- State Variables ---
+            let monthlyTrendChart;
+            let departmentCharts = {};
+            let currentFilteredRecords = []; // <--- currentFilteredRecords จะเก็บเฉพาะข้อมูลหน้าปัจจุบัน
+            let currentRecord = null;
+            let isInitialLoad = true; // <-- ยังคงใช้สำหรับจัดการปุ่ม Export
+            let currentPage = 1;
+            const rowsPerPage = 15; // <--- เปลี่ยนเป็น 15 ตามคำขอ
+            let lastVisibleDoc = null; // <--- (ใหม่) เก็บ doc สุดท้ายของหน้าที่แสดงผล
+            let pageDocHistory = [null]; // <--- (ใหม่) เก็บ doc แรกของแต่ละหน้า เพื่อใช้ย้อนกลับ
 
-                             // --- 4.1 "All Records" Table Initialization (รวม Filter Dropdowns) ---
-                             //     (  ⭐   UPDATE: ลบ filterRow, ลบการอ่าน filter ใน ajax, ลบการสร้าง filter ใน initComplete)
-                                 const initializeDataTable = (summaryData) => { 
-                                 recordsTable = $('#recordsTable').DataTable({
-                                     //  ⭐   UPDATE: เพิ่มบรรทัดนี้เพื่อซ่อนช่อง Search
-                                     searching: false, 
-                                     autoWidth: false,
-                                     scrollY: '50vh',
-                                     scrollCollapse: true,
-                                     serverSide: true, processing: true, pageLength: 15, order: [[0, 'desc']],
-                                     ajax: async (data, callback, settings) => {
-                                         try {
-                                             let query = db.collection("bale_checking_records");
-                                             const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
-                                             const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
-                                             query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
+            // ปิดปุ่ม Export ไว้ก่อนตอนเริ่มโหลดหน้า
+            exportExcelBtn.disabled = true;
+            exportExcelBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading Data...`;
+            // --- AI Copilot Logic ---
+            copilotBtn.on('click', () => copilotSidebar.addClass('open'));
+            closeCopilotBtn.on('click', () => copilotSidebar.removeClass('open'));
+            analyzeBtn.on('click', function() {
+                copilotSidebar.addClass('open');
+                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Analyzing...');
+                if (currentFilteredRecords.length === 0) {
+                    copilotContent.html('<p class="text-orange-500">No data in the table to analyze.</p>');
+                    $(this).prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                    return;
+                }
+                getGeminiInsights(currentFilteredRecords, $(this));
+            });
+            const getGeminiInsights = async (records, btn) => {
+                 copilotContent.html('<p class="text-center">  ✨   Analyzing data... Please wait a moment.</p>');
+                 if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_GEMINI_API_KEY")) {
+                     copilotContent.html('<p class="text-red-500">Error: Gemini API Key is missing. Please configure it in the script.</p>');
+                     btn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                     return;
+                 }
+                 try {
+                     const simplifiedRecords = records.map(({ id, ...rest }) => rest);
+                     const prompt = `
+                     # Role and Expertise
+                     You are "Q-Insight AI," a world-class **Viscose Production Expert** and **Data Scientist** specializing in Quality Control for the entire Viscose manufacturing process, from pulp slurry to finished fiber.
 
-                                             const orderSettings = data.order[0]; const orderColumnIndex = orderSettings.column; const orderDirection = orderSettings.dir;
-                                             const orderColumnName = ['inspectionDate', 'department', null, 'customerName', 'baleNumber', 'checkedBy', 'issueProblem'][orderColumnIndex]; if (orderColumnName) query = query.orderBy(orderColumnName, orderDirection);
-                                             const totalRecordsSnapshot = await query.get(); const recordsFiltered = totalRecordsSnapshot.size;
-                                             if (data.start > 0) { const firstDocSnapshot = await query.limit(data.start).get(); const lastVisible = firstDocSnapshot.docs[firstDocSnapshot.docs.length - 1]; query = query.startAfter(lastVisible); }
-                                             const pagedSnapshot = await query.limit(data.length).get();
-                                             const recordsData = await Promise.all(pagedSnapshot.docs.map(async (doc) => {
-                                                 let record = { id: doc.id, ...doc.data() };
-                                                 if (record.photoFileName) { try { const photoRef = storage.ref(`bale_images/${record.photoFileName}`); record.photoURL = await photoRef.getDownloadURL(); } catch (error) { record.photoURL = null;
-                                                 } }
-                                                 return record;
-                                             }));
-                                             callback({ draw: data.draw, recordsTotal: recordsFiltered, recordsFiltered: recordsFiltered, data: recordsData });
-                                         } catch (error) { console.error("Error fetching data for DataTable:", error); callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-                                         }
-                                     },
-                                     columns: [ { data: 'inspectionDate', render: (d) => formatDate(d) }, { data: 'department' }, { data: 'photoURL', orderable: false, searchable: false, render: (url) => url ?
-                                     `<a href="${url}" target="_blank"><img src="${url}" class="thumbnail" alt="Bale Image"></a>` : 'No Photo' }, { data: 'customerName' }, { data: 'baleNumber' }, { data: 'checkedBy' }, { data: 'issueProblem' }, { data: 'notes', render: (d) => `<div class="notes-column">${d ||
-                                     ''}</div>` }, { data: null, orderable: false, searchable: false, render: (data, type, row) => `<div class="flex justify-center items-center gap-2"><button onclick="editRecord('${row.id}')" class="action-btn" title="Edit Record"><i class="fas fa-edit text-blue-500 hover:text-blue-700 fa-lg"></i></button><button onclick="deleteRecord('${row.id}', '${row.photoFileName || ''}')" class="action-btn" title="Delete Record"><i class="fas fa-trash-alt text-red-500 hover:text-red-700 fa-lg"></i></button</div>` } ],
-                                     columnDefs: [
-                                         { targets: 7, width: "250px" }, // (เพิ่มบรรทัดนี้: กำหนดความกว้างคอลัมน์ "Notes" ให้ตรงกับ CSS)
-                                         { targets: 8, visible: false, width: "80px" } // (อันนี้ของเดิม: คอลัมน์ Actions)
-                                     ],
-                                     initComplete: function () {
-                                         const api = this.api();
-                                         const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase()); api.column(8).visible(isAdmin);
-                                         setTimeout(() => {
-                                             this.api().columns.adjust();
-                                         }, 200);
-                                     }
-                                 });
-                                 };
+                     # Core Expertise: Viscose Production Process
+                     You have a deep, practical understanding of the entire Viscose process and its potential failure points. When analyzing NCF data, you must always consider how a reported problem might be caused by or affect the following stages:
 
-                             // --- 4.2 Table Actions (Edit / Delete) ---
-                             window.editRecord = (recordId) => { window.location.href = `Bale_Checking.html?id=${recordId}`; };
-                             window.deleteRecord = (recordId, photoFileName) => {
-                                 if (!confirm(`Are you sure you want to delete this record?\nID: ${recordId}`)) return;
-                                 const deleteFirestoreRecord = () => db.collection("bale_checking_records").doc(recordId).delete();
-                                 if (photoFileName) {
-                                     const photoRef = storage.ref(`bale_images/${photoFileName}`);
-                                     photoRef.delete().then(deleteFirestoreRecord)
-                                     .then(() => { alert("Record and photo deleted successfully!"); recordsTable.draw(); })
-                                     .catch(error => {
-                                         if (error.code === 'storage/object-not-found') { deleteFirestoreRecord().then(() => { alert("Record deleted (photo not found in storage)."); recordsTable.draw(); }).catch(dbError => alert("Error: " + dbError.message));
-                                         } else { alert("Error: " + error.message); }
-                                     });
-                                 } else { deleteFirestoreRecord().then(() => { alert("Record deleted successfully!"); recordsTable.draw(); }).catch(error => alert("Error: " + error.message)); }
-                             };
+                     1.  **Pulp Slurry & Steeping:** Pulp quality (reactivity, viscosity), alkali concentration (NaOH %), temperature control.
+                     2.  **Pressing & Shredding:** Alkali Cellulose (AC) properties, press factor, shredder condition.
+                     3.  **Ageing:** Temperature, time, degree of polymerization (DP) control, potential for contamination.
+                     4.  **Xanthation (Baratte):** Carbon Disulfide (CS2) dosage, temperature, vacuum, reaction time, potential for poor reactivity leading to gels.
+                     5.  **Dissolving (Vissolver):** Caustic concentration, temperature, mixing efficiency, final cellulose/alkali ratio.
+                     6.  **Ripening & Filtration:** Viscosity, ripeness index (Hottenroth), filterability (Kw value), filter press condition. **Poor filtration is a direct cause of downstream problems.**
+                     7.  **Spinning & Stretching (Spin Bath):** Acid/Sulfate/Zinc concentrations, temperature, spinneret condition (clogging, damage), stretch ratio, denier control, broken filaments.
+                     8.  **Finishing & Drying:** Finish oil application, cutter condition, dryer temperature, moisture control, fiber physical properties (tenacity, elongation).
 
-                             // --- 4.3 Filter Event Handlers ---
-                             //     ( ⭐  BUG FIX: ลบโค้ดที่ซ้ำซ้อนออก )
-                             clearFiltersBtn.on('click', function() { 
-                                 exportStartDateInput.value = ''; 
-                                 exportEndDateInput.value = ''; 
-                                 // [ลบ] $('#recordsTable .filter-row .select2')...
-                                 recordsTable.search('').draw(); 
-                             });
-                             //  ⭐   UPDATE: เพิ่มโค้ดนี้กลับเข้ามา
-                             $('#exportStartDate, #exportEndDate').on('change', () => { 
-                                 recordsTable.draw(); 
-                             });
-                          
-                             // --- 4.4 Export to Excel Handler ---
-                             $('#exportExcel').on('click', async () => {
-                                 const exportBtn = $('#exportExcel'); exportBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Exporting...');
-                                 try {
-                                     let query = db.collection("bale_checking_records");
-                                     const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
-                                     const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
-                                     query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
+                     # Analysis Philosophy (Crucial!)
+                     * **Prioritize Meaning, Not Just Categories:** The most critical information is hidden in free-text fields like 'part1.details', 'part2.rootCause', and 'part2.correctiveAction'. Prioritize the "actual problems" described within them over simply counting broad categories.
+                     * **Think Holistically:** Always look for connections between the "Problem" (Part 1), the "Root Cause" (Part 2), and the "Corrective Action" (Part 2).
+                     * **Find Patterns in Text:** Even if the text is not identical, you must understand the intent and group similar concepts together.
 
-                                     // [ลบ] $('.filter-row .select2').each... (เดิม 463)
+                     # Text Analysis Methodology
+                     For free-text fields ('details', 'rootCause', 'correctiveAction'), use the following method:
+                     1.  **Normalize:** Convert text to lowercase, trim unnecessary whitespace, and attempt to understand synonymous terms.
+                     2.  **Group and Count:** Group similar problems, causes, or actions together and then count the frequency of each group.
 
-                                     query = query.orderBy('inspectionDate', 'desc');
-                                     const snapshot = await query.get();
-                                     if (snapshot.empty) { alert("No data to export for the selected filters."); return; }
-                                     const allFilteredRecords = await Promise.all(snapshot.docs.map(async doc => { let record = doc.data(); if (record.photoFileName) { try { const photoRef = storage.ref(`bale_images/${record.photoFileName}`); record.photoURL = await photoRef.getDownloadURL(); } catch (e) { record.photoURL = null; } } return record; }));
-                                     const formattedData = allFilteredRecords.map(record => ({ "Date": formatDate(record.inspectionDate), "Department": record.department, "Customer": record.customerName, "Bale No.": record.baleNumber, "Checked By": record.checkedBy, "Issue": record.issueProblem, "Notes": record.notes || '', "Photo Link": record.photoURL ? { t: 's', v: 'View Image', l: { Target: record.photoURL, Tooltip: "Click to view image" } } : '' }));
-                                     const worksheet = XLSX.utils.json_to_sheet(formattedData);
-                                     worksheet['!cols'] = [{ wch: 22 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 30 }, { wch: 15 }];
-                                     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, worksheet, "Bale Records");
-                                     XLSX.writeFile(wb, "Bale_Checking_Report_Filtered.xlsx");
-                                 } catch (error) { console.error("Error exporting Excel:", error); alert("Failed to export data. Please check the console.");
-                                 } finally { exportBtn.prop('disabled', false).html('<i class="fas fa-file-excel"></i> Export Excel'); }
-                             });
+                     # Task
+                     Using your expert knowledge and the methodology above, analyze the provided NCF dataset and generate a summary report covering the following sections:
 
-                             // ===================================================================================
-                             // 5. MAIN FUNCTION TO FETCH DATA AND RENDER PAGE (EXECUTION)
-                             //    (นี่คือ "Hybrid Model" ที่ถูกต้อง)
-                             // ===================================================================================
+                     1.  **Executive Summary:** In 2-3 sentences, summarize the most critical points, the biggest risk, and the overall health of the quality system based on all findings.
+                     2.  **Key Highlights & Insights (In-depth Analysis):**
+                         -   **Most Common Problems (from 'details'):** From a **Viscose production expert's perspective,** identify the top 2-3 recurring technical issues by analyzing and grouping the text in \`part1.details\`.
+                         -   **Most Common Root Causes (from 'rootCause'):** Identify the top 2-3 true root causes by analyzing \`part2.rootCause\`.
+                         -   **Most Common Corrective Actions (from 'correctiveAction'):** Identify the most frequently implemented solutions by analyzing \`part2.correctiveAction\`.
+                     3.  **Anomalies & Outliers:** Identify any suspicious or unusual NCFs, such as recurring problems that are never closed or severe issues resolved suspiciously fast.
+                     4.  **Trend Analysis:** Are there any trends of specific problems, causes, or departments increasing or decreasing over time?
+                     5.  **Correlations & Relationships:**
+                         -   Which "Problems" are most often linked to which "Root Causes"?
+                         -   **Crucially, connect problems found in \`details\` to potential upstream process stages outlined in your Core Expertise.** For example, if 'spinneret clogging' is a common problem, is there a correlation with NCFs related to 'poor filtration' or 'high viscosity'?
+                     6.  **Priority & Actionable Recommendations:** Based on the entire analysis, provide a prioritized list of 1-3 actions. For each, specify:
+                         -   **The Problem:** (e.g., 'High TDS in water' is impacting Spin Bath stability.)
+                         -   **The Action:** (e.g., Instead of a generic 'investigate the issue,' suggest specific actions like **'review the demineralized water plant's performance logs,' or 'increase the frequency of Spin Bath testing.'**)
+                         -   **Owner:** (e.g., Head of Utilities & Spinning.)
+                         -   **Expected Outcome:** (e.g., Stabilize Spin Bath parameters and reduce related fiber quality issues.)
 
-                             // --- 5.1 Main Data Fetch Function ---
-                             const fetchAndRenderData = async () => {
-                                 // --- ส่วนที่ 1: ดึงข้อมูลสรุป (Summary) ---
-                                 const summaryPromise = db.collection("dashboard_summary").doc("main_stats").get(); // ( ✅ 1 read)
+                     # Data for Analysis
+                     \`\`\`json
+                     ${JSON.stringify(simplifiedRecords, null, 2)}
+                     \`\`\`
 
-                                 try {
-                                     const [summaryDoc] = await Promise.all([summaryPromise]);
+                     # Output Format
+                     Please generate the response in clean, well-structured Markdown using the following headings:
+                     ## Executive Summary
+                     [Content]
+                     ✨  Key Highlights & Insights
+                     -   **Common Problems:** [Problem 1], [Problem 2], [Problem 3]
+                     -   **Common Root Causes:** [Cause 1], [Cause 2], [Cause 3]
+                     -   **Common Corrective Actions:** [Action 1], [Action 2], [Action 3]
+                     Pareto Analysis: [Finding]
+                     NCF Lifecycle: [Finding]
+                     ⚠️  Anomalies & Outliers
+                     [Anomaly 1 and why it's an outlier]
+                     [Anomaly 2 and why it's an outlier]
+                     📈  Trend Analysis
+                     [Trend 1 with supporting data]
+                     [Trend 2 with supporting data]
+                     🔗  Correlations & Relationships
+                     [Finding 1]
+                     [Finding 2]
+                     🎯  Priority & Actionable Recommendations
+                     [Action Item Title - e.g., Conduct Root Cause Analysis for Top Issue]: Problem: [State the problem]. Action: [Describe the action].
+                     Owner: [Suggest a role/department]. Expected Outcome: [Describe the expected benefit].
+                     [Action Item Title - e.g., Address Aging NCFs in Dept. X]: Problem: [State the problem]. Action: [Describe the action].
+                     Owner: [Suggest a role/department]. Expected Outcome: [Describe the expected benefit].
+                     `;
+                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                     });
+                     if (!response.ok) {
+                         const errorData = await response.json();
+                         throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+                     }
+                     const data = await response.json();
+                     const text = data.candidates[0].content.parts[0].text;
+                     copilotContent.html(marked.parse(text));
+                 } catch (error) {
+                     console.error("Error calling Gemini API:", error);
+                     copilotContent.html(`<p class="text-red-500">Sorry, the AI analysis failed. Error: ${error.message}</p>`);
+                 } finally {
+                     btn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
+                 }
+            };
+            copilotChatSubmitBtn.on('click', async function() {
+                const question = copilotChatInput.val().trim();
+                if (!question) return;
+                const chatBtn = $(this);
+                chatBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+                const userQuestionHtml = `<div class="user-question mb-2 border-t pt-4 mt-4"><p class="font-semibold text-slate-800">You:</p><p>${question}</p></div>`;
+                copilotContent.append(userQuestionHtml);
+                const thinkingHtmlId = `thinking-${Date.now()}`;
+                const thinkingHtml = `<div id="${thinkingHtmlId}" class="ai-answer"><p class="font-semibold text-purple-600">AI:</p><p>  🤔   Thinking...</p></div>`;
+                copilotContent.append(thinkingHtml);
+                copilotContent.scrollTop(copilotContent[0].scrollHeight);
+                copilotChatInput.val('');
+                try {
+                    const recordsForAnalysis = currentFilteredRecords.length > 1000 ? currentFilteredRecords.slice(0, 1000) : currentFilteredRecords;
+                    const simplifiedRecords = recordsForAnalysis.map(({ id, ...rest }) => rest);
+                    const prompt = `Based on this Nonconformance Report (NCF) data: ${JSON.stringify(simplifiedRecords, null, 2)}\nAnswer this question: ${question}\nProvide a clear, concise answer using Markdown formatting.`;
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => null);
+                        const errorMessage = errorData?.error?.message || response.statusText || 'Chat API request failed';
+                        throw new Error(errorMessage);
+                    }
+                    const data = await response.json();
+                    const text = data.candidates[0].content.parts[0].text;
+                    $(`#${thinkingHtmlId}`).html(`<p class="font-semibold text-purple-600">AI:</p><div>${marked.parse(text)}</div>`);
+                } catch (error) {
+                    $(`#${thinkingHtmlId}`).html(`<p class="text-red-500">Error: ${error.message}</p>`);
+                } finally {
+                    chatBtn.prop('disabled', false).html('Send');
+                    copilotContent.scrollTop(copilotContent[0].scrollHeight);
+                }
+            });
+            // --- เพิ่มฟังก์ชันใหม่สำหรับจัดการ Pagination ---
+            const prevPageBtn = document.getElementById('prevPageBtn');
+            const nextPageBtn = document.getElementById('nextPageBtn');
+            const pageInfo = document.getElementById('pageInfo');
 
-                                     let summaryDataForFilters = null;
+            // (ใหม่) อัปเดต UI โดยไม่จำเป็นต้องรู้ Total
+            const updatePaginationUI = (recordsFetchedCount) => {
+                pageInfo.textContent = `Page ${currentPage}`;
+                // จัดการปุ่ม Previous
+                prevPageBtn.disabled = currentPage === 1;
+                // จัดการปุ่ม Next
+                // ถ้าข้อมูลที่ดึงมาได้ น้อยกว่า "rowsPerPage" หมายความว่านี่คือหน้าสุดท้าย
+                nextPageBtn.disabled = recordsFetchedCount < rowsPerPage;
+            };
 
-                                     if (summaryDoc.exists) {
-                                         const summaryData = summaryDoc.data();
-                                         summaryDataForFilters = summaryData; 
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    applyFiltersAndRender('prev'); // <--- (ใหม่) ส่งทิศทาง
+                }
+            });
 
-                                         updateKpiCards(summaryData);
-                                         createTopIssuesChart(summaryData.issueCounts);
-                                         createDepartmentComparisonChart(summaryData.departmentComparison);
-                                         createIssueTrendChart(); // ( ✅ 3 reads from monthly summary)
+            nextPageBtn.addEventListener('click', () => {
+                // ไม่ต้องเช็ค totalPages, ปุ่ม next จะถูก disable เอง
+                currentPage++;
+                applyFiltersAndRender('next'); // <--- (ใหม่) ส่งทิศทาง
+            });
 
-                                     } else {
-                                         console.error("Error: main_stats document does not exist!");
-                                     }
+            // --- Main Application Logic ---
+            
+            // 2. เพิ่มฟังก์ชันใหม่สำหรับดึงข้อมูล Dashboard โดยเฉพาะ
+            const fetchDashboardData = () => {
+                const summaryRef = db.collection("ncf_dashboard_summary").doc("main_stats");
 
-                                     // --- เริ่มสร้างตาราง "All Records" ---
-                                     initializeDataTable(summaryDataForFilters); // ( ✅ 15 reads from table ajax)
+                // ใช้ onSnapshot เพื่อให้กราฟอัปเดต Real-time เมื่อเอกสารสรุปเปลี่ยน
+                // (นี่คือ 1 Read + Real-time Listeners บนเอกสารเดียว)
+                summaryRef.onSnapshot(doc => {
+                    if (doc.exists) {
+                        const summaryData = doc.data();
+                        // ส่งข้อมูลที่ประมวลผลแล้วไปให้ฟังก์ชัน updateDashboard
+                        updateDashboard(summaryData);
+                    } else {
+                        // กรณีที่เอกสารสรุปยังไม่ถูกสร้าง (เช่น ยังไม่มี NCF เลย)
+                        console.warn("NCF Summary document (main_stats) does not exist yet.");
+                        updateDashboard({}); // ส่งค่าว่างไปเพื่อไม่ให้กราฟค้าง
+                    }
+                }, error => {
+                    console.error("Error fetching NCF dashboard data: ", error);
+                });
+            };
+            const renderTable = (records) => {
+                // (ใหม่) ตรวจสอบสถานะ Admin *ภายใน* ฟังก์ชันนี้เลย
+                const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase());
+                tableBody.innerHTML = '';
+                if (records.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-500">No records found.</td></tr>`;
+                    return;
+                }
+                records.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50 cursor-pointer';
+                    tr.setAttribute('data-id', record.id);
+                    const status = record.followUpStatus || 'Pending Response';
+                    let statusBadge = '';
+                    if (status === 'Pending Response') statusBadge = `<span class="status-badge status-issued">Issued</span>`;
+                    else if (status === 'Responded') statusBadge = `<span class="status-badge status-responded">Responded</span>`;
+                    else if (status === 'Completed') statusBadge = `<span class="status-badge status-completed">Completed</span>`;
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-indigo-600">${record.ncfNumber}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${record.to.department}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.part1.areaProcess || ''}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate" style="max-width: 300px;">${record.part1.details}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.documentDate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
+                    <td class="admin-actions-cell px-6 py-4 whitespace-nowrap text-center" style="display: ${isAdmin ? '' : 'none'};">
+                        <div class="flex justify-center items-center gap-4">
+                            <button onclick="editRecord(event, '${record.id}')" class="text-blue-500 hover:text-blue-700" title="Edit Record">
+                                <i class="fas fa-edit fa-lg"></i>
+                            </button>
 
-                                 } catch (error) {
-                                     console.error("An error occurred while fetching data:", error);
-                                     alert("Failed to load page data. Please check the console for errors.");
-                                     initializeDataTable(null); 
-                                 }
-                             }; // (จบฟังก์ชัน fetchAndRenderData)
+                            <button onclick="deleteRecord(event, '${record.id}')" class="text-red-500 hover:text-red-700" title="Delete Record">
+                                <i class="fas fa-trash-alt fa-lg"></i>
+                            </button>
+                        </div>
+                    </td>
+                    `;
+                    tableBody.appendChild(tr);
+                    tr.addEventListener('click', () => {
+                    // (แก้ไข) ให้ค้นหาจาก 'currentFilteredRecords' (ที่มีแค่ 20 รายการ)
+                    currentRecord = currentFilteredRecords.find(r => r.id === record.id);
+                    // (ใหม่) เรียก Sidebar ในโหมด "ดำเนินการ"
+                    populateAndShowSidebar(currentRecord, 'progress');
+                    });
+                });
+            };
+            // (ใหม่) เปลี่ยนเป็น async function และรับ pageDirection
+            const applyFiltersAndRender = async (pageDirection = 'first') => {
+                // 1. (เหมือนเดิม) ดึงค่าจาก Filters
+                const searchValue = searchInput.value.toLowerCase();
+                const deptValue = filterDepartment.value;
+                const statusValue = filterStatus.value;
+                const startDateValue = exportStartDate.value;
+                const endDateValue = exportEndDate.value;
 
-                             // --- 5.2 Start Execution ---
-                             fetchAndRenderData();
+                // 2. (ใหม่) สร้าง Query
+                let query = db.collection("non_conformance_records");
 
-                         });
-                         </script>
-                     </body>
-                     </html>
+                // 3. (ใหม่) ประกอบ Query ตาม Filters
+                // Filter: Department
+                if (deptValue !== 'all') {
+                    query = query.where("departmentCode", "==", deptValue);
+                }
+
+                // Filter: Status (จัดการ Logic "ซ่อน Completed" [cite: 506-507])
+                if (statusValue === 'all') {
+                    // *** นี่คือการแปลง Logic "!= 'Completed'" 
+                    //     ให้ Firestore Query ได้ (ต้องใช้ Index)
+                    query = query.where("followUpStatus", "in", ["Pending Response", "Responded"]);
+                } else if (statusValue === 'Issued') {
+                    query = query.where("followUpStatus", "==", "Pending Response");
+                } else if (statusValue !== 'all') {
+                    query = query.where("followUpStatus", "==", statusValue);
+                }
+
+                // Filter: Date Range
+                if (startDateValue) {
+                    // ใช้วิธีสร้าง Date object เพื่อความแม่นยำ
+                    query = query.where("createdAt", ">=", new Date(startDateValue + "T00:00:00"));
+                }
+                if (endDateValue) {
+                    query = query.where("createdAt", "<=", new Date(endDateValue + "T23:59:59"));
+                }
+
+                // Filter: Search และการเรียงลำดับ (สำคัญ)
+                // Firestore ไม่อนุญาตให้ใช้ .where() แบบค้นหา (เช่น 'search-key') 
+                // ร่วมกับการเรียงลำดับ (orderBy) createdAt 
+                // เราจะใช้ Logic เดียวกับ Cloud Function (index.js) 
+                // คือ: ถ้ามีการ Search, ให้เรียงตาม ncfNumber
+                //      ถ้าไม่ Search, ให้เรียงตาม createdAt
+                if (searchValue) {
+                    // (ต้องมั่นใจว่า ncfNumber ใน DB เป็นตัวพิมพ์ใหญ่)
+                    query = query.orderBy("ncfNumber")
+                                 .startAt(searchValue.toUpperCase())
+                                 .endAt(searchValue.toUpperCase() + '\uf8ff');
+                } else {
+                    // (Default Order)
+                    query = query.orderBy("createdAt", "desc");
+                }
+
+                // 4. (ใหม่) จัดการ Pagination
+                try {
+                    if (pageDirection === 'prev') {
+                        // (ย้อนกลับไปใช้ Doc แรกของหน้า "ก่อนหน้า")
+                        // pageDocHistory[0] คือ null (สำหรับหน้า 1)
+                        lastVisibleDoc = pageDocHistory[currentPage - 1]; 
+                        pageDocHistory.pop(); // เอา doc ของหน้าปัจจุบันทิ้งไป
+                    }
+
+                    // (สร้าง Query สำหรับหน้าปัจจุบัน)
+                    let pageQuery = query; // Copy query
+
+                    if (lastVisibleDoc && (pageDirection === 'next' || pageDirection === 'prev')) {
+                         pageQuery = pageQuery.startAfter(lastVisibleDoc);
+                    }
+
+                    pageQuery = pageQuery.limit(rowsPerPage);
+
+                    // 5. (ใหม่) ดึงข้อมูล (ใช้ .get() แทน .onSnapshot() เพื่อประหยัด)
+                    const snapshot = await pageQuery.get();
+                    const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    // 6. (ใหม่) อัปเดต State สำหรับ Pagination
+                    if (!snapshot.empty) {
+                        lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
+                        if (pageDirection === 'next') {
+                            pageDocHistory.push(lastVisibleDoc);
+                        }
+                    }
+
+                    // (เก็บข้อมูลหน้าปัจจุบันไว้สำหรับ Export - แม้จะได้แค่ 20)
+                    // (เราจะแก้ไขปุ่ม Export ในขั้นตอนถัดไป)
+                    currentFilteredRecords = records; 
+
+                    // 7. (เหมือนเดิม) แสดงผลตาราง
+                    renderTable(records);
+
+                    // 8. (ใหม่) อัปเดต UI ปุ่ม Pagination
+                    updatePaginationUI(records.length);
+
+                } catch (error) {
+                    console.error("Error fetching paginated records: ", error);
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-red-500">Failed to load data. Error: ${error.message}</td></tr>`;
+                    // (อย่าลืมเปิดปุ่ม Export ถ้า Error)
+                    isInitialLoad = false; // (ถือว่าโหลดครั้งแรกเสร็จแล้ว แม้จะ error)
+                } finally {
+                    // (ใหม่) เปิดปุ่ม Export หลังจากโหลดครั้งแรกเสร็จ
+                    if (isInitialLoad) {
+                        exportExcelBtn.disabled = false;
+                        exportExcelBtn.innerHTML = `<i class="fas fa-file-excel"></i> Export Excel`;
+                        isInitialLoad = false;
+                    }
+                }
+            };
+            // 
+            // 3. เขียนทับฟังก์ชัน updateDashboard ทั้งหมด
+                const updateDashboard = (summaryData) => {
+                // [FIX] แปลงข้อมูล "Flat" (จาก Firestore) ให้เป็น "Nested" (ที่กราฟต้องการ)
+                const monthlyTrendData = {};
+                const deptStatusData = {};
+
+                // วนลูป Key ทั้งหมดใน summaryData ที่ได้มา (เช่น "monthlyTrend.2025-10.SPG")
+                for (const key in summaryData) {
+                    const value = summaryData[key];
+
+                    if (key.startsWith('monthlyTrend.')) {
+                        // key คือ "monthlyTrend.2025-10.SPG"
+                        const parts = key.split('.'); // ["monthlyTrend", "2025-10", "SPG"]
+                        if (parts.length === 3) {
+                            const monthId = parts[1]; // "2025-10"
+                            const dept = parts[2];    // "SPG"
+
+                            if (!monthlyTrendData[monthId]) {
+                                monthlyTrendData[monthId] = {};
+                            }
+                            monthlyTrendData[monthId][dept] = value;
+                        }
+                    } else if (key.startsWith('departmentStatus.')) {
+                        // key คือ "departmentStatus.SPG.Pending Response"
+                        const parts = key.split('.'); // ["departmentStatus", "SPG", "Pending Response"]
+                        if (parts.length === 3) {
+                            const dept = parts[1];    // "SPG"
+                            const status = parts[2]; // "Pending Response"
+
+                            if (!deptStatusData[dept]) {
+                                deptStatusData[dept] = {};
+                            }
+                            deptStatusData[dept][status] = value;
+                        }
+                    }
+                }
+                // สิ้นสุดการ [FIX]
+
+                // --- ส่วนที่ 1: กราฟเส้น Monthly Trend (ปรับปรุง Logic) ---
+
+                // 1.1 สร้างป้ายกำกับ 6 เดือนย้อนหลัง (เหมือนเดิม)
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+                sixMonthsAgo.setDate(1);
+                const monthLabels = []; // ["May 25", "Jun 25", ...]
+                const monthIds = []; // ["2025-05", "2025-06", ...]
+                for (let i = 0; i < 6; i++) {
+                    const date = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth() + i, 1);
+                    monthLabels.push(date.toLocaleString('en-US', { month: 'short', year: '2-digit' }));
+                    monthIds.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+                }
+
+                // 1.2 รวบรวมรายชื่อ Department ทั้งหมดจากข้อมูลสรุป
+                const allDeptsInSummary = new Set([
+                    ...Object.values(monthlyTrendData).flatMap(month => Object.keys(month)),
+                    ...Object.keys(deptStatusData)
+                ]);
+                const departments = Array.from(allDeptsInSummary).sort(); // ["ABEC", "AUX", "ETP", ...]
+
+                // 1.3 เตรียมสี (เหมือนเดิม)
+                const departmentColors = { // 
+                    'AUX': 'rgba(239, 68, 68, 1)', 'VIS': 'rgba(59, 130, 246, 1)',
+                    'SPG': 'rgba(245, 158, 11, 1)', 'ETP': 'rgba(34, 197, 94, 1)',
+                    'ABEC': 'rgba(139, 92, 246, 1)', 'FIBER': 'rgba(236, 72, 153, 1)',
+                    'RM': 'rgba(107, 114, 128, 1)'
+                };
+
+                // 1.4 สร้าง Datasets โดยการวนลูป (Logic ใหม่)
+                const datasets = departments.map(dept => {
+                    const data = monthIds.map(monthId => {
+                        // ดึงยอดจาก monthlyTrendData[monthId][dept]
+                        return monthlyTrendData[monthId]?.[dept] || 0;
+                    });
+
+                    return {
+                        label: dept,
+                        data: data,
+                        borderColor: departmentColors[dept] || 'rgba(0,0,0,1)',
+                        backgroundColor: (departmentColors[dept] || 'rgba(0,0,0,1)').replace('1)', '0.1)'),
+                        fill: true,
+                        tension: 0.3
+                    };
+                });
+
+                // 1.5 วาดกราฟ (เหมือนเดิม)
+                if (monthlyTrendChart) monthlyTrendChart.destroy(); // 
+                monthlyTrendChart = new Chart(monthlyTrendCtx, {
+                    type: 'line',
+                    data: { labels: monthLabels, datasets: datasets },
+                    options: { plugins: { legend: { position: 'top' } } }
+                });
+
+                // --- ส่วนที่ 2: กราฟวงกลม Department Status (ปรับปรุง Logic) ---
+
+                // 2.1 (ข้าม) ไม่ต้องคำนวณ deptStatusData 
+                // เพราะเราได้ `deptStatusData` มาจาก `summaryData` โดยตรงแล้ว
+
+                // 2.2 วาดกราฟ (เหมือนเดิม)
+                departmentStatusContainer.innerHTML = ''; // 
+                Object.keys(departmentCharts).forEach(key => departmentCharts[key].destroy()); // 
+
+                // วนลูปจาก deptStatusData ที่ได้มาเลย
+                Object.keys(deptStatusData).sort().forEach(dept => {
+                    const statusCounts = deptStatusData[dept];
+
+                    // แปลงชื่อ Status จาก "Pending Response" (ใน DB) เป็น "Issued" (ที่แสดงผล)
+                    const data = {
+                        Issued: statusCounts["Pending Response"] || 0,
+                        Responded: statusCounts["Responded"] || 0,
+                        Completed: statusCounts["Completed"] || 0
+                    };
+
+                    const total = data.Issued + data.Responded + data.Completed;
+
+                    // ถ้าไม่มีข้อมูลเลย ก็ข้ามไป ไม่ต้องแสดงกราฟ
+                    if (total === 0) return;
+
+                    // ที่เหลือคือโค้ดวาดกราฟเดิม 
+                    const chartWrapper = document.createElement('div');
+                    chartWrapper.innerHTML = `<h4 class="font-bold text-gray-800">${dept}</h4><canvas id="chart-${dept}"></canvas><div class="font-semibold text-sm text-gray-600 mt-1">Total: ${total}</div>`;
+                    departmentStatusContainer.appendChild(chartWrapper);
+                    const ctx = document.getElementById(`chart-${dept}`).getContext('2d');
+                    departmentCharts[dept] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Issued', 'Responded', 'Completed'],
+                            datasets: [{
+                                data: [data.Issued, data.Responded, data.Completed],
+                                backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(34, 197, 94, 0.7)'],
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: function(context) { return `${context.label}: ${context.raw} units`; } } },
+                                datalabels: {
+                                    formatter: (value, ctx) => {
+                                        if (value === 0) return '';
+                                        let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                        let percentage = (value * 100 / sum).toFixed(0) + "%";
+                                        return percentage;
+                                    },
+                                    color: '#fff',
+                                    font: { weight: 'bold' }
+                                }
+                            }
+                        }
+                    });
+                });
+            }; // (จุดสิ้นสุดของฟังก์ชันที่เขียนทับ)
+            // (ใหม่) แก้ไขฟังก์ชันทั้งหมดให้รับ "mode"
+            const populateAndShowSidebar = (record, mode = 'progress') => {
+                const status = record.followUpStatus || 'Pending Response';
+                const isEditMode = (mode === 'edit'); // ตัวแปรเช็คโหมด
+
+                let contentHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-1">NCF: ${record.ncfNumber}</h2>`;
+
+                if (isEditMode) {
+                    contentHTML += `<p class="text-sm text-blue-600 font-semibold mb-6">Mode: Editing Record Data</p>`;
+                } else {
+                    const issuedAt = record.findingDateTime ? new Date(record.findingDateTime).toLocaleString('th-TH') : 'N/A';
+                    contentHTML += `<p class="text-sm text-gray-500 mb-6">Issued on: ${issuedAt}</p>`;
+                }
+
+                // --- Part 1: Description ---
+                // (ถ้าเป็นโหมด Edit ให้แสดงเป็นช่อง Input, ถ้าเป็น Progress ให้แสดงเป็น Text)
+                contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 1: Description</h3>`;
+                if (isEditMode) {
+                    // --- โหมดแก้ไข Part 1 ---
+                    contentHTML += `<form id="editForm" class="space-y-4">
+                        <div><label class="sidebar-label">To Department</label><input type="text" id="edit_toDepartment" class="sidebar-input border p-2" value="${record.to.department}"></div>
+                        <div><label class="sidebar-label">Area / Process</label><input type="text" id="edit_areaProcess" class="sidebar-input border p-2" value="${record.part1.areaProcess}"></div>
+                        <div><label class="sidebar-label">Details</label><textarea id="edit_details" rows="3" class="sidebar-input border p-2">${record.part1.details}</textarea></div>
+                        <div><label class="sidebar-label">Issuer</label><input type="text" id="edit_issuer" class="sidebar-input border p-2" value="${record.part1.issuer}"></div>
+                        <div><label class="sidebar-label">Issue Date</label><input type="text" id="edit_documentDate" class="sidebar-input border p-2" value="${record.documentDate}"></div>
+                    `;
+                } else {
+                    // --- โหมด Progress Part 1 (Read-Only) ---
+                    contentHTML += `<div class="grid grid-cols-2 gap-4">
+                        <div><span class="sidebar-label">To Department</span><span class="sidebar-value">${record.to.department}</span></div>
+                        <div><span class="sidebar-label">Area / Process</span><span class="sidebar-value">${record.part1.areaProcess}</span></div>
+                        <div class="col-span-2"><span class="sidebar-label">Details</span><p class="sidebar-value" style="white-space: pre-wrap;">${record.part1.details}</p></div>
+                        <div><span class="sidebar-label">Issuer</span><span class="sidebar-value">${record.part1.issuer}</span></div>
+                    </div>`;
+                }
+                contentHTML += `</div>`; // ปิด Section Part 1 (หรือ ปิด <form> ถ้าเป็น Edit Mode)
+
+                // --- Part 2: Response ---
+                if (status === 'Pending Response') {
+                    if (!isEditMode) {
+                        // โหมด Progress: แสดงฟอร์ม Part 2 ให้กรอก
+                        contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 2: Response</h3><form id="responseForm" class="space-y-4">
+                            <div><label for="containmentAction" class="sidebar-label">Containment Action:</label><textarea id="containmentAction" rows="3" class="sidebar-input border p-2"></textarea></div>
+                            <div><label for="rootCause" class="sidebar-label">Root Cause:</label><textarea id="rootCause" rows="3" class="sidebar-input border p-2"></textarea></div>
+                            <div><label for="correctiveAction" class="sidebar-label">Corrective Action:</label><textarea id="correctiveAction" rows="3" class="sidebar-input border p-2"></textarea></div>
+                            <div><label for="inChargePerson" class="sidebar-label">In-Charge Person:</label><input type="text" id="inChargePerson" class="sidebar-input border p-2"></div>
+                            <div><label for="targetDate" class="sidebar-label">Target Date:</label><input type="date" id="targetDate" class="sidebar-input border p-2"></div>
+                            <div><label for="responderName" class="sidebar-label">Responder Name:</label><input type="text" id="responderName" class="sidebar-input border p-2"></div>
+                            <div><label for="approvalName" class="sidebar-label">Approval Name:</label><input type="text" id="approvalName" class="sidebar-input border p-2"></div>
+                        </form></div>`;
+                    }
+                    // ถ้าเป็น Edit Mode และ Status = Issued: ไม่ต้องแสดง Part 2 (ตามกฎข้อ 1)
+
+                } else { // (Status = Responded หรือ Completed)
+                    const part2 = record.part2 || {};
+                    contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 2: Response</h3>`;
+                    if (isEditMode) {
+                        // โหมด Edit: แสดงฟอร์ม Part 2 (มีข้อมูลเดิม)
+                        contentHTML += `
+                            <div><label class="sidebar-label">Containment Action</label><textarea id="edit_containmentAction" rows="3" class="sidebar-input border p-2">${part2.containmentAction || ''}</textarea></div>
+                            <div><label class="sidebar-label">Root Cause</label><textarea id="edit_rootCause" rows="3" class="sidebar-input border p-2">${part2.rootCause || ''}</textarea></div>
+                            <div><label class="sidebar-label">Corrective Action</label><textarea id="edit_correctiveAction" rows="3" class="sidebar-input border p-2">${part2.correctiveAction || ''}</textarea></div>
+                            <div class="grid grid-cols-2 gap-4 mt-4">
+                                <div><label class="sidebar-label">In-Charge Person</label><input type="text" id="edit_inChargePerson" class="sidebar-input border p-2" value="${part2.inChargePerson || ''}"></div>
+                                <div><label class="sidebar-label">Target Date</label><input type="date" id="edit_targetDate" class="sidebar-input border p-2" value="${part2.targetDate || ''}"></div>
+                                <div><label class="sidebar-label">Responder Name</label><input type="text" id="edit_responderName" class="sidebar-input border p-2" value="${part2.responder || ''}"></div>
+                                <div><label class="sidebar-label">Approval Name</label><input type="text" id="edit_approvalName" class="sidebar-input border p-2" value="${part2.approvalName || ''}"></div>
+                            </div>
+                        `;
+                    } else {
+                        // โหมด Progress: แสดง Part 2 (Read-Only)
+                        const respondedAt = part2.respondedAt ? new Date(part2.respondedAt.toDate()).toLocaleString('th-TH') : 'N/A';
+                        contentHTML += `<div class="space-y-4">
+                            <div><span class="sidebar-label">Containment Action</span><p class="sidebar-value">${part2.containmentAction || 'N/A'}</p></div>
+                            <div><span class="sidebar-label">Root Cause</span><p class="sidebar-value">${part2.rootCause || 'N/A'}</p></div>
+                            <div><span class="sidebar-label">Corrective Action</span><p class="sidebar-value">${part2.correctiveAction || 'N/A'}</p></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><span class="sidebar-label">In-Charge Person</span><span class="sidebar-value">${part2.inChargePerson || 'N/A'}</span></div>
+                                <div><span class="sidebar-label">Target Date</span><span class="sidebar-value">${part2.targetDate || 'N/A'}</span></div>
+                                <div><span class="sidebar-label">Responder Name</span><span class="sidebar-value">${part2.responder || 'N/A'}</span></div>
+                                <div><span class="sidebar-label">Approval Name</span><span class="sidebar-value">${part2.approvalName || 'N/A'}</span></div>
+                                <div><span class="sidebar-label">Responded At</span><span class="sidebar-value">${respondedAt}</span></div>
+                            </div>
+                        </div>`;
+                    }
+                    contentHTML += `</div>`; // ปิด Section Part 2
+                }
+
+                // --- Part 3: Follow Up ---
+                if (status === 'Responded') {
+                    if (!isEditMode) {
+                        // โหมด Progress: แสดงฟอร์ม Part 3 ให้กรอก
+                        contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 3: Follow Up</h3><form id="closeForm" class="space-y-4"><div><span class="sidebar-label">Verification Result:</span><div class="flex gap-4 mt-2"><label><input type="radio" name="followUpResult" value="Satisfaction" required> Satisfaction</label><label><input type="radio" name="followUpResult" value="Unsatisfaction"> Unsatisfaction</label></div></div><div><label for="closingIssuer" class="sidebar-label">Verified By:</label><input type="text" id="closingIssuer" class="sidebar-input border p-2"></div></form></div>`;
+                    }
+                    // ถ้าเป็น Edit Mode และ Status = Responded: ไม่ต้องแสดง Part 3 (ตามกฎข้อ 2)
+
+                } else if (status === 'Completed') {
+                    const part3 = record.part3 || {};
+                    contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 3: Follow Up</h3>`;
+                    if (isEditMode) {
+                        // โหมด Edit: แสดงฟอร์ม Part 3 (มีข้อมูลเดิม)
+                        const satChecked = (part3.followUpResult === 'Satisfaction') ? 'checked' : '';
+                        const unsatChecked = (part3.followUpResult === 'Unsatisfaction') ? 'checked' : '';
+                        contentHTML += `<div class="space-y-4">
+                            <div><span class="sidebar-label">Verification Result:</span>
+                                <div class="flex gap-4 mt-2">
+                                    <label><input type="radio" id="edit_followUpResult_sat" name="edit_followUpResult" value="Satisfaction" ${satChecked}> Satisfaction</label>
+                                    <label><input type="radio" id="edit_followUpResult_unsat" name="edit_followUpResult" value="Unsatisfaction" ${unsatChecked}> Unsatisfaction</label>
+                                </div>
+                            </div>
+                            <div><label class="sidebar-label">Verified By:</label><input type="text" id="edit_closingIssuer" class="sidebar-input border p-2" value="${part3.closingIssuerSign || ''}"></div>
+                        </div>`;
+                    } else {
+                        // โหมด Progress: แสดง Part 3 (Read-Only)
+                        const completedAt = part3.completedAt ? new Date(part3.completedAt.toDate()).toLocaleString('th-TH') : 'N/A';
+                        contentHTML += `<div class="space-y-4"><div class="grid grid-cols-2 gap-4"><div><span class="sidebar-label">Verification Result</span><p class="sidebar-value">${part3.followUpResult || 'N/A'}</p></div><div><span class="sidebar-label">Verified By</span><p class="sidebar-value">${part3.closingIssuerSign || 'N/A'}</p></div></div><div><span class="sidebar-label">Completed At</span><p class="sidebar-value">${completedAt}</p></div></div>`;
+                    }
+                    contentHTML += `</div>`; // ปิด Section Part 3
+                }
+
+                // (จำเป็นต้องปิด <form> ของโหมด Edit)
+                if (isEditMode) {
+                    contentHTML += `</form>`; // ปิด <form id="editForm">
+                }
+
+                // --- Action Buttons (ปุ่มด้านล่าง) ---
+                contentHTML += `<div id="sidebarActions" class="mt-8 flex items-center gap-2 flex-wrap">`;
+                if (isEditMode) {
+                    // (ใหม่) โหมด Edit: แสดงปุ่ม Save
+                    contentHTML += `<button id="saveChangesBtn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Save Changes</button>`;
+                } else {
+                    // (เดิม) โหมด Progress: แสดงปุ่มตาม Status
+                    if (status === 'Pending Response') {
+                        contentHTML += `<button id="submitResponseBtn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Submit Response</button>`;
+                    } else if (status === 'Responded') {
+                        contentHTML += `<button id="submitCloseBtn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Mark as Completed & Close</button>`;
+                    } else {
+                        contentHTML += `<span class="text-green-700 font-bold">This NCF has been closed.</span>`;
+                    }
+                }
+                // ปุ่ม Export PDF (มีทั้ง 2 โหมด)
+                contentHTML += `<button id="exportPdfBtn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300"><i class="fas fa-file-pdf mr-2"></i>Export</button>`;
+                contentHTML += `</div>`;
+
+                sidebarContent.innerHTML = contentHTML;
+                detailsSidebar.classList.add('open');
+            };
+            detailsSidebar.addEventListener('click', async (e) => {
+                // (ใหม่) --- LOGIC สำหรับโหมด EDIT ---
+                if (e.target.id === 'saveChangesBtn') {
+                    const btn = e.target;
+                    btn.disabled = true;
+                    btn.textContent = 'Saving...';
+
+                    try {
+                        const updateData = {};
+                        const status = currentRecord.followUpStatus || 'Pending Response';
+
+                        // --- ดึงข้อมูล Part 1 (มีเสมอ) ---
+                        updateData['to.department'] = document.getElementById('edit_toDepartment').value;
+                        updateData['part1.areaProcess'] = document.getElementById('edit_areaProcess').value;
+                        updateData['part1.details'] = document.getElementById('edit_details').value;
+                        updateData['part1.issuer'] = document.getElementById('edit_issuer').value;
+                        updateData['documentDate'] = document.getElementById('edit_documentDate').value;
+
+                        // --- ดึงข้อมูล Part 2 (ถ้ามี) ---
+                        if (status === 'Responded' || status === 'Completed') {
+                            updateData['part2.containmentAction'] = document.getElementById('edit_containmentAction').value;
+                            updateData['part2.rootCause'] = document.getElementById('edit_rootCause').value;
+                            updateData['part2.correctiveAction'] = document.getElementById('edit_correctiveAction').value;
+                            updateData['part2.inChargePerson'] = document.getElementById('edit_inChargePerson').value;
+                            updateData['part2.targetDate'] = document.getElementById('edit_targetDate').value;
+                            updateData['part2.responder'] = document.getElementById('edit_responderName').value;
+                            updateData['part2.approvalName'] = document.getElementById('edit_approvalName').value;
+                        }
+
+                        // --- ดึงข้อมูล Part 3 (ถ้ามี) ---
+                        if (status === 'Completed') {
+                            const resultRadio = document.querySelector('input[name="edit_followUpResult"]:checked');
+                            updateData['part3.followUpResult'] = resultRadio ? resultRadio.value : '';
+                            updateData['part3.closingIssuerSign'] = document.getElementById('edit_closingIssuer').value;
+                        }
+
+                        // --- อัปเดต Firestore ---
+                        await db.collection("non_conformance_records").doc(currentRecord.id).update(updateData);
+
+                        detailsSidebar.classList.remove('open');
+                        // (สำคัญ) โหลดข้อมูลตารางใหม่ เพราะข้อมูลอาจถูกเปลี่ยน
+                        resetAndRender(); 
+
+                    } catch (error) {
+                        console.error("Error saving changes: ", error);
+                        alert("Failed to save changes.");
+                        btn.disabled = false;
+                        btn.textContent = 'Save Changes';
+                    }
+                }
+
+                // (เดิม) --- LOGIC สำหรับโหมด PROGRESS ---
+            if (e.target.id === 'submitResponseBtn') {
+            const btn = e.target;
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+            try {
+            await db.collection("non_conformance_records").doc(currentRecord.id).update({
+            'part2.containmentAction': document.getElementById('containmentAction').value,
+            'part2.rootCause': document.getElementById('rootCause').value,
+            'part2.correctiveAction': document.getElementById('correctiveAction').value,
+            'part2.inChargePerson': document.getElementById('inChargePerson').value,
+            'part2.targetDate': document.getElementById('targetDate').value,
+            'part2.responder': document.getElementById('responderName').value,
+            'part2.approvalName': document.getElementById('approvalName').value,
+            'part2.respondedAt': firebase.firestore.FieldValue.serverTimestamp(),
+            followUpStatus: 'Responded'
+            });
+                detailsSidebar.classList.remove('open');
+                           resetAndRender(); // <--- เพิ่มบรรทัดนี้
+                // (หมายเหตุ: ที่จริง onSnapshot ของ dashboard จะทำงานเอง
+                //  แต่การเรียก resetAndRender() จะทำให้ตารางอัปเดตทันที)
+                } catch (error) {
+            console.error("Error submitting response: ", error);
+            alert("Failed to submit response.");
+            btn.disabled = false;
+            btn.textContent = 'Submit Response';
+            }
+            }
+            if (e.target.id === 'submitCloseBtn') {
+            const btn = e.target;
+            btn.disabled = true;
+            btn.textContent = 'Closing...';
+            try {
+            await db.collection("non_conformance_records").doc(currentRecord.id).update({
+            'part3.followUpResult': document.querySelector('input[name="followUpResult"]:checked').value,
+            'part3.closingIssuerSign': document.getElementById('closingIssuer').value,
+            'part3.completedAt': firebase.firestore.FieldValue.serverTimestamp(),
+            followUpStatus: 'Completed'
+            });
+                detailsSidebar.classList.remove('open');
+                           resetAndRender(); // <--- เพิ่มบรรทัดนี้
+                } catch (error) {
+                console.error("Error closing NCF: ", error);
+            alert("Failed to close NCF.");
+            btn.disabled = false;
+            btn.textContent = 'Mark as Completed & Close';
+            }
+            }
+            });
+
+            // (ใหม่) ฟังก์ชันสำหรับ "แก้ไข" (เปิด Sidebar)
+            window.editRecord = (event, recordId) => {
+            // ป้องกันไม่ให้ Event การคลิกอื่นๆ ทำงาน
+            event.stopPropagation(); 
+
+            // ค้นหาข้อมูล Record ที่ตรงกับ id นี้ จากข้อมูลที่เราแสดงผลอยู่
+            const recordToEdit = currentFilteredRecords.find(r => r.id === recordId);
+
+            if (recordToEdit) {
+            currentRecord = recordToEdit;
+            // (ใหม่) เรียก Sidebar ในโหมด "แก้ไข"
+            populateAndShowSidebar(currentRecord, 'edit');
+            } else {
+            alert("Error: Could not find record data to edit.");
+            }
+            };
+
+                // (ใหม่) ฟังก์ชันสำหรับลบเอกสาร
+                window.deleteRecord = (event, recordId) => {
+                // ป้องกันไม่ให้ Sidebar เปิดขึ้นมาเมื่อกดปุ่มลบ
+                event.stopPropagation(); 
+
+                if (!confirm(`Are you sure you want to delete this NCF record?\nID: ${recordId}\n\nThis action cannot be undone.`)) {
+                    return;
+                }
+
+                db.collection("non_conformance_records").doc(recordId).delete()
+                    .then(() => {
+                        alert("Record deleted successfully!");
+                        // (สำคัญ) เรียก resetAndRender() เพื่อโหลดข้อมูลตารางหน้าแรกใหม่
+                        resetAndRender(); 
+                    })
+                    .catch(error => {
+                        console.error("Error deleting record: ", error);
+                        alert("Failed to delete record: " + error.message);
+                    });
+            };
+
+            const resetAndRender = () => {
+            currentPage = 1;
+            lastVisibleDoc = null; // <--- (ใหม่) รีเซ็ต doc สุดท้าย
+            pageDocHistory = [null]; // <--- (ใหม่) รีเซ็ตประวัติการแบ่งหน้า
+            applyFiltersAndRender('first'); // <--- (ใหม่) ส่งทิศทาง
+            };
+
+            // (ใหม่) ย้ายคำสั่งเรียกใช้มาไว้ข้างล่าง
+            fetchDashboardData();
+            resetAndRender();
+
+            searchInput.addEventListener('input', resetAndRender);
+            filterDepartment.addEventListener('change', resetAndRender);
+            filterStatus.addEventListener('change', resetAndRender);
+            closeSidebarBtn.addEventListener('click', () => detailsSidebar.classList.remove('open'));
+            exportStartDate.addEventListener('change', resetAndRender);
+            exportEndDate.addEventListener('change', resetAndRender);
+
+            clearFiltersBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                filterDepartment.value = 'all';
+                filterStatus.value = 'all';
+                exportStartDate.value = '';
+                exportEndDate.value = '';
+                resetAndRender(); // <-- เรียกใช้ฟังก์ชันใหม่
+            });
+            const formatTimestamp = (timestamp) => {
+                if (timestamp && typeof timestamp.toDate === 'function') {
+                    return timestamp.toDate().toLocaleString('th-TH', {
+                        year: 'numeric', month: '2-digit', day: '2-digit',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                }
+                return '';
+            };
+        // (ใหม่) ทำให้ Listener เป็น async
+        exportExcelBtn.addEventListener('click', async () => {
+
+            // (ใหม่) ฟังก์ชันสำหรับดึงข้อมูล Export (จำกัดที่ 1000 รายการ)
+            const fetchAllFilteredRecordsForExport = async () => {
+                // (คัดลอก Logic การสร้าง Query มาจาก applyFiltersAndRender)
+                const searchValue = searchInput.value.toLowerCase();
+                const deptValue = filterDepartment.value;
+                const statusValue = filterStatus.value;
+                const startDateValue = exportStartDate.value;
+                const endDateValue = exportEndDate.value;
+
+                let query = db.collection("non_conformance_records");
+
+                if (deptValue !== 'all') {
+                    query = query.where("departmentCode", "==", deptValue);
+                }
+                if (statusValue !== 'all') {
+                // กรองเฉพาะเมื่อผู้ใช้เลือก Status ที่ต้องการจริงๆ
+                if (statusValue === 'Issued') {
+                query = query.where("followUpStatus", "==", "Pending Response");
+                } else {
+                // กรอง "Responded" หรือ "Completed" ตามที่ผู้ใช้เลือก
+                query = query.where("followUpStatus", "==", statusValue);
+                }
+                }
+                if (startDateValue) {
+                    query = query.where("createdAt", ">=", new Date(startDateValue + "T00:00:00"));
+                }
+                if (endDateValue) {
+                    query = query.where("createdAt", "<=", new Date(endDateValue + "T23:59:59"));
+                }
+                if (searchValue) {
+                    query = query.orderBy("ncfNumber")
+                                 .startAt(searchValue.toUpperCase())
+                                 .endAt(searchValue.toUpperCase() + '\uf8ff');
+                } else {
+                    query = query.orderBy("createdAt", "desc");
+                }
+
+                // *** (สำคัญ) ดึงข้อมูลโดยไม่แบ่งหน้า แต่จำกัดไว้ที่ 1000 ***
+                const snapshot = await query.limit(1000).get(); 
+                if (snapshot.empty) {
+                    return [];
+                }
+                return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            };
+
+            // --- (เริ่ม Logic ของปุ่ม) ---
+            exportExcelBtn.disabled = true;
+            exportExcelBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparing...`;
+
+            try {
+                // (ใหม่) เรียกดึงข้อมูลทั้งหมดสำหรับ Export
+                const recordsToExport = await fetchAllFilteredRecordsForExport();
+
+                if (recordsToExport.length === 0) {
+                    alert("No data to export based on the current filters.");
+                    return;
+                }
+
+                // (เหมือนเดิม) แปลงข้อมูล
+                const formattedData = recordsToExport.map(record => ({
+                    "NCF Number": record.ncfNumber,
+                    "Issue Date": record.documentDate,
+                    "Department": record.to?.department || '',
+                    "Area Process": record.part1?.areaProcess || '',
+                    "Description of Nonconformance": record.part1?.details || '',
+                    "Issuer": record.part1?.issuer || '',
+                    "Containment Action": record.part2?.containmentAction || '',
+                    "Root Cause": record.part2?.rootCause || '',
+                    "Corrective Action": record.part2?.correctiveAction || '',
+                    "In-Charge Person": record.part2?.inChargePerson || '',
+                    "Target Date": record.part2?.targetDate || '',
+                    "Responder": record.part2?.responder || '',
+                    "Approval": record.part2?.approvalName || '',
+                    "Responded Date": formatTimestamp(record.part2?.respondedAt),
+                    "Verification Result": record.part3?.followUpResult || '',
+                    "Verified By": record.part3?.closingIssuerSign || '',
+                    "Completed Date": formatTimestamp(record.part3?.completedAt),
+                    "Status": record.followUpStatus || 'Issued'
+                }));
+
+                // (เหมือนเดิม) สร้างไฟล์ Excel
+                const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                worksheet['!cols'] = [
+                    { wch: 18 }, { wch: 12 }, { wch: 15 }, { wch: 25 }, { wch: 50 },
+                    { wch: 20 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 20 },
+                    { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+                    { wch: 20 }, { wch: 20 }, { wch: 15 }
+                ];
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "NCF Records");
+                XLSX.writeFile(workbook, "Nonconformance_Report_Detailed.xlsx");
+
+            } catch (error) {
+                console.error("Error exporting Excel: ", error);
+                alert("An error occurred while preparing the export file.");
+            } finally {
+                exportExcelBtn.disabled = false;
+                exportExcelBtn.innerHTML = `<i class="fas fa-file-excel"></i> Export Excel`;
+            }
+        });
+});
+</script>
+
+<div id="passwordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[100]" style="display: none;">
+  <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3 text-center">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Enter Password</h3>
+      <div class="mt-2 px-7 py-3">
+         <label for="passwordInput" class="sr-only">Password</label> <input type="password" id="passwordInput" class="form-input w-full text-center" placeholder="Password">
+      </div>
+      <div class="items-center px-4 py-3">
+        <button id="modalOkBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+          OK
+        </button>
+        <button id="modalCancelBtn" class="ml-3 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
