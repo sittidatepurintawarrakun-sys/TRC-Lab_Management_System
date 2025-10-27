@@ -80,9 +80,19 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label for="areaProcess" class="form-label">Area / Process:</label>
-                        <select id="areaProcess" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" disabled required>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                  <label for="findingDate" class="form-label">วันที่พบปัญหา (Date of Finding):</label>
+                                  <input type="date" id="findingDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                </div>
+                                <div>
+                                  <label for="findingTime" class="form-label">เวลาที่พบปัญหา (Time of Finding):</label>
+                                  <input type="time" id="findingTime" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                </div>
+                              </div>
+                              <div>
+                            <label for="areaProcess" class="form-label">Area / Process:</label>
+                            <select id="areaProcess" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" disabled required>
                             <option value="">-- โปรดเลือกแผนกก่อน --</option>
                         </select>
                     </div>
@@ -107,7 +117,6 @@
         </form>
     </div>
         <script>
-            <script>
                 // เช็คว่ามี "กุญแจ" ใน sessionStorage หรือยัง
                 if (sessionStorage.getItem('isF4Authenticated') !== 'true') {
 
@@ -125,9 +134,6 @@
                         window.location.href = 'index.html';
                     }
                 }
-        </script>
-
-    <script>
         
         // ===================================================================================
         // JAVASCRIPT SECTION (ส่วนนี้ไม่ต้องแก้ไข เหมือนเดิมทุกอย่าง)
@@ -260,6 +266,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const areaProcessDropdown = document.getElementById('areaProcess');
     const ncfForm = document.getElementById('ncfForm');
 
+          // ---  ✅  เพิ่มโค้ดส่วนนี้: ตั้งค่าวันที่-เวลา ปัจจุบันเป็นค่าเริ่มต้น ---
+          try {
+            const now = new Date();
+            // ปรับ Timezone Offset ของไทย (GMT+7)
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+
+            // Format YYYY-MM-DD
+            const today = now.toISOString().split('T')[0]; 
+            // Format HH:MM
+            const currentTime = now.toISOString().split('T')[1].substring(0, 5);
+
+            document.getElementById('findingDate').value = today;
+            document.getElementById('findingTime').value = currentTime;
+          } catch (e) {
+            console.warn("Could not set default date/time inputs.", e);
+          }
+          // ---  ✅  สิ้นสุดส่วนที่เพิ่มเข้ามา ---
+
     // --- ส่วนจัดการ Logic ของฟอร์มแบบ Dynamic ---
     // เมื่อมีการเลือกแผนก ฟังก์ชันนี้จะทำงาน
     departmentSelector.addEventListener('change', () => {
@@ -332,13 +356,29 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- ส่วนรวบรวมข้อมูลจากฟอร์ม ---
             const ncRelated = Array.from(document.querySelectorAll('input[name="ncRelated"]:checked')).map(el => el.value);
             
-            const recordData = {
-                ncfNumber: ncfNumber,
-                itemNumber: newItemNumber,
-                departmentCode: deptCode,
-                documentDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-                findingDateTime: new Date().toISOString(),
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                      // ---  ✅  เพิ่ม Logic นี้เข้ามา (ก่อน const recordData) ---
+                      // 1. ดึงค่าวันที่และเวลาที่ผู้ใช้กรอก
+                      const findingDate = document.getElementById('findingDate').value;
+                      const findingTime = document.getElementById('findingTime').value;
+
+                      // 2. ตรวจสอบ
+                      if (!findingDate || !findingTime) {
+                        alert('กรุณาระบุ วันที่ และ เวลา ที่พบปัญหาให้ครบถ้วน');
+                        throw new Error("Finding date or time is missing.");
+                      }
+
+                      // 3. รวม Date และ Time เพื่อสร้าง Timestamp (ISO String)
+                      const combinedDateTime = new Date(`${findingDate}T${findingTime}`);
+                      // ---  ✅  สิ้นสุด Logic ที่เพิ่มเข้ามา ---
+
+
+                const recordData = {
+                  ncfNumber: ncfNumber,
+                  itemNumber: newItemNumber,
+                  departmentCode: deptCode,
+                  documentDate: findingDate, //  <--- ‼️ แก้ไข: ใช้ 'วันที่พบปัญหา' ที่กรอก
+                  findingDateTime: combinedDateTime.toISOString(), //  <--- ‼️ แก้ไข: ใช้ 'วัน-เวลา' ที่รวมแล้ว
+                  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 issueStatus: "Issued",
                 followUpStatus: "Pending Response",
                 to: {
