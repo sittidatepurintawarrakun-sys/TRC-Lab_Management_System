@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Requesting - Lab-TRC-App</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
+        .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
+        .form-input, .form-select { width: 100%; background-color: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b; border-radius: 0.5rem; padding: 0.75rem; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
+        .form-label { display: block; font-weight: 600; color: #334155; margin-bottom: 0.5rem; }
+        .btn-primary { background-color: #2563eb; color: white; font-weight: 600; border-radius: 0.5rem; padding: 0.75rem 1.5rem; transition: background-color 0.3s ease; cursor: pointer; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-primary:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .form-file-button { background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.2s; }
+        .form-file-button:hover { background-color: #e2e8f0; }
+    </style>
+</head>
+<body class="antialiased">
+
+<div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-6">
+            <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+            </a>
+        </div>
+
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-vial-circle-check text-blue-700"></i> Sample Requesting</h1>
+            <p class="text-slate-500 mt-2">Submit a new sample for laboratory testing.</p>
+        </header>
+
+        <div class="card p-8">
+            <form id="sample-request-form" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+
+                <div class="md:col-span-2 pb-4 border-b border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800">1. Requester Information</h3>
+                </div>
+
+                <div>
+                    <label for="requestDate" class="form-label">Date & Time of Request</label>
+                    <input type="datetime-local" id="requestDate" name="requestDate" class="form-input" required>
+                </div>
+
+                <div>
+                    <label for="requesterName" class="form-label">Requester Name</label>
+                    <input type="text" id="requesterName" name="requesterName" class="form-input" placeholder="e.g., John Doe" required>
+                </div>
+                
+                <div>
+                    <label for="requesterEmail" class="form-label">Requester E-Mail</label>
+                    <input type="email" id="requesterEmail" name="requesterEmail" class="form-input" placeholder="e.g., john.doe@example.com" required>
+                </div>
+
+                <div>
+                    <label for="requesterPhone" class="form-label">Phone Number (Optional)</label>
+                    <input type="tel" id="requesterPhone" name="requesterPhone" class="form-input" placeholder="e.g., 081-234-5678">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="requesterDepartment" class="form-label">Department</label>
+                    <select id="requesterDepartment" name="requesterDepartment" class="form-select" required>
+                        <option value="" disabled selected>-- Select Department --</option>
+                        <option value="Viscose">Viscose</option>
+                        <option value="Spinning">Spinning</option>
+                        <option value="Auxiliary">Auxiliary</option>
+                        <option value="ETP&WTP">ETP&WTP</option>
+                        <option value="ABEC">ABEC</option>
+                        <option value="Warehouse">Warehouse</option>
+                        <option value="Quality Control">Quality Control</option>
+                        <option value="Technical Cell">Technical Cell</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Other Unit">Other Unit</option>
+                    </select>
+                </div>
+
+                <div id="otherDepartmentContainer" class="md:col-span-2 hidden">
+                    <label for="otherDepartment" class="form-label">Please Specify Department</label>
+                    <input type="text" id="otherDepartment" name="otherDepartment" class="form-input" placeholder="e.g., Logistics">
+                </div>
+                
+                
+                <div class="md:col-span-2 pt-4 pb-4 border-b border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800">2. Sample Information</h3>
+                </div>
+
+                <div>
+                    <label for="sampleName" class="form-label">Sample Name / Type</label>
+                    <input type="text" id="sampleName" name="sampleName" class="form-input" placeholder="e.g., Polyester Staple Fiber" required>
+                </div>
+
+                <div>
+                    <label for="sampleSource" class="form-label">Sample Source</label>
+                    <input type="text" id="sampleSource" name="sampleSource" class="form-input" placeholder="e.g., Production Line 3, Supplier ABC" required>
+                </div>
+
+                <div>
+                    <label for="batchLotNumber" class="form-label">Batch / Lot No.</label>
+                    <input type="text" id="batchLotNumber" name="batchLotNumber" class="form-input" placeholder="e.g., B-123456" required>
+                </div>
+
+                <div>
+                    <label for="sampleCount" class="form-label">Number of Samples</label>
+                    <input type="number" id="sampleCount" name="sampleCount" class="form-input" placeholder="e.g., 5, 10, 1" min="1" required>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="sampleUnit" class="form-label">Sample Unit / Description (Optional)</label>
+                    <input type="text" id="sampleUnit" name="sampleUnit" class="form-input" placeholder="e.g., 100g per bag, 250ml cans, Samples A1-A5">
+                </div>
+
+
+                <div class="md:col-span-2 pt-4 pb-4 border-b border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800">3. Test Details</h3>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="priority" class="form-label">Priority Level</label>
+                    <select id="priority" name="priority" class="form-select" required>
+                        <option value="" disabled selected>-- Select Priority --</option>
+                        <option value="Normal">Normal</option>
+                        <option value="High">High</option>
+                        <option value="Urgent">Urgent</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="reasonForTest" class="form-label">Reason for Testing</label>
+                    <select id="reasonForTest" name="reasonForTest" class="form-select" required>
+                        <option value="" disabled selected>-- Select Reason --</option>
+                        <option value="Routine Check">Routine Check</option>
+                        <option value="Customer Complaint">Customer Complaint</option>
+                        <option value="R&D Trial">R&D Trial</option>
+                        <option value="Process Problem">Process Problem</option>
+                        <option value="Supplier Check">Supplier Check</option>
+                        <option value="Round Robin Test">Round Robin Test</option>
+                        <option value="Benchmarking">Benchmarking</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div id="otherReasonContainer" class="md:col-span-2 hidden">
+                    <label for="otherReason" class="form-label">Please Specify Reason</label>
+                    <input type="text" id="otherReason" name="otherReason" class="form-input" placeholder="e.g., New Product Development">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="testJustification" class="form-label">Test Purpose (Required)</label>
+                    <textarea id="testJustification" name="testJustification" rows="2" class="form-input" placeholder="Explain why this test is needed, its importance, or what to look for..." required></textarea>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="testsRequired" class="form-label">Tests Required</label>
+                    <textarea id="testsRequired" name="testsRequired" rows="3" class="form-input" placeholder="List all tests needed, separated by commas (e.g., Tensile Strength, Color Check, Moisture %)" required></textarea>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="specialInstructions" class="form-label">Special Instructions / Notes</label>
+                    <textarea id="specialInstructions" name="specialInstructions" rows="3" class="form-input" placeholder="e.g., Handle with care, light sensitive, test immediately..."></textarea>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="photoReference" class="form-label">Photo Reference (Optional)</label>
+                    <div class="mt-2 flex items-center gap-4">
+                        <input type="file" id="photoReference" name="photoReference" class="hidden" accept="image/*">
+                        <label for="photoReference" class="form-file-button">
+                            <i class="fas fa-upload mr-2"></i> Choose Image
+                        </label>
+                        <span id="fileName" class="text-sm text-slate-500">No file selected</span>
+                    </div>
+                </div>
+                <div class="md:col-span-2 text-right mt-6">
+                    <button type="submit" id="submitButton" class="btn-primary w-full md:w-auto">
+                        <i class="fas fa-paper-plane mr-2"></i>Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Firebase Configuration ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+        authDomain: "lab-trc-management-system.firebaseapp.com",
+        projectId: "lab-trc-management-system",
+        storageBucket: "lab-trc-management-system.firebasestorage.app",
+        messagingSenderId: "43919979160",
+        appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+    };
+
+    // --- Initialize Firebase Services ---
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = app.firestore();
+    const storage = app.storage();
+    const auth = app.auth();
+    
+    // บังคับให้ Firestore ใช้ Long Polling ซึ่งเสถียรกว่าใน Replit
+    db.settings({ experimentalForceLongPolling: true }); 
+    
+    // --- DOM Elements ---
+    const requestForm = document.getElementById('sample-request-form');
+    const submitButton = document.getElementById('submitButton');
+    const photoInput = document.getElementById('photoReference');
+    const fileNameSpan = document.getElementById('fileName');
+    
+    const departmentSelect = document.getElementById('requesterDepartment');
+    const otherDepartmentContainer = document.getElementById('otherDepartmentContainer');
+    const otherDepartmentInput = document.getElementById('otherDepartment');
+
+    const reasonSelect = document.getElementById('reasonForTest');
+    const otherReasonContainer = document.getElementById('otherReasonContainer');
+    const otherReasonInput = document.getElementById('otherReason');
+
+
+    // --- Auto-fill fields ---
+    
+    // ตั้งค่าวันที่และเวลาปัจจุบัน
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('requestDate').value = now.toISOString().slice(0, 16);
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            const requesterEmailInput = document.getElementById('requesterEmail');
+            const requesterNameInput = document.getElementById('requesterName');
+
+            if (requesterEmailInput && !requesterEmailInput.value) {
+                requesterEmailInput.value = user.email; 
+            }
+            if (requesterNameInput && !requesterNameInput.value && user.displayName) {
+                requesterNameInput.value = user.displayName;
+            }
+        }
+    });
+    
+    // --- File Input Listener ---
+    photoInput.addEventListener('change', () => {
+        fileNameSpan.textContent = photoInput.files.length > 0 ? photoInput.files[0].name : 'No file selected';
+    });
+    
+    // Event Listener for Department dropdown
+    departmentSelect.addEventListener('change', () => {
+        if (departmentSelect.value === 'Other') {
+            otherDepartmentContainer.classList.remove('hidden');
+            otherDepartmentInput.required = true; 
+        } else {
+            otherDepartmentContainer.classList.add('hidden');
+            otherDepartmentInput.required = false;
+            otherDepartmentInput.value = ''; 
+        }
+    });
+
+    // Event Listener for Reason dropdown
+    reasonSelect.addEventListener('change', () => {
+        if (reasonSelect.value === 'Other') {
+            otherReasonContainer.classList.remove('hidden');
+            otherReasonInput.required = true; 
+        } else {
+            otherReasonContainer.classList.add('hidden');
+            otherReasonInput.required = false;
+            otherReasonInput.value = ''; 
+        }
+    });
+
+    // --- Function: Generate Unique Request ID (สำคัญ!) ---
+    async function getNextRequestId() {
+        const counterRef = db.collection("metadata").doc("counters");
+        let nextId = 1; 
+
+        try {
+            await db.runTransaction(async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                
+                if (!counterDoc.exists) {
+                    transaction.set(counterRef, { sampleRequestCounter: 1 });
+                    nextId = 1;
+                } else {
+                    nextId = counterDoc.data().sampleRequestCounter + 1;
+                    transaction.update(counterRef, { sampleRequestCounter: nextId });
+                }
+            });
+            
+            return `LAB-SP-${String(nextId).padStart(4, '0')}`;
+            
+        } catch (error) {
+            console.error("Transaction failed: ", error);
+            throw new Error("Could not generate Request ID. Please try again.");
+        }
+    }
+
+    // ฟังก์ชันสำหรับพิมพ์ป้าย
+    function handlePrintLabel(requestId, sampleName, testsArray, requestDate) {
+        // จัดรูปแบบวันที่
+        const formattedDate = new Date(requestDate).toLocaleString('en-US', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        // จัดรูปแบบรายการทดสอบ (ดึง testName มาจาก object)
+        const testsHtml = testsArray.map(test => `<li>${test.testName}</li>`).join('');
+
+        // สร้าง HTML สำหรับหน้าต่างพิมพ์
+        const labelHtml = `
+            <html>
+            <head>
+                <title>Print Label - ${requestId}</title>
+                <style>
+                    body { font-family: sans-serif; margin: 20px; }
+                    .label-container {
+                        border: 2px dashed #000;
+                        padding: 15px;
+                        width: 400px;
+                        margin: 0 auto;
+                    }
+                    h1 { margin-top: 0; font-size: 24px; text-align: center; }
+                    p, ul { margin: 10px 0; font-size: 16px; }
+                    ul { padding-left: 25px; }
+                    .request-id {
+                        font-size: 28px;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="label-container">
+                    <h1>Sample Request Label</h1>
+                    <div class="request-id">${requestId}</div>
+                    <p><strong>Sample Name:</strong> ${sampleName}</p>
+                    <p><strong>Request Date:</strong> ${formattedDate}</p>
+                    <p><strong>Tests Required:</strong></p>
+                    <ul>
+                        ${testsHtml}
+                    </ul>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        // เปิดหน้าต่างใหม่แล้วสั่งพิมพ์
+        try {
+            const printWindow = window.open('', '_blank', 'width=600,height=400');
+            printWindow.document.open();
+            printWindow.document.write(labelHtml);
+            printWindow.document.close();
+            
+            // ใช้ setTimeout เพื่อให้แน่ใจว่าโหลดเนื้อหาก่อนพิมพ์
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250); // 250ms delay
+            
+        } catch (e) {
+            console.error("Print popup failed: ", e);
+            Swal.fire('Print Failed', 'Could not open print window. Please check your browser popup settings.', 'error');
+        }
+    }
+
+    // --- Form Submission Logic ---
+    requestForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Validating...';
+
+        try {
+            // Get the correct department value
+            let finalDepartment = requestForm.requesterDepartment.value;
+            if (finalDepartment === 'Other') {
+                finalDepartment = requestForm.otherDepartment.value;
+            }
+            
+            // Get the correct reason value
+            let finalReason = requestForm.reasonForTest.value;
+            if (finalReason === 'Other') {
+                finalReason = requestForm.otherReason.value;
+            }
+            
+            // ✅ (เพิ่ม) Get Priority Value
+            const priorityValue = requestForm.priority.value;
+            if (!priorityValue) {
+                Swal.fire('Validation Error', 'Please select a "Priority Level".', 'warning');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Request';
+                return;
+            }
+
+            // Validation for "Other Department"
+            if (requestForm.requesterDepartment.value === 'Other' && !finalDepartment) {
+                Swal.fire('Validation Error', 'Please specify the department name in the "Please Specify Department" field.', 'warning');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Request';
+                return;
+            }
+            
+            // Validation for "Other Reason"
+            if (requestForm.reasonForTest.value === 'Other' && !finalReason) {
+                Swal.fire('Validation Error', 'Please specify the reason in the "Please Specify Reason" field.', 'warning');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Request';
+                return;
+            }
+            
+            const testJustificationValue = requestForm.testJustification.value.trim();
+            if (!testJustificationValue) {
+                Swal.fire('Validation Error', 'Please fill in the "Test Purpose (Required)" field.', 'warning');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Request';
+                return;
+            }
+
+            // แปลง Textarea ของ "Tests Required" ให้เป็น Array of Objects
+            const testsRequiredArray = requestForm.testsRequired.value.split(',')
+                .map(test => test.trim()) // ลบช่องว่างหน้า-หลัง
+                .filter(test => test.length > 0) // กรองค่าว่าง
+                .map(testName => ({
+                    testName: testName,
+                    status: 'Pending', // สถานะเริ่มต้นของแต่ละการทดสอบ
+                    result: ''         // ช่องว่างสำหรับกรอกผล
+                }));
+                
+            // (Validation) ตรวจสอบว่ากรอก Tests Required อย่างน้อย 1 รายการ
+            if (testsRequiredArray.length === 0) {
+                 Swal.fire('Validation Error', 'Please list at least one test in the "Tests Required" field.', 'warning');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Request';
+                return;
+            }
+
+
+            // --- 2. Get Form Data (Updated) ---
+            const formData = {
+                requestDate: requestForm.requestDate.value,
+                requesterName: requestForm.requesterName.value, 
+                requesterEmail: requestForm.requesterEmail.value, 
+                requesterPhone: requestForm.requesterPhone.value || '', 
+                requesterDepartment: finalDepartment, 
+                sampleName: requestForm.sampleName.value,
+                sampleSource: requestForm.sampleSource.value,
+                batchLotNumber: requestForm.batchLotNumber.value,
+                sampleCount: parseInt(requestForm.sampleCount.value, 10), 
+                sampleUnit: requestForm.sampleUnit.value || '', 
+                priority: priorityValue, // ✅ (เพิ่ม)
+                reasonForTest: finalReason, 
+                testJustification: testJustificationValue, 
+                testsRequired: testsRequiredArray, 
+                specialInstructions: requestForm.specialInstructions.value || '',
+                status: "Submitted", 
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            // Validation สำหรับ sampleCount
+            if (!formData.sampleCount || formData.sampleCount <= 0) {
+                Swal.fire('Validation Error', 'Please enter a valid "Number of Samples" (must be 1 or more).', 'warning');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Request';
+                return;
+            }
+            
+            // --- 3. Generate Unique ID ---
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating ID...';
+            const newRequestId = await getNextRequestId();
+            formData.requestId = newRequestId;
+
+            // --- 4. Handle Image Compression & Upload (Optional) ---
+            let fileToUpload = photoInput.files[0];
+            if (fileToUpload) {
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Compressing Image...';
+                const options = {
+                    maxSizeMB: 0.5,
+                    maxWidthOrHeight: 1920,
+                    useWebWorker: true,
+                    fileType: 'image/jpeg'
+                };
+                try {
+                    const compressedFile = await imageCompression(fileToUpload, options);
+                    fileToUpload = compressedFile; 
+                    console.log(`Image compressed: ${fileToUpload.size / 1024} KB`);
+                } catch (compressionError) {
+                    console.error("Image compression failed:", compressionError);
+                    fileToUpload = photoInput.files[0];
+                }
+
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading Image...';
+                const uniqueFileName = Date.now() + '-' + fileToUpload.name;
+                const storageRef = storage.ref('sample_request_images/' + uniqueFileName);
+                
+                const uploadTask = await storageRef.put(fileToUpload);
+                const downloadURL = await uploadTask.ref.getDownloadURL();
+                
+                formData.photoURL = downloadURL;
+                formData.photoFileName = uniqueFileName;
+            }
+            
+            // --- 5. Save to Firestore ---
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+            
+            const docRef = await db.collection("sample_requests").add(formData);
+            
+            // (อัปเดต SweetAlert ให้มีปุ่ม Print)
+            Swal.fire({
+                title: 'Submitted!',
+                html: `Request submitted successfully.<br>Your Reference ID is: <strong>${newRequestId}</strong>`,
+                icon: 'success',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#2563eb',
+                showDenyButton: true, 
+                denyButtonText: '<i class="fas fa-print mr-2"></i>Print Label', 
+                denyButtonColor: '#64748b'
+            }).then((result) => {
+                
+                if (result.isDenied) {
+                    // ถ้าผู้ใช้กดปุ่ม "Print Label"
+                    handlePrintLabel(
+                        newRequestId,
+                        formData.sampleName,
+                        formData.testsRequired, // ส่ง Array of Objects
+                        formData.requestDate 
+                    );
+                }
+                
+                // --- 6. Success (Reset ฟอร์มหลังจากกด "OK" หรือ "Print") ---
+                requestForm.reset();
+                fileNameSpan.textContent = 'No file selected';
+                document.getElementById('requestDate').value = now.toISOString().slice(0, 16);
+                
+                otherDepartmentContainer.classList.add('hidden');
+                otherDepartmentInput.required = false;
+                
+                otherReasonContainer.classList.add('hidden');
+                otherReasonInput.required = false;
+            });
+
+        } catch (error) {
+            console.error("An error occurred: ", error);
+            // (ใช้ SweetAlert สำหรับ Error ด้วย)
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to submit request. Please check the console for details.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        } finally {
+            // --- 7. Re-enable button ---
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Request';
+        }
+    });
+});
+</script>
+
+</body>
+</html>
