@@ -81,9 +81,9 @@
                         
                         <h2 class="text-2xl font-bold text-slate-700 mb-4">Dashboard Overview</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            <div id="samples-in-progress-card" class="card stat-card"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Samples in Progress</p><p id="samples-in-progress-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-vials"></i></div></div></div>
-                            <div id="overdue-calibrations-card" class="card stat-card alert"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Overdue Calibrations</p><p id="overdue-calibrations-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-tools"></i></div></div></div>
-                            <div id="open-ncrs-card" class="card stat-card"><div class="flex justify-between items-start"><div><p class="stat-label text-sm font-medium">Open NCRs</p><p id="open-ncrs-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-triangle-exclamation"></i></div></div></div>
+                            <div id="samples-in-progress-card" class="card stat-card"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Samples in Progress</p><p id="samples-in-progress-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-vials"></i></div></div></div>
+                            <div id="overdue-calibrations-card" class="card stat-card alert"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Overdue Calibrations</p><p id="overdue-calibrations-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-tools"></i></div></div></div>
+                            <div id="open-ncrs-card" class="card stat-card"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Open NCRs</p><p id="open-ncrs-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-triangle-exclamation"></i></div></div></div>
                         </div>
                         <div class="card mt-6 p-6"><h3 class="font-semibold text-slate-700 mb-4">Test Result Trends</h3><div class="text-center text-slate-400 py-12"><i class="fas fa-chart-line text-4xl mb-2"></i><p>(Basic data visualization charts will be displayed here)</p></div></div>
                     </div>
@@ -189,6 +189,76 @@
 
             const bookingsCollection = db.collection('bookings');
 
+            // --- (ใหม่) Function to Fetch Dashboard Stats ---
+            const fetchDashboardStats = async () => {
+                console.log("Fetching all dashboard stats from summary docs...");
+                try {
+                    // --- 1. Fetch Samples in Progress ---
+                    // (ชี้ไปที่เอกสารสรุป 'sample_dashboard_summary')
+                    const sampleSummaryRef = db.collection("metadata").doc("sample_dashboard_summary");
+                    const sampleSummaryDoc = await sampleSummaryRef.get();
+
+                    let sampleCount = 0; // (ค่าเริ่มต้น)
+
+                    if (sampleSummaryDoc.exists) {
+                        const summaryData = sampleSummaryDoc.data();
+                        // "Samples in Progress" คือยอดรวมของ 'Submitted' และ 'In Progress'
+                        const submittedCount = summaryData['status.Submitted'] || 0;
+                        const inProgressCount = summaryData['status.InProgress'] || 0;
+                        sampleCount = submittedCount + inProgressCount;
+                        console.log(`Sample Summary: Submitted (${submittedCount}), InProgress (${inProgressCount})`);
+                    } else {
+                        console.warn("Summary document (sample_dashboard_summary) not found.");
+                    }
+
+                    // อัปเดตการ์ด "Samples in Progress"
+                    const sampleNumberEl = document.getElementById('samples-in-progress-number');
+                    if (sampleNumberEl) {
+                        sampleNumberEl.textContent = sampleCount;
+                        console.log(`Updated Samples in Progress: ${sampleCount}`);
+                    }
+
+                    // --- 2. (ใหม่) Fetch Open NCRs ---
+                    // (ชี้ไปที่เอกสารสรุป 'ncf_dashboard_summary/main_stats')
+                    const ncfSummaryRef = db.collection("ncf_dashboard_summary").doc("main_stats");
+                    const ncfSummaryDoc = await ncfSummaryRef.get();
+
+                    let ncrCount = 0; // (ค่าเริ่มต้น)
+
+                    if (ncfSummaryDoc.exists) {
+                        const ncfData = ncfSummaryDoc.data();
+                        // วนลูป field ทั้งหมดในเอกสาร
+                        for (const key in ncfData) {
+                            // เช็คว่า field ขึ้นต้นด้วย 'departmentStatus.' 
+                            // และ *ไม่* ลงท้ายด้วย '.Completed'
+                            if (key.startsWith('departmentStatus.') && !key.endsWith('.Completed')) {
+                                // ถ้าใช่ ให้นับรวมค่าเข้าไป (ป้องกันค่า NaN)
+                                ncrCount += (ncfData[key] || 0);
+                            }
+                        }
+                        console.log(`NCF Summary: Total Open NCRs (${ncrCount})`);
+                    } else {
+                        console.warn("Summary document (ncf_dashboard_summary/main_stats) not found.");
+                    }
+
+                    // อัปเดตการ์ด "Open NCRs"
+                    const ncrNumberEl = document.getElementById('open-ncrs-number');
+                    if (ncrNumberEl) {
+                        ncrNumberEl.textContent = ncrCount;
+                        console.log(`Updated Open NCRs: ${ncrCount}`);
+                    }
+
+                } catch (error) {
+                    console.error("Error fetching dashboard summaries:", error);
+                    // (Optional) แสดง Error บน UI ทั้งสองการ์ด
+                    const sampleNumberEl = document.getElementById('samples-in-progress-number');
+                    if (sampleNumberEl) sampleNumberEl.textContent = 'E';
+                    const ncrNumberEl = document.getElementById('open-ncrs-number');
+                    if (ncrNumberEl) ncrNumberEl.textContent = 'E';
+                }
+            };
+            // --- (จบส่วนที่เพิ่ม) ---
+
             const initializeDashboardCalendar = () => {
                 const calendarEl = document.getElementById('dashboard-calendar');
                 if (!calendarEl) return;
@@ -257,7 +327,8 @@
                 calendar.render();
             };
 
-            initializeDashboardCalendar(); 
+            initializeDashboardCalendar();
+            fetchDashboardStats();
         });
     </script>
     <script>

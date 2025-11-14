@@ -1,1631 +1,364 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Special Sample Report - Lab Management</title>
+    <title>Lab-TRC-App - Laboratory Dashboard</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* 2. CSS Styles (From NCF & New) */
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
-        .btn { font-weight: 600; border-radius: 0.5rem; padding: 0.6rem 1.2rem; transition: background-color 0.3s ease; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; }
-        .btn:disabled { cursor: not-allowed; background-color: #94a3b8; }
-        .btn-primary { background-color: #2563eb; color: white; }
-        .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
-        .btn-secondary { background-color: #64748b; color: white; }
-        .btn-secondary:hover:not(:disabled) { background-color: #475569; }
-        .form-input { width: 100%; background-color: #f9fafb; border: 1px solid #d1d5db; color: #111827; border-radius: 0.5rem; padding: 0.75rem; }
-        .form-select { width: 100%; border-gray-300 rounded-md shadow-sm; } /* (เพิ่ม) */
-
-        /* Sidebar Styles (From NCF) */
-        #detailsSidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
-        #detailsSidebar.open { transform: translateX(0); }
-        #copilot-sidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
-        #copilot-sidebar.open { transform: translateX(0); }
-        #close-copilot-btn { font-size: 2rem; line-height: 1; }
-
-        /* Prose Styles (From NCF) */
-        .prose h3 { font-size: 1.1em; margin-top: 1em; margin-bottom: 0.5em; }
-        .prose ul { list-style-type: disc; padding-left: 1.5em; }
-        .prose p { margin: 0.5em 0; }
-
-        /* (ใหม่) Status Badge (ปรับปรุงจาก NCF) */
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .status-submitted { background-color: #eff6ff; color: #1d4ed8; } /* Issued -> Submitted */
-        .status-inprogress { background-color: #fefce8; color: #a16207; } /* Responded -> In Progress */
-        .status-completed { background-color: #f0fdf4; color: #15803d; }
-
-        /* Sidebar Section Styles (From NCF) */
-        .sidebar-section { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1.5rem; }
-        .sidebar-label { font-weight: 600; color: #4b5563; margin-bottom: 0.25rem; display: block; }
-        .sidebar-value { color: #111827; }
-        .sidebar-input { width: 100%; border-gray-300 rounded-md shadow-sm; }
-
-        /* (ใหม่) Landing Page Styles */
-        #landingView {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* (ใหม่) Background ที่ดูทันสมัย */
-            background-color: #0c1427;
-            background-image: 
-                radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.1) 0px, transparent 50%),
-                radial-gradient(at 97% 21%, hsla(125, 98%, 72%, 0.1) 0px, transparent 50%),
-                radial-gradient(at 52% 99%, hsla(355, 98%, 71%, 0.1) 0px, transparent 50%),
-                radial-gradient(at 10% 29%, hsla(256, 96%, 68%, 0.1) 0px, transparent 50%),
-                radial-gradient(at 97% 96%, hsla(38, 60%, 74%, 0.1) 0px, transparent 50%),
-                radial-gradient(at 44% 53%, hsla(340, 98%, 76%, 0.1) 0px, transparent 50%),
-                radial-gradient(at 10% 10%, hsla(215, 98%, 61%, 0.1) 0px, transparent 50%);
+        /* Professional Theme (Deep Blue & White) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff;
+            color: #334155;
         }
-        .selection-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
+        header h1 { color: #1e40af; }
+        header h1 .fa-flask-vial { color: #1d4ed8; }
+        header p, #datetime-display { color: #475569; }
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 1rem;
-            padding: 2.5rem;
-            text-align: center;
-            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
             transition: all 0.3s ease;
-            cursor: pointer;
-            width: 350px;
         }
-        .selection-card:hover {
-            transform: translateY(-10px);
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
+        /* No hover effect on calendar card */
+        .card:not(.calendar-card):hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
         }
-        .selection-card i {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            display: block;
+        .stat-card { padding: 1.5rem; }
+        .stat-card .stat-number { color: #1e40af; font-weight: 700; }
+        .stat-card .stat-label { color: #64748b; }
+        .stat-card .stat-icon { color: #94a3b8; }
+        .stat-card.alert .stat-number { color: #be123c; }
+        .module-card { padding: 1.5rem; }
+        .module-card h2 { color: #1e40af; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; }
+        .module-link { display: flex; align-items: center; padding: 0.75rem; border-radius: 0.5rem; color: #334155; font-weight: 500;
+        transition: background-color 0.2s ease, color 0.2s ease; cursor: pointer; }
+        .module-link:hover { background-color: #e0f2fe; color: #0c4a6e; }
+        .module-link i { width: 2rem; color: #60a5fa; }
+
+        /* CSS to shrink the calendar */
+        #dashboard-calendar {
+            font-size: 0.8rem; /* Reduce overall font size */
         }
-        .selection-card h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
+        .fc .fc-toolbar-title {
+            font-size: 1em; /* Adjust month title font size */
         }
-        .selection-card p {
-            font-size: 1rem;
-            color: #cbd5e1;
+        .fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion {
+            font-size: 0.9em; /* Adjust day number and header font size */
         }
     </style>
 </head>
 <body class="antialiased">
+    <div id="app-container" class="relative min-h-screen p-4 sm:p-6 lg:p-8">
+        <div id="datetime-display" class="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 text-right text-sm font-medium"></div>
+        <section id="lobby-page">
+            <header class="text-center mb-12">
+                <h1 class="text-4xl sm:text-5xl font-bold tracking-tight"><i class="fas fa-flask-vial"></i> Laboratory</h1>
+                <p class="mt-2 text-lg">Quality Control & Laboratory Management System</p>
+            </header>
 
-    <div id="landingView">
-        <div class="max-w-4xl mx-auto p-8">
-            <div class="text-center mb-12">
-                <h1 class="text-5xl font-bold text-white mb-4">Special Sample Report</h1>
-                <p class="text-xl text-slate-300">Please select your role to continue</p>
-            </div>
-            <div class="flex flex-col md:flex-row gap-8">
-                <div id="userSearchBtn" class="selection-card">
-                    <i class="fas fa-user-check text-blue-400"></i>
-                    <h2>For Requester</h2>
-                    <p>Track your sample status using a Request ID</p>
-                </div>
-                <div id="staffLoginBtn" class="selection-card">
-                    <i class="fas fa-flask-vial text-green-400"></i>
-                    <h2>For Lab Staff</h2>
-                    <p>Access the dashboard to manage and update results</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="userResultView" class="hidden min-h-screen bg-gray-100 p-8">
-        <div class="max-w-3xl mx-auto">
-            <button id="backToLandingBtn" class="btn btn-secondary mb-6">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
-            <div class="bg-white p-8 rounded-lg shadow-md">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">Sample Status: <span id="userResult_requestId" class="text-blue-700"></span></h2>
-                <div id="userResultContent" class="space-y-4">
+            <main class="max-w-7xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        
+                        <div class="card calendar-card p-4 mb-6">
+                            <h3 class="font-bold text-slate-700 mb-3 text-lg"><i class="fas fa-calendar-alt mr-2 text-blue-600"></i>This Month's Bookings</h3>
+                            <div id="dashboard-calendar"></div>
+                        </div>
+                        
+                        <h2 class="text-2xl font-bold text-slate-700 mb-4">Dashboard Overview</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            <div id="samples-in-progress-card" class="card stat-card"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Samples in Progress</p><p id="samples-in-progress-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-vials"></i></div></div></div>
+                            <div id="overdue-calibrations-card" class="card stat-card alert"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Overdue Calibrations</p><p id="overdue-calibrations-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-tools"></i></div></div></div>
+                            <div id="open-ncrs-card" class="card stat-card"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Open NCRs</p><p id="open-ncrs-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-triangle-exclamation"></i></div></div></div>
+                        </div>
+                        <div class="card mt-6 p-6"><h3 class="font-semibold text-slate-700 mb-4">Test Result Trends</h3><div class="text-center text-slate-400 py-12"><i class="fas fa-chart-line text-4xl mb-2"></i><p>(Basic data visualization charts will be displayed here)</p></div></div>
                     </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="dashboardView" class="hidden flex h-screen bg-gray-100">
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
-                <div class="container mx-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <div class="flex items-center gap-4">
-                            <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-vial-circle-check text-blue-700"></i> Special Sample Dashboard</h1>
-                            <button id="analyze-btn" class="btn btn-primary">
-                                <i class="fas fa-sparkles"></i> Analyze with AI
-                            </button>
+                    <div class="lg:col-span-1 flex flex-col gap-8">
+                        <h2 class="text-2xl font-bold text-slate-700 mb-0 lg:mb-4">System Modules</h2>
+                        <div class="card module-card">
+                            <h2><i class="fas fa-tasks w-6 mr-2 text-sky-600"></i> Core Operations</h2>
+                            <nav class="flex flex-col gap-1">
+                                <a href="Sample_Requesting.html" class="module-link"><i class="fas fa-flask"></i> Special Sample Requesting</a>
+                                <a href="Bale_Checking.html" class="module-link"><i class="fas fa-barcode"></i> Bale Checking</a>
+                                <a id="nav-test-results" class="module-link"><i class="fas fa-file-invoice"></i> Test Results</a>
+                                <a href="F4.html" id="ncr-link" class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR (F4) Register</a>
+                            </nav>
                         </div>
-                        <div id="auth-container">
-                            <div id="user-info" class="hidden items-center gap-4">
-                                <span id="user-email" class="text-gray-600 text-sm"></span>
-                                <button id="logout-btn" class="btn btn-secondary text-sm">Logout</button>
-                            </div>
-                            <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
+                        <div class="card module-card">
+                            <h2><i class="fas fa-shield-halved w-6 mr-2 text-teal-600"></i> Quality & Assets</h2>
+                            <nav class="flex flex-col gap-1">
+                                <a href="NcfReport.html" class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR (F4) Report</a>
+                                <a class="module-link"><i class="fas fa-tools"></i> Equipment</a>
+                                <a class="module-link"><i class="fas fa-prescription-bottle"></i> Chemical Inventory</a>
+                                <a href="View_Test_Results_Reports.html" class="module-link"><i class="fas fa-file-alt"></i> View Test Results / Reports</a>
+                            </nav>
                         </div>
-                        <a href="index.html" class="bg-white text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 transition">
-                            &#8592; Back to Dashboard
-                        </a>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                        <div class="bg-white p-6 rounded-lg shadow-md">
-                            <h3 class="font-bold text-lg text-gray-700 mb-4">Monthly Sample Requests Trend</h3>
-                            <canvas id="monthlyTrendChart"></canvas>
+                        <div class="card module-card">
+                            <h2><i class="fas fa-cog w-6 mr-2 text-slate-500"></i> System & Admin</h2>
+                            <nav class="flex flex-col gap-1">
+                                <a href="Room_Booking.html" class="module-link"><i class="fas fa-calendar-alt"></i> Room Booking</a>
+                                <a class="module-link"><i class="fas fa-file-pdf"></i> Report Generation</a>
+                                <a class="module-link"><i class="fas fa-users-cog"></i> User Management</a>
+                            </nav>
                         </div>
-                        <div class="bg-white p-6 rounded-lg shadow-md">
-                            <h3 class="font-bold text-lg text-gray-700 mb-4">Requests by Status</h3>
-                            <canvas id="statusOverviewChart" style="max-height: 250px;"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <h3 class="font-bold text-lg text-gray-700 mb-4">Monthly Sample Trend by Department</h3>
-                        <canvas id="departmentTrendChart" style="max-height: 350px;"></canvas>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-lg text-gray-700">Department Status Overview</h3>
-
-                            <div class="flex gap-4 text-sm text-gray-600">
-                                <span class="flex items-center">
-                                    <span class="w-3 h-3 rounded-full mr-2" style="background-color: rgba(59, 130, 246, 0.7);"></span> Submitted
-                                </span>
-                                <span class="flex items-center">
-                                    <span class="w-3 h-3 rounded-full mr-2" style="background-color: rgba(34, 197, 94, 0.7);"></span> Completed
-                                </span>
-                            </div>
-                        </div>
-
-                        <div id="departmentStatusContainer" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-center">
-                            </div>
-                    </div>
-
-                    <div class="bg-white p-4 rounded-lg shadow-md mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <div>
-                            <label for="searchInput" class="text-sm font-medium text-gray-700">Search Request ID:</label>
-                            <input type="text" id="searchInput" placeholder="e.g., LAB-SP-0001" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                        </div>
-                        <div>
-                            <label for="filterDepartment" class="text-sm font-medium text-gray-700">Filter by Department:</label>
-                            <select id="filterDepartment" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="all">All Departments</option>
-                                <option value="Viscose">Viscose</option>
-                                <option value="Spinning">Spinning</option>
-                                <option value="Auxiliary">Auxiliary</option>
-                                <option value="ETP&WTP">ETP&WTP</option>
-                                <option value="ABEC">ABEC</option>
-                                <option value="Warehouse">Warehouse</option>
-                                <option value="Quality Control">Quality Control</option>
-                                <option value="Technical Cell">Technical Cell</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="Other Unit">Other Unit</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="filterStatus" class="text-sm font-medium text-gray-700">Filter by Status:</label>
-                            <select id="filterStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="open">All Open</option>
-                                <option value="Submitted">Submitted</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                                <option value="all">All Statuses</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="filterPriority" class="text-sm font-medium text-gray-700">Filter by Priority:</label>
-                            <select id="filterPriority" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="all">All Priorities</option>
-                                <option value="Urgent">Urgent</option>
-                                <option value="High">High</option>
-                                <option value="Normal">Normal</option>
-                            </select>
-                        </div>
-                        <div class="col-span-1 md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                            <div>
-                                <label for="exportStartDate" class="text-sm font-medium text-gray-700">Start Date:</label>
-                                <input type="date" id="exportStartDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            </div>
-                            <div>
-                                <label for="exportEndDate" class="text-sm font-medium text-gray-700">End Date:</label>
-                                <input type="date" id="exportEndDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            </div>
-                            <div class="flex justify-end gap-2">
-                                <button id="clearFiltersBtn" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Clear Filters
-                                </button>
-                                <button id="exportExcelBtn" class="btn btn-primary">
-                                    <i class="fas fa-file-excel"></i> Export Excel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-lg shadow-md overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Request ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Sample Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Department</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Request Date</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Priority</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
-                                    <th class="admin-actions-header px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider" style="display: none;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ncfTableBody" class="bg-white divide-y divide-gray-200">
-                                <tr><td colspan="7" class="text-center p-8 text-gray-500">Loading data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div id="pagination-controls" class="flex justify-between items-center mt-4 px-4 py-2 bg-white rounded-lg shadow-md">
-                        <button id="prevPageBtn" class="btn btn-secondary" disabled>
-                            <i class="fas fa-chevron-left"></i> Previous
-                        </button>
-                        <span id="pageInfo" class="text-sm font-semibold text-gray-700">Page 1 of 1</span>
-                        <button id="nextPageBtn" class="btn btn-secondary" disabled>
-                            Next <i class="fas fa-chevron-right"></i>
-                        </button>
                     </div>
                 </div>
             </main>
-        </div>
-    </div>
-
-    <div id="detailsSidebar" class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white shadow-2xl z-50 overflow-y-auto">
-        <div class="p-8">
-            <button id="closeSidebarBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
-            <div id="sidebarContent">
-                </div>
-        </div>
-    </div>
-
-    <button id="copilot-btn" class="fixed bottom-8 right-8 bg-purple-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-2xl z-40 hover:bg-purple-700 transition-transform transform hover:scale-110">
-        <i class="fa-solid fa-wand-magic-sparkles"></i>
-    </button>
-    <div id="copilot-sidebar" class="fixed top-0 right-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out">
-        <div class="flex flex-col h-full">
-            <header class="p-4 border-b flex justify-between items-center bg-slate-50 flex-shrink-0">
-                <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i> AI Analysis</h2>
-                <button id="close-copilot-btn" class="text-slate-500 hover:text-slate-800">&times;</button>
+        </section>
+        <section id="report-page" class="hidden max-w-7xl mx-auto">
+            <div class="mb-6">
+                <a class="back-to-lobby text-slate-600 hover:text-blue-700 font-semibold text-sm cursor-pointer">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
+            <header class="mb-8">
+                <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-file-invoice text-teal-600"></i> Test Results & Reports</h1>
             </header>
-            <div id="copilot-content" class="flex-grow p-4 overflow-y-auto prose prose-sm max-w-none">
-                <div class="text-center text-slate-500">
-                    <p>Click "Analyze with AI" on the main page to get insights, or ask me a question below.</p>
+            <div class="card p-8">
+                <div class="text-center text-slate-500 py-16">
+                    <i class="fas fa-search text-5xl mb-4"></i>
+                    <p class="text-xl">Report viewing interface will be built here.</p>
+                    <p>This section will contain search filters, data tables, and PDF export options.</p>
                 </div>
             </div>
-            <footer class="p-4 border-t bg-slate-50 flex-shrink-0">
-                <div class="flex gap-2">
-                    <input type="text" id="copilot-chat-input" placeholder="Ask a follow-up question..." class="form-input flex-grow">
-                    <button id="copilot-chat-submit-btn" class="btn btn-secondary">Send</button>
-                </div>
-            </footer>
-        </div>
+        </section>
+        <footer class="w-full text-center mt-12">
+            <p class="text-sm text-slate-500">&copy; 2025 Sittidate Purintawarrakun</p>
+        </footer>
     </div>
-
-    <div id="staffPasswordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-[100]" style="display: none;">
-        <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Lab Staff Access</h3>
-                <div class="mt-2 px-7 py-3">
-                    <label for="staffPasswordInput" class="sr-only">Password</label> 
-                    <input type="password" id="staffPasswordInput" class="form-input w-full text-center" placeholder="Enter Password">
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button id="staffPasswordOkBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-blue-700">
-                        Login
-                    </button>
-                    <button id="staffPasswordCancelBtn" class="ml-3 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-300">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="userSearchModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-[100]" style="display: none;">
-        <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Track Your Sample</h3>
-                <div class="mt-2 px-7 py-3">
-                    <label for="userSearchInput_number" class="sr-only">Request ID Number</label> 
-                    <div class="flex rounded-md shadow-sm">
-                        <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-                            LAB-SP-
-                        </span>
-                        <input type="text" id="userSearchInput_number" class="form-input flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md text-center" placeholder="0001">
-                    </div>
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button id="userSearchOkBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-blue-700">
-                        Search
-                    </button>
-                    <button id="userSearchCancelBtn" class="ml-3 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-300">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="passwordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-[100]" style="display: none;">
-        <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Enter Password</h3>
-                <div class="mt-2 px-7 py-3">
-                    <label for="passwordInput" class="sr-only">Password</label> <input type="password" id="passwordInput" class="form-input w-full text-center" placeholder="Password">
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button id="modalOkBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-blue-700">OK</button>
-                    <button id="modalCancelBtn" class="ml-3 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-300">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        Chart.register(ChartDataLabels);
-        // --- 1. Firebase Config (From NCF/Sample Requesting) ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w", // [cite: 192, 1337]
-            authDomain: "lab-trc-management-system.firebaseapp.com", // [cite: 193, 1338]
-            projectId: "lab-trc-management-system", // [cite: 194, 1339]
-            storageBucket: "lab-trc-management-system.appspot.com", // [cite: 195]
-            messagingSenderId: "43919979160", // [cite: 196, 1341]
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed" // [cite: 197, 1342]
-        };
-        firebase.initializeApp(firebaseConfig); // [cite: 200, 1345]
-
-        const db = firebase.firestore();
-        db.settings({ experimentalForceLongPolling: true }); // [cite: 202, 1350]
-        const auth = firebase.auth(); // [cite: 204, 1348]
-        const functions = firebase.functions(); // [cite: 206]
-
-        // (ใหม่) AI Function Names (ปรับปรุงจาก NCF)
-        const getSampleAiAnalysis = functions.httpsCallable('getSampleAiAnalysis');
-        const askSampleChat = functions.httpsCallable('askSampleChat');
-
-        // Admin Config (From NCF)
-        const adminEmails = ["sittidate.p@adityabirla.com", "trc-qcl.laboratory@adityabirla.com", "laboratory.trc@adityabirla.com", "waraporn.jindanath@adityabirla.com"]; // [cite: 210]
-        let currentUser = null; // [cite: 211]
-
-        // --- 2. DOM Elements ---
-
-        // (ใหม่) View Containers
-        const landingView = $('#landingView');
-        const dashboardView = $('#dashboardView');
-        const userResultView = $('#userResultView');
-
-        // (ใหม่) Landing Buttons
-        const userSearchBtn = $('#userSearchBtn');
-        const staffLoginBtn = $('#staffLoginBtn');
-        const backToLandingBtn = $('#backToLandingBtn');
-
-        // (ใหม่) Staff Password Modal
-        const staffPasswordModal = $('#staffPasswordModal');
-        const staffPasswordInput = $('#staffPasswordInput');
-        const staffPasswordOkBtn = $('#staffPasswordOkBtn');
-        const staffPasswordCancelBtn = $('#staffPasswordCancelBtn');
-
-        // (ใหม่) User Search Modal
-        const userSearchModal = $('#userSearchModal');
-        const userSearchInput_number = $('#userSearchInput_number'); // <--- 1. แก้ไขชื่อตัวแปร
-        const userSearchOkBtn = $('#userSearchOkBtn');
-        const userSearchCancelBtn = $('#userSearchCancelBtn');
-
-        // (ใหม่) User Result View Content
-        const userResultContent = $('#userResultContent');
-        const userResultRequestId = $('#userResult_requestId');
-
-        // Admin Auth (From NCF [cite: 213-216])
-        const loginPromptBtn = $('#login-prompt-btn');
-        const logoutBtn = $('#logout-btn');
-        const userInfoDiv = $('#user-info');
-        const userEmailSpan = $('#user-email');
-        const passwordModal = $('#passwordModal');
-        const passwordInput = $('#passwordInput');
-        const modalOkBtn = $('#modalOkBtn');
-        const modalCancelBtn = $('#modalCancelBtn');
-
-        // Dashboard Elements (From NCF [cite: 275-288])
-        const tableBody = document.getElementById('ncfTableBody');
-        const searchInput = document.getElementById('searchInput');
-        const filterDepartment = document.getElementById('filterDepartment');
-        const filterStatus = document.getElementById('filterStatus');
-        const filterPriority = document.getElementById('filterPriority'); // (ใหม่)
-        const detailsSidebar = document.getElementById('detailsSidebar');
-        const sidebarContent = document.getElementById('sidebarContent');
-        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
-        const exportStartDate = document.getElementById('exportStartDate');
-        const exportEndDate = document.getElementById('exportEndDate');
-        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-        const exportExcelBtn = document.getElementById('exportExcelBtn');
-
-        // (ใหม่) Graph Elements
-        const monthlyTrendCtx = document.getElementById('monthlyTrendChart')?.getContext('2d');
-        const statusOverviewCtx = document.getElementById('statusOverviewChart')?.getContext('2d');
-        // (ใหม่) กราฟ Trend รายแผนก (แทนที่ departmentChart)
-        const departmentTrendCtx = document.getElementById('departmentTrendChart')?.getContext('2d');
-        // (ใหม่) Container สำหรับกราฟวงกลมรายแผนก
-        const deptStatusContainer = document.getElementById('departmentStatusContainer');
-
-        // AI Copilot Elements (From NCF [cite: 289-295])
-        const copilotBtn = $('#copilot-btn');
-        const copilotSidebar = $('#copilot-sidebar');
-        const closeCopilotBtn = $('#close-copilot-btn');
-        const copilotContent = $('#copilot-content');
-        const copilotChatInput = $('#copilot-chat-input');
-        const copilotChatSubmitBtn = $('#copilot-chat-submit-btn');
-        const analyzeBtn = $('#analyze-btn');
-
-        // Pagination Elements (From NCF [cite: 369-371])
-        const prevPageBtn = document.getElementById('prevPageBtn');
-        const nextPageBtn = document.getElementById('nextPageBtn');
-        const pageInfo = document.getElementById('pageInfo');
-
-        // --- 3. State Variables ---
-
-        // (ใหม่) Graph States
-        let monthlyTrendChart, statusOverviewChart, departmentTrendChart;
-        let deptStatusCharts = []; // (ใหม่) Array สำหรับเก็บกราฟย่อยๆ
-
-        // State (From NCF [cite: 299-305])
-        let currentFilteredRecords = [];
-        let currentRecord = null;
-        let isInitialLoad = true;
-        let currentPage = 1;
-        const rowsPerPage = 15; // ตามคำขอ
-        let lastVisibleDoc = null;
-        let pageDocHistory = [null];
-        let loginEmailAttempt = null; // (From NCF)
-
-        // --- 4. (ใหม่) View Switching & Initial Load Logic ---
-
-        // Show Landing Page by default
-        landingView.show();
-        dashboardView.hide();
-        userResultView.hide();
-
-        // Landing -> Staff Password Modal
-        staffLoginBtn.on('click', () => {
-            staffPasswordInput.val('');
-            staffPasswordModal.show();
-            staffPasswordInput.focus();
-        });
-        staffPasswordCancelBtn.on('click', () => staffPasswordModal.hide());
-        
-
-        // Staff Password Logic
-        staffPasswordOkBtn.on('click', () => {
-            if (staffPasswordInput.val() === "123456789") { // Password ตามที่คุณตั้ง
-                staffPasswordModal.hide();
-                landingView.fadeOut(() => {
-                    dashboardView.fadeIn();
-                    // (สำคัญ) Initial Load Dashboard Data *NOW*
-                    initializeDashboard();
-                });
-            } else {
-                alert("Incorrect Password!");
-                staffPasswordInput.val('');
-            }
-        });
-
-        // Landing -> User Search Modal
-        userSearchBtn.on('click', () => {
-            userSearchInput_number.val(''); // <--- 2. แก้ไขชื่อตัวแปร
-            userSearchModal.show();
-            userSearchInput_number.focus(); // <--- 3. แก้ไขชื่อตัวแปร
-        });
-        userSearchCancelBtn.on('click', () => userSearchModal.hide());
-        
-
-        // User Search Logic
-            userSearchOkBtn.on('click', async () => {
-            // (ใหม่) รวมร่าง prefix และ number ที่ผู้ใช้กรอก
-            const requestNumber = userSearchInput_number.val().trim(); // <--- 4. แก้ไข Logic
-            if (!requestNumber) return;
-            const requestId = "LAB-SP-" + requestNumber;
-
-            userSearchOkBtn.prop('disabled', true).text('Searching...');
-            try {
-                const snapshot = await db.collection("sample_requests")
-                                         .where("requestId", "==", requestId)
-                                         .limit(1)
-                                         .get();
-
-                if (snapshot.empty) {
-                    alert("Request ID not found. Please check the ID and try again.");
-                } else {
-                    const record = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-                    displayUserResult(record); // (ฟังก์ชันใหม่)
-                    userSearchModal.hide();
-                    landingView.fadeOut(() => {
-                        userResultView.fadeIn();
-                    });
-                }
-            } catch (error) {
-                console.error("Error searching for Request ID: ", error);
-                alert("An error occurred while searching.");
-            } finally {
-                userSearchOkBtn.prop('disabled', false).text('Search');
-            }
-        });
-
-        // Back to Landing
-        backToLandingBtn.on('click', () => {
-            userResultView.fadeOut(() => {
-                landingView.fadeIn();
-                userResultContent.html(''); // Clear content
-            });
-        });
-
-        // (ใหม่) Function to display user result
-        // (ใหม่) Function to display user result (แก้ไข Bug)
-        const displayUserResult = (record) => {
-        userResultRequestId.text(record.requestId);
-
-        // (แก้ไข) 1. คำนวณ % progress (อิงตาม 'result' ไม่ใช่ 'status')
-                    // กรองเฉพาะ Test ที่มีชื่อ (ป้องกันแถวว่างที่อาจหลงเหลือ)
-        const relevantTests = record.testsRequired.filter(t => t.testName && t.testName.trim() !== '');
-        const totalTests = relevantTests.length;
-                    // "Completed" หมายถึง มีผลลัพธ์ (result)
-        const completedTests = relevantTests.filter(t => t.result && t.result.trim() !== '').length;
-        const progressPercent = totalTests > 0 ? (completedTests / totalTests) * 100 : 0;
-
-        let html = `
-        <div class="mb-6">
-        <span class="sidebar-label">Sample Name</span>
-        <span class="sidebar-value text-lg">${record.sampleName}</span>
-        </div>
-        <div class="grid grid-cols-2 gap-4 mb-6">
-<div><span class="sidebar-label">Request Date</span><span class="sidebar-value">${new Date(record.requestDate).toLocaleString('th-TH')}</span></div>
-<div><span class="sidebar-label">Requester</span><span class="sidebar-value">${record.requesterName} (${record.requesterDepartment})</span></div>
-<div><span class="sidebar-label">Priority</span><span class="sidebar-value">${record.priority}</span></div>
-<div><span class="sidebar-label">Overall Status</span><span class="sidebar-value font-bold">${record.status}</span></div>
     
-</div>
-
-        <div class="mb-6">
-        <span class="sidebar-label">Test Progress (${completedTests} of ${totalTests} completed)</span>
-        <div class="w-full bg-gray-200 rounded-full h-2.5">
-        <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progressPercent}%"></div>
-        </div>
-        </div>
-
-        <div class="sidebar-section">
-        <h3 class="font-bold text-lg mb-4 text-gray-700">Test Results</h3>
-        <ul class="space-y-3">
-        `;
-
-        // (แก้ไข) 2. Loop for tests (อิงตาม 'result' ไม่ใช่ 'status')
-        relevantTests.forEach(test => {
-        let statusIcon;
-        let resultText;
-
-        if (test.result && test.result.trim() !== '') {
-        // --- มีผลลัพธ์ (Completed) ---
-        statusIcon = '<i class="fas fa-check-circle text-green-500"></i>';
-        resultText = `<strong>${test.result}</strong>`;
-        } else {
-        // --- ไม่มีผลลัพธ์ (Pending) ---
-        statusIcon = '<i class="fas fa-clock text-yellow-500"></i>';
-        resultText = '<i>(Pending)</i>';
-        }
-
-        html += `
-        <li class="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-        <span class="font-medium text-gray-700">${statusIcon} ${test.testName}</span>
-        <span class="text-gray-900">${resultText}</span>
-        </li>
-        `;
-        });
-
-        html += `</ul></div>`;
-            html += `
-            <div class="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-gray-200">
-                <div>
-                    <span class="sidebar-label">Lab Tester</span>
-                    <span class="sidebar-value">${record.labTesterName || '-'}</span> 
-                </div>
-                <div>
-                    <span class="sidebar-label">Lab Remarks</span>
-                    <span class="sidebar-value">${record.labRemark || '-'}</span>
-                </div>
-            </div>
-            `;
-        userResultContent.html(html);
-        };
-
-        // --- 5. (ใหม่) Dashboard Initialization Function ---
-        const initializeDashboard = () => {
-            // (From NCF) Setup Admin Auth
-            setupAdminAuth();
-
-            // (From NCF) Setup AI Copilot
-            setupAICopilot();
-
-            // (From NCF) Setup General Listeners
-            setupDashboardListeners();
-
-            // (From NCF) Load data
-            // (หมายเหตุ: เราจะเรียก fetchDashboardData และ resetAndRender ที่นี่)
-            exportExcelBtn.disabled = true;
-            exportExcelBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading Data...`;
-
-            fetchDashboardData();
-            resetAndRender();
-        };
-
-        // --- 6. Admin Auth (Copied from NCF [cite: 218-272]) ---
-        const setupAdminAuth = () => {
-            loginPromptBtn.on('click', () => {
-                const email = prompt("Please enter your admin email:");
-                if (email) {
-                    loginEmailAttempt = email;
-                    passwordInput.val('');
-                    passwordModal.show();
-                    passwordInput.focus();
-                }
-            });
-            modalOkBtn.on('click', () => {
-                const password = passwordInput.val();
-                if (password && loginEmailAttempt) {
-                    auth.signInWithEmailAndPassword(loginEmailAttempt, password)
-                        .catch(err => alert("Login Failed: " + err.message));
-                }
-                passwordModal.hide();
-                loginEmailAttempt = null;
-            });
-            modalCancelBtn.on('click', () => {
-                passwordModal.hide();
-                loginEmailAttempt = null;
-            });
-            
-            logoutBtn.on('click', () => auth.signOut());
-
-            auth.onAuthStateChanged(user => {
-                currentUser = user;
-                const isAdmin = user && adminEmails.includes(user.email.toLowerCase());
-                if (user) {
-                    loginPromptBtn.hide();
-                    userInfoDiv.show().css('display', 'flex');
-                    userEmailSpan.text(user.email);
-                } else {
-                    loginPromptBtn.show();
-                    userInfoDiv.hide();
-                }
-
-                // Show/Hide Admin Columns
-                const headers = document.querySelectorAll('.admin-actions-header');
-                const cells = document.querySelectorAll('.admin-actions-cell');
-                const displayStyle = isAdmin ? '' : 'none';
-                headers.forEach(el => el.style.display = displayStyle);
-                cells.forEach(el => el.style.display = displayStyle);
-            });
-        };
-
-        // --- 7. AI Copilot Logic (Adapted from NCF [cite: 309-367]) ---
-        const setupAICopilot = () => {
-            copilotBtn.on('click', () => copilotSidebar.addClass('open'));
-            closeCopilotBtn.on('click', () => copilotSidebar.removeClass('open'));
-
-            analyzeBtn.on('click', async function() {
-                copilotSidebar.addClass('open');
-                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Analyzing...');
-
-                copilotContent.html('<p class="text-center">✨ Analyzing data from server... Please wait a moment.</p>');
-                try {
-                    // (ใหม่) เรียกฟังก์ชัน AI ใหม่
-                    const result = await getSampleAiAnalysis(); 
-                    const text = result.data.text;
-                    copilotContent.html(marked.parse(text));
-                } catch (error) {
-                    console.error("Error calling AI Analysis Function:", error);
-                    copilotContent.html(`<p class="text-red-500">Sorry, the AI analysis failed. Error: ${error.message}</p>`);
-                } finally {
-                    $(this).prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
-                }
-            });
-
-            copilotChatSubmitBtn.on('click', async function() {
-                const question = copilotChatInput.val().trim();
-                if (!question) return;
-
-                const chatBtn = $(this);
-                chatBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-
-                const userQuestionHtml = `<div class="user-question mb-2 border-t pt-4 mt-4"><p class="font-semibold text-slate-800">You:</p><p>${question}</p></div>`;
-                copilotContent.append(userQuestionHtml);
-                const thinkingHtmlId = `thinking-${Date.now()}`;
-                const thinkingHtml = `<div id="${thinkingHtmlId}" class="ai-answer"><p class="font-semibold text-purple-600">AI:</p><p>🤔 Thinking...</p></div>`;
-                copilotContent.append(thinkingHtml);
-                copilotContent.scrollTop(copilotContent[0].scrollHeight);
-                copilotChatInput.val('');
-
-                try {
-                    // (ใหม่) เรียกฟังก์ชัน Chat ใหม่
-                    const result = await askSampleChat({ question: question }); 
-                    const text = result.data.text;
-                    $(`#${thinkingHtmlId}`).html(`<p class="font-semibold text-purple-600">AI:</p><div>${marked.parse(text)}</div>`);
-                } catch (error) {
-                    console.error("Error calling AI Chat Function:", error);
-                    $(`#${thinkingHtmlId}`).html(`<p class="text-red-500">Error: ${error.message}</p>`);
-                } finally {
-                    chatBtn.prop('disabled', false).html('Send');
-                    copilotContent.scrollTop(copilotContent[0].scrollHeight);
-                }
-            });
-        };
-
-        // --- 8. Dashboard Data Logic ---
-
-        // (ใหม่) ดึงข้อมูล Dashboard (เน้นประหยัด Read)
-        const fetchDashboardData = () => {
-            // (สำคัญ!) เราจะใช้สถาปัตยกรรมเดียวกับ NCF 
-            // เราจะ Listen ไปที่เอกสารสรุป (Summary Document)
-            // คุณ *ต้อง* สร้าง Cloud Function เพื่อรวบรวมข้อมูลไปไว้ที่นี่
-            const summaryRef = db.collection("metadata").doc("sample_dashboard_summary");
-
-            summaryRef.onSnapshot(doc => {
-                if (doc.exists) {
-                    const summaryData = doc.data();
-                    updateDashboard(summaryData); // (ฟังก์ชันใหม่)
-                } else {
-                    console.warn("Sample Summary document (sample_dashboard_summary) does not exist.");
-                    updateDashboard({}); // ส่งค่าว่าง
-                }
-            }, error => {
-                console.error("Error fetching sample dashboard data: ", error);
-            });
-        };
-
-        // (ใหม่) อัปเดตกราฟ (อ้างอิง NCF [cite: 551-681])
-        const updateDashboard = (summaryData) => {
-
-            // (ใหม่) สีสำหรับแผนกต่างๆ (อ้างอิงจาก NCF)
-            const deptColorMap = {
-                'Viscose': '#3b82f6', // blue
-                'Spinning': '#f59e0b', // amber
-                'Auxiliary': '#10b981', // green
-                'ETP&WTP': '#a855f7', // purple
-                'ABEC': '#ec4899', // pink
-                'Warehouse': '#84cc16', // lime
-                'Quality Control': '#ef4444', // red
-                'Technical Cell': '#14b8a6', // teal
-                'Maintenance': '#6b7280', // gray
-                'Other Unit': '#d946ef'  // fuchsia
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Date/Time Update ---
+            const updateDateTime = () => {
+                const datetimeDisplay = document.getElementById('datetime-display');
+                if (!datetimeDisplay) return;
+                const now = new Date();
+                const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const dateString = now.toLocaleDateString('en-US', optionsDate);
+                const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit'});
+                datetimeDisplay.innerHTML = `<div>${dateString}</div><div>${timeString}</div>`;
             };
-            const defaultColor = '#94a3b8'; // slate
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
 
-            // --- 1. แปลง Flat Data (Firestore) เป็น Nested (Charts) ---
-            const monthlyTrendData = {};
-            const statusData = {};
-            const monthlyTrendByDept = {}; // (ใหม่) สำหรับ กราฟ Trend รายแผนก
-            const deptStatusData = {};     // (ใหม่) สำหรับ กราฟวงกลมรายแผนก
+            // --- Page Navigation Logic ---
+            const lobbyPage = document.getElementById('lobby-page');
+            const reportPage = document.getElementById('report-page');
+            const allPages = [lobbyPage, reportPage].filter(p => p);
+            const showPage = (pageToShow) => {
+                allPages.forEach(page => page.classList.add('hidden'));
+                if (pageToShow) pageToShow.classList.remove('hidden');
+            };
+            document.getElementById('nav-test-results')?.addEventListener('click', () => showPage(reportPage));
+            document.querySelectorAll('.back-to-lobby').forEach(button => {
+                button.addEventListener('click', () => showPage(lobbyPage));
+            });
 
-            for (const key in summaryData) {
-                const value = summaryData[key];
-                const parts = key.split('.');
-
-                if (parts[0] === 'monthlyTrend' && parts.length === 2) {
-                    monthlyTrendData[parts[1]] = value;
-                } else if (parts[0] === 'status' && parts.length === 2) {
-                    statusData[parts[1]] = value;
-                } else if (parts[0] === 'monthlyTrendByDept' && parts.length === 3) {
-                    // e.g., monthlyTrendByDept.VIS.2025-11
-                    const [_, dept, month] = parts;
-                    if (!monthlyTrendByDept[dept]) monthlyTrendByDept[dept] = {};
-                    monthlyTrendByDept[dept][month] = value;
-                } else if (parts[0] === 'deptStatus' && parts.length === 3) {
-                    // e.g., deptStatus.AUX.Submitted
-                    const [_, dept, status] = parts;
-                    if (!deptStatusData[dept]) deptStatusData[dept] = {};
-                    deptStatusData[dept][status] = value;
-                }
-            }
-
-            // --- 2. คำนวณแกน X (6 เดือนย้อนหลัง) ---
-            const monthLabels = [];
-            const monthIds = [];
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-            sixMonthsAgo.setDate(1);
-            for (let i = 0; i < 6; i++) {
-                const date = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth() + i, 1);
-                monthLabels.push(date.toLocaleString('en-US', { month: 'short', year: '2-digit' }));
-                monthIds.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-            }
-
-            // --- กราฟ 1: Monthly Sample Requests Trend (Submitted เท่านั้น) ---
-            const trendDataset = {
-                label: 'Samples Submitted',
-                data: monthIds.map(monthId => monthlyTrendData[monthId] || 0),
-                borderColor: 'rgba(59, 130, 246, 1)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                fill: true,
-                tension: 0.3
+            // --- Calendar Logic ---
+            const firebaseConfig = {
+                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                authDomain: "lab-trc-management-system.firebaseapp.com",
+                projectId: "lab-trc-management-system",
+                storageBucket: "lab-trc-management-system.firebasestorage.app",
+                messagingSenderId: "43919979160",
+                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
             };
 
-            if (monthlyTrendChart) monthlyTrendChart.destroy();
-            if (monthlyTrendCtx) {
-                monthlyTrendChart = new Chart(monthlyTrendCtx, {
-                    type: 'line',
-                    data: { labels: monthLabels, datasets: [trendDataset] }, // (แก้ไข) เอา Completed ออก
-                    plugins: [ChartDataLabels],
-                    options: {
-                        plugins: {
-                            legend: { display: false }, // (แก้ไข) ปิด Legend
-                            datalabels: {
-                            display: false // (ใหม่) ปิดการแสดงผลตัวเลขบนกราฟนี้
-                            }
-                        },
-                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            const db = firebase.firestore();
+
+            // Add this line to fix connection issues on restricted networks
+            db.settings({ experimentalForceLongPolling: true }); 
+
+            const bookingsCollection = db.collection('bookings');
+
+            // --- (ใหม่) Function to Fetch Dashboard Stats ---
+            const fetchDashboardStats = async () => {
+                console.log("Fetching all dashboard stats from summary docs...");
+                try {
+                    // --- 1. Fetch Samples in Progress ---
+                    // (ชี้ไปที่เอกสารสรุป 'sample_dashboard_summary')
+                    const sampleSummaryRef = db.collection("metadata").doc("sample_dashboard_summary");
+                    const sampleSummaryDoc = await sampleSummaryRef.get();
+
+                    let sampleCount = 0; // (ค่าเริ่มต้น)
+
+                    if (sampleSummaryDoc.exists) {
+                        const summaryData = sampleSummaryDoc.data();
+                        // "Samples in Progress" คือยอดรวมของ 'Submitted' และ 'In Progress'
+                        const submittedCount = summaryData['status.Submitted'] || 0;
+                        const inProgressCount = summaryData['status.InProgress'] || 0;
+                        sampleCount = submittedCount + inProgressCount;
+                        console.log(`Sample Summary: Submitted (${submittedCount}), InProgress (${inProgressCount})`);
+                    } else {
+                        console.warn("Summary document (sample_dashboard_summary) not found.");
                     }
-                });
-            }
 
-            // --- กราฟ 2: Requests by Status (Submitted & Completed เท่านั้น) ---
-            const statusLabels = ['Submitted', 'Completed'];
-            const statusColors = ['rgba(59, 130, 246, 0.7)', 'rgba(34, 197, 94, 0.7)']; // (แก้ไข)
-            const statusCounts = [
-                statusData['Submitted'] || 0,
-                statusData['Completed'] || 0 // (แก้ไข)
-            ];
-            const totalStatus = statusCounts.reduce((a, b) => a + b, 0);
+                    // อัปเดตการ์ด "Samples in Progress"
+                    const sampleNumberEl = document.getElementById('samples-in-progress-number');
+                    if (sampleNumberEl) {
+                        sampleNumberEl.textContent = sampleCount;
+                        console.log(`Updated Samples in Progress: ${sampleCount}`);
+                    }
 
-            if (statusOverviewChart) statusOverviewChart.destroy();
-            if (statusOverviewCtx) {
-                statusOverviewChart = new Chart(statusOverviewCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: statusLabels,
-                        datasets: [{ data: statusCounts, backgroundColor: statusColors }]
+                    // --- 2. (ใหม่) Fetch Open NCRs ---
+                    // (ชี้ไปที่เอกสารสรุป 'ncf_dashboard_summary/main_stats')
+                    const ncfSummaryRef = db.collection("ncf_dashboard_summary").doc("main_stats");
+                    const ncfSummaryDoc = await ncfSummaryRef.get();
+
+                    let ncrCount = 0; // (ค่าเริ่มต้น)
+
+                    if (ncfSummaryDoc.exists) {
+                        const ncfData = ncfSummaryDoc.data();
+                        // วนลูป field ทั้งหมดในเอกสาร
+                        for (const key in ncfData) {
+                            // เช็คว่า field ขึ้นต้นด้วย 'departmentStatus.' 
+                            // และ *ไม่* ลงท้ายด้วย '.Completed'
+                            if (key.startsWith('departmentStatus.') && !key.endsWith('.Completed')) {
+                                // ถ้าใช่ ให้นับรวมค่าเข้าไป (ป้องกันค่า NaN)
+                                ncrCount += (ncfData[key] || 0);
+                            }
+                        }
+                        console.log(`NCF Summary: Total Open NCRs (${ncrCount})`);
+                    } else {
+                        console.warn("Summary document (ncf_dashboard_summary/main_stats) not found.");
+                    }
+
+                    // อัปเดตการ์ด "Open NCRs"
+                    const ncrNumberEl = document.getElementById('open-ncrs-number');
+                    if (ncrNumberEl) {
+                        ncrNumberEl.textContent = ncrCount;
+                        console.log(`Updated Open NCRs: ${ncrCount}`);
+                    }
+
+                } catch (error) {
+                    console.error("Error fetching dashboard summaries:", error);
+                    // (Optional) แสดง Error บน UI ทั้งสองการ์ด
+                    const sampleNumberEl = document.getElementById('samples-in-progress-number');
+                    if (sampleNumberEl) sampleNumberEl.textContent = 'E';
+                    const ncrNumberEl = document.getElementById('open-ncrs-number');
+                    if (ncrNumberEl) ncrNumberEl.textContent = 'E';
+                }
+            };
+            // --- (จบส่วนที่เพิ่ม) ---
+
+            const initializeDashboardCalendar = () => {
+                const calendarEl = document.getElementById('dashboard-calendar');
+                if (!calendarEl) return;
+
+                const calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: {
+                        left: 'title',
+                        center: '',
+                        right: ''
                     },
-                    plugins: [ChartDataLabels],
-                    options: {
-                        plugins: {
-                            legend: { position: 'right' },
-                            datalabels: {
-                                formatter: (value, ctx) => {
-                                    if (totalStatus === 0) return '0%';
-                                    const percentage = (value / totalStatus * 100).toFixed(0);
-                                    return percentage + '%';
-                                },
-                                color: '#ffffff',
-                                font: { weight: 'bold', size: 14 }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // --- กราฟ 3: Monthly Sample Trend by Department (ใหม่) ---
-            if (departmentTrendChart) departmentTrendChart.destroy();
-            if (departmentTrendCtx) {
-                const deptTrendDatasets = [];
-                const depts = Object.keys(monthlyTrendByDept).sort();
-
-                depts.forEach(dept => {
-                    const color = deptColorMap[dept] || defaultColor;
-                    deptTrendDatasets.push({
-                        label: dept,
-                        data: monthIds.map(monthId => monthlyTrendByDept[dept][monthId] || 0),
-                        borderColor: color,
-                        backgroundColor: `${color}33`, // เพิ่ม Alpha 0.2
-                        fill: true,
-                        tension: 0.4
-                    });
-                });
-
-                departmentTrendChart = new Chart(departmentTrendCtx, {
-                    type: 'line',
-                    data: { labels: monthLabels, datasets: deptTrendDatasets },
-                    options: {
-                        plugins: {
-                            legend: { position: 'top', labels: { usePointStyle: true } }
+                    editable: false,
+                    selectable: false,
+                    dayMaxEvents: true, 
+                    
+                    eventSources: [
+                        // Source 1: Hardcoded events (loads instantly)
+                        {
+                            events: [
+                                {
+                                    title: 'Plant Daily Meeting',
+                                    startTime: '10:30:00',
+                                    endTime: '12:00:00',
+                                    daysOfWeek: [1, 3, 5], 
+                                    color: '#8b5cf6',
+                                    classNames: ['pointer-events-none']
+                                }
+                            ]
                         },
-                        scales: {
-                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                        }
-                    }
-                });
-            }
+                        // Source 2: Events from Firebase (loads asynchronously)
+                        {
+                            events: async (fetchInfo, successCallback, failureCallback) => {
+                                console.log("Fetching bookings from Firebase...");
+                                try {
+                                    const snapshot = await bookingsCollection.get();
+                                    console.log(`Found ${snapshot.docs.length} documents in 'bookings' collection.`);
 
-            // --- กราฟ 4: Department Status Overview (ใหม่) ---
-            if (deptStatusContainer) {
-                // ทำลายกราฟเก่าย่อยๆ ทั้งหมดก่อน
-                deptStatusCharts.forEach(chart => chart.destroy());
-                deptStatusCharts = [];
-                deptStatusContainer.innerHTML = ''; // ล้าง Container
+                                    const firebaseEvents = snapshot.docs.map(doc => {
+                                        const data = doc.data();
+                                        // Check data integrity before processing
+                                        if (data.start && typeof data.start.toDate === 'function' &&
+                                            data.end && typeof data.end.toDate === 'function') {
+                                            return {
+                                                id: doc.id,
+                                                title: data.title,
+                                                start: data.start.toDate(),
+                                                end: data.end.toDate(),
+                                            };
+                                        } else {
+                                            console.warn(`Skipping document ${doc.id} due to missing or invalid date fields.`, data);
+                                            return null;
+                                        }
+                                    }).filter(event => event !== null); // Filter out invalid items
 
-                const depts = Object.keys(deptStatusData).sort();
-
-                depts.forEach(dept => {
-                    const submitted = deptStatusData[dept].Submitted || 0;
-                    const completed = deptStatusData[dept].Completed || 0;
-                    const total = submitted + completed;
-
-                    if (total === 0) return; // ไม่ต้องแสดงแผนกที่ไม่มีข้อมูล
-
-                    // 1. สร้าง HTML Structure
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'flex flex-col items-center';
-                    const canvasId = `dept-status-${dept.replace(/[^a-zA-Z0-9]/g, '')}`; // สร้าง ID ที่ปลอดภัย
-                    wrapper.innerHTML = `
-                        <div class="w-24 h-24 relative">
-                            <canvas id="${canvasId}"></canvas>
-                        </div>
-                        <h4 class="font-semibold text-gray-700 mt-2 text-sm">${dept}</h4>
-                        <p class="text-xs text-gray-500">Total: ${total}</p>
-                    `;
-                    deptStatusContainer.appendChild(wrapper);
-
-                    // 2. สร้างกราฟ
-                    const ctx = document.getElementById(canvasId).getContext('2d');
-                    const miniChart = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Submitted', 'Completed'],
-                            datasets: [{
-                                data: [submitted, completed],
-                                backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(34, 197, 94, 0.7)'],
-                                borderColor: '#fff',
-                                borderWidth: 2
-                            }]
-                        },
-                        plugins: [ChartDataLabels],
-                        options: {
-                            responsive: true,
-                            cutout: '60%',
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: { enabled: true },
-                                datalabels: {
-                                    formatter: (value, ctx) => {
-                                        const percentage = (value / total * 100).toFixed(0);
-                                        return percentage > 0 ? percentage + '%' : '';
-                                    },
-                                    color: '#ffffff',
-                                    font: { weight: 'bold', size: 10 }
+                                    console.log(`Successfully mapped ${firebaseEvents.length} events.`);
+                                    successCallback(firebaseEvents);
+                                } catch (error) {
+                                    console.error("Error fetching bookings from Firebase:", error);
+                                    failureCallback(error);
                                 }
                             }
                         }
-                    });
-                    deptStatusCharts.push(miniChart); // เก็บ reference ไว้ทำลาย
-                });
-            }
-        };
-
-        // (ปรับปรุงจาก NCF) Render Table
-        const renderTable = (records) => {
-            const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase()); // [cite: 414]
-            tableBody.innerHTML = '';
-            if (records.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-gray-500">No records found.</td></tr>`; // [cite: 417]
-                return;
-            }
-
-            records.forEach(record => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-50 cursor-pointer';
-                tr.setAttribute('data-id', record.id);
-
-                const status = record.status || 'Submitted';
-                let statusBadge = '';
-                if (status === 'Submitted') statusBadge = `<span class="status-badge status-submitted">Submitted</span>`;
-                else if (status === 'In Progress') statusBadge = `<span class="status-badge status-inprogress">In Progress</span>`;
-                else if (status === 'Completed') statusBadge = `<span class="status-badge status-completed">Completed</span>`;
-
-                let priorityClass = '';
-                if (record.priority === 'Urgent') priorityClass = 'font-bold text-red-600';
-                else if (record.priority === 'High') priorityClass = 'font-semibold text-yellow-700';
-
-                tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap font-medium text-indigo-600">${record.requestId}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${record.sampleName}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.requesterDepartment}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(record.requestDate).toLocaleString('th-TH')}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm ${priorityClass}">${record.priority}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
-                    <td class="admin-actions-cell px-6 py-4 whitespace-nowrap text-center" style="display: ${isAdmin ? '' : 'none'};">
-                        <div class="flex justify-center items-center gap-4">
-                            <button onclick="editRecord(event, '${record.id}')" class="text-blue-500 hover:text-blue-700" title="Edit Record">
-                                <i class="fas fa-edit fa-lg"></i>
-                            </button>
-                            <button onclick="deleteRecord(event, '${record.id}')" class="text-red-500 hover:text-red-700" title="Delete Record">
-                                <i class="fas fa-trash-alt fa-lg"></i>
-                            </button>
-                        </div>
-                    </td>
-                `; // [cite: 436-445]
-                tableBody.appendChild(tr);
-
-            tr.addEventListener('click', () => {
-                // 1. ค้นหา Record ต้นฉบับ (ที่ยังไม่ถูกแก้ไข)
-                const originalRecord = currentFilteredRecords.find(r => r.id === record.id);
-
-                // 2. (สำคัญ!) Clone ข้อมูล Record เพื่อป้องกัน State Pollution
-                // เราสร้าง object ใหม่ โดย spread property ทั้งหมด
-                // และ (สำคัญ) สร้าง Array ใหม่สำหรับ testsRequired (และ object ภายใน)
-                // เพื่อให้การ "Add Parameter" ใน Sidebar ไม่ไปยุ่งกับข้อมูลต้นฉบับ
-                currentRecord = {
-                    ...originalRecord,
-                    testsRequired: originalRecord.testsRequired.map(test => ({...test}))
-                };
-
-                // 3. แสดง Sidebar โดยใช้ข้อมูล "ฉบับร่าง" (Clone)
-                populateAndShowSidebar(currentRecord, 'progress');
-            });
-            }); // (ตัวนี้คือ }); จาก [cite: 829])
-        };
-
-        // (ปรับปรุงจาก NCF [cite: 457]) Main Query Function
-        const applyFiltersAndRender = async (pageDirection = 'first') => {
-            const searchValue = searchInput.value.toLowerCase();
-            const deptValue = filterDepartment.value;
-            const statusValue = filterStatus.value;
-            const priorityValue = filterPriority.value; // (ใหม่)
-            const startDateValue = exportStartDate.value;
-            const endDateValue = exportEndDate.value;
-
-            let query = db.collection("sample_requests"); // (ใหม่) Collection
-
-            // --- ประกอบ Query (Filters) ---
-            if (deptValue !== 'all') {
-                query = query.where("requesterDepartment", "==", deptValue);
-            }
-            if (priorityValue !== 'all') {
-                query = query.where("priority", "==", priorityValue);
-            }
-
-            // (ใหม่) Logic การกรอง Status (ตามคำขอ)
-            if (statusValue === 'open') {
-                query = query.where("status", "in", ["Submitted", "In Progress"]);
-            } else if (statusValue !== 'all') {
-                query = query.where("status", "==", statusValue);
-            }
-
-            if (startDateValue) {
-                query = query.where("createdAt", ">=", new Date(startDateValue + "T00:00:00"));
-            }
-            if (endDateValue) {
-                query = query.where("createdAt", "<=", new Date(endDateValue + "T23:59:59"));
-            }
-
-            // Search & Order (จาก NCF [cite: 495-503])
-            if (searchValue) {
-                query = query.orderBy("requestId") // (ใหม่) ค้นหาด้วย requestId
-                           .startAt(searchValue.toUpperCase())
-                           .endAt(searchValue.toUpperCase() + '\uf8ff');
-            } else {
-                query = query.orderBy("createdAt", "desc");
-            }
-
-            // --- Pagination Logic (From NCF [cite: 504-548]) ---
-            try {
-                if (pageDirection === 'prev') {
-                    lastVisibleDoc = pageDocHistory[currentPage - 1];
-                    pageDocHistory.pop();
-                }
-
-                let pageQuery = query;
-                if (lastVisibleDoc && (pageDirection === 'next' || pageDirection === 'prev')) {
-                    pageQuery = pageQuery.startAfter(lastVisibleDoc);
-                }
-                pageQuery = pageQuery.limit(rowsPerPage);
-
-                const snapshot = await pageQuery.get();
-                const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                if (!snapshot.empty) {
-                    lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
-                    if (pageDirection === 'next') {
-                        pageDocHistory.push(lastVisibleDoc);
-                    }
-                }
-
-                currentFilteredRecords = records;
-                renderTable(records);
-                updatePaginationUI(records.length);
-
-            } catch (error) {
-                console.error("Error fetching paginated records: ", error);
-                tableBody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-red-500">Failed to load data. Error: ${error.message}</td></tr>`;
-            } finally {
-                if (isInitialLoad) {
-                    exportExcelBtn.disabled = false;
-                    exportExcelBtn.innerHTML = `<i class="fas fa-file-excel"></i> Export Excel`;
-                    isInitialLoad = false;
-                }
-            }
-        };
-
-        // (From NCF [cite: 373-380])
-        const updatePaginationUI = (recordsFetchedCount) => {
-            pageInfo.textContent = `Page ${currentPage}`;
-            prevPageBtn.disabled = currentPage === 1;
-            nextPageBtn.disabled = recordsFetchedCount < rowsPerPage;
-        };
-
-        // --- 9. Sidebar Logic (ปรับปรุงครั้งใหญ่จาก NCF) ---
-
-        // (ปรับปรุงจาก NCF [cite: 683])
-        const populateAndShowSidebar = (record, mode = 'progress') => {
-            const isEditMode = (mode === 'edit');
-            let contentHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-1">Sample ID: ${record.requestId}</h2>`;
-
-            if (isEditMode) {
-                contentHTML += `<p class="text-sm text-blue-600 font-semibold mb-6">Mode: Editing Record Data</p>`;
-            } else {
-                const requestedAt = (record.createdAt && record.createdAt.toDate) ? record.createdAt.toDate().toLocaleString('th-TH') : 'N/A';
-                contentHTML += `<p class="text-sm text-gray-500 mb-6">Requested on: ${requestedAt}</p>`;
-            }
-
-            // --- Section 1: Requester & Sample Info ---
-            contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Sample Info</h3>`;
-
-            if (isEditMode) {
-                // --- (ใหม่) โหมด Admin Edit (อัปเดตตามข้อ 4) ---
-                contentHTML += `<form id="editForm" class="space-y-4">
-            <div><label class="sidebar-label">Sample Name</label><input type="text" id="edit_sampleName" class="sidebar-input border p-2" value="${record.sampleName || ''}"></div>
-            <div><label class="sidebar-label">Requester Name</label><input type="text" id="edit_requesterName" class="sidebar-input border p-2" value="${record.requesterName || ''}"></div>
-            <div><label class="sidebar-label">Department</label><input type="text" id="edit_requesterDepartment" class="sidebar-input border p-2" value="${record.requesterDepartment || ''}"></div>
-            <div><label class="sidebar-label">Priority</label>
-                <select id="edit_priority" class="form-select border p-2">
-                    <option value="Normal" ${record.priority === 'Normal' ? 'selected' : ''}>Normal</option>
-                    <option value="High" ${record.priority === 'High' ? 'selected' : ''}>High</option>
-                    <option value="Urgent" ${record.priority === 'Urgent' ? 'selected' : ''}>Urgent</option>
-                </select>
-            </div>
-            <div><label class="sidebar-label">Batch/Lot No.</label><input type="text" id="edit_batchLotNumber" class="sidebar-input border p-2" value="${record.batchLotNumber || ''}"></div>
-            <div><label class="sidebar-label">Sample Source</label><input type="text" id="edit_sampleSource" class="sidebar-input border p-2" value="${record.sampleSource || ''}"></div>
-            <div><label class="sidebar-label">Reason for Test</label><textarea id="edit_reasonForTest" rows="2" class="sidebar-input border p-2">${record.reasonForTest || ''}</textarea></div>
-            <div><label class="sidebar-label">Test Purpose</label><textarea id="edit_testJustification" rows="2" class="sidebar-input border p-2">${record.testJustification || ''}</textarea></div>
-            `;
-                // (หมายเหตุ: <form> ยังไม่ปิด)
-            } else {
-                // --- โหมด Staff Progress (Read-Only) ---
-                contentHTML += `<div class="grid grid-cols-2 gap-4">
-            <div><span class="sidebar-label">Sample Name</span><span class="sidebar-value">${record.sampleName}</span></div>
-            <div><span class="sidebar-label">Priority</span><span class="sidebar-value">${record.priority}</span></div>
-            <div><span class="sidebar-label">Requester</span><span class="sidebar-value">${record.requesterName}</span></div>
-            <div><span class="sidebar-label">Department</span><span class="sidebar-value">${record.requesterDepartment}</span></div>
-            <div><span class="sidebar-label">Batch/Lot No.</span><span class="sidebar-value">${record.batchLotNumber}</span></div>
-            <div><span class="sidebar-label">Sample Source</span><span class="sidebar-value">${record.sampleSource}</span></div>
-            <div class="col-span-2"><span class="sidebar-label">Reason for Test</span><p class="sidebar-value">${record.reasonForTest}</p></div>
-            <div class="col-span-2"><span class="sidebar-label">Test Purpose</span><p class="sidebar-value">${record.testJustification}</p></div>
-            ${record.photoURL ? `<div class="col-span-2"><span class="sidebar-label">Reference Photo</span><a href="${record.photoURL}" target="_blank" class="text-blue-600 hover:underline">View Image</a></div>` : ''}
-            </div>`;
-            }
-            contentHTML += `</div>`; // ปิด Section 1
-
-            // --- Section 2: Lab Results Entry ---
-            if (isEditMode) {
-                // --- (ใหม่) Admin Edit Mode (อัปเดตตามข้อ 4) ---
-                contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Lab Results (Admin Edit)</h3>`;
-                if (record.testsRequired && record.testsRequired.length > 0) {
-                    record.testsRequired.forEach((test, index) => {
-                        contentHTML += `
-                <div class="p-3 bg-gray-50 rounded-lg border mb-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
-                            <label for="admin_edit_name_${index}" class="text-sm font-medium">Parameter:</label>
-                            <input type="text" id="admin_edit_name_${index}" class="sidebar-input border p-2" value="${test.testName || ''}">
-                        </div>
-                        <div>
-                            <label for="admin_edit_result_${index}" class="text-sm font-medium">Result:</label>
-                            <input type="text" id="admin_edit_result_${index}" class="sidebar-input border p-2" value="${test.result || ''}">
-                        </div>
-                    </div>
-                </div>
-                `;
-                    });
-                } else {
-                    contentHTML += `<p class="text-gray-500">No specific tests listed.</p>`;
-                }
-                // (ใหม่) เพิ่ม Lab Remarks (ตามข้อ 4)
-                contentHTML += `
-            <div class="mt-4">
-                <label for="edit_labRemark" class="sidebar-label">Lab Remarks (Optional):</label>
-                <textarea id="edit_labRemark" rows="3" class="sidebar-input border p-2">${record.labRemark || ''}</textarea>
-            </div>
-            `;
-                contentHTML += `</div>`; // ปิด Section 2 (Admin)
-                contentHTML += `</form>`; // (สำคัญ) ปิด <form id="editForm"> ที่นี่
-            } else {
-                // --- (Staff Progress Mode) ---
-                contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Lab Results Entry</h3>`;
-                contentHTML += `<form id="resultsForm" class="space-y-4">`;
-                contentHTML += `
-            <div>
-                <label for="labTesterName" class="sidebar-label">Tester Name:</label>
-                <input type="text" id="labTesterName" class="sidebar-input border p-2" value="${record.labTesterName || ''}">
-            </div>
-            `;
-                if (record.testsRequired && record.testsRequired.length > 0) {
-                    record.testsRequired.forEach((test, index) => {
-                        contentHTML += `
-                <div class="p-3 bg-gray-50 rounded-lg border">
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-                        <div class="col-span-1">
-                            <label for="test_name_${index}" class="text-sm font-medium">Parameter:</label>
-                            <input type="text" id="test_name_${index}" class="sidebar-input border p-2"
-                                value="${test.testName || ''}">
-                        </div>
-                        <div class="col-span-1">
-                            <label for="test_result_${index}" class="text-sm font-medium">Result:</label>
-                            <input type="text" id="test_result_${index}" class="sidebar-input border p-2" value="${test.result || ''}">
-                        </div>
-                    </div>
-                </div>
-                `;
-                    });
-                }
-                contentHTML += `
-            <div>
-                <button type="button" id="addNewParameterBtn" class="btn btn-secondary w-full">
-                    <i class="fas fa-plus mr-2"></i> Add New Test Parameter
-                </button>
-            </div>
-            `;
-                contentHTML += `
-            <div>
-                <label for="labRemark" class="sidebar-label">Lab Remarks (Optional):</label>
-                <textarea id="labRemark" rows="3" class="sidebar-input border p-2" placeholder="e.g., Sample was wet upon arrival...">${record.labRemark || ''}</textarea>
-            </div>
-            `;
-                contentHTML += `</form></div>`; // ปิด Section 2 (Staff)
-            }
-
-            // --- Action Buttons ---
-            contentHTML += `<div id="sidebarActions" class="mt-8 flex items-center gap-2 flex-wrap">`;
-            if (isEditMode) {
-                contentHTML += `<button id="saveChangesBtn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Save Changes</button>`;
-            } else {
-                contentHTML += `<button id="saveResultsBtn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Save Results</button>`;
-                if (record.status === 'Completed') {
-                    contentHTML += `<span class="text-green-700 font-bold ml-4">(Status: Completed)</span>`;
-                }
-            }
-            contentHTML += `</div>`;
-
-            sidebarContent.innerHTML = contentHTML;
-            detailsSidebar.classList.add('open');
-        };
-
-        // --- 10. Event Listeners (Dashboard) ---
-
-        // (ใหม่) Sidebar Save Logic (ปรับปรุงจาก NCF [cite: 843-974])
-        detailsSidebar.addEventListener('click', async (e) => {
-            // (ใหม่) Logic สำหรับปุ่ม "Add New Parameter" (แก้ไขข้อ 3)
-            if (e.target.id === 'addNewParameterBtn') {
-                e.preventDefault(); // ป้องกันฟอร์ม submit
-
-                // (สำคัญ) 1. อ่านข้อมูลปัจจุบันจากฟอร์มมาเก็บใน State ก่อน
-                currentRecord.labTesterName = document.getElementById('labTesterName')?.value || '';
-                currentRecord.labRemark = document.getElementById('labRemark')?.value || '';
-
-                currentRecord.testsRequired.forEach((test, index) => {
-                    const nameEl = document.getElementById(`test_name_${index}`);
-                    const resultEl = document.getElementById(`test_result_${index}`);
-                    if (nameEl) currentRecord.testsRequired[index].testName = nameEl.value;
-                    if (resultEl) currentRecord.testsRequired[index].result = resultEl.value;
+                    ]
                 });
 
-                // 2. เพิ่ม Object ว่างๆ เข้าไปใน State
-                currentRecord.testsRequired.push({
-                    testName: "",
-                    result: ""
+                calendar.render();
+            };
+
+            initializeDashboardCalendar();
+            fetchDashboardStats();
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ncrLink = document.getElementById('ncr-link');
+
+            // เช็คให้แน่ใจว่าเจอปุ่มก่อนจะเพิ่ม event
+            if (ncrLink) {
+                ncrLink.addEventListener('click', function(event) {
+                    // หยุดการทำงานปกติของลิงก์ (ไม่ให้ไปหน้า F4 ทันที)
+                    event.preventDefault();
+
+                    // ตั้งรหัสผ่านของคุณที่นี่
+                    const correctPassword = "123456789"; 
+
+                    // แสดงหน้าต่างให้กรอกรหัสผ่าน
+                    const enteredPassword = prompt("Please enter the password to access NCR Register:");
+
+                    if (enteredPassword === correctPassword) {
+                        // ถ้ารหัสผ่านถูกต้อง ให้เก็บ "กุญแจ" ไว้ใน sessionStorage
+                        sessionStorage.setItem('isF4Authenticated', 'true');
+                        // แล้วค่อยพาไปที่หน้า F4.html
+                        window.location.href = ncrLink.href;
+                    } else if (enteredPassword !== null) { // เช็คว่าผู้ใช้ไม่ได้กด Cancel
+                        // ถ้ารหัสผ่านผิด
+                        alert("Incorrect password. Access denied.");
+                    }
                 });
-
-                // 3. วาด Sidebar ใหม่ (ในโหมด progress)
-                populateAndShowSidebar(currentRecord, 'progress');
-                return; // จบการทำงาน
-            }
-
-            // (ใหม่) Logic สำหรับปุ่ม Save Results (โหมด Progress/Staff)
-            if (e.target.id === 'saveResultsBtn') {
-                const btn = e.target;
-                btn.disabled = true;
-                btn.textContent = 'Saving...';
-                try {
-                    // 1. อ่านค่าจากฟอร์ม (รวมถึง Parameter Name ที่อาจแก้ไข)
-                    const newTestsArray = currentRecord.testsRequired.map((test, index) => {
-                        return {
-                            testName: document.getElementById(`test_name_${index}`).value,
-                            result: document.getElementById(`test_result_${index}`).value
-                        };
-                    });
-
-                    // 2. กรองแถวว่างที่ผู้ใช้อาจเผลอกด Add แต่ไม่กรอก
-                    const filledTestsArray = newTestsArray.filter(test =>
-                        test.testName.trim() !== '' || test.result.trim() !== ''
-                    );
-
-                    // 3. ตรวจสอบสถานะโดยรวม
-                    const relevantTests = filledTestsArray.filter(t => t.testName.trim() !== '');
-                    const allTestsDone = relevantTests.length > 0 && relevantTests.every(t => t.result.trim() !== '');
-                    let newOverallStatus;
-                    if (allTestsDone) {
-                        newOverallStatus = 'Completed';
-                    } else if (relevantTests.some(t => t.result.trim() !== '')) {
-                        newOverallStatus = 'In Progress';
-                    } else {
-                        newOverallStatus = 'Submitted';
-                    }
-
-                    // 4. อัปเดต Firestore
-                    await db.collection("sample_requests").doc(currentRecord.id).update({
-                        testsRequired: filledTestsArray,
-                        status: newOverallStatus,
-                        labTesterName: document.getElementById('labTesterName').value,
-                        labRemark: document.getElementById('labRemark').value
-                    });
-
-                    detailsSidebar.classList.remove('open');
-                    resetAndRender(); // โหลดตารางใหม่
-                } catch (error) {
-                    console.error("Error saving results: ", error);
-                    alert("Failed to save results.");
-                    btn.disabled = false;
-                    btn.textContent = 'Save Results';
-                }
-            }
-
-            // (ใหม่) Logic สำหรับปุ่ม Save Changes (โหมด Edit/Admin) (อัปเดตสำหรับข้อ 4)
-            if (e.target.id === 'saveChangesBtn') {
-                const btn = e.target;
-                btn.disabled = true;
-                btn.textContent = 'Saving...';
-                try {
-                    // 1. อ่านข้อมูลหลัก (ที่เพิ่มเข้ามาใหม่)
-                    const updateData = {
-                        sampleName: document.getElementById('edit_sampleName').value,
-                        requesterName: document.getElementById('edit_requesterName').value,
-                        requesterDepartment: document.getElementById('edit_requesterDepartment').value,
-                        priority: document.getElementById('edit_priority').value,
-                        batchLotNumber: document.getElementById('edit_batchLotNumber').value,
-                        sampleSource: document.getElementById('edit_sampleSource').value,
-                        reasonForTest: document.getElementById('edit_reasonForTest').value,
-                        testJustification: document.getElementById('edit_testJustification').value,
-                        labRemark: document.getElementById('edit_labRemark').value // (ใหม่)
-                    };
-
-                    // 2. อ่านข้อมูลผลการทดลอง (ที่แก้ไข Parameter Name และ Result)
-                    const newTestsArray = currentRecord.testsRequired.map((test, index) => {
-                        return {
-                            testName: document.getElementById(`admin_edit_name_${index}`).value,
-                            result: document.getElementById(`admin_edit_result_${index}`).value
-                        };
-                    });
-                    // กรองแถวว่างออก (เผื่อ Admin ลบชื่อ Parameter เอง)
-                    updateData.testsRequired = newTestsArray.filter(test =>
-                        test.testName.trim() !== '' || test.result.trim() !== ''
-                    );
-
-
-                    // 3. (แก้ไข) คำนวณสถานะรวมใหม่ (เหมือนโหมด Staff)
-                    const relevantTests = updateData.testsRequired.filter(t => t.testName.trim() !== '');
-                    const allTestsDone = relevantTests.length > 0 && relevantTests.every(t => t.result.trim() !== '');
-
-                    if (allTestsDone) {
-                        updateData.status = 'Completed';
-                    } else if (relevantTests.some(t => t.result.trim() !== '')) {
-                        updateData.status = 'In Progress';
-                    } else {
-                        updateData.status = 'Submitted';
-                    }
-
-                    // 4. อัปเดต Firestore
-                    await db.collection("sample_requests").doc(currentRecord.id).update(updateData);
-
-                    detailsSidebar.classList.remove('open');
-                    resetAndRender();
-                } catch (error) {
-                    console.error("Error saving changes: ", error);
-                    alert("Failed to save changes.");
-                    btn.disabled = false;
-                    btn.textContent = 'Save Changes';
-                }
             }
         });
-
-        // (ใหม่) Admin Actions (Edit/Delete) (From NCF [cite: 976-1006])
-        window.editRecord = (event, recordId) => {
-        event.stopPropagation();
-                    // (เปลี่ยนชื่อตัวแปรเพื่อความชัดเจน)
-        const originalRecord = currentFilteredRecords.find(r => r.id === recordId); 
-        if (originalRecord) {
-                        // (ใหม่) ทำการ Clone ข้อมูลเหมือนกับใน renderTable
-                        currentRecord = {
-                            ...originalRecord,
-                            testsRequired: originalRecord.testsRequired.map(test => ({...test}))
-                        };
-        populateAndShowSidebar(currentRecord, 'edit'); // เปิดโหมด Edit ด้วยข้อมูล Clone
-        }
-        };
-
-        window.deleteRecord = (event, recordId) => {
-            event.stopPropagation();
-            if (!confirm(`Are you sure you want to delete this Sample Request?\nID: ${recordId}\nThis action cannot be undone.`)) {
-                return;
-            }
-            db.collection("sample_requests").doc(recordId).delete()
-                .then(() => {
-                    alert("Record deleted successfully!");
-                    resetAndRender();
-                })
-                .catch(error => {
-                    console.error("Error deleting record: ", error);
-                    alert("Failed to delete record: " + error.message);
-                });
-        };
-
-        // (From NCF [cite: 1007-1012])
-        const resetAndRender = () => {
-            currentPage = 1;
-            lastVisibleDoc = null;
-            pageDocHistory = [null];
-            applyFiltersAndRender('first');
-        };
-
-        // (From NCF [cite: 381-391])
-        const setupDashboardListeners = () => {
-            prevPageBtn.addEventListener('click', () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    applyFiltersAndRender('prev');
-                }
-            });
-            nextPageBtn.addEventListener('click', () => {
-                currentPage++;
-                applyFiltersAndRender('next');
-            });
-
-            // (ปรับปรุงจาก NCF [cite: 1016-1029])
-            searchInput.addEventListener('input', resetAndRender);
-            filterDepartment.addEventListener('change', resetAndRender);
-            filterStatus.addEventListener('change', resetAndRender);
-            filterPriority.addEventListener('change', resetAndRender); // (ใหม่)
-            exportStartDate.addEventListener('change', resetAndRender);
-            exportEndDate.addEventListener('change', resetAndRender);
-            closeSidebarBtn.addEventListener('click', () => detailsSidebar.classList.remove('open'));
-
-            clearFiltersBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                filterDepartment.value = 'all';
-                filterStatus.value = 'open'; // (ใหม่) ค่า Default คือ "open"
-                filterPriority.value = 'all'; // (ใหม่)
-                exportStartDate.value = '';
-                exportEndDate.value = '';
-                resetAndRender();
-            });
-
-            // (ปรับปรุงจาก NCF [cite: 1040-1133]) Excel Export
-            exportExcelBtn.addEventListener('click', async () => {
-                exportExcelBtn.disabled = true;
-                exportExcelBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparing...`;
-
-                try {
-                    const recordsToExport = await fetchAllFilteredRecordsForExport(); // (ฟังก์ชันด้านล่าง)
-                    if (recordsToExport.length === 0) {
-                        alert("No data to export based on the current filters.");
-                        return;
-                    }
-
-                    // (ใหม่) แปลงข้อมูลสำหรับ Export
-                    const formattedData = recordsToExport.map(record => ({
-                        "Request ID": record.requestId,
-                        "Request Date": new Date(record.requestDate).toLocaleString('th-TH'),
-                        "Priority": record.priority,
-                        "Status": record.status,
-                        "Sample Name": record.sampleName,
-                        "Sample Source": record.sampleSource,
-                        "Batch/Lot No.": record.batchLotNumber,
-                        "Sample Count": record.sampleCount,
-                        "Requester Name": record.requesterName,
-                        "Requester Dept": record.requesterDepartment,
-                        "Reason for Test": record.reasonForTest,
-                        "Test Purpose": record.testJustification,
-                        "Tests Required": record.testsRequired.map(t => t.testName).join(', '),
-                        // (ใหม่) เพิ่มผลการทดสอบ
-                        ...Object.fromEntries(
-                        record.testsRequired.map(t => [
-                        `Test: ${t.testName} (Result)`, t.result
-                        ])
-                        )
-                    }));
-
-                    const worksheet = XLSX.utils.json_to_sheet(formattedData);
-                    // (ปรับปรุง) ตั้งค่าความกว้างคอลัมน์
-                    worksheet['!cols'] = [
-                        { wch: 18 }, { wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 30 }, 
-                        { wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 20 }, { wch: 20 },
-                        { wch: 30 }, { wch: 40 }, { wch: 40 }
-                    ]; 
-                    // (หมายเหตุ: คอลัมน์ผลลัพธ์ที่เพิ่มมาทีหลังจะใช้ความกว้าง default)
-
-                    const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, "Sample Records");
-                    XLSX.writeFile(workbook, "Special_Sample_Report_Detailed.xlsx");
-
-                } catch (error) {
-                    console.error("Error exporting Excel: ", error);
-                    alert("An error occurred while preparing the export file.");
-                } finally {
-                    exportExcelBtn.disabled = false;
-                    exportExcelBtn.innerHTML = `<i class="fas fa-file-excel"></i> Export Excel`;
-                }
-            });
-
-            // (ปรับปรุงจาก NCF )
-            const fetchAllFilteredRecordsForExport = async () => {
-            const searchValue = searchInput.value.toLowerCase();
-            const deptValue = filterDepartment.value;
-            const statusValue = filterStatus.value;
-            const priorityValue = filterPriority.value;
-            const startDateValue = exportStartDate.value;
-            const endDateValue = exportEndDate.value;
-
-            // (ใหม่) ตรวจสอบว่าผู้ใช้อยู่ในสถานะ Filter เริ่มต้นหรือไม่
-            const isDefaultState = (
-            deptValue === 'all' &&
-            statusValue === 'open' && // <--- นี่คือค่าเริ่มต้น
-            priorityValue === 'all' &&
-            startDateValue === '' &&
-            endDateValue === '' &&
-            searchValue === ''
-            );
-
-            let query = db.collection("sample_requests");
-
-            if (deptValue !== 'all') query = query.where("requesterDepartment", "==", deptValue);
-            if (priorityValue !== 'all') query = query.where("priority", "==", priorityValue);
-
-            // (ใหม่) Logic การกรอง Status สำหรับ Export
-            if (!isDefaultState) {
-            // ถ้า *ไม่ได้* อยู่ในสถานะเริ่มต้น ให้ใช้ Filter ตามที่ผู้ใช้เลือก
-            if (statusValue === 'open') query = query.where("status", "in", ["Submitted", "In Progress"]);
-            else if (statusValue !== 'all') query = query.where("status", "==", statusValue);
-            }
-            // (ถ้าอยู่ในสถานะเริ่มต้น (isDefaultState = true) เราจะไม่กรอง Status เลย = ได้ทั้งหมด)
-
-            if (startDateValue) query = query.where("createdAt", ">=", new Date(startDateValue + "T00:00:00"));
-            if (endDateValue) query = query.where("createdAt", "<=", new Date(endDateValue + "T23:59:59"));
-
-            if (searchValue) {
-            query = query.orderBy("requestId")
-            .startAt(searchValue.toUpperCase())
-            .endAt(searchValue.toUpperCase() + '\uf8ff');
-            } else {
-            query = query.orderBy("createdAt", "desc");
-            }
-
-            // (หมายเหตุ) Firestore จำกัดการดึงข้อมูลจาก .get()
-            // ถ้าข้อมูลมีมากกว่า 1000 รายการ อาจต้องใช้ Cloud Function ช่วย
-            const snapshot = await query.limit(1000).get();
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            };
-        };
-
-    }); // <-- End of DOMContentLoaded
     </script>
-</body>
-</html>
+    </body>
+    </html>
