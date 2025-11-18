@@ -173,8 +173,14 @@
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <h3 class="font-bold text-lg text-gray-700 mb-4">Monthly Sample Trend by Department</h3>
-                        <canvas id="departmentTrendChart" style="max-height: 350px;"></canvas>
+                      <h3 class="font-bold text-lg text-gray-700 mb-4">Monthly Sample Trend by Department (Requests)</h3>
+                      <canvas id="departmentTrendChart" style="max-height: 350px;"></canvas>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                      <h3 class="font-bold text-lg text-gray-700 mb-4">Actual Workload (Total Tests Performed)</h3>
+                      <p class="text-sm text-gray-500 mb-4">* This chart counts every single test parameter (e.g., 1 Request with 7 days monitoring = 7+ items)</p>
+                      <canvas id="workloadTrendChart" style="max-height: 350px;"></canvas>
                     </div>
 
                     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -615,30 +621,55 @@
         `;
 
         // (แก้ไข) 2. Loop for tests (อิงตาม 'result' ไม่ใช่ 'status')
-        relevantTests.forEach(test => {
-        let statusIcon;
-        let resultText;
+            const groupedData = {};
+            relevantTests.forEach((test) => {
+                const sLabel = test.sampleLabel || 'Sample #1'; 
+                const tLabel = test.timePoint || 'Result';
+                if (!groupedData[sLabel]) groupedData[sLabel] = {};
+                if (!groupedData[sLabel][tLabel]) groupedData[sLabel][tLabel] = [];
+                groupedData[sLabel][tLabel].push(test);
+            });
 
-        if (test.result && test.result.trim() !== '') {
-        // --- มีผลลัพธ์ (Completed) ---
-        statusIcon = '<i class="fas fa-check-circle text-green-500"></i>';
-        resultText = `<strong>${test.result}</strong>`;
-        } else {
-        // --- ไม่มีผลลัพธ์ (Pending) ---
-        statusIcon = '<i class="fas fa-clock text-yellow-500"></i>';
-        resultText = '<i>(Pending)</i>';
-        }
+            // Render Groups
+            for (const [sampleLabel, timePoints] of Object.entries(groupedData)) {
+                html += `<div class="mb-4 border border-gray-200 rounded-lg overflow-hidden">`;
+                html += `<div class="bg-blue-50 px-4 py-2 font-bold text-blue-800 border-b border-blue-100">
+                            <i class="fas fa-vial mr-2"></i>${sampleLabel}
+                         </div>`;
+                html += `<div class="p-4 bg-white space-y-4">`;
 
-        html += `
-        <li class="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-        <span class="font-medium text-gray-700">${statusIcon} ${test.testName}</span>
-        <span class="text-gray-900">${resultText}</span>
-        </li>
-        `;
-        });
+                for (const [timeLabel, tests] of Object.entries(timePoints)) {
+                     // แสดง Time Header
+                     html += `<h5 class="text-sm font-semibold text-slate-500 border-b pb-1 mt-1">
+                                <i class="far fa-clock mr-1"></i>${timeLabel}
+                              </h5>`;
 
-        html += `</ul></div>`;
-            html += `
+                     html += `<ul class="space-y-2 mt-2">`;
+                     tests.forEach(test => {
+                        let statusIcon;
+                        let resultText;
+
+                        if (test.result && test.result.trim() !== '') {
+                            statusIcon = '<i class="fas fa-check-circle text-green-500"></i>';
+                            resultText = `<span class="font-bold text-blue-900">${test.result}</span>`;
+                        } else {
+                            statusIcon = '<i class="fas fa-hourglass-half text-yellow-500"></i>';
+                            resultText = '<span class="text-gray-400 italic">(Pending)</span>';
+                        }
+
+                        html += `
+                        <li class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
+                            <span class="font-medium text-gray-700 flex items-center gap-2">
+                                ${statusIcon} ${test.testName}
+                            </span>
+                            <span>${resultText}</span>
+                        </li>`;
+                     });
+                     html += `</ul>`;
+                }
+                html += `</div></div>`;
+            }
+                   html += `
             <div class="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-gray-200">
                 <div>
                     <span class="sidebar-label">Lab Tester</span>
@@ -948,6 +979,59 @@
                 });
             }
 
+            // --- [NEW] กราฟ 3.5: Workload Trend by Department ---
+            const workloadTrendCtx = document.getElementById('workloadTrendChart')?.getContext('2d');
+            // เตรียมตัวแปรเก็บข้อมูล Workload
+            const workloadByDept = {}; 
+
+            // ดึงข้อมูลจาก summaryData (ต้อง Loop ใหม่ หรือแทรกใน Loop แรกก็ได้)
+            for (const key in summaryData) {
+                const parts = key.split('.');
+                if (parts[0] === 'workloadByDept' && parts.length === 3) {
+                    const [_, dept, month] = parts;
+                    if (!workloadByDept[dept]) workloadByDept[dept] = {};
+                    workloadByDept[dept][month] = summaryData[key];
+                }
+            }
+
+            if (workloadTrendCtx) {
+                // เช็คว่ามีกราฟเก่าไหม ถ้ามีให้ทำลาย (ต้องประกาศตัวแปร workloadChartGlobal ไว้ข้างบนสุดด้วยนะครับ หรือใช้ window.workloadChart ก็ได้ถ้ารีบ)
+                if (window.workloadChart) window.workloadChart.destroy();
+
+                const workloadDatasets = [];
+                const depts = Object.keys(workloadByDept).sort(); // ใช้ Key จาก Workload แทน
+
+                depts.forEach(dept => {
+                    const color = deptColorMap[dept] || defaultColor;
+                    workloadDatasets.push({
+                        label: dept,
+                        data: monthIds.map(monthId => workloadByDept[dept][monthId] || 0),
+                        backgroundColor: color, // ใช้สีทึบเพราะเป็น Bar Chart จะดูง่ายกว่า
+                        borderColor: color,
+                        borderWidth: 1
+                    });
+                });
+
+                window.workloadChart = new Chart(workloadTrendCtx, {
+                    type: 'bar', // แนะนำเป็น Bar Chart เพื่อให้เห็น Volume ชัดเจน
+                    data: { labels: monthLabels, datasets: workloadDatasets },
+                    options: {
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                            }
+                        },
+                        responsive: true,
+                        scales: {
+                            x: { stacked: true }, // กราฟแท่งซ้อนกัน (Stacked) จะเห็นภาพรวม Workload ดีมาก
+                            y: { stacked: true, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
             // --- กราฟ 4: Department Status Overview (ใหม่) ---
             if (deptStatusContainer) {
                 // ทำลายกราฟเก่าย่อยๆ ทั้งหมดก่อน
@@ -1250,44 +1334,84 @@
                 contentHTML += `</div>`; // ปิด Section 2 (Admin)
                 contentHTML += `</form>`; // (สำคัญ) ปิด <form id="editForm"> ที่นี่
             } else {
-                // --- (Staff Progress Mode) ---
-                contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Lab Results Entry</h3>`;
-                contentHTML += `<form id="resultsForm" class="space-y-4">`;
-                contentHTML += `
-            <div>
-                <label for="labTesterName" class="sidebar-label">Tester Name:</label>
-                <input type="text" id="labTesterName" class="sidebar-input border p-2" value="${record.labTesterName || ''}">
-            </div>
-            `;
-                if (record.testsRequired && record.testsRequired.length > 0) {
-                    record.testsRequired.forEach((test, index) => {
-                        contentHTML += `
-                <div class="p-3 bg-gray-50 rounded-lg border">
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-                        <div class="col-span-1">
-                            <label for="test_name_${index}" class="text-sm font-medium">Parameter:</label>
-                            <input type="text" id="test_name_${index}" class="sidebar-input border p-2"
-                                value="${test.testName || ''}">
-                        </div>
-                        <div class="col-span-1">
-                            <label for="test_result_${index}" class="text-sm font-medium">Result:</label>
-                            <input type="text" id="test_result_${index}" class="sidebar-input border p-2" value="${test.result || ''}">
-                        </div>
+      // --- (Staff Progress Mode: UPDATED FOR GROUPING) ---
+      contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Lab Results Entry</h3>`;
+      contentHTML += `<form id="resultsForm" class="space-y-4">`;
+      
+      contentHTML += `<div><label class="sidebar-label">Tester Name:</label><input type="text" id="labTesterName" class="sidebar-input border p-2" value="${record.labTesterName || ''}"></div>`;
+
+      if (record.testsRequired && record.testsRequired.length > 0) {
+          // 1. Grouping Data
+          const groupedData = {};
+          record.testsRequired.forEach((test, index) => {
+              const sLabel = test.sampleLabel || 'Sample #1'; 
+              const tLabel = test.timePoint || 'Result';
+              if (!groupedData[sLabel]) groupedData[sLabel] = {};
+              if (!groupedData[sLabel][tLabel]) groupedData[sLabel][tLabel] = [];
+              groupedData[sLabel][tLabel].push({ ...test, originalIndex: index });
+          });
+
+          // 2. Rendering Groups
+          let groupIndex = 0; // ตัวนับกลุ่มหลัก
+          for (const [sampleLabel, timePoints] of Object.entries(groupedData)) {
+              const sampleHeaderId = `sample_header_${groupIndex}`; // สร้าง ID ให้ Header
+              
+              contentHTML += `<div class="mb-4 border border-blue-200 rounded-lg overflow-hidden">`;
+              // เปลี่ยน Text เป็น Input
+              contentHTML += `<div class="bg-blue-100 px-4 py-2 font-bold text-blue-800 flex items-center gap-2">
+                                <i class="fas fa-vial"></i>
+                                <input type="text" id="${sampleHeaderId}" class="bg-transparent border-b border-blue-300 focus:outline-none focus:border-blue-600 w-full font-bold text-blue-900" value="${sampleLabel}">
+                              </div>`;
+              contentHTML += `<div class="p-4 bg-white space-y-4">`;
+              
+              let timeIndex = 0; // ตัวนับกลุ่มย่อย
+              for (const [timeLabel, tests] of Object.entries(timePoints)) {
+                  const timeHeaderId = `time_header_${groupIndex}_${timeIndex}`; // สร้าง ID ให้ Time Header
+                  
+                  // เปลี่ยน H5 เป็น Input (แสดงเสมอเพื่อให้แก้ได้ง่าย)
+                  contentHTML += `<div class="flex items-center gap-2 mt-2 border-b pb-1">
+                                    <i class="far fa-clock text-slate-400 text-xs"></i>
+                                    <input type="text" id="${timeHeaderId}" class="text-sm font-semibold text-slate-600 bg-transparent focus:outline-none w-full" value="${timeLabel}">
+                                  </div>`;
+
+                  tests.forEach(item => {
+                      const idx = item.originalIndex;
+                      // เพิ่ม data-sample-header-id และ data-time-header-id เพื่อใช้ตอน Save
+                      contentHTML += `
+                      <div class="grid grid-cols-12 gap-2 items-center mb-2">
+                          <div class="col-span-5">
+                              <label class="text-xs text-gray-500 block">Parameter</label>
+                              <input type="text" id="test_name_${idx}" class="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value="${item.testName}" placeholder="Parameter Name">
+                          </div>
+                          <div class="col-span-7">
+                              <label class="text-xs text-gray-500 block">Result</label>
+                              <input type="text" id="test_result_${idx}" 
+                                     data-sample-header-id="${sampleHeaderId}" 
+                                     data-time-header-id="${timeHeaderId}"
+                                     class="w-full border border-blue-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500" 
+                                     placeholder="Enter result..." value="${item.result || ''}">
+                          </div>
+                      </div>`;
+                  });
+                  timeIndex++;
+              }
+              contentHTML += `
+                    <div class="mt-3 pt-3 border-t border-dashed border-blue-100 text-right">
+                        <button type="button" class="add-param-btn text-sm text-blue-600 hover:text-blue-800 font-semibold" data-target-sample="${sampleLabel}">
+                            <i class="fas fa-plus-circle"></i> Add to ${sampleLabel}
+                        </button>
                     </div>
-                </div>
                 `;
-                    });
-                }
-                contentHTML += `
-            <div>
-                <button type="button" id="addNewParameterBtn" class="btn btn-secondary w-full">
-                    <i class="fas fa-plus mr-2"></i> Add New Test Parameter
-                </button>
-            </div>
-            `;
-                contentHTML += `
-            <div>
-                <label for="labRemark" class="sidebar-label">Lab Remarks (Optional):</label>
+              contentHTML += `</div></div>`; 
+              groupIndex++;
+          }
+      } else {
+           contentHTML += `<p>No tests required.</p>`;
+      }
+
+      contentHTML += `
+        <div>
+          <label for="labRemark" class="sidebar-label">Lab Remarks (Optional):</label>
                 <textarea id="labRemark" rows="3" class="sidebar-input border p-2" placeholder="e.g., Sample was wet upon arrival...">${record.labRemark || ''}</textarea>
             </div>
             `;
@@ -1314,30 +1438,45 @@
 
         // (ใหม่) Sidebar Save Logic (ปรับปรุงจาก NCF [cite: 843-974])
         detailsSidebar.addEventListener('click', async (e) => {
-            // (ใหม่) Logic สำหรับปุ่ม "Add New Parameter" (แก้ไขข้อ 3)
-            if (e.target.id === 'addNewParameterBtn') {
-                e.preventDefault(); // ป้องกันฟอร์ม submit
+            // (ใหม่) Logic สำหรับปุ่ม "Add New Parameter" (แบบแยก Sample)
+            const addBtn = e.target.closest('.add-param-btn'); // เช็คว่ากดโดนปุ่ม class นี้ไหม
 
-                // (สำคัญ) 1. อ่านข้อมูลปัจจุบันจากฟอร์มมาเก็บใน State ก่อน
+            if (addBtn) {
+                e.preventDefault();
+
+                // 1. Save State ปัจจุบันก่อน (เหมือนเดิม)
                 currentRecord.labTesterName = document.getElementById('labTesterName')?.value || '';
                 currentRecord.labRemark = document.getElementById('labRemark')?.value || '';
 
+                // (Logic Save Header ที่เราทำไว้ก่อนหน้า)
                 currentRecord.testsRequired.forEach((test, index) => {
-                    const nameEl = document.getElementById(`test_name_${index}`);
-                    const resultEl = document.getElementById(`test_result_${index}`);
-                    if (nameEl) currentRecord.testsRequired[index].testName = nameEl.value;
-                    if (resultEl) currentRecord.testsRequired[index].result = resultEl.value;
+                    const resultInput = document.getElementById(`test_result_${index}`);
+                    const nameInput = document.getElementById(`test_name_${index}`);
+                    if (resultInput && nameInput) {
+                         const sampleHeaderId = resultInput.getAttribute('data-sample-header-id');
+                         const timeHeaderId = resultInput.getAttribute('data-time-header-id');
+
+                         test.testName = nameInput.value;
+                         test.result = resultInput.value;
+                         test.sampleLabel = document.getElementById(sampleHeaderId)?.value || test.sampleLabel;
+                         test.timePoint = document.getElementById(timeHeaderId)?.value || test.timePoint;
+                    }
                 });
 
-                // 2. เพิ่ม Object ว่างๆ เข้าไปใน State
+                // 2. อ่านค่าจากปุ่มว่าให้เพิ่มเข้า Sample ไหน
+                const targetSampleLabel = addBtn.getAttribute('data-target-sample');
+
+                // 3. เพิ่มรายการใหม่ โดยระบุ Sample Label ให้ตรงกับกลุ่มที่กด
                 currentRecord.testsRequired.push({
                     testName: "",
-                    result: ""
+                    result: "",
+                    sampleLabel: targetSampleLabel, // <--- พระเอกของงาน: ระบุกลุ่ม
+                    timePoint: "One-time" // ค่าเริ่มต้น (User ไปแก้ Header เอาเองได้ถ้าเป็น Day 2)
                 });
 
-                // 3. วาด Sidebar ใหม่ (ในโหมด progress)
+                // 4. Render ใหม่
                 populateAndShowSidebar(currentRecord, 'progress');
-                return; // จบการทำงาน
+                return;
             }
 
             // (ใหม่) Logic สำหรับปุ่ม Save Results (โหมด Progress/Staff)
@@ -1348,9 +1487,24 @@
                 try {
                     // 1. อ่านค่าจากฟอร์ม (รวมถึง Parameter Name ที่อาจแก้ไข)
                     const newTestsArray = currentRecord.testsRequired.map((test, index) => {
+                        const resultInput = document.getElementById(`test_result_${index}`);
+                        const nameInput = document.getElementById(`test_name_${index}`);
+
+                        // ดึง ID ของ Header ที่เก็บไว้ใน data-attribute
+                        const sampleHeaderId = resultInput.getAttribute('data-sample-header-id');
+                        const timeHeaderId = resultInput.getAttribute('data-time-header-id');
+
+                        // อ่านค่าจริงจาก Header Input
+                        const newSampleLabel = document.getElementById(sampleHeaderId)?.value || test.sampleLabel || 'Sample #1';
+                        const newTimePoint = document.getElementById(timeHeaderId)?.value || test.timePoint || 'Result';
+
                         return {
-                            testName: document.getElementById(`test_name_${index}`).value,
-                            result: document.getElementById(`test_result_${index}`).value
+                            // รักษาค่าเดิมอื่นๆ ไว้ด้วย spread operator
+                            ...test, 
+                            testName: nameInput.value,
+                            result: resultInput.value,
+                            sampleLabel: newSampleLabel, // บันทึกชื่อ Sample ใหม่
+                            timePoint: newTimePoint      // บันทึกวันที่ใหม่
                         };
                     });
 
@@ -1544,12 +1698,17 @@
                         "Requester Dept": record.requesterDepartment,
                         "Reason for Test": record.reasonForTest,
                         "Test Purpose": record.testJustification,
-                        "Tests Required": record.testsRequired.map(t => t.testName).join(', '),
-                        // (ใหม่) เพิ่มผลการทดสอบ
+                        // 1. แก้ให้ช่อง "Tests Required" โชว์ชื่อ Test แบบไม่ซ้ำ (Unique) จะได้ไม่ยาวเหยียด
+                        "Tests Required": [...new Set(record.testsRequired.map(t => t.testName))].join(', '),
+
+                        // 2. แก้การระเบิดคอลัมน์ผลลัพธ์ ให้ระบุ Sample และ วันที่ ในหัวตาราง
                         ...Object.fromEntries(
-                        record.testsRequired.map(t => [
-                        `Test: ${t.testName} (Result)`, t.result
-                        ])
+                            record.testsRequired.map(t => {
+                                // ถ้ามีข้อมูล Sample/Time ให้เอามาตั้งชื่อคอลัมน์ เช่น "Sample #1 (Day 1): Splinter"
+                                // ถ้าเป็นข้อมูลเก่า (ไม่มี Label) ให้ใช้คำว่า "Result" เหมือนเดิม
+                                const colPrefix = t.sampleLabel ? `${t.sampleLabel} (${t.timePoint || '-'})` : "Result";
+                                return [`${colPrefix}: ${t.testName}`, t.result];
+                            })
                         )
                     }));
 

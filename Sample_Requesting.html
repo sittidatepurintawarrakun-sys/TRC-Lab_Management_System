@@ -165,7 +165,21 @@
                     <label for="otherReason" class="form-label">Please Specify Reason</label>
                     <input type="text" id="otherReason" name="otherReason" class="form-input" placeholder="e.g., New Product Development">
                 </div>
-
+                <div class="md:col-span-2 pt-4 pb-2 border-t border-slate-100 mt-2">
+                    <h4 class="text-sm font-semibold text-slate-700 mb-2"><i class="fas fa-calendar-alt mr-2"></i>Testing Schedule</h4>
+                </div>
+                <div>
+                    <label for="testFrequency" class="form-label">Frequency</label>
+                    <select id="testFrequency" name="testFrequency" class="form-select">
+                        <option value="One-off" selected>One-off (Check Once)</option>
+                        <option value="Daily">Daily (Check Every Day)</option>
+                        <option value="Per Shift">Per Shift</option>
+                    </select>
+                </div>
+                <div id="durationContainer" class="hidden">
+                    <label for="testDuration" class="form-label">Duration (Days)</label>
+                    <input type="number" id="testDuration" name="testDuration" class="form-input" placeholder="e.g. 7" min="1" value="1">
+                </div>
                 <div class="md:col-span-2">
                     <label for="testJustification" class="form-label">Test Purpose (Required)</label>
                     <textarea id="testJustification" name="testJustification" rows="2" class="form-input" placeholder="Explain why this test is needed, its importance, or what to look for..." required></textarea>
@@ -287,7 +301,23 @@ document.addEventListener('DOMContentLoaded', () => {
             otherReasonInput.value = ''; 
         }
     });
+    // START NEW CODE: Event Listener for Frequency
+    const frequencySelect = document.getElementById('testFrequency');
+    const durationContainer = document.getElementById('durationContainer');
+    const durationInput = document.getElementById('testDuration');
 
+    frequencySelect.addEventListener('change', () => {
+        if (frequencySelect.value !== 'One-off') {
+            durationContainer.classList.remove('hidden');
+            durationInput.required = true;
+            if(durationInput.value === "1") durationInput.value = ""; 
+        } else {
+            durationContainer.classList.add('hidden');
+            durationInput.required = false;
+            durationInput.value = "1";
+        }
+    });
+    // END NEW CODE
     // --- Function: Generate Unique Request ID (สำคัญ!) ---
     async function getNextRequestId() {
         const counterRef = db.collection("metadata").doc("counters");
@@ -437,14 +467,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // แปลง Textarea ของ "Tests Required" ให้เป็น Array of Objects
-            const testsRequiredArray = requestForm.testsRequired.value.split(',')
-                .map(test => test.trim()) // ลบช่องว่างหน้า-หลัง
-                .filter(test => test.length > 0) // กรองค่าว่าง
-                .map(testName => ({
-                    testName: testName,
-                    status: 'Pending', // สถานะเริ่มต้นของแต่ละการทดสอบ
-                    result: ''         // ช่องว่างสำหรับกรอกผล
-                }));
+            // START CHANGED CODE: Explosion Logic
+            const rawTestsList = requestForm.testsRequired.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            const sampleCount = parseInt(requestForm.sampleCount.value, 10) || 1;
+            const frequency = requestForm.testFrequency.value;
+            const duration = parseInt(requestForm.testDuration.value, 10) || 1;
+
+            let testsRequiredArray = [];
+
+            // Loop 1: ตามจำนวนตัวอย่าง
+            for (let i = 1; i <= sampleCount; i++) {
+                // Loop 2: ตามระยะเวลา
+                let timeLoop = (frequency === 'One-off') ? 1 : duration;
+                for (let d = 1; d <= timeLoop; d++) {
+                    let timeLabel = (frequency === 'One-off') ? 'One-time' : `Day ${d}`;
+                    if (frequency === 'Per Shift') timeLabel = `Day ${d} (All Shifts)`; 
+
+                    rawTestsList.forEach(testName => {
+                        testsRequiredArray.push({
+                            testName: testName,
+                            sampleId: i,                
+                            sampleLabel: `Sample #${i}`, 
+                            timePoint: timeLabel,       
+                            status: 'Pending',
+                            result: ''
+                        });
+                    });
+                }
+            }
+            // END CHANGED CODE
                 
             // (Validation) ตรวจสอบว่ากรอก Tests Required อย่างน้อย 1 รายการ
             if (testsRequiredArray.length === 0) {
@@ -466,8 +517,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 sampleSource: requestForm.sampleSource.value,
                 batchLotNumber: requestForm.batchLotNumber.value,
                 sampleCount: parseInt(requestForm.sampleCount.value, 10), 
+                // START NEW CODE
+                testFrequency: requestForm.testFrequency.value,
+                testDuration: parseInt(requestForm.testDuration.value, 10) || 1,
+                totalTestCount: testsRequiredArray.length,
+                // END NEW CODE
                 sampleUnit: requestForm.sampleUnit.value || '', 
-                priority: priorityValue, // ✅ (เพิ่ม)
+                priority: priorityValue, //  ✅  (เพิ่ม)
                 reasonForTest: finalReason, 
                 testJustification: testJustificationValue, 
                 testsRequired: testsRequiredArray, 

@@ -32,7 +32,7 @@
 <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
     <div class="max-w-4xl mx-auto">
         <div class="mb-6">
-            <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
+            <a href="Bale_Check_Report.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
                 <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
             </a>
         </div>
@@ -158,7 +158,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const recordId = urlParams.get('id');
     const isEditMode = Boolean(recordId);
     let originalRecordData = null;
-    const adminEmail = "sittidate.p@adityabirla.com";
+    
+    // ⭐ [แก้ไข] เปลี่ยนจากอีเมลเดียว เป็น Array รายชื่อ Admin ทั้งหมด
+    const adminEmails = [
+        "sittidate.p@adityabirla.com",
+        "trc-qcl.laboratory@adityabirla.com",
+        "laboratory.trc@adityabirla.com",
+        "waraporn.jindanath@adityabirla.com",
+        "datejub@hotmail.com"
+    ];
 
     const populateForm = (data) => {
         baleForm.inspectionDate.value = data.inspectionDate;
@@ -181,7 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Main Logic Controller (Auth-aware) ---
     auth.onAuthStateChanged(user => {
         if (isEditMode) {
-            const isAdmin = user && user.email.toLowerCase() === adminEmail.toLowerCase();
+            // ⭐ [แก้ไข] ตรวจสอบว่าอีเมลของ User อยู่ในรายการ adminEmails หรือไม่
+            const isAdmin = user && adminEmails.includes(user.email.toLowerCase());
+            
             if (isAdmin) {
                 baleForm.classList.remove('hidden');
                 authMessage.classList.add('hidden');
@@ -231,37 +241,37 @@ document.addEventListener('DOMContentLoaded', () => {
         submitButton.disabled = true;
         submitButton.textContent = 'Saving...';
         try {
-            let fileToUpload = photoInput.files[0]; // <-- (1) เปลี่ยนจาก const เป็น let
+            let fileToUpload = photoInput.files[0]; 
 
-            // ✅  ===== START: แทรกโค้ดบีบอัดเข้ามาตรงนี้ =====
+            // ✅  ===== START: Image Compression Logic =====
             if (fileToUpload) {
                 submitButton.textContent = 'Compressing Image...';
 
                 const options = {
-                    maxSizeMB: 0.5,           // ขนาดไฟล์สูงสุด 0.5 MB (500 KB)
-                    maxWidthOrHeight: 1920, // ความละเอียดสูงสุด
+                    maxSizeMB: 0.5,           // Max size 0.5 MB
+                    maxWidthOrHeight: 1920,   // Max dimension
                     useWebWorker: true,
                     fileType: 'image/jpeg'
                 };
 
                 try {
                     const compressedFile = await imageCompression(fileToUpload, options);
-                    fileToUpload = compressedFile; // (2) อัปเดตตัวแปร fileToUpload เป็นไฟล์ใหม่ที่บีบอัดแล้ว
+                    fileToUpload = compressedFile; 
                     console.log(`Image compressed: ${fileToUpload.size / 1024} KB`);
                 } catch (compressionError) {
                     console.error("Image compression failed:", compressionError);
                     alert("Image compression failed. Uploading original file.");
-                    fileToUpload = photoInput.files[0]; // (3) หากล้มเหลว ให้กลับไปใช้ไฟล์เดิม
+                    fileToUpload = photoInput.files[0]; 
                 }
             }
-            // ✅  ===== END: แทรกโค้ดบีบอัด =====
+            // ✅  ===== END: Image Compression Logic =====
 
-            if (fileToUpload) { // (4) โค้ดที่เหลือจะใช้ตัวแปร fileToUpload (ซึ่งอาจเป็นไฟล์ที่บีบอัดแล้ว)
+            if (fileToUpload) { 
                 submitButton.textContent = 'Uploading Image...';
                 const uniqueFileName = Date.now() + '-' + fileToUpload.name;
                 const storageRef = storage.ref('bale_images/' + uniqueFileName);
 
-                const uploadTask = await storageRef.put(fileToUpload); // <-- อัปโหลดไฟล์ใหม่
+                const uploadTask = await storageRef.put(fileToUpload); 
                 const downloadURL = await uploadTask.ref.getDownloadURL();
                 updatedData.photoURL = downloadURL;
                 updatedData.photoFileName = uniqueFileName;
@@ -279,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitButton.textContent = 'Updating Record...';
                 await db.collection("bale_checking_records").doc(recordId).update(updatedData);
                 alert("Record updated successfully!");
+                // Redirect กลับไปหน้า Bale_Check_Report.html (หรือชื่อไฟล์ Report ของคุณ)
                 window.location.href = 'Bale_Check_Report.html';
             } else {
                 updatedData.status = "In Progress";
