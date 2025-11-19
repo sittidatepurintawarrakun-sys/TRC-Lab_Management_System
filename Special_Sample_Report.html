@@ -495,6 +495,7 @@
         // State (From NCF [cite: 299-305])
         let currentFilteredRecords = [];
         let currentRecord = null;
+        let currentUserRecord = null;
         let isInitialLoad = true;
         let currentPage = 1;
         const rowsPerPage = 15; // ตามคำขอ
@@ -585,6 +586,7 @@
         // (ใหม่) Function to display user result
         // (ใหม่) Function to display user result (แก้ไข Bug)
         const displayUserResult = (record) => {
+            currentUserRecord = record;
         userResultRequestId.text(record.requestId);
 
         // (แก้ไข) 1. คำนวณ % progress (อิงตาม 'result' ไม่ใช่ 'status')
@@ -596,6 +598,14 @@
         const progressPercent = totalTests > 0 ? (completedTests / totalTests) * 100 : 0;
 
         let html = `
+        <div class="flex justify-end gap-3 mb-6 pb-4 border-b border-gray-200">
+             <button onclick="printUserReport()" class="btn btn-secondary text-sm">
+                <i class="fas fa-print"></i> Print Report
+             </button>
+             <button onclick="exportUserExcel()" class="btn btn-primary bg-green-600 hover:bg-green-700 text-white text-sm">
+                <i class="fas fa-file-excel"></i> Download Excel
+             </button>
+        </div>
         <div class="mb-6">
         <span class="sidebar-label">Sample Name</span>
         <span class="sidebar-value text-lg">${record.sampleName}</span>
@@ -1783,7 +1793,115 @@
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             };
         };
+        // --- [NEW] User Actions: Print & Export ---
 
+        // 1. ฟังก์ชัน Print Report (สร้างหน้าต่างใหม่สวยๆ แล้วสั่งพิมพ์)
+        window.printUserReport = () => {
+            if (!currentUserRecord) return;
+
+            const record = currentUserRecord;
+            const printDate = new Date().toLocaleString('th-TH');
+
+            // สร้างเนื้อหาสำหรับพิมพ์ (ดึง HTML จากหน้าจอมาใช้บางส่วนได้ หรือสร้างใหม่ให้ Clean)
+            const printContent = `
+                <html>
+                <head>
+                    <title>Test Report - ${record.requestId}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #333; }
+                        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                        .header h1 { margin: 0; font-size: 24px; }
+                        .header p { margin: 5px 0; color: #666; }
+                        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+                        .label { font-weight: bold; color: #555; }
+                        .result-box { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+                        .result-header { background: #f3f4f6; padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #ddd; }
+                        .result-item { display: flex; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #eee; }
+                        .result-item:last-child { border-bottom: none; }
+                        .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>Laboratory Test Report</h1>
+                        <p>Request ID: <strong>${record.requestId}</strong></p>
+                        <p>Status: ${record.status}</p>
+                    </div>
+
+                    <div class="info-grid">
+                        <div><span class="label">Sample Name:</span> ${record.sampleName}</div>
+                        <div><span class="label">Requester:</span> ${record.requesterName}</div>
+                        <div><span class="label">Department:</span> ${record.requesterDepartment}</div>
+                        <div><span class="label">Request Date:</span> ${new Date(record.requestDate).toLocaleString('th-TH')}</div>
+                        <div><span class="label">Batch/Lot:</span> ${record.batchLotNumber}</div>
+                        <div><span class="label">Source:</span> ${record.sampleSource}</div>
+                    </div>
+
+                    <h3>Test Results</h3>
+                    ${document.getElementById('userResultContent').querySelector('.sidebar-section ul')?.parentElement.innerHTML || '<p>No results to display.</p>'}
+
+                    <div class="info-grid" style="margin-top: 30px;">
+                        <div><span class="label">Tester:</span> ${record.labTesterName || '-'}</div>
+                        <div><span class="label">Remarks:</span> ${record.labRemark || '-'}</div>
+                    </div>
+
+                    <div class="footer">
+                        Report Generated on: ${printDate}<br>
+                        Lab Management System
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const printWindow = window.open('', '', 'width=900,height=600');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        };
+
+        // 2. ฟังก์ชัน Export Excel (เฉพาะใบงานนี้)
+        window.exportUserExcel = () => {
+            if (!currentUserRecord) return;
+
+            const record = currentUserRecord;
+
+            // ใช้ Logic เดียวกับ Admin Export แต่ทำแค่ record เดียว
+            const formattedData = [{
+                "Request ID": record.requestId,
+                "Request Date": new Date(record.requestDate).toLocaleString('th-TH'),
+                "Priority": record.priority,
+                "Status": record.status,
+                "Sample Name": record.sampleName,
+                "Sample Source": record.sampleSource,
+                "Batch/Lot No.": record.batchLotNumber,
+                "Sample Count": record.sampleCount,
+                "Requester Name": record.requesterName,
+                "Requester Dept": record.requesterDepartment,
+                "Reason for Test": record.reasonForTest,
+                "Test Purpose": record.testJustification,
+                "Tests Required": [...new Set(record.testsRequired.map(t => t.testName))].join(', '),
+
+                // ระเบิดคอลัมน์ผลลัพธ์ (ใช้ Logic ใหม่ที่หัวตารางไม่ซ้ำ)
+                ...Object.fromEntries(
+                    record.testsRequired.map(t => {
+                        const colPrefix = t.sampleLabel ? `${t.sampleLabel} (${t.timePoint || '-'})` : "Result";
+                        return [`${colPrefix}: ${t.testName}`, t.result];
+                    })
+                )
+            }];
+
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            // จัดความกว้างคอลัมน์
+            worksheet['!cols'] = [{ wch: 18 }, { wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 25 }]; 
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Test Report");
+            XLSX.writeFile(workbook, `${record.requestId}_Report.xlsx`);
+        };
     }); // <-- End of DOMContentLoaded
     </script>
 </body>
