@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Material Record - LabTrack</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff;
+            color: #334155;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* ปุ่มย้อนกลับ */
+        .back-button {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            color: #475569;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s ease-in-out;
+        }
+        .back-button:hover { color: #1e40af; }
+
+        /* ส่วนหัวข้อ */
+        .header {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 40px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .header h1 {
+            color: #1e40af;
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .header p {
+            color: #475569;
+            font-size: 1.1rem;
+        }
+
+        /* กล่องรวมเมนู */
+        .report-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            max-width: 950px;
+        }
+
+        /* ตัวการ์ดเมนู */
+        .report-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            padding: 30px;
+            text-align: center;
+            width: 260px;
+            height: 200px;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07);
+        }
+
+        /* ไอคอน Emoji */
+        .report-card .icon {
+            font-size: 3.5rem; 
+            margin-bottom: 20px;
+            color: #3f51b5;
+        }
+
+        /* ข้อความบนการ์ด */
+        .report-card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+            color: #1e40af;
+        }
+
+        /* สไตล์สำหรับ Template (ซ่อนไว้ถ้ายังไม่ใช้ หรือใช้ class disabled) */
+        .report-card.template {
+            border-style: dashed;
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <a href="Lab_Record.html" class="back-button">
+        <span>&larr; Back to Lab Reports & Records Page</span>
+    </a>
+
+    <div class="header">
+        <h1>Raw Material</h1>
+        <p>Select a material type.</p>
+    </div>
+
+    <div class="report-container">
+
+        <a href="RM_Pulp_Record.html" class="report-card">
+            <div class="icon"> 🪵 </div>
+            <h2>Pulp</h2>
+        </a>
+
+        <a href="RM_CausticSoda_Record.html" class="report-card">
+            <div class="icon"> 🧪 </div>
+            <h2>Caustic Soda</h2>
+        </a>
+
+        <a href="RM_CS2_Record.html" class="report-card">
+            <div class="icon"> ⚗️ </div>
+            <h2>CS2</h2>
+        </a>
+
+
+        </div>
+
+</body>
+</html>
