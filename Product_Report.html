@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Quality Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+    <style>body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }</style>
+</head>
+<body class="text-slate-800">
+
+    <nav class="bg-white shadow px-6 py-4 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-green-900"><i class="fas fa-box-open"></i> Product Quality Dashboard</h1>
+        <button onclick="openSidebar()" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
+            <i class="fas fa-plus"></i> Record Lot
+        </button>
+    </nav>
+
+    <main class="p-6">
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="font-bold mb-4">Lot Comparison (Tenacity)</h2>
+            <div class="h-64"><canvas id="productChart"></canvas></div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-100 font-bold text-slate-600">
+                    <tr><th class="p-3">Lot No.</th><th class="p-3">Type</th><th class="p-3">Tenacity</th><th class="p-3">Elongation</th></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="sidebar" class="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl transform translate-x-full transition duration-300 p-6 z-50">
+        <h2 class="text-xl font-bold mb-4">Record Product Test</h2>
+        <input type="text" id="inp_lot" placeholder="Lot No." class="w-full border p-2 rounded mb-3">
+        <select id="inp_type" class="w-full border p-2 rounded mb-3">
+            <option>Fiber Type A</option><option>Fiber Type B</option>
+        </select>
+        <input type="number" id="inp_tenacity" placeholder="Tenacity (g/den)" class="w-full border p-2 rounded mb-3">
+        <input type="number" id="inp_elong" placeholder="Elongation (%)" class="w-full border p-2 rounded mb-6">
+        <div class="flex gap-2">
+            <button onclick="saveData()" class="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
+            <button onclick="closeSidebar()" class="flex-1 bg-gray-200 py-2 rounded">Cancel</button>
+        </div>
+    </div>
+
+    <button onclick="toggleAI()" class="fixed bottom-8 right-8 bg-purple-600 text-white w-14 h-14 rounded-full shadow-xl text-2xl z-50 hover:scale-110 transition">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+    </button>
+
+    <script>
+        const firebaseConfig = { /* ใส่ Config เดิม */ }; 
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const functions = firebase.functions();
+
+        function openSidebar() { document.getElementById('sidebar').classList.remove('translate-x-full'); }
+        function closeSidebar() { document.getElementById('sidebar').classList.add('translate-x-full'); }
+
+        async function saveData() {
+            const data = {
+                lotNo: document.getElementById('inp_lot').value,
+                productType: document.getElementById('inp_type').value,
+                properties: {
+                    tenacity: parseFloat(document.getElementById('inp_tenacity').value),
+                    elongation: parseFloat(document.getElementById('inp_elong').value)
+                },
+                createdAt: new Date()
+            };
+            await db.collection('product_tests').add(data);
+            closeSidebar();
+            alert("Saved!");
+        }
+
+        function toggleAI() {
+            const q = prompt("Ask Product AI:");
+            if(q) {
+                const askProduct = functions.httpsCallable('askProductChat');
+                askProduct({ question: q }).then(res => alert(res.data.text));
+            }
+        }
+    </script>
+</body>
+</html>

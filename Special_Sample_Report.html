@@ -922,12 +922,22 @@
                 });
             }
 
-            // --- กราฟ 2: Requests by Status (Submitted & Completed เท่านั้น) ---
-            const statusLabels = ['Submitted', 'Completed'];
-            const statusColors = ['rgba(59, 130, 246, 0.7)', 'rgba(34, 197, 94, 0.7)']; // (แก้ไข)
+            // --- กราฟ 2: Requests by Status (แก้ไขให้รวม In Progress) ---
+            // 1. เพิ่ม Label 'In Progress'
+            const statusLabels = ['Submitted', 'In Progress', 'Completed']; 
+
+            // 2. เพิ่มสีเหลืองสำหรับ 'In Progress'
+            const statusColors = [
+                'rgba(59, 130, 246, 0.7)',  // Blue (Submitted)
+                'rgba(253, 224, 71, 0.8)',  // Yellow (In Progress) <--- เพิ่มสีนี้
+                'rgba(34, 197, 94, 0.7)'    // Green (Completed)
+            ];
+
+            // 3. ดึงข้อมูล 'In Progress' มาใส่ใน Array
             const statusCounts = [
                 statusData['Submitted'] || 0,
-                statusData['Completed'] || 0 // (แก้ไข)
+                statusData['In Progress'] || 0, // <--- ดึงค่า In Progress
+                statusData['Completed'] || 0
             ];
             const totalStatus = statusCounts.reduce((a, b) => a + b, 0);
 
@@ -1052,40 +1062,48 @@
                 const depts = Object.keys(deptStatusData).sort();
 
                 depts.forEach(dept => {
-                    const submitted = deptStatusData[dept].Submitted || 0;
-                    const completed = deptStatusData[dept].Completed || 0;
-                    const total = submitted + completed;
+                const submitted = deptStatusData[dept].Submitted || 0;
+                const inProgress = deptStatusData[dept]['In Progress'] || 0; // <--- เพิ่มตัวแปรนี้
+                const completed = deptStatusData[dept].Completed || 0;
 
-                    if (total === 0) return; // ไม่ต้องแสดงแผนกที่ไม่มีข้อมูล
+                // รวม Total ให้ครบ 3 สถานะ
+                const total = submitted + inProgress + completed; 
 
-                    // 1. สร้าง HTML Structure
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'flex flex-col items-center';
-                    const canvasId = `dept-status-${dept.replace(/[^a-zA-Z0-9]/g, '')}`; // สร้าง ID ที่ปลอดภัย
-                    wrapper.innerHTML = `
-                        <div class="w-24 h-24 relative">
-                            <canvas id="${canvasId}"></canvas>
-                        </div>
-                        <h4 class="font-semibold text-gray-700 mt-2 text-sm">${dept}</h4>
-                        <p class="text-xs text-gray-500">Total: ${total}</p>
-                    `;
-                    deptStatusContainer.appendChild(wrapper);
+                if (total === 0) return; 
 
-                    // 2. สร้างกราฟ
-                    const ctx = document.getElementById(canvasId).getContext('2d');
-                    const miniChart = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Submitted', 'Completed'],
-                            datasets: [{
-                                data: [submitted, completed],
-                                backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(34, 197, 94, 0.7)'],
-                                borderColor: '#fff',
-                                borderWidth: 2
-                            }]
-                        },
-                        plugins: [ChartDataLabels],
-                        options: {
+                // ... (โค้ดสร้าง Wrapper HTML คงเดิม บรรทัด 957-967) ...
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex flex-col items-center';
+                const canvasId = `dept-status-${dept.replace(/[^a-zA-Z0-9]/g, '')}`; 
+                wrapper.innerHTML = `
+                    <div class="w-24 h-24 relative">
+                        <canvas id="${canvasId}"></canvas>
+                    </div>
+                    <h4 class="font-semibold text-gray-700 mt-2 text-sm">${dept}</h4>
+                    <p class="text-xs text-gray-500">Total: ${total}</p>
+                `;
+                deptStatusContainer.appendChild(wrapper);
+
+                // 2. แก้ไข Config ของกราฟ (บรรทัด 970 เป็นต้นไป)
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                const miniChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        // เพิ่ม Label และ Data ให้ครบ 3 สถานะ
+                        labels: ['Submitted', 'In Progress', 'Completed'],
+                        datasets: [{
+                            data: [submitted, inProgress, completed], // <--- ใส่ค่า inProgress ตรงกลาง
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.7)', 
+                                'rgba(253, 224, 71, 0.8)', // <--- สีเหลือง
+                                'rgba(34, 197, 94, 0.7)'
+                            ],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    plugins: [ChartDataLabels],
+                    options: {
                             responsive: true,
                             cutout: '60%',
                             plugins: {

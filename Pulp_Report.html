@@ -16,6 +16,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
 
     <style>
         body {
@@ -40,16 +41,11 @@
             appearance: none;
         }
 
-        /* Legend Box */
-        .legend-box {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+        /* AI Sidebar Transition */
+        #copilot-sidebar {
+            transition-property: transform;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
         }
     </style>
 </head>
@@ -103,39 +99,44 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div class="card lg:col-span-2">
+        <div class="flex flex-col gap-6 mb-8">
+            <div class="card w-full">
                 <div class="flex justify-between items-center mb-4">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-                        <div>
-                            <h3 class="font-bold text-lg text-slate-700">Monthly Trend by Supplier (Lab Result)</h3>
-                            <div class="flex gap-2 text-xs mt-1">
-                                <span class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-blue-500"></div> Lab Value</span>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
-                                <input type="checkbox" id="toggleMaxLimit" class="rounded text-blue-600 focus:ring-blue-500">
-                                Show Max Limit
-                            </label>
-                            <span class="text-slate-300">|</span>
-                            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
-                                <input type="checkbox" id="toggleMinLimit" class="rounded text-blue-600 focus:ring-blue-500">
-                                Show Min Limit
-                            </label>
-                        </div>
+                    <h3 class="font-bold text-lg text-slate-700">Monthly Trend by Supplier (Lab Result)</h3>
+                    <div class="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                        <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
+                            <input type="checkbox" id="toggleMaxLimit" class="rounded text-blue-600 focus:ring-blue-500"> Show Max Limit
+                        </label>
+                        <span class="text-slate-300">|</span>
+                        <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
+                            <input type="checkbox" id="toggleMinLimit" class="rounded text-blue-600 focus:ring-blue-500"> Show Min Limit
+                        </label>
                     </div>
                 </div>
                 <div class="h-72 relative">
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
-            <div class="card">
-                <h3 class="font-bold text-lg text-slate-700 mb-4">COA vs Lab (Accuracy)</h3>
-                <p class="text-xs text-slate-400 mb-2">Comparing average values for the latest month</p>
-                <div class="h-72 relative">
-                    <canvas id="comparisonChart"></canvas>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div class="card p-4">
+                    <h4 class="font-bold text-sm text-blue-900 mb-2 border-b pb-2">ARAUCO</h4>
+                    <div class="h-40 relative"><canvas id="chart_ARAUCO"></canvas></div>
+                </div>
+                <div class="card p-4">
+                    <h4 class="font-bold text-sm text-green-700 mb-2 border-b pb-2">AV NACKAWIC</h4>
+                    <div class="h-40 relative"><canvas id="chart_AV_NACKAWIC"></canvas></div>
+                </div>
+                <div class="card p-4">
+                    <h4 class="font-bold text-sm text-amber-600 mb-2 border-b pb-2">AV CELL</h4>
+                    <div class="h-40 relative"><canvas id="chart_AV_CELL"></canvas></div>
+                </div>
+                <div class="card p-4" id="card_OTHER" style="display: none;">
+                    <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <h4 class="font-bold text-sm text-slate-600">Other</h4>
+                        <select id="select_OTHER" class="text-xs border border-slate-300 rounded px-1 py-0.5 text-slate-600 outline-none"></select>
+                    </div>
+                    <div class="h-40 relative"><canvas id="chart_OTHER"></canvas></div>
                 </div>
             </div>
         </div>
@@ -213,469 +214,608 @@
             </table>
         </div>
 
-        <script>
-            // --- 1. Config & Data ---
-            const firebaseConfig = {
-                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-                authDomain: "lab-trc-management-system.firebaseapp.com",
-                projectId: "lab-trc-management-system",
-                storageBucket: "lab-trc-management-system.appspot.com",
-                messagingSenderId: "43919979160",
-                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+    </main>
+
+    <button id="copilot-btn" class="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl z-50 hover:scale-110 transition-transform duration-200 ring-2 ring-white">
+        <i class="fa-solid fa-robot"></i>
+    </button>
+
+    <div id="copilot-sidebar" class="fixed top-0 right-0 h-full w-full md:w-[400px] bg-white shadow-2xl z-[60] transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+        <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
+                <h2 class="font-bold text-slate-700">Plant Insight AI</h2>
+            </div>
+            <button id="close-copilot-btn" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div id="copilot-content" class="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/50">
+            <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-sm text-slate-600">
+                สวัสดีครับ! ผมคือ <b>Plant Insight AI</b> 🧠<br>
+                ผมเชื่อมโยงข้อมูลจาก:
+                <ul class="list-disc list-inside mt-1 ml-1 text-xs text-slate-500">
+                    <li>Pulp Quality (Raw Material)</li>
+                    <li>Process Logs (Coming Soon)</li>
+                    <li>Finished Fiber (Coming Soon)</li>
+                </ul>
+                <br>
+                ลองถามผมได้เลย เช่น:
+                <br>
+                <i>"วิเคราะห์แนวโน้ม Alpha Cellulose ของ Arauco ให้หน่อย"</i>
+            </div>
+        </div>
+
+        <div class="p-4 bg-white border-t">
+            <div class="flex gap-2">
+                <input type="text" id="copilot-input" class="flex-1 border border-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Ask AI anything...">
+                <button id="copilot-send" class="bg-indigo-600 text-white w-10 h-10 rounded-full hover:bg-indigo-700 flex items-center justify-center transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        // --- 1. Config & Data ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const functions = firebase.functions(); // เรียกใช้ Functions (ถ้าไม่มี library ข้างบนจะ error ตรงนี้)
+        db.settings({ experimentalForceLongPolling: true, merge: true });
+
+        // 🔥 Master Config: เพิ่มค่า limitMin และ limitMax ตามมาตรฐานทั่วไป (แก้ไขตัวเลขได้ตามต้องการ)
+        const PULP_CONFIG = [
+            {
+                key: 'alphaCellulose', 
+                label: 'Alpha Cellulose', 
+                unit: '%', 
+                insight: 'Low = yield loss in Mercerization. Balance with Reactivity is key.', 
+                limitMin: 94.0, limitMax: null 
+            },
+            {
+                key: 'solubility10', 
+                label: 'Sol. 10% NaOH', 
+                unit: '%', 
+                insight: 'Indicates degraded short-chain cellulose & Hemicellulose. High S10 affects caustic recovery efficiency.', 
+                limitMin: null, limitMax: 8.0 
+            },
+            {
+                key: 'solubility18', 
+                label: 'Sol. 18% NaOH', 
+                unit: '%', 
+                insight: 'Opposite of R18 (Soluble part). High S18 causes viscous dope and filtration issues.', 
+                limitMin: null, limitMax: 5.0 
+            },
+            {
+                key: 'moisture', 
+                label: 'Moisture', 
+                unit: '%', 
+                insight: 'Standard trade at 10% (Air Dry). Critical for Commercial Weight calculation & process humidity control.', 
+                limitMin: 8.0, limitMax: 12.0 
+            },
+            {
+                key: 'viscosity', 
+                label: 'Visc. (ISO)', 
+                unit: 'ml/g', 
+                insight: 'Standard for DP calculation. Must be stable to control Dope Viscosity. (Sweet spot needed for Modal).', 
+                limitMin: 450, limitMax: 550 
+            },
+            {
+                key: 'viscosity_t206', 
+                label: 'Visc. (T-206)', 
+                unit: 'cP', 
+                insight: 'Legacy method (TAPPI). Used if specific customer requests cP unit.', 
+                limitMin: 18, limitMax: 25 
+            },
+            {
+                key: 'brightness', 
+                label: 'ISO Brightness', 
+                unit: '%', 
+                insight: 'Crucial for standard fiber. For Grey Fibre/Recycle, lower brightness allows cost optimization.', 
+                limitMin: 88.0, limitMax: null 
+            },
+            {
+                key: 'whiteness', 
+                label: 'Berger White', 
+                unit: '-', 
+                insight: 'Includes tint/shade (Blueish/Reddish). Preferred metric in European markets.', 
+                limitMin: 80.0, limitMax: null 
+            },
+            {
+                key: 'silica', 
+                label: 'Acid Insoluble', 
+                unit: 'ppm', 
+                insight: 'Silica/Sand particles. High risk for Micro-denier spinnerets abrasion.', 
+                limitMin: null, limitMax: 50 
+            },
+            {
+                key: 'calcium', 
+                label: 'Calcium (CaO)', 
+                unit: 'ppm', 
+                insight: 'Causes scaling in pipes/jets. Directly affects filtration (Kw value).', 
+                limitMin: null, limitMax: 20 
+            },
+            {
+                key: 'iron', 
+                label: 'Iron (Fe)', 
+                unit: 'ppm', 
+                insight: 'Critical for Hygiene! Causes yellowing and oxidation degradation during aging.', 
+                limitMin: null, limitMax: 5 
+            },
+            {
+                key: 'ash', 
+                label: 'Ash', 
+                unit: '%', 
+                insight: 'Total inorganic impurity. High ash = Filter Clogging & irritation risks in hygiene products.', 
+                limitMin: null, limitMax: 0.15 
+            },
+            {
+                key: 'resins', 
+                label: 'Resins (DCM)', 
+                unit: '%', 
+                insight: 'Causes "Pitch troubles" (sticky spots). Reduces water absorption capability.', 
+                limitMin: null, limitMax: 0.2 
+            },
+            {
+                key: 'ph', 
+                label: 'pH 1% Sol.', 
+                unit: '-', 
+                insight: 'Should be neutral. Acidic residue causes hydrolysis risk during storage.', 
+                limitMin: 6.0, limitMax: 8.0 
+            },
+            {
+                key: 'swelling', 
+                label: 'Swelling Factor', 
+                unit: '%', 
+                insight: 'Indicates chemical accessibility (how easily chemicals penetrate the fiber).', 
+                limitMin: 250, limitMax: null 
+            },
+            {
+                key: 'dirtCount', 
+                label: 'Dirt Count', 
+                unit: '/m²', 
+                insight: 'Visual cleanliness. Critical for high-grade Textile and Hygiene products.', 
+                limitMin: null, limitMax: 5 
+            },
+            {
+                key: 'r18', 
+                label: 'Alkali Res. (R18)', 
+                unit: '%', 
+                insight: 'Long-chain insoluble cellulose. Vital for fiber structural stability.', 
+                limitMin: 96.0, limitMax: null 
+            },
+            {
+                key: 'kappa', 
+                label: 'Kappa No.', 
+                unit: '-', 
+                insight: 'Residual Lignin. Must be < 0.5 for high purity Dissolving Pulp.', 
+                limitMin: null, limitMax: 0.5 
+            },
+            {
+                key: 'reactivity', 
+                label: 'Reactivity', 
+                unit: '-', 
+                insight: 'MOST CRITICAL. Low reactivity = unreacted fibers & waste. Hard to balance with High Alpha.', 
+                limitMin: 15, limitMax: null 
+            },
+            {
+                key: 'pentosan', 
+                label: 'Pentosan', 
+                unit: '%', 
+                insight: 'Hemicellulose impurity. Causes color reversion (yellowing over time) & fiber brittleness.', 
+                limitMin: null, limitMax: 3.0 
+            }
+        ];
+
+
+        const SUPPLIER_COLORS = {
+            'ARAUCO': '#3b82f6', 'AV NACKAWIC': '#10b981', 'AV CELL': '#f59e0b',
+            'PHOENIX': '#ef4444', 'SODRA': '#ec4899', 'Other': '#94a3b8'
+        };
+
+        let summaryDataCache = null;
+        let lastVisibleDoc = null;
+
+        // --- 2. Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            try { setupDynamicUI(); } catch (e) { console.error("UI Setup Error:", e); }
+
+            const safeBind = (id, event, func) => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener(event, func);
             };
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            db.settings({experimentalForceLongPolling: true, merge: true});
 
-            // 🔥 Master Config: เพิ่มค่า limitMin และ limitMax ตามมาตรฐานทั่วไป (แก้ไขตัวเลขได้ตามต้องการ)
-            const PULP_CONFIG = [
-                {
-                    key: 'alphaCellulose', 
-                    label: 'Alpha Cellulose', 
-                    unit: '%', 
-                    insight: 'Low = yield loss in Mercerization. Balance with Reactivity is key.', 
-                    limitMin: 94.0, limitMax: null 
-                },
-                {
-                    key: 'solubility10', 
-                    label: 'Sol. 10% NaOH', 
-                    unit: '%', 
-                    insight: 'Indicates degraded short-chain cellulose & Hemicellulose. High S10 affects caustic recovery efficiency.', 
-                    limitMin: null, limitMax: 8.0 
-                },
-                {
-                    key: 'solubility18', 
-                    label: 'Sol. 18% NaOH', 
-                    unit: '%', 
-                    insight: 'Opposite of R18 (Soluble part). High S18 causes viscous dope and filtration issues.', 
-                    limitMin: null, limitMax: 5.0 
-                },
-                {
-                    key: 'moisture', 
-                    label: 'Moisture', 
-                    unit: '%', 
-                    insight: 'Standard trade at 10% (Air Dry). Critical for Commercial Weight calculation & process humidity control.', 
-                    limitMin: 8.0, limitMax: 12.0 
-                },
-                {
-                    key: 'viscosity', 
-                    label: 'Visc. (ISO)', 
-                    unit: 'ml/g', 
-                    insight: 'Standard for DP calculation. Must be stable to control Dope Viscosity. (Sweet spot needed for Modal).', 
-                    limitMin: 450, limitMax: 550 
-                },
-                {
-                    key: 'viscosity_t206', 
-                    label: 'Visc. (T-206)', 
-                    unit: 'cP', 
-                    insight: 'Legacy method (TAPPI). Used if specific customer requests cP unit.', 
-                    limitMin: 18, limitMax: 25 
-                },
-                {
-                    key: 'brightness', 
-                    label: 'ISO Brightness', 
-                    unit: '%', 
-                    insight: 'Crucial for standard fiber. For Grey Fibre/Recycle, lower brightness allows cost optimization.', 
-                    limitMin: 88.0, limitMax: null 
-                },
-                {
-                    key: 'whiteness', 
-                    label: 'Berger White', 
-                    unit: '-', 
-                    insight: 'Includes tint/shade (Blueish/Reddish). Preferred metric in European markets.', 
-                    limitMin: 80.0, limitMax: null 
-                },
-                {
-                    key: 'silica', 
-                    label: 'Acid Insoluble', 
-                    unit: 'ppm', 
-                    insight: 'Silica/Sand particles. High risk for Micro-denier spinnerets abrasion.', 
-                    limitMin: null, limitMax: 50 
-                },
-                {
-                    key: 'calcium', 
-                    label: 'Calcium (CaO)', 
-                    unit: 'ppm', 
-                    insight: 'Causes scaling in pipes/jets. Directly affects filtration (Kw value).', 
-                    limitMin: null, limitMax: 20 
-                },
-                {
-                    key: 'iron', 
-                    label: 'Iron (Fe)', 
-                    unit: 'ppm', 
-                    insight: 'Critical for Hygiene! Causes yellowing and oxidation degradation during aging.', 
-                    limitMin: null, limitMax: 5 
-                },
-                {
-                    key: 'ash', 
-                    label: 'Ash', 
-                    unit: '%', 
-                    insight: 'Total inorganic impurity. High ash = Filter Clogging & irritation risks in hygiene products.', 
-                    limitMin: null, limitMax: 0.15 
-                },
-                {
-                    key: 'resins', 
-                    label: 'Resins (DCM)', 
-                    unit: '%', 
-                    insight: 'Causes "Pitch troubles" (sticky spots). Reduces water absorption capability.', 
-                    limitMin: null, limitMax: 0.2 
-                },
-                {
-                    key: 'ph', 
-                    label: 'pH 1% Sol.', 
-                    unit: '-', 
-                    insight: 'Should be neutral. Acidic residue causes hydrolysis risk during storage.', 
-                    limitMin: 6.0, limitMax: 8.0 
-                },
-                {
-                    key: 'swelling', 
-                    label: 'Swelling Factor', 
-                    unit: '%', 
-                    insight: 'Indicates chemical accessibility (how easily chemicals penetrate the fiber).', 
-                    limitMin: 250, limitMax: null 
-                },
-                {
-                    key: 'dirtCount', 
-                    label: 'Dirt Count', 
-                    unit: '/m²', 
-                    insight: 'Visual cleanliness. Critical for high-grade Textile and Hygiene products.', 
-                    limitMin: null, limitMax: 5 
-                },
-                {
-                    key: 'r18', 
-                    label: 'Alkali Res. (R18)', 
-                    unit: '%', 
-                    insight: 'Long-chain insoluble cellulose. Vital for fiber structural stability.', 
-                    limitMin: 96.0, limitMax: null 
-                },
-                {
-                    key: 'kappa', 
-                    label: 'Kappa No.', 
-                    unit: '-', 
-                    insight: 'Residual Lignin. Must be < 0.5 for high purity Dissolving Pulp.', 
-                    limitMin: null, limitMax: 0.5 
-                },
-                {
-                    key: 'reactivity', 
-                    label: 'Reactivity', 
-                    unit: '-', 
-                    insight: 'MOST CRITICAL. Low reactivity = unreacted fibers & waste. Hard to balance with High Alpha.', 
-                    limitMin: 15, limitMax: null 
-                },
-                {
-                    key: 'pentosan', 
-                    label: 'Pentosan', 
-                    unit: '%', 
-                    insight: 'Hemicellulose impurity. Causes color reversion (yellowing over time) & fiber brittleness.', 
-                    limitMin: null, limitMax: 3.0 
-                }
-            ];
-
-            const SUPPLIER_COLORS = {
-                'ARAUCO': '#3b82f6', 'AV NACKAWIC': '#10b981', 'AV CELL': '#f59e0b',
-                'PHOENIX': '#ef4444', 'SODRA': '#ec4899', 'Other': '#94a3b8'
-            };
-
-            let summaryDataCache = null;
-            let lastVisibleDoc = null;
-
-            // --- 2. Initialization ---
-            document.addEventListener('DOMContentLoaded', () => {
-                setupDynamicUI(); // สร้าง Dropdown และ ตาราง ตาม Config
-                initDashboard();
-
-                // Listeners
-                document.getElementById('paramSelector').addEventListener('change', (e) => {
-                    updateCharts(e.target.value);
-                    updateInsightText(e.target.value);
-                    document.getElementById('toggleMaxLimit').addEventListener('change', () => updateCharts(document.getElementById('paramSelector').value));
-                    document.getElementById('toggleMinLimit').addEventListener('change', () => updateCharts(document.getElementById('paramSelector').value));
-                });
-                document.getElementById('loadMoreBtn').addEventListener('click', fetchTableData);
-                document.getElementById('exportBtn').addEventListener('click', exportToExcel);
-                document.getElementById('tableFilterMonth').addEventListener('change', resetAndFetchTable);
-                document.getElementById('tableFilterSupplier').addEventListener('change', resetAndFetchTable);
+            safeBind('paramSelector', 'change', (e) => {
+                updateCharts(e.target.value);
+                updateInsightText(e.target.value);
+            });
+            safeBind('toggleMaxLimit', 'change', () => {
+                const sel = document.getElementById('paramSelector');
+                if (sel) updateCharts(sel.value);
+            });
+            safeBind('toggleMinLimit', 'change', () => {
+                const sel = document.getElementById('paramSelector');
+                if (sel) updateCharts(sel.value);
             });
 
-            // --- 3. Dynamic UI Generator (สร้างตารางและ Dropdown อัตโนมัติ) ---
-            function setupDynamicUI() {
-                // A. Setup Dropdown
-                const selector = document.getElementById('paramSelector');
-                selector.innerHTML = '';
-                PULP_CONFIG.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.key;
-                    opt.textContent = `${p.label} (${p.unit})`;
-                    selector.appendChild(opt);
-                });
+            safeBind('loadMoreBtn', 'click', fetchTableData);
+            safeBind('exportBtn', 'click', exportToExcel);
+            safeBind('tableFilterMonth', 'change', resetAndFetchTable);
+            safeBind('tableFilterSupplier', 'change', resetAndFetchTable);
 
-                // Trigger Default Insight
-                updateInsightText(PULP_CONFIG[0].key);
+            // Setup AI Chat
+            setupAIChat();
 
-                // B. Setup Table Header
-                const thead = document.getElementById('tableHeader');
-                let headerHTML = `
+            // Start Dashboard
+            setTimeout(() => { initDashboard(); }, 100);
+        });
+
+        // --- 3. Dynamic UI Generator ---
+        function setupDynamicUI() {
+            const selector = document.getElementById('paramSelector');
+            selector.innerHTML = '';
+            PULP_CONFIG.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.key;
+                opt.textContent = `${p.label} (${p.unit})`;
+                selector.appendChild(opt);
+            });
+            updateInsightText(PULP_CONFIG[0].key);
+
+            const thead = document.getElementById('tableHeader');
+            let headerHTML = `
                 <tr>
                     <th class="px-3 py-3 text-left font-bold text-slate-600 bg-slate-50">Date</th>
                     <th class="px-3 py-3 text-left font-bold text-slate-600 bg-slate-50 sticky left-0 shadow-sm z-20">Supplier</th>
                     <th class="px-3 py-3 text-left font-bold text-slate-600 bg-slate-50">Batch / Lot</th>
             `;
-
-                PULP_CONFIG.forEach(p => {
-                    headerHTML += `<th class="px-2 py-3 text-center font-bold text-slate-700 bg-slate-50 whitespace-nowrap" title="${p.insight}">
+            PULP_CONFIG.forEach(p => {
+                headerHTML += `<th class="px-2 py-3 text-center font-bold text-slate-700 bg-slate-50 whitespace-nowrap" title="${p.insight}">
                                 ${p.label} <span class="text-xs font-normal text-slate-400">(${p.unit})</span>
                                </th>`;
-                });
+            });
+            headerHTML += `</tr>`;
+            thead.innerHTML = headerHTML;
+        }
 
-                headerHTML += `</tr>`;
-                thead.innerHTML = headerHTML;
-            }
+        function updateInsightText(key) {
+            const item = PULP_CONFIG.find(p => p.key === key);
+            document.getElementById('impactHint').textContent = item ? item.insight : "Analysis view.";
+        }
 
-            function updateInsightText(key) {
-                const item = PULP_CONFIG.find(p => p.key === key);
-                const text = item ? item.insight : "Analysis view.";
-                document.getElementById('impactHint').textContent = text;
-            }
-
-            // --- 4. Dashboard Logic ---
-            async function initDashboard() {
-                try {
-                    const doc = await db.collection('pulp_dashboard_summary').doc('main_stats').get();
-                    if (doc.exists) {
-                        summaryDataCache = doc.data();
-                        document.getElementById('lastUpdatedTime').textContent = summaryDataCache.lastUpdated
-                            ? new Date(summaryDataCache.lastUpdated.toDate()).toLocaleString('th-TH')
-                            : '-';
-                        updateCharts(PULP_CONFIG[0].key);
-                    }
-                    fetchTableData();
-                } catch (error) {console.error(error);}
-            }
-
-            // --- 5. Table Logic (Dynamic Render) ---
-            function resetAndFetchTable() {
-                lastVisibleDoc = null;
-                document.getElementById('dataTableBody').innerHTML = '';
+        // --- 4. Dashboard Logic ---
+        async function initDashboard() {
+            try {
+                // ✅ [แก้ไข] เรียก Collection ใหม่ 'stats_pulp' ตาม index.js ล่าสุด
+                const doc = await db.collection('stats_pulp').doc('main_summary').get();
+                if (doc.exists) {
+                    summaryDataCache = doc.data();
+                    document.getElementById('lastUpdatedTime').textContent = summaryDataCache.lastUpdated
+                        ? new Date(summaryDataCache.lastUpdated.toDate()).toLocaleString('th-TH')
+                        : '-';
+                    updateCharts(PULP_CONFIG[0].key);
+                }
                 fetchTableData();
-            }
+            } catch (error) { console.error(error); }
+        }
 
-            async function fetchTableData() {
-                const tbody = document.getElementById('dataTableBody');
-                const colSpan = PULP_CONFIG.length + 3; // Date + Supplier + Batch + Params
+        // --- 5. Table Logic ---
+        function resetAndFetchTable() {
+            lastVisibleDoc = null;
+            document.getElementById('dataTableBody').innerHTML = '';
+            fetchTableData();
+        }
 
-                if (!lastVisibleDoc) tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-8 text-blue-500"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>`;
+        async function fetchTableData() {
+            const tbody = document.getElementById('dataTableBody');
+            const colSpan = PULP_CONFIG.length + 3;
+            if (!lastVisibleDoc) tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-8 text-blue-500"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>`;
 
-                try {
-                    let query = db.collection('rm_pulp_inspections').orderBy('receivedDate', 'desc');
+            try {
+                let query = db.collection('rm_pulp_inspections').orderBy('receivedDate', 'desc');
+                const filterSupplier = document.getElementById('tableFilterSupplier').value;
+                if (filterSupplier !== 'all') query = query.where('supplier', '==', filterSupplier);
 
-                    const filterSupplier = document.getElementById('tableFilterSupplier').value;
-                    if (filterSupplier !== 'all') query = query.where('supplier', '==', filterSupplier);
+                query = query.limit(50);
+                if (lastVisibleDoc) query = query.startAfter(lastVisibleDoc);
 
-                    query = query.limit(50);
-                    if (lastVisibleDoc) query = query.startAfter(lastVisibleDoc);
+                const snapshot = await query.get();
+                if (!lastVisibleDoc) tbody.innerHTML = '';
 
-                    const snapshot = await query.get();
-                    if (!lastVisibleDoc) tbody.innerHTML = '';
+                if (snapshot.empty && !lastVisibleDoc) {
+                    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-4 text-slate-400">No data found.</td></tr>`;
+                    return;
+                }
 
-                    if (snapshot.empty && !lastVisibleDoc) {
-                        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-4 text-slate-400">No data found.</td></tr>`;
-                        return;
-                    }
+                if (!snapshot.empty) lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
+                const filterMonth = document.getElementById('tableFilterMonth').value;
+                let html = '';
 
-                    if (!snapshot.empty) lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
-
-                    const filterMonth = document.getElementById('tableFilterMonth').value;
-                    let html = '';
-
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (filterMonth && (!data.receivedDate || !data.receivedDate.startsWith(filterMonth))) return;
-
-                        const p = data.parameters || {};
-
-                        // สร้าง Cell อัตโนมัติตาม Config
-                        let paramsHTML = '';
-                        PULP_CONFIG.forEach(conf => {
-                            const item = p[conf.key];
-                            if (!item) {
-                                paramsHTML += '<td class="text-center text-slate-300">-</td>';
-                            } else {
-                                let labVal = item.lab !== null && item.lab !== "" ? item.lab : "-";
-                                let coaVal = item.coa !== null && item.coa !== "" ? item.coa : "-";
-                                paramsHTML += `<td class="px-2 py-2 text-center border-l border-slate-50">
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (filterMonth && (!data.receivedDate || !data.receivedDate.startsWith(filterMonth))) return;
+                    const p = data.parameters || {};
+                    let paramsHTML = '';
+                    PULP_CONFIG.forEach(conf => {
+                        const item = p[conf.key];
+                        if (!item) {
+                            paramsHTML += '<td class="text-center text-slate-300">-</td>';
+                        } else {
+                            let labVal = item.lab !== null && item.lab !== "" ? item.lab : "-";
+                            let coaVal = item.coa !== null && item.coa !== "" ? item.coa : "-";
+                            paramsHTML += `<td class="px-2 py-2 text-center border-l border-slate-50">
                                             <div class="text-slate-700 text-sm font-semibold">${labVal}</div>
                                             <div class="text-xs text-slate-400 font-light">${coaVal}</div>
                                            </td>`;
-                            }
-                        });
-
-                        html += `
-                        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                            <td class="px-3 py-2 text-slate-600 text-xs">${formatDate(data.receivedDate)}</td>
-                            <td class="px-3 py-2 font-bold text-slate-700 sticky left-0 bg-white shadow-sm border-r border-slate-200 z-10">${data.supplier}</td>
-                            <td class="px-3 py-2 text-xs text-slate-500">
-                                <div>B: <span class="font-mono text-slate-700">${data.batchNo}</span></div>
-                                <div>L: <span class="font-mono text-slate-700">${data.lotNo}</span></div>
-                            </td>
-                            ${paramsHTML}
-                        </tr>`;
+                        }
                     });
-                    tbody.insertAdjacentHTML('beforeend', html);
+                    html += `<tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                                <td class="px-3 py-2 text-slate-600 text-xs">${formatDate(data.receivedDate)}</td>
+                                <td class="px-3 py-2 font-bold text-slate-700 sticky left-0 bg-white shadow-sm border-r border-slate-200 z-10">${data.supplier}</td>
+                                <td class="px-3 py-2 text-xs text-slate-500">
+                                    <div>B: <span class="font-mono text-slate-700">${data.batchNo}</span></div>
+                                    <div>L: <span class="font-mono text-slate-700">${data.lotNo}</span></div>
+                                </td>
+                                ${paramsHTML}
+                            </tr>`;
+                });
+                tbody.insertAdjacentHTML('beforeend', html);
+            } catch (error) { console.error(error); }
+        }
 
+        async function exportToExcel() {
+            const btn = document.getElementById('exportBtn');
+            btn.disabled = true;
+            btn.innerHTML = 'Processing...';
+            try {
+                let query = db.collection('rm_pulp_inspections').orderBy('receivedDate', 'desc').limit(500);
+                const snapshot = await query.get();
+                const exportData = [];
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const p = d.parameters || {};
+                    const row = { Date: d.receivedDate, Supplier: d.supplier, Batch: d.batchNo, Lot: d.lotNo };
+                    PULP_CONFIG.forEach(conf => {
+                        row[`${conf.label} (Lab)`] = p[conf.key]?.lab ?? '';
+                        row[`${conf.label} (COA)`] = p[conf.key]?.coa ?? '';
+                    });
+                    exportData.push(row);
+                });
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Pulp Data");
+                XLSX.writeFile(wb, "Pulp_Report.xlsx");
+            } catch (e) { alert("Error"); }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-excel"></i> Export Excel'; }
+        }
+
+        // --- 6. Chart Functions ---
+        // ✅ [แก้ไข] คืนชีพ function updateCharts ที่หายไป พร้อม Logic ใหม่
+        function updateCharts(paramKey) {
+            // ✅ [แก้ไข] เปลี่ยน Key เป็น pulp_incoming ตาม Backend ใหม่
+            if (!summaryDataCache || !summaryDataCache.pulp_incoming) return;
+            const stats = summaryDataCache.pulp_incoming;
+            const months = Object.keys(stats).sort();
+            const allSuppliers = new Set();
+            months.forEach(m => { if (stats[m]) Object.keys(stats[m]).forEach(s => allSuppliers.add(s)); });
+
+            const currentConfig = PULP_CONFIG.find(c => c.key === paramKey);
+            const paramLabel = currentConfig ? currentConfig.label : paramKey;
+
+            // --- Main Trend Chart ---
+            const datasets = [];
+            allSuppliers.forEach(supplier => {
+                const dataPoints = months.map(month => {
+                    const val = stats[month]?.[supplier]?.params?.[paramKey];
+                    // ✅ [แก้ไข] ใช้ค่า lab_avg จาก Backend ได้เลย (ไม่ต้องคำนวณเอง)
+                    return (val && val.lab_avg !== undefined) ? val.lab_avg : null;
+                });
+                if (dataPoints.some(v => v !== null)) {
+                    datasets.push({
+                        label: supplier,
+                        data: dataPoints,
+                        borderColor: SUPPLIER_COLORS[supplier] || '#666',
+                        backgroundColor: SUPPLIER_COLORS[supplier] || '#666',
+                        tension: 0.3, spanGaps: true
+                    });
+                }
+            });
+
+            // Limits
+            const showMax = document.getElementById('toggleMaxLimit').checked;
+            const showMin = document.getElementById('toggleMinLimit').checked;
+            const createLimitDataset = (val, label, color) => ({
+                label: `${label} (${val})`,
+                data: new Array(months.length).fill(val),
+                borderColor: color, borderWidth: 2, borderDash: [6, 6],
+                pointRadius: 4, pointBackgroundColor: 'white', fill: false, order: 0
+            });
+            if (showMax && currentConfig?.limitMax) datasets.push(createLimitDataset(currentConfig.limitMax, 'Max', '#ef4444'));
+            if (showMin && currentConfig?.limitMin) datasets.push(createLimitDataset(currentConfig.limitMin, 'Min', '#ef4444'));
+
+            renderChart('trendChart', 'line', months, datasets, `Avg ${paramLabel} Trend`);
+
+            // --- Sub Charts (Comparison) ---
+            const targets = [
+                { id: 'chart_ARAUCO', name: 'ARAUCO' },
+                { id: 'chart_AV_NACKAWIC', name: 'AV NACKAWIC' },
+                { id: 'chart_AV_CELL', name: 'AV CELL' }
+            ];
+            targets.forEach(target => {
+                renderSmallComparisonChart(target.id, target.name, months, stats, paramKey, paramLabel);
+            });
+
+            // Other Supplier Logic
+            const fixedNames = targets.map(t => t.name);
+            const otherSuppliers = Array.from(allSuppliers).filter(s => !fixedNames.includes(s));
+            const cardOther = document.getElementById('card_OTHER');
+            const selectOther = document.getElementById('select_OTHER');
+            const chartOtherId = 'chart_OTHER';
+
+            if (otherSuppliers.length > 0) {
+                cardOther.style.display = 'block';
+                if (selectOther.options.length !== otherSuppliers.length) {
+                    selectOther.innerHTML = '';
+                    otherSuppliers.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s; opt.textContent = s;
+                        selectOther.appendChild(opt);
+                    });
+                    selectOther.onchange = () => {
+                        renderSmallComparisonChart(chartOtherId, selectOther.value, months, stats, paramKey, paramLabel);
+                    };
+                }
+                renderSmallComparisonChart(chartOtherId, selectOther.value || otherSuppliers[0], months, stats, paramKey, paramLabel);
+            } else {
+                cardOther.style.display = 'none';
+            }
+        }
+
+        // ✅ [แก้ไข] ฟังก์ชันวาดกราฟเล็ก (ใช้ lab_avg ตรงๆ)
+        function renderSmallComparisonChart(canvasId, supplierName, months, stats, paramKey, paramLabel) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+
+            const coaData = [];
+            const labData = [];
+            let hasData = false;
+
+            months.forEach(month => {
+                const val = stats[month]?.[supplierName]?.params?.[paramKey];
+                // ใช้ค่า Avg จาก Backend
+                const labVal = (val && val.lab_avg !== undefined) ? val.lab_avg : null;
+                const coaVal = (val && val.coa_avg !== undefined) ? val.coa_avg : null;
+
+                labData.push(labVal);
+                coaData.push(coaVal);
+                if (labVal !== null || coaVal !== null) hasData = true;
+            });
+
+            renderChart(canvasId, 'line', months, [
+                { label: 'COA', data: coaData, borderColor: '#94a3b8', borderDash: [4, 4], tension: 0.1, pointRadius: 2 },
+                { label: 'Lab', data: labData, borderColor: SUPPLIER_COLORS[supplierName] || '#3b82f6', tension: 0.1, pointRadius: 3 }
+            ], hasData ? paramLabel : `${paramLabel} (No Data)`);
+        }
+
+        function renderChart(id, type, labels, datasets, title) {
+            const ctx = document.getElementById(id).getContext('2d');
+            if (window[id + 'Instance']) window[id + 'Instance'].destroy();
+            window[id + 'Instance'] = new Chart(ctx, {
+                type: type,
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: title },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) label += parseFloat(context.parsed.y).toFixed(2);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grace: '10%',
+                            ticks: { callback: function (value) { return parseFloat(value).toFixed(2); } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "-";
+            const parts = dateStr.split('-');
+            return (parts.length === 3) ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
+        }
+
+        // --- 7. AI Chat Logic (Setup) ---
+        function setupAIChat() {
+            const askPlantInsightAI = firebase.functions().httpsCallable('askPlantInsightAI'); // เรียกฟังก์ชัน Section 9
+            const copilotBtn = document.getElementById('copilot-btn');
+            const copilotSidebar = document.getElementById('copilot-sidebar');
+            const closeCopilotBtn = document.getElementById('close-copilot-btn');
+            const copilotInput = document.getElementById('copilot-input');
+            const copilotSend = document.getElementById('copilot-send');
+            const copilotContent = document.getElementById('copilot-content');
+
+            if (copilotBtn) {
+                copilotBtn.addEventListener('click', () => copilotSidebar.classList.remove('translate-x-full'));
+                closeCopilotBtn.addEventListener('click', () => copilotSidebar.classList.add('translate-x-full'));
+            }
+
+            async function handleChat() {
+                const question = copilotInput.value.trim();
+                if (!question) return;
+
+                appendMessage(question, 'user');
+                copilotInput.value = '';
+                copilotSend.disabled = true;
+                const thinkingId = appendMessage('<i class="fas fa-spinner fa-spin mr-2"></i>Thinking...', 'ai');
+
+                try {
+                    const result = await askPlantInsightAI({ question: question, language: 'Thai' });
+                    const text = result.data.text;
+                    
+                    const thinkingEl = document.getElementById(thinkingId);
+                    if (thinkingEl) thinkingEl.remove();
+
+                    const formattedText = typeof marked !== 'undefined' 
+                        ? marked.parse(text) 
+                        : text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/- /g, '<br>• ');
+
+                    appendMessage(formattedText, 'ai');
                 } catch (error) {
                     console.error(error);
+                    const thinkingEl = document.getElementById(thinkingId);
+                    if (thinkingEl) thinkingEl.remove();
+                    appendMessage(`Error: ${error.message}`, 'ai', true);
+                } finally {
+                    copilotSend.disabled = false;
+                    copilotInput.focus();
                 }
             }
 
-            // --- 6. Export Logic (Dynamic) ---
-            async function exportToExcel() {
-                const btn = document.getElementById('exportBtn');
-                btn.disabled = true;
-                btn.innerHTML = 'Processing...';
-                try {
-                    let query = db.collection('rm_pulp_inspections').orderBy('receivedDate', 'desc').limit(500);
-                    const snapshot = await query.get();
-                    const exportData = [];
-
-                    snapshot.forEach(doc => {
-                        const d = doc.data();
-                        const p = d.parameters || {};
-                        const row = {Date: d.receivedDate, Supplier: d.supplier, Batch: d.batchNo, Lot: d.lotNo};
-
-                        PULP_CONFIG.forEach(conf => {
-                            row[`${conf.label} (Lab)`] = p[conf.key]?.lab ?? '';
-                            row[`${conf.label} (COA)`] = p[conf.key]?.coa ?? '';
-                        });
-                        exportData.push(row);
-                    });
-
-                    const ws = XLSX.utils.json_to_sheet(exportData);
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "Pulp Data");
-                    XLSX.writeFile(wb, "Pulp_Report.xlsx");
-                } catch (e) {alert("Error");}
-                finally {btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-excel"></i> Export Excel';}
+            function appendMessage(html, sender, isError = false) {
+                const div = document.createElement('div');
+                div.id = 'msg-' + Date.now();
+                if (sender === 'user') {
+                    div.className = 'ml-auto bg-indigo-600 text-white p-3 rounded-t-lg rounded-bl-lg max-w-[80%] text-sm shadow-sm mb-2';
+                } else {
+                    div.className = `mr-auto bg-white border border-slate-200 p-3 rounded-t-lg rounded-br-lg max-w-[90%] text-sm shadow-sm mb-2 ${isError ? 'text-red-500' : 'text-slate-700'}`;
+                }
+                div.innerHTML = html;
+                copilotContent.appendChild(div);
+                copilotContent.scrollTop = copilotContent.scrollHeight;
+                return div.id;
             }
 
-            // --- Chart & Helper Functions ---
-            // (ใช้ function updateCharts และ renderChart และ formatDate เหมือนเดิมได้เลยครับ ไม่ต้องแก้ Logic กราฟ)
-            function updateCharts(paramKey) {
-                if (!summaryDataCache || !summaryDataCache.monthlyStats) return;
-                const stats = summaryDataCache.monthlyStats;
-                const months = Object.keys(stats).sort();
-                const allSuppliers = new Set();
-                months.forEach(m => { if (stats[m]) Object.keys(stats[m]).forEach(s => allSuppliers.add(s)); });
-
-                const datasets = [];
-                allSuppliers.forEach(supplier => {
-                    const dataPoints = months.map(month => {
-                        const val = stats[month]?.[supplier]?.params?.[paramKey];
-                        return (val && val.lab_count > 0) ? (val.lab_sum / val.lab_count).toFixed(2) : null;
-                    });
-                    if (dataPoints.some(v => v !== null)) {
-                        datasets.push({
-                            label: supplier,
-                            data: dataPoints,
-                            borderColor: SUPPLIER_COLORS[supplier] || '#666',
-                            backgroundColor: SUPPLIER_COLORS[supplier] || '#666',
-                            tension: 0.3, spanGaps: true
-                        });
-                    }
-                });
-
-                // --- ✅ Logic ใหม่: แก้ไข Limit Line ให้แสดงผลแม้มีเดือนเดียว ---
-                const currentConfig = PULP_CONFIG.find(c => c.key === paramKey);
-                const showMax = document.getElementById('toggleMaxLimit').checked;
-                const showMin = document.getElementById('toggleMinLimit').checked;
-
-                // Helper สร้าง Dataset ของ Limit
-                const createLimitDataset = (val, label, color) => ({
-                    label: `${label} (${val})`,
-                    data: new Array(months.length).fill(val),
-                    borderColor: color,
-                    borderWidth: 2,         // เส้นหนาขึ้นนิดนึง
-                    borderDash: [6, 6],     // เส้นประ
-                    pointRadius: 4,         // ✅ สำคัญ: ให้โชว์จุดด้วย (เผื่อมีแค่เดือนเดียวจะได้เห็น)
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: 'white', // จุดสีขาวขอบแดง ดูสวยกว่า
-                    fill: false,
-                    order: 0                // ✅ สำคัญ: ให้เส้น Limit อยู่ "หน้าสุด" (ทับกราฟแท่ง)
-                });
-
-                if (showMax && currentConfig && currentConfig.limitMax !== null) {
-                    datasets.push(createLimitDataset(currentConfig.limitMax, 'Max Limit', '#ef4444'));
-                }
-
-                if (showMin && currentConfig && currentConfig.limitMin !== null) {
-                    datasets.push(createLimitDataset(currentConfig.limitMin, 'Min Limit', '#ef4444'));
-                }
-                // ----------------------------------------
-
-                renderChart('trendChart', 'line', months, datasets, `Avg ${paramKey} Trend`);
-
-                // ส่วน Comparison Chart (เหมือนเดิม)
-                const lastMonth = months[months.length - 1];
-                const compLabels = [], coaVals = [], labVals = [];
-                if (lastMonth) {
-                    allSuppliers.forEach(supplier => {
-                        const val = stats[lastMonth]?.[supplier]?.params?.[paramKey];
-                        if (val && val.lab_count > 0 && val.coa_count > 0) {
-                            compLabels.push(supplier);
-                            coaVals.push((val.coa_sum / val.coa_count).toFixed(2));
-                            labVals.push((val.lab_sum / val.lab_count).toFixed(2));
-                        }
-                    });
-                }
-                renderChart('comparisonChart', 'bar', compLabels, [
-                    { label: 'COA', data: coaVals, backgroundColor: '#cbd5e1' },
-                    { label: 'Lab', data: labVals, backgroundColor: '#3b82f6' }
-                ], `${paramKey} : COA vs Lab (${lastMonth})`);
-            }
-
-            function renderChart(id, type, labels, datasets, title) {
-                const ctx = document.getElementById(id).getContext('2d');
-                if (window[id + 'Instance']) window[id + 'Instance'].destroy();
-
-                window[id + 'Instance'] = new Chart(ctx, {
-                    type: type,
-                    data: { labels, datasets },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            title: { display: true, text: title },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) label += ': ';
-                                        if (context.parsed.y !== null) label += parseFloat(context.parsed.y).toFixed(2);
-                                        return label;
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                grace: '10%', // ✅ เพิ่มพื้นที่หายใจด้านบน-ล่าง 10% (เส้น Limit จะได้ไม่ติดขอบ)
-                                ticks: {
-                                    callback: function (value) {
-                                        return parseFloat(value).toFixed(2);
-                                    }
-                                }
-                            }
-                        }
-                    }
+            if (copilotSend) {
+                copilotSend.addEventListener('click', handleChat);
+                copilotInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleChat();
                 });
             }
-
-            function formatDate(dateStr) {
-                if (!dateStr) return "-";
-                const parts = dateStr.split('-');
-                return (parts.length === 3) ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
-            }
-        </script>
+        }
+    </script>
 </body>
 
 </html>
