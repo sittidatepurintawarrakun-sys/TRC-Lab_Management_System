@@ -271,8 +271,9 @@
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const functions = firebase.functions(); // เรียกใช้ Functions (ถ้าไม่มี library ข้างบนจะ error ตรงนี้)
+        const functions = firebase.app().functions('asia-southeast1'); // เรียกใช้ Functions (ถ้าไม่มี library ข้างบนจะ error ตรงนี้)
         db.settings({ experimentalForceLongPolling: true, merge: true });
+        
 
         // 🔥 Master Config: เพิ่มค่า limitMin และ limitMax ตามมาตรฐานทั่วไป (แก้ไขตัวเลขได้ตามต้องการ)
         const PULP_CONFIG = [
@@ -747,11 +748,17 @@
             return (parts.length === 3) ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
         }
 
-        // --- 7. AI Chat Logic (Setup) ---
-        function setupAIChat() {
-            const askPlantInsightAI = firebase.functions().httpsCallable('askPlantInsightAI'); // เรียกฟังก์ชัน Section 9
-            const copilotBtn = document.getElementById('copilot-btn');
-            const copilotSidebar = document.getElementById('copilot-sidebar');
+            // --- 7. AI Chat Logic (Setup) ---
+            function setupAIChat() {
+                // ⚠️ แก้ไข 1: ระบุ Region 'asia-southeast1' ให้ตรงกับ Backend
+                // ถ้าไม่ระบุ มันจะวิ่งไป us-central1 แล้วเจอ CORS Error
+                const functions = firebase.app().functions('asia-southeast1');
+
+                // ⚠️ แก้ไข 2: เปลี่ยนชื่อเรียกให้ตรงกับใน index.js (จาก askPlantInsightAI เป็น askPulpChat)
+                const askPlantInsightAI = functions.httpsCallable('askPulpChat'); 
+
+                const copilotBtn = document.getElementById('copilot-btn');
+                const copilotSidebar = document.getElementById('copilot-sidebar');
             const closeCopilotBtn = document.getElementById('close-copilot-btn');
             const copilotInput = document.getElementById('copilot-input');
             const copilotSend = document.getElementById('copilot-send');
