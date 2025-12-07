@@ -44,8 +44,9 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center gap-4">
-                    <a href="IP_Viscose.html" class="text-indigo-300 hover:text-white transition flex items-center gap-2">
-                        <i class="fas fa-arrow-left"></i> <span class="hidden sm:inline">Entry Form</span>
+                        <a href="IPReport_Viscose.html" class="text-indigo-300 hover:text-white transition flex items-center gap-2">
+                            <i class="fas fa-arrow-left"></i> <span class="hidden sm:inline">Back to viscose report</span>
+                        </a>
                     </a>
                     <div class="h-6 w-px bg-indigo-700 mx-2"></div>
                     <h1 class="text-xl font-bold flex items-center gap-2">
@@ -252,20 +253,20 @@
                 // --- INIT ---
                 document.addEventListener('DOMContentLoaded', () => {
                     const now = new Date();
-                    const todayStr = now.toISOString().slice(0, 10);
-                    const past = new Date(); 
-                    past.setDate(past.getDate() - 30);
-                    const pastStr = past.toISOString().slice(0, 10);
+                    const todayStr = now.toISOString().slice(0, 10); // วันนี้
+
+                    // แก้ไข: กำหนดวันเริ่มต้น Fix เป็น 1 Dec 2025
+                    const fixedStartStr = '2025-12-01';
 
                     // 1. Set Default Date for Dashboard (Top)
                     document.getElementById('endDate').value = todayStr;
-                    document.getElementById('startDate').value = pastStr;
+                    document.getElementById('startDate').value = fixedStartStr;
 
-                    // 2. Set Default Date for Table (Bottom) - แก้ไขใหม่ให้มีค่าเริ่มต้น
+                    // 2. Set Default Date for Table (Bottom)
                     const tableStart = document.getElementById('tableStartDate');
                     const tableEnd = document.getElementById('tableEndDate');
                     if(tableStart && tableEnd) {
-                        tableStart.value = pastStr;
+                        tableStart.value = fixedStartStr;
                         tableEnd.value = todayStr;
                     }
 
@@ -303,6 +304,24 @@
                         const monthsToFetch = getMonthsInRange(startStr, endStr);
                         const promises = monthsToFetch.map(m => db.collection('stats_Projector').doc(m).get());
                         const snapshots = await Promise.all(promises);
+                        let maxTime = 0;
+                        snapshots.forEach(snap => {
+                            if (snap.exists) {
+                                const d = snap.data();
+                                // เช็คว่ามี field lastUpdated ไหม และเปรียบเทียบหาค่าล่าสุด
+                                if (d.lastUpdated && d.lastUpdated.seconds > maxTime) {
+                                    maxTime = d.lastUpdated.seconds;
+                                }
+                            }
+                        });
+
+                        const timeLabel = document.getElementById('lastUpdatedTime');
+                        if (maxTime > 0) {
+                            // แปลง timestamp เป็นวันที่เวลาที่อ่านง่าย
+                            timeLabel.innerText = new Date(maxTime * 1000).toLocaleString('th-TH');
+                        } else {
+                            timeLabel.innerText = "-"; // กรณีไม่มีข้อมูลเลย
+                        }
                         mergedStatsData = processMergedData(snapshots, startStr, endStr);
                         renderMainChart(mergedStatsData);
                         renderMachineCards(mergedStatsData);
