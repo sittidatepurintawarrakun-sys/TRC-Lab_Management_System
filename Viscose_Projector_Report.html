@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viscose Projection Dashboard - LabTrack</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .card { background: white; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+
+        /* Custom Scrollbar for AI Chat */
+        #copilot-content::-webkit-scrollbar { width: 6px; }
+        #copilot-content::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+
+        /* Transition for Sidebar */
+        #copilot-sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Status Colors */
+        .status-good { color: #10B981; }
+        .status-warn { color: #F59E0B; }
+        .status-crit { color: #EF4444; }
+        /* Param Button Styles */
+        .param-btn { background-color: white; color: #64748b; border-color: #e2e8f0; }
+        .param-btn:hover { background-color: #f1f5f9; }
+        .param-btn.active { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+    </style>
+</head>
+<body>
+
+    <nav class="bg-indigo-900 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-4">
+                    <a href="IP_Viscose.html" class="text-indigo-300 hover:text-white transition flex items-center gap-2">
+                        <i class="fas fa-arrow-left"></i> <span class="hidden sm:inline">Entry Form</span>
+                    </a>
+                    <div class="h-6 w-px bg-indigo-700 mx-2"></div>
+                    <h1 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-microscope text-indigo-400"></i> Viscose Projection Dashboard
+                    </h1>
+                </div>
+                <div class="flex items-center text-xs sm:text-sm text-indigo-200">
+                    <span class="mr-2">Last Sync:</span>
+                    <span id="lastUpdatedTime" class="font-bold text-white">-</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <div class="bg-indigo-50 p-2 rounded-lg text-indigo-700">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+                        <input type="date" id="startDate" class="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer">
+                        <span class="text-slate-400">-</span>
+                        <input type="date" id="endDate" class="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer">
+                    </div>
+                    <button onclick="fetchDashboardData()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm">
+                        <i class="fas fa-search mr-2"></i>Analyze
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wide self-center mr-2">Parameter:</span>
+                <button onclick="switchParam('gel_count')" id="btn-param-gel" class="param-btn active px-4 py-1.5 rounded-md text-sm font-bold border transition">
+                    Gel Count
+                </button>
+                <button onclick="switchParam('short_fiber')" id="btn-param-short" class="param-btn px-4 py-1.5 rounded-md text-sm font-bold border transition">
+                    Short Fiber
+                </button>
+                <button onclick="switchParam('long_fiber')" id="btn-param-long" class="param-btn px-4 py-1.5 rounded-md text-sm font-bold border transition">
+                    Long Fiber
+                </button>
+                <button onclick="switchParam('black_particle')" id="btn-param-black" class="param-btn px-4 py-1.5 rounded-md text-sm font-bold border transition">
+                    Black Particle
+                </button>
+            </div>
+        </div>
+
+        <div class="card relative min-h-[400px]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-slate-700 flex items-center gap-2">
+                    <i class="fas fa-chart-line text-blue-500"></i> <span id="chartTitle">Daily Trend</span>
+                </h3>
+            </div>
+            <div class="h-[320px] w-full">
+                <canvas id="mainGelChart"></canvas>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <i class="fas fa-server text-indigo-500"></i> Machine Health Overview (Avg in Period)
+            </h3>
+            <div id="machineGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div class="col-span-full text-center py-8 text-slate-400 italic">Select date range and press Analyze</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6">
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col xl:flex-row justify-between items-center gap-4">
+
+                <div class="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto">
+                    <h3 class="font-bold text-slate-700 flex items-center gap-2 min-w-[100px]">
+                        <i class="fas fa-list text-slate-500"></i> Records
+                    </h3>
+
+                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded border border-slate-300 shadow-sm">
+                        <span class="text-xs text-slate-400 font-bold uppercase">Filter:</span>
+                        <input type="date" id="tableStartDate" onchange="resetAndLoadTable()" class="text-sm border-none focus:ring-0 p-1 text-slate-600 cursor-pointer">
+                        <span class="text-slate-400">-</span>
+                        <input type="date" id="tableEndDate" onchange="resetAndLoadTable()" class="text-sm border-none focus:ring-0 p-1 text-slate-600 cursor-pointer">
+                    </div>
+
+                    <select id="tableFilterMC" onchange="resetAndLoadTable()" class="text-sm border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-white cursor-pointer">
+                        <option value="All">All Machines</option>
+                        <option value="MC2">MC2</option>
+                        <option value="MC3">MC3</option>
+                        <option value="MC5">MC5</option>
+                        <option value="MC6">MC6</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2 w-full xl:w-auto justify-end">
+                    <button onclick="changePage(-1)" id="btnPrev" class="px-3 py-1.5 rounded border bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 text-xs font-bold transition">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="pageIndicator" class="text-xs font-semibold text-slate-500 min-w-[50px] text-center">Page 1</span>
+                    <button onclick="changePage(1)" id="btnNext" class="px-3 py-1.5 rounded border bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 text-xs font-bold transition">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+
+                    <div class="h-6 w-px bg-slate-300 mx-2"></div>
+
+                    <button type="button" onclick="exportRealData()" id="btnExport" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex items-center gap-2 active:scale-95">
+                        <i class="fas fa-file-excel"></i> 
+                        <span>Export Excel</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-bold text-slate-600">Date/Time</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-600">MC</th>
+                            <th class="px-4 py-3 text-center font-bold text-slate-600">Gel Count</th>
+                            <th class="px-4 py-3 text-center font-bold text-slate-600">S.Fiber</th>
+                            <th class="px-4 py-3 text-center font-bold text-slate-600">L.Fiber</th>
+                            <th class="px-4 py-3 text-center font-bold text-slate-600">Black P.</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-600">Analyst</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 bg-white">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <button id="copilot-btn" class="fixed bottom-8 right-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-2xl z-40 hover:scale-110 transition ring-4 ring-white/50">
+        <i class="fas fa-robot"></i>
+    </button>
+
+    <div id="copilot-sidebar" class="fixed top-0 right-0 h-full w-full md:w-[400px] bg-white shadow-2xl z-50 transform translate-x-full flex flex-col">
+        <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
+            <div class="flex items-center gap-2 text-indigo-900 font-bold">
+                <i class="fas fa-brain text-indigo-500"></i> Viscose Expert AI
+            </div>
+            <button id="close-copilot-btn" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="copilot-content" class="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50">
+            <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-600">
+                สวัสดีครับ! ผมคือ <b>Viscose Expert AI</b> 🧪<br>
+                ผมวิเคราะห์ข้อมูลจาก:
+                <ul class="list-disc list-inside mt-1 ml-2 text-xs text-slate-500">
+                    <li>Viscose Projection (Gel/Impurities)</li>
+                    <li>Pulp Quality & Process Logs</li>
+                    <li>Final Product Quality</li>
+                </ul>
+                <br>ถามผมได้เลย เช่น <i>"MC2 แนวโน้มเป็นอย่างไร?", "ทำไม Gel สูงผิดปกติ?"</i>
+            </div>
+        </div>
+        <div class="p-4 bg-white border-t">
+            <div class="flex gap-2">
+                <input type="text" id="copilot-input" class="flex-1 border border-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Ask about Viscose...">
+                <button id="copilot-send" class="bg-indigo-600 text-white w-10 h-10 rounded-full hover:bg-indigo-700 flex items-center justify-center shadow-lg transition disabled:opacity-50">
+                    <i class="fas fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+            <script>
+                // --- CONFIG & STATE ---
+                const firebaseConfig = {
+                    apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                    authDomain: "lab-trc-management-system.firebaseapp.com",
+                    projectId: "lab-trc-management-system",
+                    storageBucket: "lab-trc-management-system.appspot.com",
+                    messagingSenderId: "43919979160",
+                    appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+                };
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                const db = firebase.firestore();
+                const functions = firebase.app().functions('asia-southeast1');
+                db.settings({ experimentalForceLongPolling: true, merge: true });
+
+                // Config
+                const MACHINES = ['MC2', 'MC3', 'MC5', 'MC6']; 
+                const MC_ORDER = { 'MC2': 1, 'MC3': 2, 'MC5': 3, 'MC6': 4 };
+                const COLORS = { 'MC2': '#3b82f6', 'MC3': '#10b981', 'MC5': '#ef4444', 'MC6': '#8b5cf6' };
+
+                const PARAMS = {
+                    'gel_count': { label: 'Gel Count (Big/min)', limit: 25 },
+                    'short_fiber': { label: 'Short Fiber Level (0-3)', limit: null },
+                    'long_fiber': { label: 'Long Fiber Level (0-3)', limit: null },
+                    'black_particle': { label: 'Black Particle Level (0-3)', limit: null }
+                };
+
+                // State
+                let currentChart = null;
+                let currentParam = 'gel_count';
+                let mergedStatsData = null; 
+
+                // Table State
+                let lastDoc = null;
+                let currentPage = 1;
+                const PAGE_SIZE = 20;
+
+                // --- INIT ---
+                document.addEventListener('DOMContentLoaded', () => {
+                    const now = new Date();
+                    const todayStr = now.toISOString().slice(0, 10);
+                    const past = new Date(); 
+                    past.setDate(past.getDate() - 30);
+                    const pastStr = past.toISOString().slice(0, 10);
+
+                    // 1. Set Default Date for Dashboard (Top)
+                    document.getElementById('endDate').value = todayStr;
+                    document.getElementById('startDate').value = pastStr;
+
+                    // 2. Set Default Date for Table (Bottom) - แก้ไขใหม่ให้มีค่าเริ่มต้น
+                    const tableStart = document.getElementById('tableStartDate');
+                    const tableEnd = document.getElementById('tableEndDate');
+                    if(tableStart && tableEnd) {
+                        tableStart.value = pastStr;
+                        tableEnd.value = todayStr;
+                    }
+
+                    fetchDashboardData();
+                    resetAndLoadTable();
+                    setupAIChat();
+                });
+
+                // ... (function switchParam, fetchDashboardData, getMonthsInRange, processMergedData, renderMainChart, renderMachineCards ใช้ของเดิมได้เลยครับ ไม่มีการเปลี่ยนแปลง) ...
+                // เพื่อความกระชับ ผมขอละไว้ในฐานที่เข้าใจ (ใช้ Code จากรอบที่แล้วได้เลยสำหรับส่วน Dashboard)
+
+                // --- ACTION 1: SWITCH PARAMETER ---
+                function switchParam(paramKey) {
+                    currentParam = paramKey;
+                    document.querySelectorAll('.param-btn').forEach(btn => btn.classList.remove('active'));
+                    const targetBtn = document.querySelector(`button[onclick="switchParam('${paramKey}')"]`);
+                    if(targetBtn) targetBtn.classList.add('active');
+
+                    if (mergedStatsData) {
+                        renderMainChart(mergedStatsData);
+                        renderMachineCards(mergedStatsData);
+                    } else {
+                        fetchDashboardData();
+                    }
+                }
+
+                // ... (fetchDashboardData and helpers here) ...
+                // ผมใส่ไว้ให้ครบชุดกันงงนะครับ
+                async function fetchDashboardData() {
+                    const startStr = document.getElementById('startDate').value;
+                    const endStr = document.getElementById('endDate').value;
+                    if(!startStr || !endStr) return;
+                    const grid = document.getElementById('machineGrid');
+                    try {
+                        const monthsToFetch = getMonthsInRange(startStr, endStr);
+                        const promises = monthsToFetch.map(m => db.collection('stats_Projector').doc(m).get());
+                        const snapshots = await Promise.all(promises);
+                        mergedStatsData = processMergedData(snapshots, startStr, endStr);
+                        renderMainChart(mergedStatsData);
+                        renderMachineCards(mergedStatsData);
+                    } catch (error) { console.error("Dashboard Error:", error); }
+                }
+                function getMonthsInRange(start, end) {
+                    const startD = new Date(start); const endD = new Date(end); const list = [];
+                    let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
+                    while (cur <= endD) { list.push(cur.toISOString().slice(0, 7)); cur.setMonth(cur.getMonth() + 1); }
+                    const endM = endD.toISOString().slice(0, 7); if(!list.includes(endM)) list.push(endM);
+                    return [...new Set(list)];
+                }
+                function processMergedData(snapshots, startStr, endStr) {
+                    const allDates = []; let curr = new Date(startStr); const end = new Date(endStr);
+                    while(curr <= end) { allDates.push(curr.toISOString().slice(0, 10)); curr.setDate(curr.getDate() + 1); }
+                    const result = { dates: allDates, machines: {} };
+                    MACHINES.forEach(mc => { result.machines[mc] = { gel_count: [], short_fiber: [], long_fiber: [], black_particle: [] }; });
+                    const dataMap = {}; snapshots.forEach(snap => { if(snap.exists) dataMap[snap.id] = snap.data(); });
+                    allDates.forEach(dateStr => {
+                        const monthKey = dateStr.slice(0, 7); const dayKey = dateStr.slice(8, 10); const docData = dataMap[monthKey];
+                        MACHINES.forEach(mc => {
+                            const dailyData = docData?.[mc]?.daily?.[dayKey];
+                            result.machines[mc].gel_count.push(dailyData?.gel_avg ?? null);
+                            result.machines[mc].short_fiber.push(dailyData?.short_fiber_avg ?? null);
+                            result.machines[mc].long_fiber.push(dailyData?.long_fiber_avg ?? null);
+                            result.machines[mc].black_particle.push(dailyData?.black_particle_avg ?? null);
+                        });
+                    });
+                    return result;
+                }
+                function renderMainChart(data) {
+                    const ctx = document.getElementById('mainGelChart').getContext('2d');
+                    if(currentChart) currentChart.destroy();
+                    const conf = PARAMS[currentParam];
+                    document.getElementById('chartTitle').innerText = `${conf.label} Trend`;
+                    const datasets = MACHINES.map(mc => ({
+                        label: mc, data: data.machines[mc][currentParam],
+                        borderColor: COLORS[mc], backgroundColor: COLORS[mc], tension: 0.3, spanGaps: true, pointRadius: 3
+                    }));
+                    if (conf.limit) {
+                        datasets.push({ label: `Limit (${conf.limit})`, data: Array(data.dates.length).fill(conf.limit), borderColor: '#ef4444', borderDash: [5, 5], pointRadius: 0, borderWidth: 2, fill: false });
+                    }
+                    currentChart = new Chart(ctx, { type: 'line', data: { labels: data.dates, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } } });
+                }
+                function renderMachineCards(data) {
+                    const grid = document.getElementById('machineGrid'); grid.innerHTML = '';
+                    MACHINES.forEach(mc => {
+                        const dataset = data.machines[mc][currentParam];
+                        const validValues = dataset.filter(v => v !== null);
+                        const avg = validValues.length > 0 ? (validValues.reduce((a, b) => a + b, 0) / validValues.length) : 0;
+                        const conf = PARAMS[currentParam];
+                        let statusClass = 'text-green-500 bg-green-50';
+                        if (conf.limit && avg > conf.limit) statusClass = 'text-red-500 bg-red-50';
+                        if (validValues.length === 0) statusClass = 'text-slate-400 bg-slate-50';
+                        grid.innerHTML += `<div class="card p-4 border-l-4" style="border-left-color: ${COLORS[mc]}"><div class="flex justify-between items-start"><h4 class="font-bold text-lg text-slate-700">${mc}</h4><span class="px-2 py-1 rounded text-xs font-bold ${statusClass}">${validValues.length > 0 ? (conf.limit && avg > conf.limit ? 'High' : 'Normal') : 'No Data'}</span></div><div class="mt-2 text-center"><span class="text-3xl font-bold ${statusClass.split(' ')[0]}">${avg.toFixed(1)}</span><span class="text-xs text-slate-400 block">Avg ${conf.label}</span></div><div class="mt-2 text-center text-xs text-slate-400">Based on ${validValues.length} days</div></div>`;
+                    });
+                }
+
+
+                // --- ACTION 3: TABLE LOGIC (Fixed) ---
+                function resetAndLoadTable() {
+                    lastDoc = null;
+                    currentPage = 1;
+                    loadTableData();
+                }
+
+                async function loadTableData() {
+                    const tbody = document.getElementById('tableBody');
+                    const btnPrev = document.getElementById('btnPrev');
+                    const btnNext = document.getElementById('btnNext');
+                    const pageInd = document.getElementById('pageIndicator');
+
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>`;
+                    pageInd.innerText = `Page ${currentPage}`;
+                    btnPrev.disabled = currentPage === 1;
+
+                    try {
+                        // แก้ไข: ดึงจาก ID ใหม่ในตาราง
+                        const startStr = document.getElementById('tableStartDate').value;
+                        const endStr = document.getElementById('tableEndDate').value;
+                        const mcFilter = document.getElementById('tableFilterMC').value;
+
+                        if (!startStr || !endStr) {
+                             tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-400">Please select date range.</td></tr>`;
+                             return;
+                        }
+
+                        let query = db.collection('viscose_projection_record')
+                                      .where('date', '>=', startStr)
+                                      .where('date', '<=', endStr);
+
+                        if (mcFilter !== 'All') {
+                            query = query.where('machine_id', '==', mcFilter);
+                        }
+
+                        const snapshot = await query.get();
+
+                        if (snapshot.empty) {
+                            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">No records found.</td></tr>`;
+                            btnNext.disabled = true;
+                            return;
+                        }
+
+                        let data = [];
+                        snapshot.forEach(doc => data.push(doc.data()));
+
+                        // Sort: Date Desc -> Time Desc -> MC Order
+                        data.sort((a, b) => {
+                            if (b.date !== a.date) return b.date.localeCompare(a.date);
+                            if (b.time !== a.time) return b.time.localeCompare(a.time);
+                            const orderA = MC_ORDER[a.machine_id] || 99;
+                            const orderB = MC_ORDER[b.machine_id] || 99;
+                            return orderA - orderB;
+                        });
+
+                        // Pagination
+                        const startIdx = (currentPage - 1) * PAGE_SIZE;
+                        const endIdx = startIdx + PAGE_SIZE;
+                        const pageData = data.slice(startIdx, endIdx);
+                        btnNext.disabled = endIdx >= data.length;
+
+                        let html = '';
+                        pageData.forEach(d => {
+                            const isRun = d.status === 'Running';
+                            const badge = (val) => {
+                                if(val === undefined || val === null) return '-';
+                                const labels = ['None', 'Some', 'Much', 'Very'];
+                                const colors = ['bg-slate-100 text-slate-400', 'bg-yellow-100 text-yellow-700', 'bg-orange-100 text-orange-700', 'bg-red-100 text-red-700'];
+                                return `<span class="px-2 py-0.5 rounded text-xs font-bold ${colors[val] || ''}">${labels[val] || val}</span>`;
+                            };
+
+                            html += `
+                            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="font-bold text-slate-700">${d.date}</div>
+                                    <div class="text-xs text-slate-400">${d.time}</div>
+                                </td>
+                                <td class="px-4 py-3 font-bold text-indigo-700">${d.machine_id}</td>
+                                <td class="px-4 py-3 text-center">
+                                    ${isRun 
+                                        ? `<span class="font-bold ${d.gel_count > 25 ? 'text-red-600' : 'text-slate-700'}">${d.gel_count}</span>` 
+                                        : '<span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">STOP</span>'}
+                                </td>
+                                <td class="px-4 py-3 text-center">${isRun ? badge(d.short_fiber) : '-'}</td>
+                                <td class="px-4 py-3 text-center">${isRun ? badge(d.long_fiber) : '-'}</td>
+                                <td class="px-4 py-3 text-center">${isRun ? badge(d.black_particle) : '-'}</td>
+                                <td class="px-4 py-3 text-sm text-slate-500">${d.analyst || '-'}</td>
+                            </tr>`;
+                        });
+                        tbody.innerHTML = html;
+                    } catch (error) {
+                        console.error(error);
+                        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-red-400">Error: ${error.message}</td></tr>`;
+                    }
+                }
+
+                function changePage(dir) {
+                    currentPage += dir;
+                    loadTableData();
+                }
+
+                // --- ACTION 4: EXPORT EXCEL (Fixed) ---
+                async function exportRealData() {
+                    const btn = document.getElementById('btnExport');
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                    btn.disabled = true;
+
+                    try {
+                        // แก้ไข: ดึงจาก ID ของตารางเท่านั้น
+                        const startStr = document.getElementById('tableStartDate').value;
+                        const endStr = document.getElementById('tableEndDate').value;
+                        const mcFilter = document.getElementById('tableFilterMC').value;
+
+                        if (!startStr || !endStr) { alert("Please select a date range."); return; }
+
+                        let query = db.collection('viscose_projection_record')
+                                      .where('date', '>=', startStr)
+                                      .where('date', '<=', endStr);
+
+                        if (mcFilter !== 'All') {
+                            query = query.where('machine_id', '==', mcFilter);
+                        }
+
+                        const snapshot = await query.get();
+
+                        if (snapshot.empty) {
+                            alert("No data found for this range.");
+                            return;
+                        }
+
+                        let data = [];
+                        snapshot.forEach(doc => {
+                            const d = doc.data();
+                            data.push({
+                                Date: d.date,
+                                Time: d.time,
+                                Machine: d.machine_id,
+                                Status: d.status,
+                                Gel_Count: d.gel_count || 0,
+                                Short_Fiber: d.short_fiber,
+                                Long_Fiber: d.long_fiber,
+                                Black_Particle: d.black_particle,
+                                Analyst: d.analyst,
+                                Remarks: d.remarks || ''
+                            });
+                        });
+
+                        // Sort เหมือนตาราง
+                        data.sort((a, b) => {
+                            if (a.Date !== b.Date) return a.Date.localeCompare(b.Date);
+                            if (a.Time !== b.Time) return a.Time.localeCompare(b.Time);
+                            const orderA = MC_ORDER[a.Machine] || 99;
+                            const orderB = MC_ORDER[b.Machine] || 99;
+                            return orderA - orderB;
+                        });
+
+                        const ws = XLSX.utils.json_to_sheet(data);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Viscose_Data");
+                        XLSX.writeFile(wb, `Viscose_Report_${startStr}_to_${endStr}.xlsx`);
+
+                    } catch (error) {
+                        console.error(error);
+                        alert("Export Failed: " + error.message);
+                    } finally {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                    }
+                }
+
+        // --- AI CHAT (เหมือนเดิม) ---
+        function setupAIChat() {
+            // (ใส่ Code ชุดเดิมของ AI Chat ที่คุณมีอยู่แล้วได้เลย หรือ copy จากด้านล่าง)
+            const copilotBtn = document.getElementById('copilot-btn');
+            const sidebar = document.getElementById('copilot-sidebar');
+            const closeBtn = document.getElementById('close-copilot-btn');
+            const input = document.getElementById('copilot-input');
+            const sendBtn = document.getElementById('copilot-send');
+            const content = document.getElementById('copilot-content');
+
+            copilotBtn.onclick = () => sidebar.classList.remove('translate-x-full');
+            closeBtn.onclick = () => sidebar.classList.add('translate-x-full');
+
+            const send = async () => {
+                const question = input.value.trim();
+                if(!question) return;
+                content.innerHTML += `<div class="bg-indigo-600 text-white p-3 rounded-t-lg rounded-bl-lg ml-auto max-w-[85%] text-sm mb-2 shadow-md">${question}</div>`;
+                input.value = '';
+                content.scrollTop = content.scrollHeight;
+                const loadId = 'load-' + Date.now();
+                content.innerHTML += `<div id="${loadId}" class="bg-white border p-3 rounded-t-lg rounded-br-lg mr-auto max-w-[85%] text-sm mb-2 text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...</div>`;
+                content.scrollTop = content.scrollHeight;
+                try {
+                    const askAI = functions.httpsCallable('askProjectorChat');
+                    const result = await askAI({ question: question });
+                    document.getElementById(loadId).remove();
+                    let text = result.data.text;
+                    text = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+                    content.innerHTML += `<div class="bg-white border border-slate-200 p-3 rounded-t-lg rounded-br-lg mr-auto max-w-[90%] text-sm mb-2 shadow-sm text-slate-700">${text}</div>`;
+                } catch (err) {
+                    document.getElementById(loadId).remove();
+                    content.innerHTML += `<div class="bg-red-50 text-red-500 p-3 rounded mr-auto text-xs">Error: ${err.message}</div>`;
+                }
+                content.scrollTop = content.scrollHeight;
+            };
+            sendBtn.onclick = send;
+            input.onkeypress = (e) => { if(e.key === 'Enter') send(); };
+        }
+    </script>
+</body>
+</html>

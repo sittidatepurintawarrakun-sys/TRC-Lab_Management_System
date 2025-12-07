@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viscose Projection Record</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; }
+        .level-btn { transition: all 0.2s; }
+        .level-btn.selected { transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-color: transparent; }
+        .level-0.selected { background-color: #10B981; color: white; }
+        .level-1.selected { background-color: #FBBF24; color: black; }
+        .level-2.selected { background-color: #F97316; color: white; }
+        .level-3.selected { background-color: #EF4444; color: white; }
+        
+        .machine-card.active { border: 2px solid #2563EB; background-color: #EFF6FF; }
+        .machine-card.done { background-color: #DCFCE7; border-color: #22C55E; color: #166534; } /* สีเขียวเมื่อกรอกเสร็จ */
+        
+        /* Animation for List */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .queue-item { animation: slideIn 0.3s ease-out; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <nav class="bg-indigo-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white p-2 rounded-full text-indigo-900">
+                    <i class="fas fa-project-diagram text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">Viscose Projection Record</h1>
+                    <p class="text-xs text-indigo-200">Batch Entry System</p>
+                </div>
+            </div>
+            <a href="IP_Viscose.html" class="ml-auto mr-4 text-indigo-300 hover:text-white text-sm font-bold transition flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Viscose Department
+            </a>
+            <div id="queueCountBadge" class="hidden bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-bounce">
+                0 Pending
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- LEFT COLUMN: Entry Form -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+                    <div class="p-6">
+                        <!-- Global Context -->
+                        <div class="grid grid-cols-3 gap-4 mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Date</label>
+                                <input type="date" id="dateInput" class="w-full border-gray-300 rounded text-sm p-1.5">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Time</label>
+                                <input type="time" id="timeInput" class="w-full border-gray-300 rounded text-sm p-1.5">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Analyst</label>
+                                <select id="analystInput" class="w-full border-gray-300 rounded text-sm p-1.5 bg-white">
+                                    <option value="Jamnanphon N.">Jamnanphon N.</option>
+                                    <option value="Waraporn T.">Waraporn T.</option>
+                                    <option value="Suwanna B.">Suwanna B.</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Machine Selector -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">เลือกเครื่องจักร (Select Machine)</label>
+                            <div class="grid grid-cols-5 gap-2" id="machineGrid">
+                                <!-- Generated by JS -->
+                            </div>
+                            <input type="hidden" id="selectedMachine">
+                        </div>
+
+                        <!-- Status -->
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="font-bold text-gray-700 text-sm">Status:</span>
+                            <div class="flex bg-gray-100 rounded-lg p-1">
+                                <button onclick="setStatus('Running')" id="btnRunning" class="px-4 py-1.5 rounded text-sm font-bold bg-green-500 text-white shadow-sm">Running</button>
+                                <button onclick="setStatus('Stopped')" id="btnStopped" class="px-4 py-1.5 rounded text-sm font-bold text-gray-500">Stopped</button>
+                            </div>
+                            <input type="hidden" id="machineStatus" value="Running">
+                        </div>
+
+                        <!-- Quality Form -->
+                        <div id="qualitySection" class="space-y-4">
+                            <!-- Gel -->
+                            <div class="flex items-center space-x-4">
+                                <label class="w-1/3 font-bold text-indigo-900 text-sm">Gel Count <span class="text-xs font-normal text-gray-500">(Big/min)</span></label>
+                                <input type="number" id="gelCount" min="0" placeholder="0" class="w-2/3 text-2xl font-bold text-center p-2 rounded border border-indigo-200 focus:ring-2 focus:ring-indigo-500 text-indigo-900">
+                            </div>
+
+                            <!-- Levels -->
+                            <div class="space-y-3">
+                                <div class="flex items-center">
+                                    <span class="w-24 text-sm font-bold text-gray-600">Short Fiber</span>
+                                    <div class="flex-1 grid grid-cols-4 gap-1 h-9" id="group-short">
+                                        <!-- Buttons generated by JS -->
+                                    </div>
+                                    <input type="hidden" id="val_short" value="0">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="w-24 text-sm font-bold text-gray-600">Long Fiber</span>
+                                    <div class="flex-1 grid grid-cols-4 gap-1 h-9" id="group-long"></div>
+                                    <input type="hidden" id="val_long" value="0">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="w-24 text-sm font-bold text-gray-600">Black Particle.</span>
+                                    <div class="flex-1 grid grid-cols-4 gap-1 h-9" id="group-black"></div>
+                                    <input type="hidden" id="val_black" value="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Remarks & Add Button -->
+                        <div class="mt-6 flex space-x-3">
+                            <input type="text" id="remarks" class="flex-1 border-gray-300 rounded border p-2 text-sm" placeholder="หมายเหตุ (Remarks)">
+                            <button onclick="addToQueue()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 transition">
+                                <i class="fas fa-plus mr-2"></i>เพิ่มรายการ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Queue & History -->
+            <div class="space-y-6">
+                
+                <!-- Pending Queue -->
+                <div class="bg-yellow-50 rounded-xl shadow border border-yellow-200 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-yellow-800"><i class="fas fa-clipboard-list mr-2"></i>รอการบันทึก (Queue)</h3>
+                        <span id="queueCount" class="bg-white text-yellow-800 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200">0</span>
+                    </div>
+                    
+                    <div id="queueList" class="space-y-2 max-h-60 overflow-y-auto mb-4 text-sm">
+                        <div class="text-center text-gray-400 py-4 italic">ยังไม่มีรายการ (เลือก MC แล้วกดเพิ่ม)</div>
+                    </div>
+
+                    <button onclick="submitAll()" id="btnSubmitAll" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                        <i class="fas fa-save mr-2"></i> ยืนยันบันทึกทั้งหมด (Save All)
+                    </button>
+                </div>
+
+                <!-- Recent History (Server Data) -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <h3 class="font-bold text-gray-700 mb-3 text-sm">ประวัติล่าสุด (Server)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-gray-50 text-gray-500">
+                                <tr>
+                                    <th class="p-2">MC</th>
+                                    <th class="p-2 text-center">Gel</th>
+                                    <th class="p-2 text-center">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.settings({ experimentalForceLongPolling: true });
+
+        // --- STATE ---
+        let queueData = [];
+        const machines = ['MC2', 'MC3', 'MC5', 'MC6'];
+
+        // --- INIT ---
+        document.getElementById('dateInput').valueAsDate = new Date();
+        document.getElementById('timeInput').value = "09:00";
+        initUI();
+        initHistoryListener();
+
+        // --- UI FUNCTIONS ---
+        function initUI() {
+            // Render Machine Buttons
+            const mcGrid = document.getElementById('machineGrid');
+            machines.forEach(mc => {
+                mcGrid.innerHTML += `<button onclick="selectMachine('${mc}')" id="btn-${mc}" class="machine-card p-2 rounded border text-sm font-bold text-gray-600 hover:bg-gray-50 transition">${mc}</button>`;
+            });
+
+            // Render Level Buttons
+            ['short', 'long', 'black'].forEach(type => {
+                const container = document.getElementById(`group-${type}`);
+                const labels = ['None', 'Some', 'Much', 'Very'];
+                const colors = ['text-gray-500', 'text-yellow-600', 'text-orange-600', 'text-red-600'];
+                
+                labels.forEach((label, idx) => {
+                    container.innerHTML += `
+                        <button onclick="setLevel('${type}', ${idx})" 
+                            class="level-btn level-${idx} border rounded text-xs font-semibold ${colors[idx]} hover:bg-gray-50" 
+                            id="${type}-${idx}">${label}</button>`;
+                });
+                setLevel(type, 0); // Default 0
+            });
+            
+            // Auto select first machine
+            selectMachine('MC2');
+        }
+
+        function selectMachine(mc) {
+            document.querySelectorAll('.machine-card').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${mc}`).classList.add('active');
+            document.getElementById('selectedMachine').value = mc;
+            
+            // Optional: If already in queue, maybe warn user? (Keep simple for now)
+        }
+
+        function setLevel(type, val) {
+            document.getElementById(`group-${type}`).querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+            document.getElementById(`${type}-${val}`).classList.add('selected');
+            document.getElementById(`val_${type}`).value = val;
+        }
+
+        function setStatus(status) {
+            document.getElementById('machineStatus').value = status;
+            const isRun = status === 'Running';
+            
+            document.getElementById('btnRunning').className = `px-4 py-1.5 rounded text-sm font-bold shadow-sm ${isRun ? 'bg-green-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`;
+            document.getElementById('btnStopped').className = `px-4 py-1.5 rounded text-sm font-bold shadow-sm ${!isRun ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`;
+            
+            const qualityDiv = document.getElementById('qualitySection');
+            if(isRun) {
+                qualityDiv.classList.remove('opacity-40', 'pointer-events-none');
+            } else {
+                qualityDiv.classList.add('opacity-40', 'pointer-events-none');
+            }
+        }
+
+        // --- QUEUE LOGIC ---
+        function addToQueue() {
+            const mc = document.getElementById('selectedMachine').value;
+            
+            // Check Duplicate
+            if(queueData.some(d => d.machine_id === mc)) {
+                alert(`${mc} อยู่ในรายการแล้ว (ลบออกก่อนถ้าต้องการแก้ไข)`);
+                return;
+            }
+
+            const status = document.getElementById('machineStatus').value;
+            const entry = {
+                id: Date.now(), // temp id
+                date: document.getElementById('dateInput').value,
+                time: document.getElementById('timeInput').value,
+                machine_id: mc,
+                analyst: document.getElementById('analystInput').value,
+                status: status,
+                remarks: document.getElementById('remarks').value
+            };
+
+            if (status === 'Running') {
+                entry.gel_count = parseInt(document.getElementById('gelCount').value) || 0;
+                entry.short_fiber = parseInt(document.getElementById('val_short').value);
+                entry.long_fiber = parseInt(document.getElementById('val_long').value);
+                entry.black_particle = parseInt(document.getElementById('val_black').value);
+            } else {
+                entry.gel_count = null;
+                entry.short_fiber = null;
+                entry.long_fiber = null;
+                entry.black_particle = null;
+            }
+
+            queueData.push(entry);
+            renderQueue();
+            
+            // Visual Feedback: Mark button as done
+            document.getElementById(`btn-${mc}`).classList.add('done');
+            
+            // Auto-move to next machine logic (Simple Loop)
+            const nextIdx = (machines.indexOf(mc) + 1) % machines.length;
+            selectMachine(machines[nextIdx]);
+
+            // Clear Input
+            document.getElementById('gelCount').value = '';
+            document.getElementById('remarks').value = '';
+            ['short', 'long', 'black'].forEach(t => setLevel(t, 0));
+        }
+
+        function removeFromQueue(id, mc) {
+            queueData = queueData.filter(d => d.id !== id);
+            document.getElementById(`btn-${mc}`).classList.remove('done');
+            renderQueue();
+        }
+
+        function renderQueue() {
+            const list = document.getElementById('queueList');
+            const count = document.getElementById('queueCount');
+            const btnSubmit = document.getElementById('btnSubmitAll');
+            const badge = document.getElementById('queueCountBadge');
+
+            count.innerText = queueData.length;
+            badge.innerText = `${queueData.length} Pending`;
+            badge.classList.toggle('hidden', queueData.length === 0);
+            btnSubmit.disabled = queueData.length === 0;
+
+            if (queueData.length === 0) {
+                list.innerHTML = `<div class="text-center text-gray-400 py-4 italic">ยังไม่มีรายการ (เลือก MC แล้วกดเพิ่ม)</div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            queueData.forEach(item => {
+                const isRun = item.status === 'Running';
+                const detail = isRun 
+                    ? `<span class="text-xs text-gray-500">Gel: <b>${item.gel_count}</b> | S:${item.short_fiber} L:${item.long_fiber} B:${item.black_particle}</span>`
+                    : `<span class="text-xs text-red-500 font-bold">STOPPED</span>`;
+
+                const div = document.createElement('div');
+                div.className = "queue-item bg-white p-2 rounded border flex justify-between items-center shadow-sm";
+                div.innerHTML = `
+                    <div>
+                        <div class="font-bold text-indigo-900">${item.machine_id} <span class="text-gray-400 text-xs font-normal">(${item.time})</span></div>
+                        ${detail}
+                    </div>
+                    <button onclick="removeFromQueue(${item.id}, '${item.machine_id}')" class="text-red-400 hover:text-red-600 p-2">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // --- SAVE LOGIC ---
+        async function submitAll() {
+            if(!confirm(`ยืนยันการบันทึกข้อมูลทั้ง ${queueData.length} รายการ?`)) return;
+
+            const btn = document.getElementById('btnSubmitAll');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+            btn.disabled = true;
+
+            try {
+                const batch = db.batch();
+                const collectionRef = db.collection('viscose_projection_record'); // New Collection Name
+
+                queueData.forEach(item => {
+                    const docRef = collectionRef.doc(); // Auto ID
+                    const payload = { ...item, timestamp: new Date() };
+                    delete payload.id; // Remove temp id
+                    batch.set(docRef, payload);
+                });
+
+                await batch.commit();
+
+                // Success
+                alert('บันทึกข้อมูลเรียบร้อย!');
+                queueData = [];
+                renderQueue();
+                document.querySelectorAll('.machine-card').forEach(b => b.classList.remove('done'));
+
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-save mr-2"></i> ยืนยันบันทึกทั้งหมด (Save All)';
+                btn.disabled = false; // Will be re-disabled by renderQueue if empty
+                renderQueue(); // Update UI state
+            }
+        }
+
+        // --- HISTORY LISTENER ---
+        function initHistoryListener() {
+            // Listen to NEW Collection name
+            db.collection('viscose_projection_record')
+                .orderBy('timestamp', 'desc')
+                .limit(10)
+                .onSnapshot(snapshot => {
+                    const tbody = document.getElementById('historyBody');
+                    tbody.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        const isRun = d.status === 'Running';
+                        tbody.innerHTML += `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="p-2 font-bold text-indigo-700">${d.machine_id}</td>
+                                <td class="p-2 text-center">${isRun ? d.gel_count : '<span class="text-red-400 text-xs">Stop</span>'}</td>
+                                <td class="p-2 text-center text-gray-400 text-xs">${d.time}</td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+    </script>
+</body>
+</html>

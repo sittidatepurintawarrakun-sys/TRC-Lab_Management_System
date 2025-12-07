@@ -498,17 +498,53 @@
         // --- 4. Dashboard Logic ---
         async function initDashboard() {
             try {
-                // ✅ [แก้ไข] เรียก Collection ใหม่ 'stats_pulp' ตาม index.js ล่าสุด
-                const doc = await db.collection('stats_pulp').doc('main_summary').get();
-                if (doc.exists) {
-                    summaryDataCache = doc.data();
-                    document.getElementById('lastUpdatedTime').textContent = summaryDataCache.lastUpdated
-                        ? new Date(summaryDataCache.lastUpdated.toDate()).toLocaleString('th-TH')
+                const currentYear = new Date().getFullYear();
+                const prevYear = currentYear - 1;
+
+                // 1. ดึงข้อมูล 2 ปีล่าสุด (ปีปัจจุบัน + ปีก่อนหน้า) เพื่อให้ได้ข้อมูล 12 เดือนย้อนหลังแน่นอน
+                // ถ้าช่วงเปลี่ยนปี (เช่น ม.ค. 2025) เราจำเป็นต้องมีข้อมูลปี 2024 มาแสดงด้วย
+                const [currDoc, prevDoc, legacyDoc] = await Promise.all([
+                    db.collection('stats_pulp').doc(`summary_${currentYear}`).get(),
+                    db.collection('stats_pulp').doc(`summary_${prevYear}`).get(),
+                    // (Optional) เผื่อใครยังไม่ได้ย้ายข้อมูลเก่า ดึง main_summary มากันเหนียวไว้ก่อน
+                    db.collection('stats_pulp').doc('main_summary').get() 
+                ]);
+
+                // 2. รวมร่างข้อมูล (Merge Data)
+                let mergedIncoming = {};
+
+                const mergeStats = (docSnapshot) => {
+                    if (docSnapshot.exists) {
+                        const data = docSnapshot.data();
+                        if (data.pulp_incoming) {
+                            // แตก Object ออกมาผสมกัน (Spread Operator)
+                            mergedIncoming = { ...mergedIncoming, ...data.pulp_incoming };
+                        }
+                    }
+                };
+
+                mergeStats(legacyDoc); // เอาของเก่าใส่ก่อน (ถ้ามี)
+                mergeStats(prevDoc);   // ทับด้วยปีก่อน
+                mergeStats(currDoc);   // ทับด้วยปีปัจจุบัน (ล่าสุดสำคัญสุด)
+
+                // 3. สร้าง Cache สำหรับกราฟ
+                summaryDataCache = { pulp_incoming: mergedIncoming };
+
+                // อัปเดตเวลาล่าสุด (เอาจากปีปัจจุบัน)
+                if (currDoc.exists) {
+                    const data = currDoc.data();
+                     document.getElementById('lastUpdatedTime').textContent = data.lastUpdated
+                        ? new Date(data.lastUpdated.toDate()).toLocaleString('th-TH')
                         : '-';
-                    updateCharts(PULP_CONFIG[0].key);
                 }
+
+                // 4. วาดกราฟ (ฟังก์ชัน updateCharts จะจัดการตัดเลือก 12 เดือนให้เอง)
+                updateCharts(PULP_CONFIG[0].key);
+
+                // โหลดตาราง
                 fetchTableData();
-            } catch (error) { console.error(error); }
+
+            } catch (error) { console.error("Dashboard Init Error:", error); }
         }
 
         // --- 5. Table Logic ---
@@ -528,7 +564,7 @@
                 const filterSupplier = document.getElementById('tableFilterSupplier').value;
                 if (filterSupplier !== 'all') query = query.where('supplier', '==', filterSupplier);
 
-                query = query.limit(50);
+                query = query.limit(20);
                 if (lastVisibleDoc) query = query.startAfter(lastVisibleDoc);
 
                 const snapshot = await query.get();
@@ -603,11 +639,20 @@
 
         // --- 6. Chart Functions ---
         // ✅ [แก้ไข] คืนชีพ function updateCharts ที่หายไป พร้อม Logic ใหม่
-        function updateCharts(paramKey) {
-            // ✅ [แก้ไข] เปลี่ยน Key เป็น pulp_incoming ตาม Backend ใหม่
+            function updateCharts(paramKey) {
             if (!summaryDataCache || !summaryDataCache.pulp_incoming) return;
             const stats = summaryDataCache.pulp_incoming;
-            const months = Object.keys(stats).sort();
+
+            // 1. เรียงลำดับเดือนทั้งหมดที่มี
+            let allMonths = Object.keys(stats).sort();
+
+            // 2. ✅ ตัดเอาเฉพาะ 12 เดือนล่าสุด (The Rolling Window)
+            if (allMonths.length > 12) {
+                allMonths = allMonths.slice(allMonths.length - 12);
+            }
+
+            // ใช้ตัวแปร allMonths แทน months เดิม
+            const months = allMonths;
             const allSuppliers = new Set();
             months.forEach(m => { if (stats[m]) Object.keys(stats[m]).forEach(s => allSuppliers.add(s)); });
 
