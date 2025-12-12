@@ -1,364 +1,534 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab-TRC-App - Laboratory Dashboard</title>
-
+    <title>TRC Holistic View - Integrated Dashboard</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
 
     <style>
-        /* Professional Theme (Deep Blue & White) */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f9ff;
-            color: #334155;
-        }
-        header h1 { color: #1e40af; }
-        header h1 .fa-flask-vial { color: #1d4ed8; }
-        header p, #datetime-display { color: #475569; }
-        .card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-            transition: all 0.3s ease;
-        }
-        /* No hover effect on calendar card */
-        .card:not(.calendar-card):hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
-        }
-        .stat-card { padding: 1.5rem; }
-        .stat-card .stat-number { color: #1e40af; font-weight: 700; }
-        .stat-card .stat-label { color: #64748b; }
-        .stat-card .stat-icon { color: #94a3b8; }
-        .stat-card.alert .stat-number { color: #be123c; }
-        .module-card { padding: 1.5rem; }
-        .module-card h2 { color: #1e40af; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; }
-        .module-link { display: flex; align-items: center; padding: 0.75rem; border-radius: 0.5rem; color: #334155; font-weight: 500;
-        transition: background-color 0.2s ease, color 0.2s ease; cursor: pointer; }
-        .module-link:hover { background-color: #e0f2fe; color: #0c4a6e; }
-        .module-link i { width: 2rem; color: #60a5fa; }
-
-        /* CSS to shrink the calendar */
-        #dashboard-calendar {
-            font-size: 0.8rem; /* Reduce overall font size */
-        }
-        .fc .fc-toolbar-title {
-            font-size: 1em; /* Adjust month title font size */
-        }
-        .fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion {
-            font-size: 0.9em; /* Adjust day number and header font size */
-        }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+        .chat-window { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .chat-bubble-user { background-color: #3b82f6; color: white; border-radius: 12px 12px 0 12px; }
+        .chat-bubble-ai { background-color: #f1f5f9; color: #1e293b; border-radius: 12px 12px 12px 0; border: 1px solid #e2e8f0; }
+        /* Scrollbar for chat */
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
-<body class="antialiased">
-    <div id="app-container" class="relative min-h-screen p-4 sm:p-6 lg:p-8">
-        <div id="datetime-display" class="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 text-right text-sm font-medium"></div>
-        <section id="lobby-page">
-            <header class="text-center mb-12">
-                <h1 class="text-4xl sm:text-5xl font-bold tracking-tight"><i class="fas fa-flask-vial"></i> Laboratory</h1>
-                <p class="mt-2 text-lg">Quality Control & Laboratory Management System</p>
-            </header>
+<body class="h-screen flex flex-col overflow-hidden">
 
-            <main class="max-w-7xl mx-auto">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="lg:col-span-2">
-                        
-                        <div class="card calendar-card p-4 mb-6">
-                            <h3 class="font-bold text-slate-700 mb-3 text-lg"><i class="fas fa-calendar-alt mr-2 text-blue-600"></i>This Month's Bookings</h3>
-                            <div id="dashboard-calendar"></div>
+    <header class="bg-slate-900 text-white p-4 shadow-lg z-20 flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-lg flex items-center justify-center text-xl font-bold">
+                TRC
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide">Integrated Command Center</h1>
+                <p class="text-xs text-slate-400">Pulp • Process • Fibre</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-3 bg-slate-800 p-1 rounded-lg">
+            <input type="date" id="startDate" class="bg-slate-700 text-white px-3 py-1 rounded text-sm outline-none">
+            <span class="text-slate-500 self-center">to</span>
+            <input type="date" id="endDate" class="bg-slate-700 text-white px-3 py-1 rounded text-sm outline-none">
+            <button onclick="refreshData()" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded text-sm font-bold transition">
+                <i class="fas fa-sync-alt mr-1"></i> Sync
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <main class="flex-1 overflow-y-auto p-6 relative">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                
+                <div class="glass-panel p-6 rounded-xl shadow-sm border-t-4 border-orange-400 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-orange-600 text-6xl"><i class="fas fa-tree"></i></div>
+                    <h3 class="text-orange-800 font-bold uppercase text-xs tracking-wider mb-1">Raw Material</h3>
+                    <h2 class="text-xl font-bold text-slate-800">Pulp Quality</h2>
+                    <div class="mt-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-xs text-slate-500">Avg Brightness</span>
+                            <div class="text-2xl font-bold text-orange-600" id="kpiPulp">-</div>
                         </div>
-                        
-                        <h2 class="text-2xl font-bold text-slate-700 mb-4">Dashboard Overview</h2>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            <div id="samples-in-progress-card" class="card stat-card"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Samples in Progress</p><p id="samples-in-progress-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-vials"></i></div></div></div>
-                            <div id="overdue-calibrations-card" class="card stat-card alert"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Overdue Calibrations</p><p id="overdue-calibrations-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-tools"></i></div></div></div>
-                            <div id="open-ncrs-card" class="card stat-card"><div class="flex justify-between items-center"><div><p class="stat-label text-sm font-medium">Open NCRs</p><p id="open-ncrs-number" class="stat-number text-4xl mt-1">0</p></div><div class="stat-icon text-2xl opacity-50"><i class="fas fa-triangle-exclamation"></i></div></div></div>
-                        </div>
-                        <div class="card mt-6 p-6"><h3 class="font-semibold text-slate-700 mb-4">Test Result Trends</h3><div class="text-center text-slate-400 py-12"><i class="fas fa-chart-line text-4xl mb-2"></i><p>(Basic data visualization charts will be displayed here)</p></div></div>
-                    </div>
-                    <div class="lg:col-span-1 flex flex-col gap-8">
-                        <h2 class="text-2xl font-bold text-slate-700 mb-0 lg:mb-4">System Modules</h2>
-                        <div class="card module-card">
-                            <h2><i class="fas fa-tasks w-6 mr-2 text-sky-600"></i> Core Operations</h2>
-                            <nav class="flex flex-col gap-1">
-                                <a href="Sample_Requesting.html" class="module-link"><i class="fas fa-flask"></i> Special Sample Requesting</a>
-                                <a href="Bale_Checking.html" class="module-link"><i class="fas fa-barcode"></i> Bale Checking</a>
-                                <a id="nav-test-results" class="module-link"><i class="fas fa-file-invoice"></i> Test Results</a>
-                                <a href="F4.html" id="ncr-link" class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR (F4) Register</a>
-                            </nav>
-                        </div>
-                        <div class="card module-card">
-                            <h2><i class="fas fa-shield-halved w-6 mr-2 text-teal-600"></i> Quality & Assets</h2>
-                            <nav class="flex flex-col gap-1">
-                                <a href="NcfReport.html" class="module-link"><i class="fas fa-triangle-exclamation"></i> NCR (F4) Report</a>
-                                <a class="module-link"><i class="fas fa-tools"></i> Equipment</a>
-                                <a class="module-link"><i class="fas fa-prescription-bottle"></i> Chemical Inventory</a>
-                                <a href="View_Test_Results_Reports.html" class="module-link"><i class="fas fa-file-alt"></i> View Test Results / Reports</a>
-                            </nav>
-                        </div>
-                        <div class="card module-card">
-                            <h2><i class="fas fa-cog w-6 mr-2 text-slate-500"></i> System & Admin</h2>
-                            <nav class="flex flex-col gap-1">
-                                <a href="Room_Booking.html" class="module-link"><i class="fas fa-calendar-alt"></i> Room Booking</a>
-                                <a class="module-link"><i class="fas fa-file-pdf"></i> Report Generation</a>
-                                <a class="module-link"><i class="fas fa-users-cog"></i> User Management</a>
-                            </nav>
+                        <div>
+                            <span class="text-xs text-slate-500">Avg Iron (Fe)</span>
+                            <div class="text-2xl font-bold text-slate-700" id="kpiIron">-</div>
                         </div>
                     </div>
                 </div>
-            </main>
-        </section>
-        <section id="report-page" class="hidden max-w-7xl mx-auto">
-            <div class="mb-6">
-                <a class="back-to-lobby text-slate-600 hover:text-blue-700 font-semibold text-sm cursor-pointer">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                </a>
-            </div>
-            <header class="mb-8">
-                <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-file-invoice text-teal-600"></i> Test Results & Reports</h1>
-            </header>
-            <div class="card p-8">
-                <div class="text-center text-slate-500 py-16">
-                    <i class="fas fa-search text-5xl mb-4"></i>
-                    <p class="text-xl">Report viewing interface will be built here.</p>
-                    <p>This section will contain search filters, data tables, and PDF export options.</p>
+
+                <div class="glass-panel p-6 rounded-xl shadow-sm border-t-4 border-blue-400 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-blue-600 text-6xl"><i class="fas fa-cogs"></i></div>
+                    <h3 class="text-blue-800 font-bold uppercase text-xs tracking-wider mb-1">In-Process</h3>
+                    <h2 class="text-xl font-bold text-slate-800">Viscose Status</h2>
+                    <div class="mt-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-xs text-slate-500">Avg Ball Fall</span>
+                            <div class="text-2xl font-bold text-blue-600" id="kpiBF">-</div>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500">Avg Alkali</span>
+                            <div class="text-2xl font-bold text-slate-700" id="kpiAlk">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl shadow-sm border-t-4 border-emerald-400 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-emerald-600 text-6xl"><i class="fas fa-box-open"></i></div>
+                    <h3 class="text-emerald-800 font-bold uppercase text-xs tracking-wider mb-1">Finished Goods</h3>
+                    <h2 class="text-xl font-bold text-slate-800">Fibre Quality</h2>
+                    <div class="mt-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-xs text-slate-500">% Grade E</span>
+                            <div class="text-2xl font-bold text-emerald-600" id="kpiGrade">-</div>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500">Avg Whiteness</span>
+                            <div class="text-2xl font-bold text-slate-700" id="kpiWhite">-</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </section>
-        <footer class="w-full text-center mt-12">
-            <p class="text-sm text-slate-500">&copy; 2025 Sittidate Purintawarrakun</p>
-        </footer>
+
+            <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                <div class="flex justify-between items-start mb-6 border-b pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800"><i class="fas fa-chart-line mr-2 text-indigo-500"></i>Custom Comparison</h2>
+                        <p class="text-sm text-slate-500">Add multiple parameters to compare correlations across different stages.</p>
+                    </div>
+                    
+                    <div class="flex gap-2 items-end bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase">Stage</label>
+                            <select id="chartSource" class="text-sm border rounded px-2 py-1 bg-white" onchange="updateParamOptions()">
+                                <option value="pulp">1. Raw Material (Pulp)</option>
+                                <option value="process">2. Process (Viscose/Spin)</option>
+                                <option value="product">3. Product (Fibre)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase">Machine/Type</label>
+                            <select id="chartMachine" class="text-sm border rounded px-2 py-1 bg-white">
+                                </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase">Parameter</label>
+                            <select id="chartParam" class="text-sm border rounded px-2 py-1 bg-white w-40">
+                                </select>
+                        </div>
+                        <button onclick="addSeries()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold shadow h-8 self-end">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                        <button onclick="clearChart()" class="text-slate-400 hover:text-red-500 px-2 py-1 text-sm h-8 self-end">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div id="activeSeriesList" class="flex flex-wrap gap-2 mb-4 min-h-[30px]">
+                    <span class="text-xs text-slate-400 italic self-center">No series selected. Add one from above to start comparing.</span>
+                </div>
+
+                <div class="relative h-[400px] w-full">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+            </div>
+
+        </main>
     </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- Date/Time Update ---
-            const updateDateTime = () => {
-                const datetimeDisplay = document.getElementById('datetime-display');
-                if (!datetimeDisplay) return;
-                const now = new Date();
-                const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                const dateString = now.toLocaleDateString('en-US', optionsDate);
-                const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit'});
-                datetimeDisplay.innerHTML = `<div>${dateString}</div><div>${timeString}</div>`;
-            };
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
 
-            // --- Page Navigation Logic ---
-            const lobbyPage = document.getElementById('lobby-page');
-            const reportPage = document.getElementById('report-page');
-            const allPages = [lobbyPage, reportPage].filter(p => p);
-            const showPage = (pageToShow) => {
-                allPages.forEach(page => page.classList.add('hidden'));
-                if (pageToShow) pageToShow.classList.remove('hidden');
-            };
-            document.getElementById('nav-test-results')?.addEventListener('click', () => showPage(reportPage));
-            document.querySelectorAll('.back-to-lobby').forEach(button => {
-                button.addEventListener('click', () => showPage(lobbyPage));
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        
+        <div id="chatWindow" class="chat-window hidden bg-white w-96 h-[500px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden transform origin-bottom-right scale-95 opacity-0">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-full">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">TRC AI Assistant</h3>
+                        <p class="text-[10px] text-indigo-100 opacity-80">Connected to Firebase Knowledge Base</p>
+                    </div>
+                </div>
+                <button onclick="toggleChat()" class="text-white/80 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div id="chatMessages" class="flex-1 bg-slate-50 p-4 overflow-y-auto chat-scroll space-y-3">
+                <div class="chat-bubble-ai p-3 text-sm shadow-sm max-w-[85%]">
+                    สวัสดีครับ! ผมคือ AI ผู้ช่วยวิเคราะห์ข้อมูล Pulp & Fibre 🏭 <br>
+                    คุณสามารถถามผมได้ เช่น:
+                    <ul class="list-disc ml-4 mt-1 text-xs text-slate-500">
+                        <li>"ทำไมค่า Whiteness เดือนนี้ต่ำจัง?"</li>
+                        <li>"ขอเทียบสถิติ MC3 กับ MC6 หน่อย"</li>
+                        <li>"Pulp Lot ล่าสุดมีผลต่อค่า Ball Fall ไหม?"</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="p-3 bg-white border-t border-slate-100 flex gap-2">
+                <input type="text" id="chatInput" placeholder="พิมพ์คำถามของคุณที่นี่..." class="flex-1 bg-slate-100 border-0 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" onkeypress="handleEnter(event)">
+                <button onclick="sendChatMessage()" id="sendBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-md">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <button onclick="toggleChat()" class="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95">
+            <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 text-sm font-bold whitespace-nowrap px-0 group-hover:px-2">Ask AI Assistant</span>
+            <i class="fas fa-comment-dots text-2xl"></i>
+        </button>
+    </div>
+
+    <script>
+        // --- 1. CONFIG & INIT ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const functions = firebase.functions();
+        
+        // --- 2. STATE & CHART ---
+        let chartInstance = null;
+        let chartDatasets = []; // Store active series config
+        let chatHistory = []; // Context for AI
+
+        // Default Date (Last 30 Days)
+        const today = new Date();
+        const lastMonth = new Date();
+        lastMonth.setDate(today.getDate() - 30);
+        document.getElementById('startDate').valueAsDate = lastMonth;
+        document.getElementById('endDate').valueAsDate = today;
+
+        // --- 3. CHART BUILDER LOGIC ---
+
+        const PARAM_OPTIONS = {
+            pulp: {
+                machines: ['All Pulp'],
+                params: ['Brightness', 'Iron (Fe)', 'Silica', 'Alpha Cellulose', 'Viscosity']
+            },
+            process: {
+                machines: ['MC2', 'MC3', 'MC5', 'MC6'],
+                params: ['Steep Lye Alkali %', 'Steep Lye Temp.', 'Spinning Viscose Ball Fall', 'Spinning Viscose Alkali %', 'Spinning Viscose Cellulose %', 'Spin Bath Acid gpl', 'Spin Bath ZnSO4 gpl']
+            },
+            product: {
+                machines: ['MC2 (Modal)', 'MC3 (Grey/NW)', 'MC5 (Grey/NW)', 'MC6 (Grey/NW)'],
+                params: ['Whiteness', 'Brightness', 'Tenacity Cond.', 'Elongation Cond', 'Grade E %', 'Grade O %']
+            }
+        };
+
+        function updateParamOptions() {
+            const source = document.getElementById('chartSource').value;
+            const machSelect = document.getElementById('chartMachine');
+            const paramSelect = document.getElementById('chartParam');
+
+            machSelect.innerHTML = "";
+            paramSelect.innerHTML = "";
+
+            PARAM_OPTIONS[source].machines.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.innerText = m;
+                machSelect.appendChild(opt);
             });
 
-            // --- Calendar Logic ---
-            const firebaseConfig = {
-                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-                authDomain: "lab-trc-management-system.firebaseapp.com",
-                projectId: "lab-trc-management-system",
-                storageBucket: "lab-trc-management-system.firebasestorage.app",
-                messagingSenderId: "43919979160",
-                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-            };
+            PARAM_OPTIONS[source].params.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.innerText = p;
+                paramSelect.appendChild(opt);
+            });
+        }
+        
+        // Init options on load
+        updateParamOptions();
 
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
+        async function addSeries() {
+            const source = document.getElementById('chartSource').value;
+            const machine = document.getElementById('chartMachine').value;
+            const param = document.getElementById('chartParam').value;
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+
+            // 1. Determine Collection & Query
+            let collectionName = "";
+            let fieldPath = ""; // Path inside 'stats' object
+            
+            if (source === 'pulp') {
+                collectionName = "rm_pulp_inspections"; // Assuming we have stats or query raw
+                // Note: Pulp might need special handling if not daily stats.
+                // For demo, let's assume we map raw pulp logs to daily average logic here
+                alert("Demo Note: Pulp data integration requires standardized daily stats. Simulating data for now.");
+                // In real implementation: Fetch Pulp docs, group by date, calc avg.
+            } else if (source === 'process') {
+                collectionName = "stats_Viscose"; // Or Aux/Spin depending on param (Simplified)
+                // Need to pick correct collection if param is Aux
+                if (param.includes("Spin Bath")) collectionName = "stats_Auxiliary";
+            } else if (source === 'product') {
+                if (machine.includes("MC2")) collectionName = "stats_Product_Modal";
+                else if (machine.includes("NW")) collectionName = "stats_Product_NonWoven"; // Simplification
+                else collectionName = "stats_Product_Grey";
             }
-            const db = firebase.firestore();
 
-            // Add this line to fix connection issues on restricted networks
-            db.settings({ experimentalForceLongPolling: true }); 
+            // 2. Fetch Data from Firebase
+            // (Real implementation needs robust query logic)
+            // Simulating fetch for UI demonstration
+            const dataPoints = await fetchSeriesData(collectionName, machine, param, start, end, source);
 
-            const bookingsCollection = db.collection('bookings');
-
-            // --- (ใหม่) Function to Fetch Dashboard Stats ---
-            const fetchDashboardStats = async () => {
-                console.log("Fetching all dashboard stats from summary docs...");
-                try {
-                    // --- 1. Fetch Samples in Progress ---
-                    // (ชี้ไปที่เอกสารสรุป 'sample_dashboard_summary')
-                    const sampleSummaryRef = db.collection("metadata").doc("sample_dashboard_summary");
-                    const sampleSummaryDoc = await sampleSummaryRef.get();
-
-                    let sampleCount = 0; // (ค่าเริ่มต้น)
-
-                    if (sampleSummaryDoc.exists) {
-                        const summaryData = sampleSummaryDoc.data();
-                        // "Samples in Progress" คือยอดรวมของ 'Submitted' และ 'In Progress'
-                        const submittedCount = summaryData['status.Submitted'] || 0;
-                        const inProgressCount = summaryData['status.InProgress'] || 0;
-                        sampleCount = submittedCount + inProgressCount;
-                        console.log(`Sample Summary: Submitted (${submittedCount}), InProgress (${inProgressCount})`);
-                    } else {
-                        console.warn("Summary document (sample_dashboard_summary) not found.");
-                    }
-
-                    // อัปเดตการ์ด "Samples in Progress"
-                    const sampleNumberEl = document.getElementById('samples-in-progress-number');
-                    if (sampleNumberEl) {
-                        sampleNumberEl.textContent = sampleCount;
-                        console.log(`Updated Samples in Progress: ${sampleCount}`);
-                    }
-
-                    // --- 2. (ใหม่) Fetch Open NCRs ---
-                    // (ชี้ไปที่เอกสารสรุป 'ncf_dashboard_summary/main_stats')
-                    const ncfSummaryRef = db.collection("ncf_dashboard_summary").doc("main_stats");
-                    const ncfSummaryDoc = await ncfSummaryRef.get();
-
-                    let ncrCount = 0; // (ค่าเริ่มต้น)
-
-                    if (ncfSummaryDoc.exists) {
-                        const ncfData = ncfSummaryDoc.data();
-                        // วนลูป field ทั้งหมดในเอกสาร
-                        for (const key in ncfData) {
-                            // เช็คว่า field ขึ้นต้นด้วย 'departmentStatus.' 
-                            // และ *ไม่* ลงท้ายด้วย '.Completed'
-                            if (key.startsWith('departmentStatus.') && !key.endsWith('.Completed')) {
-                                // ถ้าใช่ ให้นับรวมค่าเข้าไป (ป้องกันค่า NaN)
-                                ncrCount += (ncfData[key] || 0);
-                            }
-                        }
-                        console.log(`NCF Summary: Total Open NCRs (${ncrCount})`);
-                    } else {
-                        console.warn("Summary document (ncf_dashboard_summary/main_stats) not found.");
-                    }
-
-                    // อัปเดตการ์ด "Open NCRs"
-                    const ncrNumberEl = document.getElementById('open-ncrs-number');
-                    if (ncrNumberEl) {
-                        ncrNumberEl.textContent = ncrCount;
-                        console.log(`Updated Open NCRs: ${ncrCount}`);
-                    }
-
-                } catch (error) {
-                    console.error("Error fetching dashboard summaries:", error);
-                    // (Optional) แสดง Error บน UI ทั้งสองการ์ด
-                    const sampleNumberEl = document.getElementById('samples-in-progress-number');
-                    if (sampleNumberEl) sampleNumberEl.textContent = 'E';
-                    const ncrNumberEl = document.getElementById('open-ncrs-number');
-                    if (ncrNumberEl) ncrNumberEl.textContent = 'E';
-                }
+            // 3. Add to Chart Dataset
+            const color = getRandomColor();
+            const newDataset = {
+                label: `${source.toUpperCase()} - ${machine} : ${param}`,
+                data: dataPoints.data, // [{x: date, y: value}]
+                borderColor: color,
+                backgroundColor: color,
+                tension: 0.4,
+                yAxisID: dataPoints.yAxisID // 'y' or 'y1' (Left or Right)
             };
-            // --- (จบส่วนที่เพิ่ม) ---
 
-            const initializeDashboardCalendar = () => {
-                const calendarEl = document.getElementById('dashboard-calendar');
-                if (!calendarEl) return;
+            chartDatasets.push(newDataset);
+            renderChart();
+            addTagToUI(newDataset.label, color);
+        }
 
-                const calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    headerToolbar: {
-                        left: 'title',
-                        center: '',
-                        right: ''
-                    },
-                    editable: false,
-                    selectable: false,
-                    dayMaxEvents: true, 
-                    
-                    eventSources: [
-                        // Source 1: Hardcoded events (loads instantly)
-                        {
-                            events: [
-                                {
-                                    title: 'Plant Daily Meeting',
-                                    startTime: '10:30:00',
-                                    endTime: '12:00:00',
-                                    daysOfWeek: [1, 3, 5], 
-                                    color: '#8b5cf6',
-                                    classNames: ['pointer-events-none']
-                                }
-                            ]
+        async function fetchSeriesData(collection, machine, param, start, end, source) {
+            // This is where we query Firebase.
+            // For the sake of this UI demo, I will return mock data structure
+            // In production: db.collection(collection).where(...).get()
+            
+            console.log(`Fetching ${collection} for ${machine} param ${param}`);
+            
+            // Mock Data Generation
+            const data = [];
+            const dateIterator = new Date(start);
+            const endDate = new Date(end);
+            
+            while (dateIterator <= endDate) {
+                const dateStr = dateIterator.toISOString().split('T')[0];
+                // Random value based on param type to look realistic
+                let val = 0;
+                if (param.includes("%")) val = 80 + Math.random() * 20;
+                else if (param.includes("Whiteness")) val = 85 + Math.random() * 5;
+                else if (param.includes("Ball Fall")) val = 40 + Math.random() * 15;
+                else val = Math.random() * 10;
+
+                data.push({ x: dateStr, y: val });
+                dateIterator.setDate(dateIterator.getDate() + 1);
+            }
+
+            // Decide Y-Axis (Left for Main, Right for small/diff units)
+            // Heuristic: If value > 50 use Left, else Right (Just for demo)
+            const yAxisID = (param.includes("Whiteness") || param.includes("Ball Fall") || param.includes("%")) ? 'y' : 'y1';
+
+            return { data, yAxisID };
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: chartDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { type: 'category', labels: chartDatasets[0]?.data.map(d => d.x) }, // Simplified x-axis
+                        y: { 
+                            type: 'linear', display: true, position: 'left', 
+                            title: { display: true, text: 'Primary Scale (e.g. %, BF)' } 
                         },
-                        // Source 2: Events from Firebase (loads asynchronously)
-                        {
-                            events: async (fetchInfo, successCallback, failureCallback) => {
-                                console.log("Fetching bookings from Firebase...");
-                                try {
-                                    const snapshot = await bookingsCollection.get();
-                                    console.log(`Found ${snapshot.docs.length} documents in 'bookings' collection.`);
-
-                                    const firebaseEvents = snapshot.docs.map(doc => {
-                                        const data = doc.data();
-                                        // Check data integrity before processing
-                                        if (data.start && typeof data.start.toDate === 'function' &&
-                                            data.end && typeof data.end.toDate === 'function') {
-                                            return {
-                                                id: doc.id,
-                                                title: data.title,
-                                                start: data.start.toDate(),
-                                                end: data.end.toDate(),
-                                            };
-                                        } else {
-                                            console.warn(`Skipping document ${doc.id} due to missing or invalid date fields.`, data);
-                                            return null;
-                                        }
-                                    }).filter(event => event !== null); // Filter out invalid items
-
-                                    console.log(`Successfully mapped ${firebaseEvents.length} events.`);
-                                    successCallback(firebaseEvents);
-                                } catch (error) {
-                                    console.error("Error fetching bookings from Firebase:", error);
-                                    failureCallback(error);
-                                }
-                            }
+                        y1: { 
+                            type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Secondary Scale (e.g. Conc, Ratio)' }
                         }
-                    ]
-                });
-
-                calendar.render();
-            };
-
-            initializeDashboardCalendar();
-            fetchDashboardStats();
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const ncrLink = document.getElementById('ncr-link');
-
-            // เช็คให้แน่ใจว่าเจอปุ่มก่อนจะเพิ่ม event
-            if (ncrLink) {
-                ncrLink.addEventListener('click', function(event) {
-                    // หยุดการทำงานปกติของลิงก์ (ไม่ให้ไปหน้า F4 ทันที)
-                    event.preventDefault();
-
-                    // ตั้งรหัสผ่านของคุณที่นี่
-                    const correctPassword = "123456789"; 
-
-                    // แสดงหน้าต่างให้กรอกรหัสผ่าน
-                    const enteredPassword = prompt("Please enter the password to access NCR Register:");
-
-                    if (enteredPassword === correctPassword) {
-                        // ถ้ารหัสผ่านถูกต้อง ให้เก็บ "กุญแจ" ไว้ใน sessionStorage
-                        sessionStorage.setItem('isF4Authenticated', 'true');
-                        // แล้วค่อยพาไปที่หน้า F4.html
-                        window.location.href = ncrLink.href;
-                    } else if (enteredPassword !== null) { // เช็คว่าผู้ใช้ไม่ได้กด Cancel
-                        // ถ้ารหัสผ่านผิด
-                        alert("Incorrect password. Access denied.");
                     }
-                });
+                }
+            });
+        }
+
+        function addTagToUI(label, color) {
+            const container = document.getElementById('activeSeriesList');
+            if (container.children[0]?.tagName === 'SPAN') container.innerHTML = ''; // Clear placeholder
+
+            const tag = document.createElement('div');
+            tag.className = "flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm";
+            tag.style.backgroundColor = color;
+            tag.innerHTML = `
+                <span>${label}</span>
+                <button onclick="removeSeries('${label}')" class="hover:text-red-200"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(tag);
+        }
+
+        function removeSeries(label) {
+            chartDatasets = chartDatasets.filter(d => d.label !== label);
+            renderChart();
+            // Re-render tags (simplified: just clear and re-add all from dataset)
+            const container = document.getElementById('activeSeriesList');
+            container.innerHTML = '';
+            chartDatasets.forEach(d => addTagToUI(d.label, d.borderColor));
+            if (chartDatasets.length === 0) container.innerHTML = '<span class="text-xs text-slate-400 italic self-center">No series selected.</span>';
+        }
+
+        function clearChart() {
+            chartDatasets = [];
+            renderChart();
+            document.getElementById('activeSeriesList').innerHTML = '<span class="text-xs text-slate-400 italic self-center">No series selected.</span>';
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
+            return color;
+        }
+
+        // --- 4. AI CHATBOT LOGIC ---
+
+        function toggleChat() {
+            const win = document.getElementById('chatWindow');
+            if (win.classList.contains('hidden')) {
+                win.classList.remove('hidden');
+                setTimeout(() => {
+                    win.classList.remove('opacity-0', 'scale-95');
+                    win.classList.add('opacity-100', 'scale-100');
+                }, 10);
+            } else {
+                win.classList.remove('opacity-100', 'scale-100');
+                win.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => win.classList.add('hidden'), 300);
             }
-        });
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            // 1. Add User Message
+            addMessageToUI('user', msg);
+            input.value = '';
+            input.disabled = true;
+
+            // 2. Update Context History
+            chatHistory.push({ role: "user", content: msg });
+
+            // 3. Show Loading
+            const loadingId = addLoadingBubble();
+
+            try {
+                // 4. Call Cloud Function (Backend)
+                // This connects to the 'askProductionAI' function we designed earlier
+                const aiFunction = functions.httpsCallable('askProductionAI');
+                
+                // We send the history so the AI knows context
+                const result = await aiFunction({ 
+                    question: msg,
+                    history: chatHistory // Optional: if your backend supports history
+                });
+
+                const answer = result.data.answer;
+
+                // 5. Remove Loading & Add AI Response
+                removeLoadingBubble(loadingId);
+                addMessageToUI('ai', answer);
+                
+                // Update History
+                chatHistory.push({ role: "model", content: answer });
+
+            } catch (error) {
+                console.error(error);
+                removeLoadingBubble(loadingId);
+                addMessageToUI('ai', "ขออภัยครับ ระบบขัดข้องชั่วคราว (" + error.message + ")");
+            } finally {
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        function addMessageToUI(role, text) {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            
+            if (role === 'user') {
+                div.className = "flex justify-end";
+                div.innerHTML = `<div class="chat-bubble-user p-3 text-sm shadow-sm max-w-[85%]">${text}</div>`;
+            } else {
+                div.className = "flex justify-start";
+                // Convert Markdown-ish link to HTML if needed, here just raw text
+                div.innerHTML = `<div class="chat-bubble-ai p-3 text-sm shadow-sm max-w-[85%]"><i class="fas fa-robot text-indigo-500 mr-2"></i>${text}</div>`;
+            }
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addLoadingBubble() {
+            const container = document.getElementById('chatMessages');
+            const id = 'loading-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = "flex justify-start";
+            div.innerHTML = `
+                <div class="chat-bubble-ai p-3 text-sm shadow-sm">
+                    <span class="flex gap-1">
+                        <span class="animate-bounce">●</span>
+                        <span class="animate-bounce" style="animation-delay: 0.1s">●</span>
+                        <span class="animate-bounce" style="animation-delay: 0.2s">●</span>
+                    </span>
+                </div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeLoadingBubble(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // --- 5. REFRESH DATA (Simulated for Cards) ---
+        function refreshData() {
+            // In real app, re-fetch all KPIs based on date
+            // Simulating update
+            document.getElementById('kpiPulp').innerText = (90 + Math.random()*2).toFixed(2);
+            document.getElementById('kpiIron').innerText = (4 + Math.random()).toFixed(1) + " ppm";
+            document.getElementById('kpiBF').innerText = (45 + Math.random()*5).toFixed(1);
+            document.getElementById('kpiAlk').innerText = (5 + Math.random()).toFixed(2) + "%";
+            document.getElementById('kpiGrade').innerText = (94 + Math.random()*4).toFixed(1) + "%";
+            document.getElementById('kpiWhite').innerText = (88 + Math.random()*2).toFixed(2);
+            alert("Data synced with Firebase!");
+        }
+
+        // Initial simulation
+        refreshData();
+
     </script>
-    </body>
-    </html>
+</body>
+</html>

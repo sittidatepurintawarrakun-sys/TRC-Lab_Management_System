@@ -1,92 +1,416 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Quality Dashboard</title>
+    <title>TRC Smart Dashboard - Pulp & Fibre</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-    <style>body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }</style>
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .chart-container { position: relative; height: 350px; width: 100%; }
+        .modal { transition: opacity 0.25s ease; }
+    </style>
 </head>
 <body class="text-slate-800">
 
-    <nav class="bg-white shadow px-6 py-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-green-900"><i class="fas fa-box-open"></i> Product Quality Dashboard</h1>
-        <button onclick="openSidebar()" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
-            <i class="fas fa-plus"></i> Record Lot
-        </button>
+    <nav class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <span class="text-2xl font-bold tracking-wider text-emerald-400">TRC <span class="text-white font-light">INTELLIGENCE</span></span>
+                <span class="bg-slate-700 px-3 py-1 rounded text-xs text-slate-300">Live Dashboard</span>
+            </div>
+            <div class="flex gap-4 items-center">
+                <select id="machineSelect" class="bg-slate-800 text-white border border-slate-600 rounded px-3 py-1 focus:outline-none focus:border-emerald-500">
+                    <option value="MC2">Machine 2 (Modal)</option>
+                    <option value="MC3">Machine 3 (Mixed)</option>
+                    <option value="MC5">Machine 5 (Mixed)</option>
+                    <option value="MC6">Machine 6 (Mixed)</option>
+                </select>
+                <button onclick="loadData()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-1 rounded font-bold transition">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
     </nav>
 
-    <main class="p-6">
-        <div class="bg-white p-6 rounded-lg shadow mb-6">
-            <h2 class="font-bold mb-4">Lot Comparison (Tenacity)</h2>
-            <div class="h-64"><canvas id="productChart"></canvas></div>
+    <div class="container mx-auto p-6">
+        
+        <div class="flex justify-center mb-8">
+            <div class="bg-white p-1 rounded-full shadow-md inline-flex">
+                <button onclick="switchMode('process')" id="btnProcess" class="px-6 py-2 rounded-full font-bold transition bg-emerald-100 text-emerald-800">
+                    ⚙️ Process Control
+                </button>
+                <button onclick="switchMode('product')" id="btnProduct" class="px-6 py-2 rounded-full font-bold transition text-slate-500 hover:bg-slate-50">
+                    📦 Product Quality
+                </button>
+            </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <table class="w-full text-sm text-left">
-                <thead class="bg-slate-100 font-bold text-slate-600">
-                    <tr><th class="p-3">Lot No.</th><th class="p-3">Type</th><th class="p-3">Tenacity</th><th class="p-3">Elongation</th></tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
+        <div id="kpiArea" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="card p-6 border-l-4 border-blue-500">
+                <p class="text-slate-500 text-sm">Waiting for data...</p>
+            </div>
         </div>
-    </main>
 
-    <div id="sidebar" class="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl transform translate-x-full transition duration-300 p-6 z-50">
-        <h2 class="text-xl font-bold mb-4">Record Product Test</h2>
-        <input type="text" id="inp_lot" placeholder="Lot No." class="w-full border p-2 rounded mb-3">
-        <select id="inp_type" class="w-full border p-2 rounded mb-3">
-            <option>Fiber Type A</option><option>Fiber Type B</option>
-        </select>
-        <input type="number" id="inp_tenacity" placeholder="Tenacity (g/den)" class="w-full border p-2 rounded mb-3">
-        <input type="number" id="inp_elong" placeholder="Elongation (%)" class="w-full border p-2 rounded mb-6">
-        <div class="flex gap-2">
-            <button onclick="saveData()" class="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
-            <button onclick="closeSidebar()" class="flex-1 bg-gray-200 py-2 rounded">Cancel</button>
+        <div class="card p-6 mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800" id="mainChartTitle">Monthly Performance</h2>
+                    <p class="text-sm text-slate-400">Click on any bar to drill down to hourly data.</p>
+                </div>
+                <select id="paramSelect" onchange="updateMainChart()" class="border rounded px-3 py-2 bg-slate-50">
+                    </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+
+        <div id="drillDownSection" class="hidden card p-6 border border-emerald-200 bg-emerald-50">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-emerald-800 flex items-center gap-2">
+                    <span>🔍 Detailed Analysis:</span>
+                    <span id="drillDate" class="underline">...</span>
+                </h3>
+                <button onclick="closeDrillDown()" class="text-slate-400 hover:text-slate-600">✕ Close</button>
+            </div>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="drillChart"></canvas>
+            </div>
+            <div class="mt-4 text-xs text-slate-500 bg-white p-3 rounded border">
+                <strong>💡 Insight:</strong> This data is pulled directly from the raw logs (`_raw_logs`) for precise hourly troubleshooting.
+            </div>
         </div>
     </div>
 
-    <button onclick="toggleAI()" class="fixed bottom-8 right-8 bg-purple-600 text-white w-14 h-14 rounded-full shadow-xl text-2xl z-50 hover:scale-110 transition">
-        <i class="fa-solid fa-wand-magic-sparkles"></i>
-    </button>
-
     <script>
-        const firebaseConfig = { /* ใส่ Config เดิม */ }; 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        // --- 1. FIREBASE SETUP ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const functions = firebase.functions();
+        db.settings({ experimentalForceLongPolling: true });
 
-        function openSidebar() { document.getElementById('sidebar').classList.remove('translate-x-full'); }
-        function closeSidebar() { document.getElementById('sidebar').classList.add('translate-x-full'); }
+        // --- 2. GLOBAL STATE ---
+        let currentMode = 'process'; // 'process' or 'product'
+        let currentData = []; // Store fetched stats
+        let mainChartInstance = null;
+        let drillChartInstance = null;
 
-        async function saveData() {
-            const data = {
-                lotNo: document.getElementById('inp_lot').value,
-                productType: document.getElementById('inp_type').value,
-                properties: {
-                    tenacity: parseFloat(document.getElementById('inp_tenacity').value),
-                    elongation: parseFloat(document.getElementById('inp_elong').value)
-                },
-                createdAt: new Date()
-            };
-            await db.collection('product_tests').add(data);
-            closeSidebar();
-            alert("Saved!");
+        // Config Params to Show (Dashboard Focus)
+        const PROCESS_PARAMS = ["Steep Lye Alkali %", "Steep Lye Temp.", "Spinning Viscose Ball Fall", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %"];
+        const PRODUCT_PARAMS = ["Whiteness", "Brightness", "Tenacity Cond.", "Elongation Cond", "Whitness Grade"]; // Whitness Grade is special
+
+        // --- 3. CORE FUNCTIONS ---
+
+        function switchMode(mode) {
+            currentMode = mode;
+            // UI Toggle
+            document.getElementById('btnProcess').className = mode === 'process' 
+                ? "px-6 py-2 rounded-full font-bold transition bg-emerald-100 text-emerald-800"
+                : "px-6 py-2 rounded-full font-bold transition text-slate-500 hover:bg-slate-50";
+            
+            document.getElementById('btnProduct').className = mode === 'product'
+                ? "px-6 py-2 rounded-full font-bold transition bg-blue-100 text-blue-800"
+                : "px-6 py-2 rounded-full font-bold transition text-slate-500 hover:bg-slate-50";
+
+            // Update Dropdown Options
+            const paramSelect = document.getElementById('paramSelect');
+            paramSelect.innerHTML = "";
+            const list = mode === 'process' ? PROCESS_PARAMS : PRODUCT_PARAMS;
+            
+            list.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.innerText = p;
+                paramSelect.appendChild(opt);
+            });
+
+            loadData(); // Fetch new data
         }
 
-        function toggleAI() {
-            const q = prompt("Ask Product AI:");
-            if(q) {
-                const askProduct = functions.httpsCallable('askProductChat');
-                askProduct({ question: q }).then(res => alert(res.data.text));
+        async function loadData() {
+            const machineId = document.getElementById('machineSelect').value;
+            const statusTitle = document.getElementById('mainChartTitle');
+            statusTitle.innerText = `Loading ${currentMode} data for ${machineId}...`;
+
+            try {
+                // Determine Collection based on Mode
+                // For simplified dashboard, we default to Viscose for Process, and Detect Type for Product
+                let collection = "";
+                if (currentMode === 'process') {
+                    collection = "stats_Viscose"; // Default to Viscose first
+                } else {
+                    // For Product, we need to know type. For Dashboard demo, let's pull 'Modal' or 'Grey' based on Machine
+                    // In real app, you might query all 3 and merge.
+                    collection = machineId === 'MC2' ? "stats_Product_Modal" : "stats_Product_Grey"; 
+                    // Note: For MC3/5/6 mixed, you might want to fetch both and merge, but keeping it simple for now.
+                }
+
+                // Query last 30 days
+                // Requires Index: machineId ASC, date ASC
+                const snapshot = await db.collection(collection)
+                    .where('machineId', '==', machineId)
+                    .orderBy('date', 'asc')
+                    .limitToLast(30)
+                    .get();
+
+                currentData = [];
+                snapshot.forEach(doc => {
+                    currentData.push(doc.data());
+                });
+
+                renderKPIs();
+                updateMainChart();
+                statusTitle.innerText = `${currentMode === 'process' ? 'In-Process' : 'Product Quality'} Trends (${machineId})`;
+
+            } catch (error) {
+                console.error(error);
+                statusTitle.innerText = "Error loading data. Check Console.";
+                alert("Error: " + error.message + "\n(Please ensure Indexes are created in Firebase Console)");
             }
         }
+
+        function renderKPIs() {
+            const kpiArea = document.getElementById('kpiArea');
+            kpiArea.innerHTML = "";
+
+            if (currentData.length === 0) {
+                kpiArea.innerHTML = `<div class="col-span-4 text-center text-slate-400">No data found for this period.</div>`;
+                return;
+            }
+
+            // Calculate Last Day Stats
+            const lastRecord = currentData[currentData.length - 1];
+            const stats = lastRecord.stats || {};
+            const date = lastRecord.date;
+
+            // Define which KPIs to show on top cards
+            const kpiParams = currentMode === 'process' 
+                ? ["Steep Lye Alkali %", "Spinning Viscose Ball Fall", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %"]
+                : ["Whiteness", "Tenacity Cond.", "Elongation Cond", "Over All Grade"];
+
+            kpiParams.forEach(param => {
+                const valObj = stats[param];
+                let displayVal = "-";
+                let subText = "No Data";
+                let colorClass = "border-slate-300";
+
+                if (valObj) {
+                    if (valObj.type === 'numeric' || valObj.avg !== undefined) {
+                        displayVal = valObj.avg.toFixed(2);
+                        subText = `SD: ${valObj.sd} | CV: ${valObj.cv}%`;
+                        
+                        // Simple Threshold Logic (For Demo)
+                        // In real app, check against LSL/USL
+                        if (valObj.cv > 5) colorClass = "border-red-500"; // High Variation
+                        else colorClass = "border-emerald-500"; // Stable
+                    } 
+                    else if (valObj.type === 'categorical' || valObj.percentages) {
+                        // For Grades
+                        displayVal = (valObj.percentages['E'] || 0) + "%";
+                        subText = "Grade E Ratio";
+                        if ((valObj.percentages['E'] || 0) < 90) colorClass = "border-yellow-500";
+                        else colorClass = "border-emerald-500";
+                    }
+                }
+
+                kpiArea.innerHTML += `
+                    <div class="card p-5 border-l-4 ${colorClass} hover:shadow-lg transition">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wide">${param}</h4>
+                        <div class="text-3xl font-bold text-slate-800 mt-1">${displayVal}</div>
+                        <div class="text-xs text-slate-500 mt-2">${subText}</div>
+                        <div class="text-[10px] text-right text-slate-300 mt-1">${date}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateMainChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const param = document.getElementById('paramSelect').value;
+            
+            // Prepare Data
+            const labels = currentData.map(d => formatDate(d.date));
+            const dataPoints = [];
+            const isGrade = param.includes("Grade");
+
+            currentData.forEach(d => {
+                const s = d.stats && d.stats[param];
+                if (s) {
+                    if (isGrade) {
+                        dataPoints.push(s.percentages ? (s.percentages['E'] || 0) : 0);
+                    } else {
+                        dataPoints.push(s.avg);
+                    }
+                } else {
+                    dataPoints.push(null);
+                }
+            });
+
+            // Destroy old chart
+            if (mainChartInstance) mainChartInstance.destroy();
+
+            // Create New Chart
+            mainChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: isGrade ? '% Grade E' : `Avg ${param}`,
+                        data: dataPoints,
+                        borderColor: isGrade ? '#3b82f6' : '#10b981',
+                        backgroundColor: isGrade ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (evt, activeElements) => {
+                        if (activeElements.length > 0) {
+                            const index = activeElements[0].index;
+                            const dateStr = currentData[index].date; // YYYY-MM-DD
+                            handleChartClick(dateStr, param);
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                },
+                                footer: function(tooltipItems) {
+                                    return "👇 Click to see Hourly Data";
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 4. DRILL DOWN LOGIC (The Magic Part) ---
+
+        async function handleChartClick(dateStr, param) {
+            const machineId = document.getElementById('machineSelect').value;
+            const drillSec = document.getElementById('drillDownSection');
+            const drillTitle = document.getElementById('drillDate');
+            
+            drillSec.classList.remove('hidden');
+            drillTitle.innerText = `${dateStr} (${param})`;
+
+            // Decide collection for Raw Logs
+            // Note: We used 'process_raw_logs' and 'product_raw_logs'
+            const rawCollection = currentMode === 'process' ? 'process_raw_logs' : 'product_raw_logs';
+            const docId = `${machineId}_${dateStr}`;
+
+            try {
+                const doc = await db.collection(rawCollection).doc(docId).get();
+                if (!doc.exists) {
+                    alert("No hourly data available for this date.");
+                    return;
+                }
+
+                const rawData = doc.data();
+                // rawData structure: { data: { Viscose: { Param: [v1, v2...] }, ... } } (Process)
+                // rawData structure: { data: { Modal: { Param: [v1, v2...] } } } (Product)
+
+                let values = [];
+                // Flatten data to find the param array
+                // A bit tricky because structure varies, let's search for the param key
+                const allSections = rawData.data; 
+                Object.values(allSections).forEach(sectionObj => {
+                    if (sectionObj[param]) {
+                        values = sectionObj[param];
+                    }
+                });
+
+                if (values.length === 0) {
+                    alert(`Parameter '${param}' not found in raw logs.`);
+                    return;
+                }
+
+                renderDrillChart(values, param);
+                
+                // Scroll to drill down section
+                drillSec.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (e) {
+                console.error(e);
+                alert("Error fetching drill down data.");
+            }
+        }
+
+        function renderDrillChart(values, paramLabel) {
+            const ctx = document.getElementById('drillChart').getContext('2d');
+            
+            // Generate dummy labels if time is not strictly mapped in array (Simplification)
+            // In a perfect world, we'd map value[i] to specific time. 
+            // Here we assume sequential data points = roughly time progression.
+            const labels = values.map((_, i) => `Sample ${i+1}`);
+
+            // Filter out non-numeric for graphing (if looking at grades, we can't line chart easily)
+            // If Grade, maybe map E=4, ST=3... or just skip.
+            // Let's assume numeric for chart drilldown for now.
+            const numericValues = values.map(v => typeof v === 'number' ? v : null);
+
+            if (drillChartInstance) drillChartInstance.destroy();
+
+            drillChartInstance = new Chart(ctx, {
+                type: 'bar', // Bar chart for hourly samples is often better
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Hourly Values: ${paramLabel}`,
+                        data: numericValues,
+                        backgroundColor: '#f59e0b',
+                        borderColor: '#d97706',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Raw Data Variation (Daily Samples)' }
+                    }
+                }
+            });
+        }
+
+        function closeDrillDown() {
+            document.getElementById('drillDownSection').classList.add('hidden');
+        }
+
+        function formatDate(isoDate) {
+            const d = new Date(isoDate);
+            return `${d.getDate()}/${d.getMonth()+1}`;
+        }
+
+        // Initialize
+        switchMode('process');
+
     </script>
 </body>
 </html>

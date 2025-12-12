@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Process Data (Production Day 07:00 AM)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f0f4f8; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+
+    <div class="bg-white w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+        
+        <div class="bg-blue-900 text-white p-8 md:w-1/3 flex flex-col justify-between">
+            <div>
+                <a href="InProcess_Selection.html" class="inline-flex items-center text-blue-300 hover:text-white mb-6 transition-colors duration-200 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span class="text-sm font-semibold">Back to In Process</span>
+                </a>
+                <h1 class="text-3xl font-bold mb-2">🏭 Process Data Import</h1>
+                <p class="text-blue-200 mb-6">ระบบบันทึกข้อมูลกระบวนการผลิต (Viscose / Auxiliary / Spinning)</p>
+                
+                <div class="space-y-4">
+                    <div class="bg-blue-800 bg-opacity-50 p-3 rounded-lg border border-blue-700">
+                        <h3 class="font-bold text-yellow-400 text-sm mb-1">⚠️ กฎการตัดรอบวัน (Production Day)</h3>
+                        <p class="text-xs text-gray-200 leading-relaxed">
+                            ระบบจะนับวันผลิตแบบ <strong>07:00 AM ถึง 07:00 AM</strong> ของอีกวัน<br>
+                            เช่น ข้อมูลวันที่ 2 เวลา 05:00 น. จะถูกบันทึกเป็นของ <strong>วันที่ 1</strong> อัตโนมัติ
+                        </p>
+                    </div>
+
+                    <div class="flex items-start">
+                        <span class="bg-blue-700 p-2 rounded-lg mr-3 font-bold">1</span>
+                        <p class="text-sm">เลือกเครื่องจักร (Machine) ให้ถูกต้อง</p>
+                    </div>
+                    <div class="flex items-start">
+                        <span class="bg-blue-700 p-2 rounded-lg mr-3 font-bold">2</span>
+                        <p class="text-sm">Copy ข้อมูลจาก Excel (รวม Header) มาวางทั้งก้อน</p>
+                    </div>
+                    <div class="flex items-start">
+                        <span class="bg-blue-700 p-2 rounded-lg mr-3 font-bold">3</span>
+                        <p class="text-sm">กด Upload ระบบจะคำนวณ Stats และส่งขึ้น Cloud ทันที</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 text-xs text-blue-300 opacity-70">
+                Pulp & Fibre Business Intelligence<br>System by Sittidate Purintawarrakun
+            </div>
+        </div>
+
+        <div class="p-8 md:w-2/3 bg-gray-50">
+            
+            <div class="mb-6">
+                <label class="block text-gray-700 font-bold mb-2">เลือกเครื่องจักร (Select Machine)</label>
+                <select id="machineSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm transition">
+                    <option value="">-- กรุณาเลือก --</option>
+                    <option value="MC2">Machine No. 2</option>
+                    <option value="MC3">Machine No. 3</option>
+                    <option value="MC5">Machine No. 5</option>
+                    <option value="MC6">Machine No. 6</option>
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-700 font-bold mb-2">วางข้อมูล Excel (Paste Data)</label>
+                <textarea id="pasteArea" rows="12" 
+                    class="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:border-blue-500 transition resize-y bg-white"
+                    placeholder="คลิกแล้วกด Ctrl+V เพื่อวางข้อมูล... (รองรับการ Copy ทั้งหน้า Sheet รวมถึง Header)"></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="processData()" id="uploadBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2">
+                    <span>🚀</span> Upload Data
+                </button>
+                <button onclick="clearForm()" class="px-6 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-white hover:shadow-md transition bg-gray-100">
+                    Clear
+                </button>
+            </div>
+
+            <div id="statusArea" class="mt-6 hidden transition-all duration-300">
+                <div id="statusMessage" class="p-4 rounded-lg mb-2 shadow-sm"></div>
+                
+                <div class="bg-gray-900 rounded-lg p-3 border border-gray-700 shadow-inner">
+                    <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+                        <span class="text-gray-400 text-xs uppercase font-bold tracking-wider">System Log</span>
+                        <span id="logCount" class="text-gray-500 text-xs">Waiting...</span>
+                    </div>
+                    <div id="logDetails" class="text-xs text-green-400 font-mono h-32 overflow-y-auto whitespace-pre-wrap leading-relaxed"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. FIREBASE CONFIGURATION
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const db = firebase.firestore();
+        db.settings({ experimentalForceLongPolling: true });
+        const functions = firebase.functions();
+
+        // ==========================================
+        // 2. MACHINE CONFIGURATION
+        // ==========================================
+        const MACHINE_CONFIG = {
+            "MC2": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD E Exit End Total Alk.", "MD E Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Diss. Modal Vis BF", "Buffer Tank 5 Vis Temp", "Buffer Tank 6 Vis Temp", "Buffer Tank 7 Vis Temp", "Modal Rec14 BF", "Spinning Viscose Ball Fall", "Spinning Viscose Gamma no", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "MD 2 Vis Kw", "Flash Delta 6", "Flash Delta 7", "Vis Temp"],
+                auxiliary: ["MD 2 Spin bath Na2SO4", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC2", "HSB Temp", "HSB Acid", "HSB Zn", "HSB Salt"]
+            },
+            "MC3": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD C Exit End Total Alk.", "MD C Exit End Cell.", "MD D Exit End Total Alk.", "MD D Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp", "Buffer Tank 4 Vis Temp", "Rec Ball Fall", "Rec 1 KW", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Spinning Viscose KW", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5"],
+                auxiliary: ["MC 3 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC3"]
+            },
+            "MC5": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD F Alkali %", "MD F Cellulose %", "MD G Exit End Total Alk.", "MD G Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Churn Blender 1 Vis Temp", "Churn Blender 2 Vis Temp", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Spinning Viscose KW", "Rec Ball Fall", "REC. TK. N3 CKW", "Flash Delta 8", "Flash Delta 9", "Vis Temp"],
+                auxiliary: ["MC 5 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC5"]
+            },
+            "MC6": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD C Exit End Total Alk.", "MD C Exit End Cell.", "MD D Exit End Total Alk.", "MD D Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp", "Buffer Tank 4 Vis Temp", "Rec 1 KW", "Rec Ball Fall", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5", "Spinning Viscose KW"],
+                auxiliary: ["MC 6 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC6"]
+            }
+        };
+
+        // ==========================================
+        // 3. UI & FIXED LOGIC FUNCTIONS
+        // ==========================================
+
+        // --- 🟢 ฟังก์ชันใหม่: แก้ปัญหาวันที่อ่านผิด (DD-MM-YY Fixed) ---
+        function getProductionDate(dateString) {
+            if (!dateString) return null;
+            
+            // 1. ลองแยกระหว่าง วันที่ และ เวลา
+            // ตัวอย่าง: "01-04-25 7:00" -> แยกเป็น "01-04-25" กับ "7:00"
+            const parts = dateString.trim().split(/\s+/); 
+            const dPart = parts[0]; 
+            const tPart = parts[1] || "00:00"; 
+
+            // 2. แยกชิ้นส่วนวัน-เดือน-ปี (รองรับทั้งเครื่องหมาย - และ /)
+            const dComps = dPart.split(/[-/]/);
+            if (dComps.length !== 3) return null; // รูปแบบไม่ถูกต้อง
+
+            // บังคับอ่านตัวแรกเป็นวัน, ตัวสองเป็นเดือน, ตัวสามเป็นปี (DD-MM-YY)
+            let day = parseInt(dComps[0], 10);
+            let month = parseInt(dComps[1], 10) - 1; // เดือนในคอมเริ่มที่ 0
+            let year = parseInt(dComps[2], 10);
+
+            // แก้ไขปี 2 หลัก (25 -> 2025)
+            if (year < 100) year += 2000;
+
+            // 3. แยกเวลา
+            const tComps = tPart.split(':');
+            let hour = parseInt(tComps[0], 10);
+            let min = parseInt(tComps[1] || "0", 10);
+
+            // สร้างวันที่จริง
+            const dateObj = new Date(year, month, day, hour, min);
+            if (isNaN(dateObj.getTime())) return null;
+
+            // --- 4. Logic ตัดรอบ 07:00 AM ---
+            // ถ้าเวลา < 7 โมงเช้า ให้ถือเป็น Production Date ของ "เมื่อวาน"
+            if (hour < 7) {
+                dateObj.setDate(dateObj.getDate() - 1);
+            }
+
+            // ส่งคืน YYYY-MM-DD
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function clearForm() {
+            document.getElementById('pasteArea').value = '';
+            document.getElementById('statusArea').classList.add('hidden');
+            document.getElementById('logDetails').innerHTML = '';
+            document.getElementById('logCount').innerText = 'Waiting...';
+        }
+
+        function log(msg) {
+            const logDiv = document.getElementById('logDetails');
+            const newLine = document.createElement('div');
+            newLine.innerHTML = `> ${msg}`;
+            logDiv.appendChild(newLine);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function processData() {
+            const rawText = document.getElementById('pasteArea').value;
+            const machineId = document.getElementById('machineSelect').value;
+            const statusArea = document.getElementById('statusArea');
+            const statusMsg = document.getElementById('statusMessage');
+            const btn = document.getElementById('uploadBtn');
+
+            if (!machineId) { alert("กรุณาเลือก Machine ก่อนครับ"); return; }
+            if (!rawText.trim()) { alert("กรุณาวางข้อมูลก่อนครับ"); return; }
+
+            statusArea.classList.remove('hidden');
+            statusMsg.className = 'bg-blue-100 text-blue-800 p-4 rounded-lg flex items-center shadow-sm';
+            statusMsg.innerHTML = '<span class="animate-spin mr-3 text-xl">⏳</span> <div><span class="font-bold">Processing...</span><br><span class="text-xs">Parsing Dates (Fixed Logic) & Calculating Stats</span></div>';
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('logDetails').innerHTML = '';
+
+            try {
+                log(`Starting process for <b>${machineId}</b>...`);
+                
+                const rows = rawText.trim().split('\n').map(r => r.split('\t'));
+                const headers = rows[0].map(h => h.trim());
+                const dataRows = rows.slice(1);
+                
+                log(`Found ${dataRows.length} raw data rows.`);
+
+                const config = MACHINE_CONFIG[machineId];
+                const groupedData = {}; 
+                let parsedCount = 0;
+
+                dataRows.forEach((row, rIndex) => {
+                    let dateIdx = headers.findIndex(h => h.toLowerCase().includes('date') || h.toLowerCase().includes('time'));
+                    if (dateIdx === -1) dateIdx = 0; 
+                    
+                    const rawDateStr = row[dateIdx];
+                    if (!rawDateStr) return; 
+
+                    // --- เรียกใช้ Function ใหม่ที่นี่ ---
+                    const productionDate = getProductionDate(rawDateStr);
+                    
+                    if (!productionDate) {
+                        log(`Warning: Row ${rIndex + 1} has invalid date (${rawDateStr}). Skipped.`);
+                        return;
+                    }
+
+                    if (!groupedData[productionDate]) {
+                        groupedData[productionDate] = { viscose: {}, auxiliary: {}, spinning: {} };
+                    }
+
+                    ['viscose', 'auxiliary', 'spinning'].forEach(section => {
+                        config[section].forEach(paramName => {
+                            const targetIdx = headers.findIndex(h => {
+                                const cleanH = h.trim();
+                                return cleanH === paramName || 
+                                       cleanH === `${paramName} Value` || 
+                                       (cleanH.includes(paramName) && cleanH.includes('Value'));
+                            });
+
+                            if (targetIdx !== -1) {
+                                let val = parseFloat(row[targetIdx]);
+                                if (!isNaN(val)) {
+                                    if (!groupedData[productionDate][section][paramName]) {
+                                        groupedData[productionDate][section][paramName] = [];
+                                    }
+                                    groupedData[productionDate][section][paramName].push(val);
+                                }
+                            }
+                        });
+                    });
+                    parsedCount++;
+                });
+
+                const foundDates = Object.keys(groupedData);
+                log(`Successfully grouped data into <b>${foundDates.length} production dates</b>: [${foundDates.join(', ')}]`);
+                
+                if (foundDates.length === 0) {
+                    throw new Error("ไม่พบข้อมูลที่ตรงกับ Config หรือรูปแบบวันที่ผิดปกติ");
+                }
+
+                log("Sending payload to Cloud Function...");
+                
+                const processFunc = functions.httpsCallable('processInProcessData');
+                const result = await processFunc({ groupedData, machineId });
+
+                statusMsg.className = 'bg-green-100 text-green-800 p-4 rounded-lg shadow-sm border border-green-200';
+                statusMsg.innerHTML = `✅ <b>เสร็จสมบูรณ์!</b> ${result.data.message}`;
+                log("Upload & Calculation Complete. Database Updated.");
+                
+                document.getElementById('logCount').innerText = 'Done';
+
+            } catch (error) {
+                console.error(error);
+                statusMsg.className = 'bg-red-100 text-red-800 p-4 rounded-lg shadow-sm border border-red-200';
+                statusMsg.innerHTML = `❌ <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
+                log(`<span style="color:#ff6b6b">ERROR: ${error.message}</span>`);
+                document.getElementById('logCount').innerText = 'Error';
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    </script>
+</body>
+</html>

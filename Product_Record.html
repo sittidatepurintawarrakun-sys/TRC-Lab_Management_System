@@ -1,282 +1,146 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Quality Record - LabTrack</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Product Record - LabTrack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f0fdf4; } /* สีเขียวอ่อนสำหรับ Product */
-        #recordSidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
-        #recordSidebar.open { transform: translateX(0); }
-        .status-pass { background-color: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: bold; }
+        /* --- ใช้ Style เดิมจากหน้า Raw Material --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff;
+            color: #334155;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* ปุ่มย้อนกลับ */
+        .back-button {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            color: #475569;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s ease-in-out;
+        }
+        .back-button:hover { color: #1e40af; }
+
+        /* ส่วนหัวข้อ */
+        .header {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 40px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .header h1 {
+            color: #1e40af;
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .header p {
+            color: #475569;
+            font-size: 1.1rem;
+        }
+
+        /* กล่องรวมเมนู */
+        .report-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            max-width: 950px;
+        }
+
+        /* ตัวการ์ดเมนู */
+        .report-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            padding: 30px;
+            text-align: center;
+            width: 260px;
+            height: 200px;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07);
+        }
+
+        /* ไอคอน Emoji */
+        .report-card .icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            color: #3f51b5;
+        }
+
+        /* ข้อความบนการ์ด */
+        .report-card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+            color: #1e40af;
+        }
     </style>
 </head>
-<body>
-    <div class="flex h-screen overflow-hidden">
-        <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden">
-            <header class="bg-white shadow-sm z-10 p-4">
-                <div class="flex justify-between items-center max-w-7xl mx-auto w-full">
-                    <div class="flex items-center gap-4">
-                        <a href="index.html" class="text-slate-400 hover:text-green-600 transition"><i class="fas fa-arrow-left"></i> Back</a>
-                        <h1 class="text-2xl font-bold text-slate-800"><i class="fas fa-box-open text-green-600 mr-2"></i> Finished Product Record</h1>
-                    </div>
-                    <div class="flex gap-3">
-                        <button id="refreshBtn" class="text-slate-500 hover:text-green-600"><i class="fas fa-sync-alt"></i></button>
-                        <button id="newRecordBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm flex items-center gap-2">
-                            <i class="fas fa-plus"></i> New Lot
-                        </button>
-                    </div>
-                </div>
-            </header>
+<body class="antialiased">
 
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="max-w-7xl mx-auto">
-                    <div class="bg-white rounded-lg shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
-                        <div class="flex-1 min-w-[200px]">
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Search Lot No.</label>
-                            <input type="text" id="searchLot" placeholder="Enter Lot Number..." class="w-full p-2 border border-slate-300 rounded-md text-sm">
-                        </div>
-                        <div class="w-[200px]">
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Product Type</label>
-                            <select id="filterType" class="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                <option value="all">All Types</option>
-                                <option value="Rayon">Rayon</option>
-                                <option value="Modal">Modal</option>
-                                <option value="Non-Woven">Non-Woven</option>
-                            </select>
-                        </div>
-                        <div class="flex-1 text-right">
-                            <button id="exportBtn" class="text-green-600 border border-green-600 hover:bg-green-50 px-3 py-2 rounded text-sm font-semibold">
-                                <i class="fas fa-file-excel mr-1"></i> Export
-                            </button>
-                        </div>
-                    </div>
+    <a href="Lab_Record.html" class="back-button">
+        <span>&larr; Back to Lab Reports & Records Page</span>
+    </a>
 
-                    <div class="bg-white rounded-lg shadow border border-slate-200 overflow-hidden">
-                        <table class="min-w-full divide-y divide-slate-200">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Production Date</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Lot No. / Type</th>
-                                    <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">Key Properties</th>
-                                    <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tableBody" class="bg-white divide-y divide-slate-200">
-                                <tr><td colspan="4" class="text-center py-10 text-slate-400">Loading data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <aside id="recordSidebar" class="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white shadow-2xl z-50 flex flex-col">
-            <div class="p-5 border-b bg-green-50 flex justify-between items-center">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-800" id="sidebarTitle">Record Lot</h2>
-                    <p class="text-sm text-slate-500">Finished Good Lab Result</p>
-                </div>
-                <button id="closeSidebar" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <form id="recordForm">
-                    <div class="grid grid-cols-1 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Production Date</label>
-                            <input type="datetime-local" id="inp_date" class="w-full p-2 border rounded text-sm bg-white">
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1">Lot Number</label>
-                                <input type="text" id="inp_lot" class="w-full p-2 border rounded text-sm uppercase font-bold text-blue-900" placeholder="L-XXXX">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1">Product Type</label>
-                                <select id="inp_type" class="w-full p-2 border rounded bg-white text-sm">
-                                    <option value="Rayon">Rayon</option>
-                                    <option value="Modal">Modal</option>
-                                    <option value="Non-Woven">Non-Woven</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <h3 class="font-bold text-slate-700 mb-2 border-b pb-1">Lab Properties</h3>
-                        <div id="paramsContainer" class="space-y-3">
-                            <div class="flex justify-between items-center">
-                                <label class="text-sm text-slate-600">Tenacity (g/den)</label>
-                                <input type="number" step="0.01" id="inp_tenacity" class="w-24 border rounded p-1 text-right" placeholder="0.00">
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <label class="text-sm text-slate-600">Elongation (%)</label>
-                                <input type="number" step="0.01" id="inp_elongation" class="w-24 border rounded p-1 text-right" placeholder="0.00">
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <label class="text-sm text-slate-600">Denier</label>
-                                <input type="number" step="0.01" id="inp_denier" class="w-24 border rounded p-1 text-right" placeholder="0.00">
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <label class="text-sm text-slate-600">Moisture (%)</label>
-                                <input type="number" step="0.01" id="inp_moisture" class="w-24 border rounded p-1 text-right" placeholder="0.00">
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <label class="text-sm text-slate-600">Shirley / Strength</label>
-                                <input type="number" step="0.01" id="inp_shirley" class="w-24 border rounded p-1 text-right" placeholder="0.00">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Remarks</label>
-                        <textarea id="inp_remarks" rows="2" class="w-full p-2 border rounded text-sm" placeholder="Any quality notes..."></textarea>
-                    </div>
-                </form>
-            </div>
-
-            <div class="p-4 border-t bg-white flex justify-end gap-3">
-                <button id="cancelBtn" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
-                <button id="saveBtn" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold shadow">Save Lot</button>
-            </div>
-        </aside>
+    <div class="header">
+        <h1>Product</h1>
+        <p>Select a department section.</p>
     </div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-            authDomain: "lab-trc-management-system.firebaseapp.com",
-            projectId: "lab-trc-management-system",
-            storageBucket: "lab-trc-management-system.appspot.com",
-            messagingSenderId: "43919979160",
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        let currentDocId = null;
+    <div class="report-container">
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchRecords();
-            document.getElementById('newRecordBtn').addEventListener('click', () => openSidebar());
-            document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
-            document.getElementById('cancelBtn').addEventListener('click', closeSidebar);
-            document.getElementById('saveBtn').addEventListener('click', saveRecord);
-            document.getElementById('searchLot').addEventListener('input', fetchRecords);
-            document.getElementById('filterType').addEventListener('change', fetchRecords);
-            document.getElementById('refreshBtn').addEventListener('click', fetchRecords);
-        });
+        <a href="Fibre.html" class="report-card">
+            <div class="icon"> 👕 </div> 
+            <h2>Fibre</h2>
+        </a>
 
-        async function fetchRecords() {
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-10"><i class="fas fa-spinner fa-spin text-green-500"></i></td></tr>';
-            try {
-                let query = db.collection('product_tests').orderBy('timestamp', 'desc').limit(50);
-                const type = document.getElementById('filterType').value;
-                if(type !== 'all') query = query.where('productType', '==', type);
+        <a href="Salt.html" class="report-card">
+            <div class="icon"> 🧂 </div>
+            <h2>Na2SO4</h2>
+        </a>
 
-                const snapshot = await query.get();
-                const search = document.getElementById('searchLot').value.toUpperCase();
+        <a href="Sulphuric.html" class="report-card">
+            <div class="icon"> 🧪 </div>
+            <h2>H2SO4</h2>
+        </a>
 
-                let html = '';
-                if(snapshot.empty) html = '<tr><td colspan="4" class="text-center text-slate-400 py-10">No data found</td></tr>';
+        <a href="Product_ImportData.html" class="report-card">
+            <div class="icon"> 📥 </div>
+            <h2>Import Data</h2>
+        </a>
 
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    if(search && !d.lotNo.includes(search)) return;
+    </div>
 
-                    const date = new Date(d.timestamp).toLocaleString('th-TH');
-                    html += `
-                        <tr class="hover:bg-green-50 transition border-b border-slate-100 cursor-pointer" onclick='editRecord("${doc.id}", ${JSON.stringify(d)})'>
-                            <td class="px-6 py-4 text-sm text-slate-600">${date}</td>
-                            <td class="px-6 py-4">
-                                <div class="font-bold text-slate-800">${d.lotNo}</div>
-                                <div class="text-xs text-green-600 font-semibold">${d.productType}</div>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-center">
-                                <div class="flex justify-center gap-4 text-xs">
-                                    <div><span class="text-slate-400 block">Tenacity</span><b>${d.properties.tenacity || '-'}</b></div>
-                                    <div><span class="text-slate-400 block">Elong.</span><b>${d.properties.elongation || '-'}</b></div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <button class="text-red-400 hover:text-red-600" onclick="event.stopPropagation(); deleteRecord('${doc.id}')"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                tbody.innerHTML = html || '<tr><td colspan="4" class="text-center text-slate-400 py-10">No matching records</td></tr>';
-            } catch(e) { console.error(e); }
-        }
-
-        async function saveRecord() {
-            const btn = document.getElementById('saveBtn');
-            btn.disabled = true;
-            try {
-                const data = {
-                    timestamp: document.getElementById('inp_date').value,
-                    lotNo: document.getElementById('inp_lot').value.toUpperCase(),
-                    productType: document.getElementById('inp_type').value,
-                    properties: {
-                        tenacity: parseFloat(document.getElementById('inp_tenacity').value),
-                        elongation: parseFloat(document.getElementById('inp_elongation').value),
-                        denier: parseFloat(document.getElementById('inp_denier').value),
-                        moisture: parseFloat(document.getElementById('inp_moisture').value),
-                        shirley: parseFloat(document.getElementById('inp_shirley').value),
-                    },
-                    remarks: document.getElementById('inp_remarks').value,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                if(!data.lotNo || !data.timestamp) throw new Error("Lot No and Date are required");
-
-                if(currentDocId) {
-                    await db.collection('product_tests').doc(currentDocId).update(data);
-                } else {
-                    await db.collection('product_tests').add(data);
-                }
-                closeSidebar();
-                fetchRecords();
-            } catch(e) { alert(e.message); }
-            finally { btn.disabled = false; }
-        }
-
-        function openSidebar() {
-            currentDocId = null;
-            document.getElementById('recordForm').reset();
-            document.getElementById('sidebarTitle').innerText = "Record New Lot";
-            document.getElementById('inp_date').value = new Date().toISOString().slice(0, 16);
-            document.getElementById('recordSidebar').classList.add('open');
-        }
-        function closeSidebar() { document.getElementById('recordSidebar').classList.remove('open'); }
-
-        window.editRecord = (id, d) => {
-            currentDocId = id;
-            document.getElementById('sidebarTitle').innerText = "Edit Lot: " + d.lotNo;
-            document.getElementById('inp_date').value = d.timestamp;
-            document.getElementById('inp_lot').value = d.lotNo;
-            document.getElementById('inp_type').value = d.productType;
-            document.getElementById('inp_tenacity').value = d.properties.tenacity || '';
-            document.getElementById('inp_elongation').value = d.properties.elongation || '';
-            document.getElementById('inp_denier').value = d.properties.denier || '';
-            document.getElementById('inp_moisture').value = d.properties.moisture || '';
-            document.getElementById('inp_shirley').value = d.properties.shirley || '';
-            document.getElementById('inp_remarks').value = d.remarks || '';
-            document.getElementById('recordSidebar').classList.add('open');
-        };
-
-        window.deleteRecord = async (id) => {
-            if(confirm("Delete this lot record?")) {
-                await db.collection('product_tests').doc(id).delete();
-                fetchRecords();
-            }
-        };
-    </script>
 </body>
 </html>
