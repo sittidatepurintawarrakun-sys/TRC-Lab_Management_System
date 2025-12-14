@@ -639,20 +639,18 @@
 
         // --- 6. Chart Functions ---
         // ✅ [แก้ไข] คืนชีพ function updateCharts ที่หายไป พร้อม Logic ใหม่
-            function updateCharts(paramKey) {
+        function updateCharts(paramKey) {
             if (!summaryDataCache || !summaryDataCache.pulp_incoming) return;
-            const stats = summaryDataCache.pulp_incoming;
 
-            // 1. เรียงลำดับเดือนทั้งหมดที่มี
+            const stats = summaryDataCache.pulp_incoming;
             let allMonths = Object.keys(stats).sort();
 
-            // 2. ✅ ตัดเอาเฉพาะ 12 เดือนล่าสุด (The Rolling Window)
+            // ตัดเอาเฉพาะ 12 เดือนล่าสุด
             if (allMonths.length > 12) {
                 allMonths = allMonths.slice(allMonths.length - 12);
             }
-
-            // ใช้ตัวแปร allMonths แทน months เดิม
             const months = allMonths;
+
             const allSuppliers = new Set();
             months.forEach(m => { if (stats[m]) Object.keys(stats[m]).forEach(s => allSuppliers.add(s)); });
 
@@ -664,29 +662,42 @@
             allSuppliers.forEach(supplier => {
                 const dataPoints = months.map(month => {
                     const val = stats[month]?.[supplier]?.params?.[paramKey];
-                    // ✅ [แก้ไข] ใช้ค่า lab_avg จาก Backend ได้เลย (ไม่ต้องคำนวณเอง)
-                    return (val && val.lab_avg !== undefined) ? val.lab_avg : null;
+
+                    // ✅ FIX 1: ดึงค่า Lab
+                    let labValue = (val && val.lab_avg !== undefined) ? val.lab_avg : null;
+
+                    // ✅ FIX 2: ป้องกันกราฟตกเป็น 0 ถ้าค่าเป็น 0 (สมมติว่า Lab ยังไม่ออก) ให้เปลี่ยนเป็น null
+                    // (ใช้ parseFloat เพื่อความชัวร์ เผื่อมาเป็น string "0")
+                    if (labValue !== null && parseFloat(labValue) === 0) {
+                        labValue = null;
+                    }
+
+                    return labValue;
                 });
+
+                // ตรวจสอบว่าใน dataPoints มีตัวเลขจริงๆ อย่างน้อย 1 ตัวไหม (ถ้าเป็น null หมด ไม่ต้องพลอต)
                 if (dataPoints.some(v => v !== null)) {
                     datasets.push({
                         label: supplier,
                         data: dataPoints,
                         borderColor: SUPPLIER_COLORS[supplier] || '#666',
                         backgroundColor: SUPPLIER_COLORS[supplier] || '#666',
-                        tension: 0.3, spanGaps: true
+                        tension: 0.3,
+                        spanGaps: true // true = ลากเส้นเชื่อมข้ามเดือนที่ข้อมูลหาย, false = เส้นขาดเมื่อไม่มีข้อมูล
                     });
                 }
             });
 
-            // Limits
+            // Limits Logic (เหมือนเดิม)
             const showMax = document.getElementById('toggleMaxLimit').checked;
             const showMin = document.getElementById('toggleMinLimit').checked;
             const createLimitDataset = (val, label, color) => ({
                 label: `${label} (${val})`,
                 data: new Array(months.length).fill(val),
                 borderColor: color, borderWidth: 2, borderDash: [6, 6],
-                pointRadius: 4, pointBackgroundColor: 'white', fill: false, order: 0
+                pointRadius: 0, pointHoverRadius: 0, fill: false, order: 0 // ปรับ pointRadius เป็น 0 ให้เส้น Limit ดูสะอาดตา
             });
+
             if (showMax && currentConfig?.limitMax) datasets.push(createLimitDataset(currentConfig.limitMax, 'Max', '#ef4444'));
             if (showMin && currentConfig?.limitMin) datasets.push(createLimitDataset(currentConfig.limitMin, 'Min', '#ef4444'));
 
@@ -698,16 +709,16 @@
                 { id: 'chart_AV_NACKAWIC', name: 'AV NACKAWIC' },
                 { id: 'chart_AV_CELL', name: 'AV CELL' }
             ];
+
             targets.forEach(target => {
                 renderSmallComparisonChart(target.id, target.name, months, stats, paramKey, paramLabel);
             });
 
-            // Other Supplier Logic
+            // Other Supplier Logic (เหมือนเดิม)
             const fixedNames = targets.map(t => t.name);
             const otherSuppliers = Array.from(allSuppliers).filter(s => !fixedNames.includes(s));
             const cardOther = document.getElementById('card_OTHER');
             const selectOther = document.getElementById('select_OTHER');
-            const chartOtherId = 'chart_OTHER';
 
             if (otherSuppliers.length > 0) {
                 cardOther.style.display = 'block';
@@ -719,10 +730,10 @@
                         selectOther.appendChild(opt);
                     });
                     selectOther.onchange = () => {
-                        renderSmallComparisonChart(chartOtherId, selectOther.value, months, stats, paramKey, paramLabel);
+                        renderSmallComparisonChart('chart_OTHER', selectOther.value, months, stats, paramKey, paramLabel);
                     };
                 }
-                renderSmallComparisonChart(chartOtherId, selectOther.value || otherSuppliers[0], months, stats, paramKey, paramLabel);
+                renderSmallComparisonChart('chart_OTHER', selectOther.value || otherSuppliers[0], months, stats, paramKey, paramLabel);
             } else {
                 cardOther.style.display = 'none';
             }
@@ -739,18 +750,41 @@
 
             months.forEach(month => {
                 const val = stats[month]?.[supplierName]?.params?.[paramKey];
-                // ใช้ค่า Avg จาก Backend
-                const labVal = (val && val.lab_avg !== undefined) ? val.lab_avg : null;
-                const coaVal = (val && val.coa_avg !== undefined) ? val.coa_avg : null;
+
+                // ✅ FIX: Logic เดียวกัน ถ้าเป็น 0 ให้เป็น null
+                let labVal = (val && val.lab_avg !== undefined) ? val.lab_avg : null;
+                if (labVal !== null && parseFloat(labVal) === 0) labVal = null;
+
+                let coaVal = (val && val.coa_avg !== undefined) ? val.coa_avg : null;
+                if (coaVal !== null && parseFloat(coaVal) === 0) coaVal = null;
 
                 labData.push(labVal);
                 coaData.push(coaVal);
+
                 if (labVal !== null || coaVal !== null) hasData = true;
             });
 
+            // เพิ่มเทคนิค: ถ้า LabData เดือนสุดท้ายเป็น Null (ยังไม่ทำ) แต่เดือนก่อนหน้ามีค่า
+            // เส้นกราฟจะหยุดแค่เดือนก่อนหน้า ไม่ทิ่มลง 0 ทำให้ดู Trend ได้ง่ายขึ้น
+
             renderChart(canvasId, 'line', months, [
-                { label: 'COA', data: coaData, borderColor: '#94a3b8', borderDash: [4, 4], tension: 0.1, pointRadius: 2 },
-                { label: 'Lab', data: labData, borderColor: SUPPLIER_COLORS[supplierName] || '#3b82f6', tension: 0.1, pointRadius: 3 }
+                { 
+                    label: 'COA', 
+                    data: coaData, 
+                    borderColor: '#94a3b8', 
+                    borderDash: [4, 4], 
+                    tension: 0.1, 
+                    pointRadius: 2,
+                    spanGaps: true // อนุญาตให้ลากเส้นข้ามจุดที่ว่าง
+                },
+                { 
+                    label: 'Lab', 
+                    data: labData, 
+                    borderColor: SUPPLIER_COLORS[supplierName] || '#3b82f6', 
+                    tension: 0.1, 
+                    pointRadius: 3,
+                    spanGaps: true // อนุญาตให้ลากเส้นข้ามจุดที่ว่าง
+                }
             ], hasData ? paramLabel : `${paramLabel} (No Data)`);
         }
 

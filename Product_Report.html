@@ -3,413 +3,495 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRC Smart Dashboard - Pulp & Fibre</title>
+    <title>TRC Command Center v2 - Integrated Line View</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
 
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .chart-container { position: relative; height: 350px; width: 100%; }
-        .modal { transition: opacity 0.25s ease; }
+        .card-header { @apply flex justify-between items-center mb-3 pb-2 border-b border-slate-100; }
+        .kpi-value { @apply text-2xl font-bold text-slate-800; }
+        .kpi-label { @apply text-xs text-slate-500 uppercase tracking-wider font-semibold; }
+        .trend-up { @apply text-emerald-500 text-xs; }
+        .trend-down { @apply text-rose-500 text-xs; }
+        
+        /* Chat UI */
+        .chat-bubble-ai { background-color: #ffffff; border: 1px solid #e2e8f0; color: #1e293b; border-radius: 12px 12px 12px 0; }
+        .chat-bubble-user { background-color: #4f46e5; color: white; border-radius: 12px 12px 0 12px; }
+        
+        /* Layout Utilities */
+        .grid-dashboard { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; }
+        .section-title { font-size: 0.9rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
     </style>
 </head>
-<body class="text-slate-800">
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <nav class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <span class="text-2xl font-bold tracking-wider text-emerald-400">TRC <span class="text-white font-light">INTELLIGENCE</span></span>
-                <span class="bg-slate-700 px-3 py-1 rounded text-xs text-slate-300">Live Dashboard</span>
+    <header class="bg-slate-900 text-white p-3 shadow-md z-30 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded flex items-center justify-center font-bold text-xl shadow-lg">
+                TRC
             </div>
-            <div class="flex gap-4 items-center">
-                <select id="machineSelect" class="bg-slate-800 text-white border border-slate-600 rounded px-3 py-1 focus:outline-none focus:border-emerald-500">
-                    <option value="MC2">Machine 2 (Modal)</option>
-                    <option value="MC3">Machine 3 (Mixed)</option>
-                    <option value="MC5">Machine 5 (Mixed)</option>
-                    <option value="MC6">Machine 6 (Mixed)</option>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide">Production Command Center v2</h1>
+                <p class="text-[10px] text-slate-400">Holistic View: Pulp • Process • Fibre</p>
+            </div>
+        </div>
+
+        <div class="flex gap-4 bg-slate-800 p-2 rounded-lg items-center border border-slate-700">
+            <div class="flex flex-col">
+                <label class="text-[10px] text-slate-400 font-bold uppercase">Select Line (MC)</label>
+                <select id="mcFilter" class="bg-slate-700 text-white text-sm font-bold border-none outline-none rounded px-2 py-1 w-40 hover:bg-slate-600 transition" onchange="updateDashboard()">
+                    <option value="MC2">MC2 (Modal)</option>
+                    <option value="MC3">MC3 (Grey/Fine)</option>
+                    <option value="MC5">MC5 (Non-Woven)</option>
+                    <option value="MC6">MC6 (Non-Woven)</option>
                 </select>
-                <button onclick="loadData()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-1 rounded font-bold transition">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </button>
             </div>
-        </div>
-    </nav>
-
-    <div class="container mx-auto p-6">
-        
-        <div class="flex justify-center mb-8">
-            <div class="bg-white p-1 rounded-full shadow-md inline-flex">
-                <button onclick="switchMode('process')" id="btnProcess" class="px-6 py-2 rounded-full font-bold transition bg-emerald-100 text-emerald-800">
-                    ⚙️ Process Control
-                </button>
-                <button onclick="switchMode('product')" id="btnProduct" class="px-6 py-2 rounded-full font-bold transition text-slate-500 hover:bg-slate-50">
-                    📦 Product Quality
-                </button>
+            <div class="h-8 w-px bg-slate-600 mx-2"></div>
+            <div class="flex items-center gap-2">
+                <input type="date" id="startDate" class="bg-slate-700 text-white text-xs px-2 py-1 rounded outline-none">
+                <span class="text-slate-500">-</span>
+                <input type="date" id="endDate" class="bg-slate-700 text-white text-xs px-2 py-1 rounded outline-none">
             </div>
+            <button onclick="updateDashboard()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded text-sm font-bold transition shadow-lg border border-indigo-400">
+                <i class="fas fa-sync-alt animate-pulse-slow"></i> Refresh
+            </button>
         </div>
+    </header>
 
-        <div id="kpiArea" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="card p-6 border-l-4 border-blue-500">
-                <p class="text-slate-500 text-sm">Waiting for data...</p>
+    <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100">
+
+        <section>
+            <div class="section-title text-orange-700">
+                <i class="fas fa-tree"></i> 1. Raw Material Input (Common Pulp Mix)
             </div>
-        </div>
-
-        <div class="card p-6 mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-800" id="mainChartTitle">Monthly Performance</h2>
-                    <p class="text-sm text-slate-400">Click on any bar to drill down to hourly data.</p>
+            <div class="grid grid-cols-12 gap-4">
+                <div class="col-span-3 bg-white p-4 rounded-lg shadow-sm border-l-4 border-orange-400">
+                    <h4 class="text-xs font-bold text-slate-500 mb-2">SUPPLIER MIX (Last 30 Days)</h4>
+                    <div class="h-32 w-full relative">
+                        <canvas id="pulpMixChart"></canvas>
+                    </div>
                 </div>
-                <select id="paramSelect" onchange="updateMainChart()" class="border rounded px-3 py-2 bg-slate-50">
-                    </select>
+
+                <div class="col-span-9 grid grid-cols-4 gap-4">
+
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="kpi-label">Alpha Cellulose</div>
+                        <div class="flex justify-between items-end">
+                            <div class="kpi-value text-orange-600">94.2%</div>
+                            <div class="trend-up"><i class="fas fa-arrow-up"></i> 0.1%</div>
+                        </div>
+                        <div class="h-16 w-full mt-2 relative">
+                            <canvas id="chartPulpAlpha"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="kpi-label">Viscosity (cP)</div>
+                        <div class="flex justify-between items-end">
+                            <div class="kpi-value text-slate-700">18.5</div>
+                            <div class="text-slate-400 text-xs">Target: 18-19</div>
+                        </div>
+                        <div class="h-16 w-full mt-2 relative">
+                            <canvas id="chartPulpVisco"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-red-100">
+                        <div class="kpi-label text-red-500"><i class="fas fa-exclamation-triangle"></i> Iron (Fe) ppm</div>
+                        <div class="flex justify-between items-end">
+                            <div class="kpi-value text-red-600">5.2</div>
+                            <div class="trend-up text-red-500">High</div>
+                        </div>
+                        <div class="h-16 w-full mt-2 relative">
+                            <canvas id="chartPulpFe"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="kpi-label">Silica (SiO2) ppm</div>
+                        <div class="flex justify-between items-end">
+                            <div class="kpi-value text-slate-700">45</div>
+                            <div class="trend-down"><i class="fas fa-arrow-down"></i> Stable</div>
+                        </div>
+                        <div class="h-16 w-full mt-2 relative">
+                            <canvas id="chartPulpSilica"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="chart-container">
-                <canvas id="mainChart"></canvas>
-            </div>
+        </section>
+
+        <div class="grid grid-cols-2 gap-6">
+            
+            <section class="flex flex-col h-full">
+                <div class="section-title text-blue-700 flex justify-between">
+                    <span><i class="fas fa-cogs"></i> 2. Process Control (<span id="lblMcProcess">MC2</span>)</span>
+                    <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border">Impacts Quality Directly</span>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-blue-500 flex-1 space-y-4">
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc1" onchange="updateSubChart('proc1')">
+                                    <option value="Ball Fall">Viscose Ball Fall (sec)</option>
+                                    <option value="Ripening Index">Ripening Index (Hot)</option>
+                                    <option value="Viscose Temp">Viscose Temp (°C)</option>
+                                </select>
+                                <span class="text-[10px] text-slate-400">Target: 45-50</span>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;">
+                                <canvas id="chartProc1"></canvas> 
+                            </div>
+                        </div>
+
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc2">
+                                    <option value="Acid">Spin Bath Acid (g/l)</option>
+                                    <option value="Temp">Spin Bath Temp (°C)</option>
+                                </select>
+                                <span class="text-[10px] text-slate-400">Target: 125 ±2</span>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProc2"></canvas></div>
+                        </div>
+
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc3">
+                                    <option value="Zinc">Spin Bath Zinc (g/l)</option>
+                                    <option value="Sulphate">Sodium Sulphate</option>
+                                </select>
+                                <span class="text-[10px] text-slate-400">Target: High Precision</span>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProc3"></canvas></div>
+                        </div>
+
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc4">
+                                    <option value="Alk">Steep Lye Alkali %</option>
+                                    <option value="Hemi">Hemi-Cellulose %</option>
+                                </select>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProc4"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flex flex-col h-full">
+                <div class="section-title text-emerald-700 flex justify-between">
+                    <span><i class="fas fa-tags"></i> 3. Product Quality (<span id="lblMcProduct">MC2</span>)</span>
+                    <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border">Result of Process</span>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-emerald-500 flex-1 space-y-4">
+                    
+                    <div class="flex gap-4 items-center bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                        <div class="w-1/3 h-24 relative">
+                            <canvas id="gradeChart"></canvas> </div>
+                        <div class="w-2/3 grid grid-cols-2 gap-2 text-xs">
+                            <div><span class="font-bold text-emerald-700">% Grade E (Export):</span> <span id="valGradeE">92%</span></div>
+                            <div><span class="font-bold text-blue-600">% Grade ST (Standard):</span> <span id="valGradeST">5%</span></div>
+                            <div><span class="font-bold text-orange-500">% Grade I (Inferior):</span> <span id="valGradeI">2%</span></div>
+                            <div><span class="font-bold text-red-500">% Grade O (Off):</span> <span id="valGradeO">1%</span></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1">
+                                    <option value="Tenacity">Tenacity (Cond.)</option>
+                                    <option value="Elongation">Elongation (%)</option>
+                                </select>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd1"></canvas></div>
+                        </div>
+
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1">
+                                    <option value="Whiteness">Whiteness (%MgO)</option>
+                                    <option value="Brightness">Brightness</option>
+                                </select>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd2"></canvas></div>
+                        </div>
+
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1">
+                                    <option value="Splinter">Splinter (Total)</option>
+                                    <option value="Milky">Milky Fibres</option>
+                                </select>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd3"></canvas></div>
+                        </div>
+
+                        <div class="border rounded p-2">
+                            <div class="flex justify-between mb-1">
+                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1">
+                                    <option value="Denier">Titer (Denier)</option>
+                                    <option value="Length">Cut Length (mm)</option>
+                                </select>
+                            </div>
+                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd4"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
 
-        <div id="drillDownSection" class="hidden card p-6 border border-emerald-200 bg-emerald-50">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-emerald-800 flex items-center gap-2">
-                    <span>🔍 Detailed Analysis:</span>
-                    <span id="drillDate" class="underline">...</span>
-                </h3>
-                <button onclick="closeDrillDown()" class="text-slate-400 hover:text-slate-600">✕ Close</button>
+        <section>
+            <div class="section-title text-indigo-700">
+                <i class="fas fa-project-diagram"></i> 4. Correlation Analysis (Root Cause Finder)
             </div>
-            <div class="chart-container" style="height: 300px;">
-                <canvas id="drillChart"></canvas>
+            <div class="bg-white p-4 rounded-xl shadow-md border border-indigo-100">
+                <div class="flex gap-2 mb-4 bg-slate-50 p-2 rounded items-center">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Y1-Axis (Process):</span>
+                    <select id="corrY1" class="text-xs border rounded p-1"><option>Spin Bath Acid</option><option>Viscose Ball Fall</option><option>Zn Concentration</option></select>
+                    <span class="text-xs font-bold text-slate-500 uppercase ml-4">vs</span>
+                    <span class="text-xs font-bold text-slate-500 uppercase ml-2">Y2-Axis (Product/Pulp):</span>
+                    <select id="corrY2" class="text-xs border rounded p-1"><option>Tenacity</option><option>Whiteness</option><option>Pulp Iron (Fe)</option></select>
+                    <button class="ml-auto bg-indigo-600 text-white text-xs px-3 py-1 rounded hover:bg-indigo-500" onclick="updateCorrelation()">Plot Correlation</button>
+                </div>
+                <div class="h-64">
+                    <canvas id="correlationChart"></canvas>
+                </div>
             </div>
-            <div class="mt-4 text-xs text-slate-500 bg-white p-3 rounded border">
-                <strong>💡 Insight:</strong> This data is pulled directly from the raw logs (`_raw_logs`) for precise hourly troubleshooting.
+        </section>
+
+    </div>
+
+    <div class="fixed bottom-6 right-6 z-50">
+        <div id="chatWindow" class="hidden bg-white w-96 h-[450px] rounded-xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-700 to-purple-700 p-3 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-brain"></i> <span class="font-bold text-sm">TRC Pulp&Fibre Expert AI</span>
+                </div>
+                <button onclick="toggleChat()" class="hover:text-red-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="chatMessages" class="flex-1 bg-slate-50 p-3 overflow-y-auto space-y-3 text-sm">
+                <div class="chat-bubble-ai p-3 shadow-sm max-w-[90%]">
+                    สวัสดีครับ ผมพร้อมช่วยวิเคราะห์ข้อมูล Pulp & Fibre ครับ 🏭 <br>
+                    ขณะนี้คุณกำลังดูข้อมูลของ <b><span id="aiMcContext">MC2</span></b>
+                    <br><br>
+                    <i>ลองถามเช่น:</i> "ทำไม Tenacity ของ MC2 ถึงตกในช่วง 3 วันที่ผ่านมา?" หรือ "ค่า Fe ใน Pulp มีผลต่อ Whiteness ไหม?"
+                </div>
+            </div>
+            <div class="p-2 border-t flex gap-2 bg-white">
+                <input type="text" id="chatInput" class="flex-1 bg-slate-100 rounded-full px-3 py-1.5 text-sm outline-none border focus:border-indigo-500" placeholder="Ask AI..." onkeypress="handleEnter(event)">
+                <button onclick="sendChatMessage()" class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-indigo-700"><i class="fas fa-arrow-right"></i></button>
             </div>
         </div>
+        <button onclick="toggleChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl transition transform hover:scale-110">
+            <i class="fas fa-comment-dots"></i>
+        </button>
     </div>
 
     <script>
-        // --- 1. FIREBASE SETUP ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-            authDomain: "lab-trc-management-system.firebaseapp.com",
-            projectId: "lab-trc-management-system",
-            storageBucket: "lab-trc-management-system.appspot.com",
-            messagingSenderId: "43919979160",
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        db.settings({ experimentalForceLongPolling: true });
+        // --- CONFIG & STATE ---
+        const firebaseConfig = { /* Firebase Config Here */ };
+        // firebase.initializeApp(firebaseConfig); 
+        
+        let currentMC = 'MC2';
+        let chartInstances = {}; // Store charts to update them
 
-        // --- 2. GLOBAL STATE ---
-        let currentMode = 'process'; // 'process' or 'product'
-        let currentData = []; // Store fetched stats
-        let mainChartInstance = null;
-        let drillChartInstance = null;
-
-        // Config Params to Show (Dashboard Focus)
-        const PROCESS_PARAMS = ["Steep Lye Alkali %", "Steep Lye Temp.", "Spinning Viscose Ball Fall", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %"];
-        const PRODUCT_PARAMS = ["Whiteness", "Brightness", "Tenacity Cond.", "Elongation Cond", "Whitness Grade"]; // Whitness Grade is special
-
-        // --- 3. CORE FUNCTIONS ---
-
-        function switchMode(mode) {
-            currentMode = mode;
-            // UI Toggle
-            document.getElementById('btnProcess').className = mode === 'process' 
-                ? "px-6 py-2 rounded-full font-bold transition bg-emerald-100 text-emerald-800"
-                : "px-6 py-2 rounded-full font-bold transition text-slate-500 hover:bg-slate-50";
-            
-            document.getElementById('btnProduct').className = mode === 'product'
-                ? "px-6 py-2 rounded-full font-bold transition bg-blue-100 text-blue-800"
-                : "px-6 py-2 rounded-full font-bold transition text-slate-500 hover:bg-slate-50";
-
-            // Update Dropdown Options
-            const paramSelect = document.getElementById('paramSelect');
-            paramSelect.innerHTML = "";
-            const list = mode === 'process' ? PROCESS_PARAMS : PRODUCT_PARAMS;
-            
-            list.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p;
-                opt.innerText = p;
-                paramSelect.appendChild(opt);
-            });
-
-            loadData(); // Fetch new data
-        }
-
-        async function loadData() {
-            const machineId = document.getElementById('machineSelect').value;
-            const statusTitle = document.getElementById('mainChartTitle');
-            statusTitle.innerText = `Loading ${currentMode} data for ${machineId}...`;
-
-            try {
-                // Determine Collection based on Mode
-                // For simplified dashboard, we default to Viscose for Process, and Detect Type for Product
-                let collection = "";
-                if (currentMode === 'process') {
-                    collection = "stats_Viscose"; // Default to Viscose first
-                } else {
-                    // For Product, we need to know type. For Dashboard demo, let's pull 'Modal' or 'Grey' based on Machine
-                    // In real app, you might query all 3 and merge.
-                    collection = machineId === 'MC2' ? "stats_Product_Modal" : "stats_Product_Grey"; 
-                    // Note: For MC3/5/6 mixed, you might want to fetch both and merge, but keeping it simple for now.
-                }
-
-                // Query last 30 days
-                // Requires Index: machineId ASC, date ASC
-                const snapshot = await db.collection(collection)
-                    .where('machineId', '==', machineId)
-                    .orderBy('date', 'asc')
-                    .limitToLast(30)
-                    .get();
-
-                currentData = [];
-                snapshot.forEach(doc => {
-                    currentData.push(doc.data());
-                });
-
-                renderKPIs();
-                updateMainChart();
-                statusTitle.innerText = `${currentMode === 'process' ? 'In-Process' : 'Product Quality'} Trends (${machineId})`;
-
-            } catch (error) {
-                console.error(error);
-                statusTitle.innerText = "Error loading data. Check Console.";
-                alert("Error: " + error.message + "\n(Please ensure Indexes are created in Firebase Console)");
+        // --- MOCK DATA GENERATOR (Simulating Real Pulp & Fibre Physics) ---
+        function generateData(days, type, param) {
+            let data = [];
+            let val = 0;
+            for (let i = 0; i < days; i++) {
+                // Logic to simulate specific behaviors
+                if (type === 'pulp' && param === 'Fe') val = 3 + Math.random() * 5; // Fe unstable
+                else if (type === 'process' && param === 'Acid') val = 125 + (Math.random() - 0.5) * 5; 
+                else if (type === 'product' && param === 'Tenacity') val = 2.5 + (Math.random() - 0.5) * 0.2;
+                else val = 50 + Math.random() * 20; // Generic
+                data.push(val);
             }
+            return data;
         }
 
-        function renderKPIs() {
-            const kpiArea = document.getElementById('kpiArea');
-            kpiArea.innerHTML = "";
-
-            if (currentData.length === 0) {
-                kpiArea.innerHTML = `<div class="col-span-4 text-center text-slate-400">No data found for this period.</div>`;
-                return;
-            }
-
-            // Calculate Last Day Stats
-            const lastRecord = currentData[currentData.length - 1];
-            const stats = lastRecord.stats || {};
-            const date = lastRecord.date;
-
-            // Define which KPIs to show on top cards
-            const kpiParams = currentMode === 'process' 
-                ? ["Steep Lye Alkali %", "Spinning Viscose Ball Fall", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %"]
-                : ["Whiteness", "Tenacity Cond.", "Elongation Cond", "Over All Grade"];
-
-            kpiParams.forEach(param => {
-                const valObj = stats[param];
-                let displayVal = "-";
-                let subText = "No Data";
-                let colorClass = "border-slate-300";
-
-                if (valObj) {
-                    if (valObj.type === 'numeric' || valObj.avg !== undefined) {
-                        displayVal = valObj.avg.toFixed(2);
-                        subText = `SD: ${valObj.sd} | CV: ${valObj.cv}%`;
-                        
-                        // Simple Threshold Logic (For Demo)
-                        // In real app, check against LSL/USL
-                        if (valObj.cv > 5) colorClass = "border-red-500"; // High Variation
-                        else colorClass = "border-emerald-500"; // Stable
-                    } 
-                    else if (valObj.type === 'categorical' || valObj.percentages) {
-                        // For Grades
-                        displayVal = (valObj.percentages['E'] || 0) + "%";
-                        subText = "Grade E Ratio";
-                        if ((valObj.percentages['E'] || 0) < 90) colorClass = "border-yellow-500";
-                        else colorClass = "border-emerald-500";
-                    }
-                }
-
-                kpiArea.innerHTML += `
-                    <div class="card p-5 border-l-4 ${colorClass} hover:shadow-lg transition">
-                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wide">${param}</h4>
-                        <div class="text-3xl font-bold text-slate-800 mt-1">${displayVal}</div>
-                        <div class="text-xs text-slate-500 mt-2">${subText}</div>
-                        <div class="text-[10px] text-right text-slate-300 mt-1">${date}</div>
-                    </div>
-                `;
-            });
-        }
-
-        function updateMainChart() {
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            const param = document.getElementById('paramSelect').value;
+        // --- CHART RENDERING HELPERS ---
+        function createLineChart(canvasId, label, color, dataPoints) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
             
-            // Prepare Data
-            const labels = currentData.map(d => formatDate(d.date));
-            const dataPoints = [];
-            const isGrade = param.includes("Grade");
-
-            currentData.forEach(d => {
-                const s = d.stats && d.stats[param];
-                if (s) {
-                    if (isGrade) {
-                        dataPoints.push(s.percentages ? (s.percentages['E'] || 0) : 0);
-                    } else {
-                        dataPoints.push(s.avg);
-                    }
-                } else {
-                    dataPoints.push(null);
-                }
-            });
-
-            // Destroy old chart
-            if (mainChartInstance) mainChartInstance.destroy();
-
-            // Create New Chart
-            mainChartInstance = new Chart(ctx, {
+            chartInstances[canvasId] = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: Array.from({length: 30}, (_, i) => `Day ${i+1}`),
                     datasets: [{
-                        label: isGrade ? '% Grade E' : `Avg ${param}`,
+                        label: label,
                         data: dataPoints,
-                        borderColor: isGrade ? '#3b82f6' : '#10b981',
-                        backgroundColor: isGrade ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                        borderColor: color,
+                        backgroundColor: color + '10', // Transparent fill
                         borderWidth: 2,
-                        tension: 0.3,
+                        pointRadius: 0, // Clean look
                         fill: true,
-                        pointRadius: 4,
-                        pointHoverRadius: 7
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    onClick: (evt, activeElements) => {
-                        if (activeElements.length > 0) {
-                            const index = activeElements[0].index;
-                            const dateStr = currentData[index].date; // YYYY-MM-DD
-                            handleChartClick(dateStr, param);
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.raw}`;
-                                },
-                                footer: function(tooltipItems) {
-                                    return "👇 Click to see Hourly Data";
-                                }
-                            }
-                        }
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { display: false }, 
+                        y: { display: true, grid: { display: false } } 
                     }
                 }
             });
         }
 
-        // --- 4. DRILL DOWN LOGIC (The Magic Part) ---
-
-        async function handleChartClick(dateStr, param) {
-            const machineId = document.getElementById('machineSelect').value;
-            const drillSec = document.getElementById('drillDownSection');
-            const drillTitle = document.getElementById('drillDate');
+        function createDoughnut(canvasId, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
             
-            drillSec.classList.remove('hidden');
-            drillTitle.innerText = `${dateStr} (${param})`;
-
-            // Decide collection for Raw Logs
-            // Note: We used 'process_raw_logs' and 'product_raw_logs'
-            const rawCollection = currentMode === 'process' ? 'process_raw_logs' : 'product_raw_logs';
-            const docId = `${machineId}_${dateStr}`;
-
-            try {
-                const doc = await db.collection(rawCollection).doc(docId).get();
-                if (!doc.exists) {
-                    alert("No hourly data available for this date.");
-                    return;
-                }
-
-                const rawData = doc.data();
-                // rawData structure: { data: { Viscose: { Param: [v1, v2...] }, ... } } (Process)
-                // rawData structure: { data: { Modal: { Param: [v1, v2...] } } } (Product)
-
-                let values = [];
-                // Flatten data to find the param array
-                // A bit tricky because structure varies, let's search for the param key
-                const allSections = rawData.data; 
-                Object.values(allSections).forEach(sectionObj => {
-                    if (sectionObj[param]) {
-                        values = sectionObj[param];
-                    }
-                });
-
-                if (values.length === 0) {
-                    alert(`Parameter '${param}' not found in raw logs.`);
-                    return;
-                }
-
-                renderDrillChart(values, param);
-                
-                // Scroll to drill down section
-                drillSec.scrollIntoView({ behavior: 'smooth' });
-
-            } catch (e) {
-                console.error(e);
-                alert("Error fetching drill down data.");
-            }
-        }
-
-        function renderDrillChart(values, paramLabel) {
-            const ctx = document.getElementById('drillChart').getContext('2d');
-            
-            // Generate dummy labels if time is not strictly mapped in array (Simplification)
-            // In a perfect world, we'd map value[i] to specific time. 
-            // Here we assume sequential data points = roughly time progression.
-            const labels = values.map((_, i) => `Sample ${i+1}`);
-
-            // Filter out non-numeric for graphing (if looking at grades, we can't line chart easily)
-            // If Grade, maybe map E=4, ST=3... or just skip.
-            // Let's assume numeric for chart drilldown for now.
-            const numericValues = values.map(v => typeof v === 'number' ? v : null);
-
-            if (drillChartInstance) drillChartInstance.destroy();
-
-            drillChartInstance = new Chart(ctx, {
-                type: 'bar', // Bar chart for hourly samples is often better
+            chartInstances[canvasId] = new Chart(ctx, {
+                type: 'doughnut',
                 data: {
-                    labels: labels,
+                    labels: ['Grade E', 'Grade ST', 'Grade I', 'Grade O'],
                     datasets: [{
-                        label: `Hourly Values: ${paramLabel}`,
-                        data: numericValues,
-                        backgroundColor: '#f59e0b',
-                        borderColor: '#d97706',
-                        borderWidth: 1
+                        data: data,
+                        backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#ef4444'],
+                        borderWidth: 0
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: 'Raw Data Variation (Daily Samples)' }
+                    cutout: '70%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- DASHBOARD UPDATE LOGIC ---
+        function updateDashboard() {
+            currentMC = document.getElementById('mcFilter').value;
+            
+            // Update Text Labels
+            document.getElementById('lblMcProcess').innerText = currentMC;
+            document.getElementById('lblMcProduct').innerText = currentMC;
+            document.getElementById('aiMcContext').innerText = currentMC;
+
+            // 1. UPDATE PULP (Common) - Fixed supplier mix for demo
+            const ctxMix = document.getElementById('pulpMixChart').getContext('2d');
+            if(chartInstances['pulpMix']) chartInstances['pulpMix'].destroy();
+            chartInstances['pulpMix'] = new Chart(ctxMix, {
+                type: 'pie',
+                data: {
+                    labels: ['Arauco', 'AVN', 'AVC', 'Phoenix'],
+                    datasets: [{ data: [40, 30, 20, 10], backgroundColor: ['#fdba74', '#fb923c', '#f97316', '#ea580c'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 10} } } } }
+            });
+
+            // Pulp Sparklines
+            createLineChart('chartPulpAlpha', 'Alpha %', '#ea580c', generateData(30, 'pulp', 'Alpha'));
+            createLineChart('chartPulpVisco', 'Viscosity', '#334155', generateData(30, 'pulp', 'Visco'));
+            createLineChart('chartPulpFe', 'Iron', '#ef4444', generateData(30, 'pulp', 'Fe'));
+            createLineChart('chartPulpSilica', 'Silica', '#64748b', generateData(30, 'pulp', 'Silica'));
+
+            // 2. UPDATE PROCESS (Simulate MC differences)
+            // Example: MC2 (Modal) has high Acid, MC5 (NW) has lower
+            let acidBase = currentMC === 'MC2' ? 125 : 110; 
+            createLineChart('chartProc1', 'Ball Fall', '#2563eb', generateData(30, 'process', 'BF'));
+            createLineChart('chartProc2', 'Acid', '#2563eb', generateData(30, 'process', 'Acid').map(x => x - 125 + acidBase)); 
+            createLineChart('chartProc3', 'Zinc', '#2563eb', generateData(30, 'process', 'Zinc'));
+            createLineChart('chartProc4', 'Steep Alk', '#2563eb', generateData(30, 'process', 'Alk'));
+
+            // 3. UPDATE PRODUCT (Simulate Grade differences)
+            // Modal (MC2) might have more defects than Grey (MC3)
+            let gradeData = currentMC === 'MC2' ? [88, 8, 3, 1] : [94, 4, 1, 1];
+            createDoughnut('gradeChart', gradeData);
+            document.getElementById('valGradeE').innerText = gradeData[0] + '%';
+            
+            createLineChart('chartProd1', 'Tenacity', '#10b981', generateData(30, 'product', 'Tenacity'));
+            createLineChart('chartProd2', 'Whiteness', '#10b981', generateData(30, 'product', 'Whiteness'));
+            createLineChart('chartProd3', 'Splinter', '#f59e0b', generateData(30, 'product', 'Splinter')); // Orange for warning
+            createLineChart('chartProd4', 'Denier', '#10b981', generateData(30, 'product', 'Denier'));
+
+            // 4. UPDATE CORRELATION
+            updateCorrelation();
+        }
+
+        function updateCorrelation() {
+            const ctx = document.getElementById('correlationChart').getContext('2d');
+            if (chartInstances['corr']) chartInstances['corr'].destroy();
+            
+            // Simulating Scatter Plot
+            const scatterData = Array.from({length: 50}, () => ({
+                x: 100 + Math.random() * 20, // Process Param
+                y: 2 + Math.random() // Product Param
+            }));
+
+            chartInstances['corr'] = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Correlation Data Points',
+                        data: scatterData,
+                        backgroundColor: '#4f46e5'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: document.getElementById('corrY1').value } },
+                        y: { title: { display: true, text: document.getElementById('corrY2').value } }
                     }
                 }
             });
         }
 
-        function closeDrillDown() {
-            document.getElementById('drillDownSection').classList.add('hidden');
+        // --- AI CHAT LOGIC (Improved Context) ---
+        function toggleChat() {
+            const win = document.getElementById('chatWindow');
+            win.classList.toggle('hidden');
+        }
+        
+        function handleEnter(e) { if(e.key === 'Enter') sendChatMessage(); }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value;
+            if(!msg) return;
+            
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="flex justify-end"><div class="chat-bubble-user p-3 shadow-sm max-w-[90%]">${msg}</div></div>`;
+            
+            // Simulate AI Response with Context
+            setTimeout(() => {
+                let response = `กำลังวิเคราะห์ข้อมูลของ <b>${currentMC}</b>... <br>`;
+                if(msg.includes('Fe') || msg.includes('Iron')) {
+                    response += `จากการวิเคราะห์ Pulp Lot ล่าสุด พบว่าค่า Fe เฉลี่ยอยู่ที่ 5.2 ppm ซึ่งสูงกว่าค่ามาตรฐาน (3.0 ppm) สิ่งนี้อาจส่งผลกระทบต่อ <b>Whiteness</b> ของ ${currentMC} ที่กำลังผลิตอยู่ครับ`;
+                } else {
+                    response += "รับทราบครับ ระบบกำลังประมวลผลความสัมพันธ์ของตัวแปรที่คุณถาม...";
+                }
+                container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm max-w-[90%]">${response}</div></div>`;
+                container.scrollTop = container.scrollHeight;
+            }, 1000);
+            
+            input.value = '';
         }
 
-        function formatDate(isoDate) {
-            const d = new Date(isoDate);
-            return `${d.getDate()}/${d.getMonth()+1}`;
-        }
-
-        // Initialize
-        switchMode('process');
+        // Init
+        // Set default dates
+        document.getElementById('startDate').valueAsDate = new Date(new Date().setDate(new Date().getDate() - 30));
+        document.getElementById('endDate').valueAsDate = new Date();
+        updateDashboard();
 
     </script>
 </body>

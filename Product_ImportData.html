@@ -66,9 +66,9 @@
                 <select id="machineSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white shadow-sm transition">
                     <option value="">-- กรุณาเลือก --</option>
                     <option value="MC2">MC2 (Modal)</option>
-                    <option value="MC3">MC3 (Mixed)</option>
-                    <option value="MC5">MC5 (Mixed)</option>
-                    <option value="MC6">MC6 (Mixed)</option>
+                    <option value="MC3">MC3 (Non Woven)</option>
+                    <option value="MC5">MC5 (Grey)</option>
+                    <option value="MC6">MC6 (Non Woven)</option>
                 </select>
             </div>
 
@@ -168,51 +168,49 @@
         function getProductionDate(dateStr, timeStr) {
             if (!dateStr) return null;
 
-            // dateStr format expected: DD-MM-YY (e.g., 01-12-25)
-            // Manual Parsing for DD-MM-YY safety
-            const dParts = dateStr.trim().split('-');
+            // 1. แยกวันที่ด้วย - หรือ /
+            let separator = dateStr.includes('/') ? '/' : '-';
+            const dParts = dateStr.trim().split(separator);
+
             if (dParts.length !== 3) return null;
 
-            let day = parseInt(dParts[0], 10);
-            let month = parseInt(dParts[1], 10) - 1; 
-            let year = parseInt(dParts[2], 10);
+            // 2. บังคับอ่านค่าตามตำแหน่ง DD-MM-YY (แก้ปัญหา US Format)
+            let day = parseInt(dParts[0], 10);    // ตัวแรกเป็น วัน เสมอ
+            let month = parseInt(dParts[1], 10) - 1; // ตัวสองเป็น เดือน เสมอ (Javascript นับเดือนเริ่มที่ 0)
+            let year = parseInt(dParts[2], 10);   // ตัวสามเป็น ปี
+
+            // แก้ปี 2 หลัก (เช่น 25 -> 2025)
             if (year < 100) year += 2000;
 
-            // Default time if missing
+            // 3. จัดการเวลา
             if (!timeStr) timeStr = "12:00:00 PM";
-
-            // Parse Time (HH:mm:ss AM/PM)
-            // Handle various splits like space or colon
-            const tParts = timeStr.trim().split(/[:\s]+/); 
-
+            const tParts = timeStr.trim().split(/[:\s]+/);
             let hour = 0, min = 0;
             let ampm = '';
 
-            // Basic parsing logic
             if (tParts.length >= 2) {
                 hour = parseInt(tParts[0], 10);
                 min = parseInt(tParts[1], 10);
-                // Check for AM/PM at the end
                 const lastPart = tParts[tParts.length - 1].toUpperCase();
-                if (lastPart === 'AM' || lastPart === 'PM') {
-                    ampm = lastPart;
-                }
+                if (lastPart === 'AM' || lastPart === 'PM') ampm = lastPart;
             }
 
-            // Convert to 24h
             if (ampm === 'PM' && hour < 12) hour += 12;
             if (ampm === 'AM' && hour === 12) hour = 0;
 
             const dateObj = new Date(year, month, day, hour, min);
 
-            // Logic 07:00 AM Cutoff
-            if (dateObj.getHours() < 7) {
-                dateObj.setDate(dateObj.getDate() - 1);
-            }
+            // ============================================
+            // Logic ตัดรอบวัน (07:00 AM) ถูกปิดไว้ตามที่คุณต้องการ
+            // if (dateObj.getHours() < 7) {
+            //    dateObj.setDate(dateObj.getDate() - 1);
+            // }
+            // ============================================
 
             const yyyy = dateObj.getFullYear();
             const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
             const dd = String(dateObj.getDate()).padStart(2, '0');
+
             return `${yyyy}-${mm}-${dd}`;
         }
 
