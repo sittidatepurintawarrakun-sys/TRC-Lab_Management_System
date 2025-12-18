@@ -64,16 +64,15 @@
         </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100">
-        
+    <div class="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-100">
+
         <section>
             <div class="section-title text-orange-700 flex justify-between items-center mb-4">
                 <div class="flex items-center gap-2">
-                    <i class="fas fa-tree"></i> 
+                    <i class="fas fa-tree"></i>
                     <span>1. Raw Material Input (COA Analysis)</span>
                 </div>
             </div>
-            
             <div id="pulpSupplierContainer" class="flex flex-col gap-4">
                 <div class="w-full flex flex-col items-center justify-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-300 py-8">
                     <i class="fas fa-circle-notch fa-spin text-2xl mb-2 text-orange-300"></i>
@@ -82,140 +81,155 @@
             </div>
         </section>
 
-        <div class="grid grid-cols-2 gap-6">
-            <section class="flex flex-col h-full">
-                <div class="section-title text-blue-700 flex justify-between">
-                    <span><i class="fas fa-cogs"></i> 2. Process Control (<span id="lblMcProcess">MC2</span>)</span>
-                    <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border">Impacts Quality Directly</span>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-blue-500 flex-1 space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc1" onchange="updateSubChart('proc1')">
-                                    <option value="Ball Fall">Viscose Ball Fall (sec)</option>
-                                    <option value="Ripening Index">Ripening Index (Hot)</option>
-                                    <option value="Viscose Temp">Viscose Temp (°C)</option>
-                                </select>
-                                <span class="text-[10px] text-slate-400">Target: 45-50</span>
+        <section class="flex flex-col">
+            <div class="section-title text-blue-700 flex justify-between mb-2">
+                <span><i class="fas fa-cogs"></i> 2. Process Control (<span id="lblMcProcess">MC2</span>)</span>
+                <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border">Impacts Quality Directly</span>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-blue-500 w-full">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2 items-center">
+                            <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc1" onchange="updateSingleChart('Proc', 1)">
+                                <option value="Ball Fall">Viscose Ball Fall (sec)</option>
+                            </select>
                             </div>
-                            <div class="relative w-full" style="height: 180px;">
-                                <canvas id="chartProc1"></canvas>
-                            </div>
-                        </div>
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc2">
-                                    <option value="Acid">Spin Bath Acid (g/l)</option>
-                                    <option value="Temp">Spin Bath Temp (°C)</option>
-                                </select>
-                                <span class="text-[10px] text-slate-400">Target: 125 ±2</span>
-                            </div>
-                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProc2"></canvas></div>
-                        </div>
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc3">
-                                    <option value="Zinc">Spin Bath Zinc (g/l)</option>
-                                    <option value="Sulphate">Sodium Sulphate</option>
-                                </select>
-                                <span class="text-[10px] text-slate-400">Target: High Precision</span>
-                            </div>
-                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProc3"></canvas></div>
-                        </div>
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-blue-800 bg-blue-50 rounded px-1" id="selProc4">
-                                    <option value="Alk">Steep Lye Alkali %</option>
-                                    <option value="Hemi">Hemi-Cellulose %</option>
-                                </select>
-                            </div>
-                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProc4"></canvas></div>
+                        <div class="relative w-full h-64">
+                            <canvas id="chartProc1"></canvas>
                         </div>
                     </div>
-                </div>
-            </section>
 
-            <section class="flex flex-col h-full">
-                <div class="section-title text-emerald-700 flex justify-between">
-                    <span><i class="fas fa-tags"></i> 3. Product Quality (<span id="lblMcProduct">MC2</span>)</span>
-                    <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border">Result of Process</span>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-emerald-500 flex-1 space-y-4">
-                    <div class="flex gap-4 items-center bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                        <div class="w-1/3 h-24 relative">
-                            <canvas id="gradeChart"></canvas>
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2 items-center">
+                            <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc2" onchange="updateSingleChart('Proc', 2)">
+                                <option value="Acid">Spin Bath Acid (g/l)</option>
+                            </select>
                         </div>
-                        <div class="w-2/3 grid grid-cols-2 gap-2 text-xs">
-                            <div><span class="font-bold text-emerald-700">% Grade E (Export):</span> <span id="valGradeE">92%</span></div>
-                            <div><span class="font-bold text-blue-600">% Grade ST (Standard):</span> <span id="valGradeST">5%</span></div>
-                            <div><span class="font-bold text-orange-500">% Grade I (Inferior):</span> <span id="valGradeI">2%</span></div>
-                            <div><span class="font-bold text-red-500">% Grade O (Off):</span> <span id="valGradeO">1%</span></div>
+                        <div class="relative w-full h-64">
+                            <canvas id="chartProc2"></canvas>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1" id="selProd1">
-                                    <option value="Tenacity">Tenacity (Cond.)</option>
-                                    <option value="Elongation">Elongation (%)</option>
-                                </select>
-                            </div>
-                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd1"></canvas></div>
+
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2 items-center">
+                            <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc3" onchange="updateSingleChart('Proc', 3)">
+                                <option value="Zinc">Spin Bath Zinc (g/l)</option>
+                            </select>
                         </div>
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1" id="selProd2">
-                                    <option value="Whiteness">Whiteness (%MgO)</option>
-                                    <option value="Brightness">Brightness</option>
-                                </select>
-                            </div>
-                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd2"></canvas></div>
+                        <div class="relative w-full h-64">
+                            <canvas id="chartProc3"></canvas>
                         </div>
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1" id="selProd3">
-                                    <option value="Splinter">Splinter (Total)</option>
-                                    <option value="Milky">Milky Fibres</option>
-                                </select>
-                            </div>
-                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd3"></canvas></div>
+                    </div>
+
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2 items-center">
+                            <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc4" onchange="updateSingleChart('Proc', 4)">
+                                <option value="Alk">Steep Lye Alkali %</option>
+                            </select>
                         </div>
-                        <div class="border rounded p-2">
-                            <div class="flex justify-between mb-1">
-                                <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-1" id="selProd4">
-                                    <option value="Denier">Titer (Denier)</option>
-                                    <option value="Length">Cut Length (mm)</option>
-                                </select>
-                            </div>
-                            <div class="relative w-full" style="height: 180px;"><canvas id="chartProd4"></canvas></div>
+                        <div class="relative w-full h-64">
+                            <canvas id="chartProc4"></canvas>
                         </div>
                     </div>
                 </div>
-            </section>
-        </div>
+            </div>
+        </section>
+
+        <section class="flex flex-col">
+            <div class="section-title text-emerald-700 flex justify-between mb-2">
+                <span><i class="fas fa-tags"></i> 3. Product Quality (<span id="lblMcProduct">MC2</span>)</span>
+                <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border">Result of Process</span>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-emerald-500 w-full space-y-6">
+
+                <div class="flex flex-wrap gap-4 items-center bg-emerald-50 p-4 rounded-lg border border-emerald-100">
+                    <div class="w-full md:w-1/3 h-24 relative">
+                        <canvas id="gradeChart"></canvas>
+                    </div>
+                    <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div class="bg-white p-2 rounded shadow-sm border border-emerald-100 text-center">
+                            <span class="block text-xs text-slate-400 font-bold uppercase">Export (E)</span>
+                            <span class="text-xl font-bold text-emerald-600" id="valGradeE">92%</span>
+                        </div>
+                        <div class="bg-white p-2 rounded shadow-sm border border-blue-100 text-center">
+                            <span class="block text-xs text-slate-400 font-bold uppercase">Standard (ST)</span>
+                            <span class="text-xl font-bold text-blue-600" id="valGradeST">5%</span>
+                        </div>
+                        <div class="bg-white p-2 rounded shadow-sm border border-orange-100 text-center">
+                            <span class="block text-xs text-slate-400 font-bold uppercase">Inferior (I)</span>
+                            <span class="text-xl font-bold text-orange-500" id="valGradeI">2%</span>
+                        </div>
+                        <div class="bg-white p-2 rounded shadow-sm border border-red-100 text-center">
+                            <span class="block text-xs text-slate-400 font-bold uppercase">Off Grade (O)</span>
+                            <span class="text-xl font-bold text-red-500" id="valGradeO">1%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2">
+                            <select class="text-sm font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100" id="selProd1" onchange="updateSingleChart('Prod', 1)">
+                                <option value="Tenacity">Tenacity (Cond.)</option>
+                            </select>
+                        </div>
+                        <div class="relative w-full h-64"><canvas id="chartProd1"></canvas></div>
+                    </div>
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2">
+                            <select class="text-sm font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100" id="selProd2" onchange="updateSingleChart('Prod', 2">
+                                <option value="Whiteness">Whiteness</option>
+                            </select>
+                        </div>
+                        <div class="relative w-full h-64"><canvas id="chartProd2"></canvas></div>
+                    </div>
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2">
+                            <select class="text-sm font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100" id="selProd3" onchange="updateSingleChart('Prod', 3)">
+                                <option value="Splinter">Splinter (Total)</option>
+                            </select>
+                        </div>
+                        <div class="relative w-full h-64"><canvas id="chartProd3"></canvas></div>
+                    </div>
+                    <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between mb-2">
+                            <select class="text-sm font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100" id="selProd4" onchange="updateSingleChart('Prod', 4)">
+                                <option value="Denier">Titer (Denier)</option>
+                            </select>
+                        </div>
+                        <div class="relative w-full h-64"><canvas id="chartProd4"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <section>
             <div class="section-title text-indigo-700">
-                <i class="fas fa-project-diagram"></i> 4. Correlation Analysis (Root Cause Finder)
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-md border border-indigo-100">
-                <div class="flex gap-2 mb-4 bg-slate-50 p-2 rounded items-center">
-                    <span class="text-xs font-bold text-slate-500 uppercase">Y1-Axis (Process):</span>
-                    <select id="corrY1" class="text-xs border rounded p-1"><option>Spin Bath Acid</option><option>Viscose Ball Fall</option><option>Zn Concentration</option></select>
-                    
-                    <span class="text-xs font-bold text-slate-500 uppercase ml-4">vs</span>
-                    
-                    <span class="text-xs font-bold text-slate-500 uppercase ml-2">Y2-Axis (Product/Pulp):</span>
-                    <select id="corrY2" class="text-xs border rounded p-1"><option>Tenacity</option><option>Whiteness</option><option>Pulp Iron (Fe)</option></select>
-                    
-                    <button class="ml-auto bg-indigo-600 text-white text-xs px-3 py-1 rounded hover:bg-indigo-500" onclick="updateCorrelation()">Plot Correlation</button>
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>4. Correlation Analysis (Root Cause Finder)</span>
                 </div>
-                <div class="h-64">
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border border-indigo-100">
+                <div class="flex flex-wrap gap-2 mb-4 bg-slate-50 p-3 rounded items-center border border-slate-100">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Y1 (Process):</span>
+                    <select id="corrY1" class="text-xs border rounded p-1.5 outline-none focus:border-indigo-500 font-semibold text-slate-700"></select>
+
+                    <span class="text-xs font-bold text-slate-500 uppercase ml-2 md:ml-4">vs</span>
+
+                    <span class="text-xs font-bold text-slate-500 uppercase ml-2">Y2 (Product):</span>
+                    <select id="corrY2" class="text-xs border rounded p-1.5 outline-none focus:border-indigo-500 font-semibold text-slate-700"></select>
+
+                    <button class="ml-auto bg-indigo-600 text-white text-xs px-4 py-2 rounded hover:bg-indigo-500 shadow-sm font-bold tracking-wide" onclick="updateDashboard()">
+                        <i class="fas fa-play mr-1"></i> Plot
+                    </button>
+                </div>
+                <div class="h-80 w-full">
                     <canvas id="correlationChart"></canvas>
                 </div>
             </div>
         </section>
+
     </div>
 
     <div class="fixed bottom-6 right-6 z-50">
@@ -245,110 +259,220 @@
     </div>
 
     <script>
-    // =========================================================
-    // 1. FIREBASE CONFIGURATION & INIT
-    // =========================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-        authDomain: "lab-trc-management-system.firebaseapp.com",
-        projectId: "lab-trc-management-system",
-        storageBucket: "lab-trc-management-system.appspot.com",
-        messagingSenderId: "43919979160",
-        appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    db.settings({ experimentalForceLongPolling: true });
-    const functions = firebase.functions();
+        // =========================================================
+        // 1. FIREBASE CONFIGURATION & INIT
+        // =========================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.settings({ experimentalForceLongPolling: true });
+        const functions = firebase.app().functions('asia-southeast1');
 
-    // =========================================================
-    // 2. CONFIGURATION & METADATA
-    // =========================================================
+        // =========================================================
+        // 2. CONFIGURATION & METADATA
+        // =========================================================
 
-    // --- PULP CONFIGURATION (Updated with Trend Logic) ---
-    // type: 'quality' (Higher is Better), 'impurity' (Lower is Better)
-    const PULP_PARAM_MAP = {
-        alpha: { dbKey: "alphaCellulose", label: "Alpha Cellulose", unit: "%", type: 'quality' },
-        viscosity: { dbKey: "viscosity", label: "Viscosity (ISO)", unit: "ml/g", type: 'quality' }, // Sometimes defined target, but generally stability/high is monitored
-        whiteness: { dbKey: "whiteness", label: "Berger Whiteness", unit: "%", type: 'quality' },
-        silica: { dbKey: "silica", label: "Acid Insoluble (SiO2)", unit: "ppm", type: 'impurity' },
-        calcium: { dbKey: "calcium", label: "Calcium (Ca)", unit: "ppm", type: 'impurity' }
-    };
+        // --- PULP CONFIG ---
+        const PULP_PARAM_MAP = {
+            alpha: { dbKey: "alphaCellulose", label: "Alpha Cellulose", unit: "%", type: 'quality' },
+            viscosity: { dbKey: "viscosity", label: "Viscosity (ISO)", unit: "ml/g", type: 'quality' },
+            whiteness: { dbKey: "whiteness", label: "Berger Whiteness", unit: "%", type: 'quality' },
+            silica: { dbKey: "silica", label: "Acid Insoluble (SiO2)", unit: "ppm", type: 'impurity' },
+            calcium: { dbKey: "calcium", label: "Calcium (Ca)", unit: "ppm", type: 'impurity' }
+        };
+        const MC_SUPPLIER_RULES = {
+            "MC2": ["AV NACKAWIC"],
+            "MC3": ["ARAUCO", "AV CELL", "PHOENIX"],
+            "MC5": ["ARAUCO", "AV CELL", "PHOENIX"],
+            "MC6": ["ARAUCO", "AV CELL", "PHOENIX"]
+        };
 
-    const MC_SUPPLIER_RULES = {
-        "MC2": ["AV NACKAWIC"],
-        "MC3": ["ARAUCO", "AV CELL", "PHOENIX"],
-        "MC5": ["ARAUCO", "AV CELL", "PHOENIX"],
-        "MC6": ["ARAUCO", "AV CELL", "PHOENIX"]
-    };
+        const DEPT_COLLECTION_MAP = {
+            "Viscose": "stats_Viscose",
+            "Auxiliary": "stats_Auxiliary",
+            "Spinning": "stats_Spinning"
+        };
 
-    // --- PROCESS & PRODUCT CONFIG ---
-    const MACHINE_PROCESS_CONFIG = {
-        "MC2": {
-            viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD E Exit End Total Alk.", "MD E Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Diss. Modal Vis BF", "Buffer Tank 5 Vis Temp", "Buffer Tank 6 Vis Temp", "Buffer Tank 7 Vis Temp", "Modal Rec14 BF", "Spinning Viscose Ball Fall", "Spinning Viscose Gamma no", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "MD 2 Vis Kw", "Flash Delta 6", "Flash Delta 7", "Vis Temp"],
-            auxiliary: ["MD 2 Spin bath Na2SO4", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
-            spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC2", "HSB Temp", "HSB Acid", "HSB Zn", "HSB Salt"]
-        },
-        "MC3": {
-            viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD C Exit End Total Alk.", "MD C Exit End Cell.", "MD D Exit End Total Alk.", "MD D Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp", "Buffer Tank 4 Vis Temp", "Rec Ball Fall", "Rec 1 KW", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Spinning Viscose KW", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5"],
-            auxiliary: ["MC 3 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
-            spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC3"]
-        },
-        "MC5": {
-            viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD F Alkali %", "MD F Cellulose %", "MD G Exit End Total Alk.", "MD G Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Churn Blender 1 Vis Temp", "Churn Blender 2 Vis Temp", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Spinning Viscose KW", "Rec Ball Fall", "REC. TK. N3 CKW", "Flash Delta 8", "Flash Delta 9", "Vis Temp"],
-            auxiliary: ["MC 5 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
-            spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC5"]
-        },
-        "MC6": {
-            viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD C Exit End Total Alk.", "MD C Exit End Cell.", "MD D Exit End Total Alk.", "MD D Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp", "Buffer Tank 4 Vis Temp", "Rec 1 KW", "Rec Ball Fall", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5", "Spinning Viscose KW"],
-            auxiliary: ["MC 6 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
-            spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC6"]
+        const MACHINE_PROCESS_CONFIG = {
+            "MC2": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD E Exit End Total Alk.", "MD E Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Diss. Modal Vis BF", "Buffer Tank 5 Vis Temp", "Buffer Tank 6 Vis Temp", "Buffer Tank 7 Vis Temp", "Modal Rec14 BF", "Spinning Viscose Ball Fall", "Spinning Viscose Gamma no", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "MD 2 Vis Kw", "Flash Delta 6", "Flash Delta 7", "Vis Temp"],
+                auxiliary: ["MD 2 Spin bath Na2SO4", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC2", "HSB Temp", "HSB Acid", "HSB Zn", "HSB Salt"]
+            },
+            "MC3": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD C Exit End Total Alk.", "MD C Exit End Cell.", "MD D Exit End Total Alk.", "MD D Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp", "Buffer Tank 4 Vis Temp", "Rec Ball Fall", "Rec 1 KW", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Spinning Viscose KW", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5"],
+                auxiliary: ["MC 3 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC3"]
+            },
+            "MC5": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD F Alkali %", "MD F Cellulose %", "MD G Exit End Total Alk.", "MD G Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Churn Blender 1 Vis Temp", "Churn Blender 2 Vis Temp", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Spinning Viscose KW", "Rec Ball Fall", "REC. TK. N3 CKW", "Flash Delta 8", "Flash Delta 9", "Vis Temp"],
+                auxiliary: ["MC 5 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC5"]
+            },
+            "MC6": {
+                viscose: ["Steep Lye Alkali %", "Steep Lye Temp.", "MD C Exit End Total Alk.", "MD C Exit End Cell.", "MD D Exit End Total Alk.", "MD D Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.", "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp", "Buffer Tank 4 Vis Temp", "Rec 1 KW", "Rec Ball Fall", "Spinning Viscose Ball Fall", "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5", "Spinning Viscose KW"],
+                auxiliary: ["MC 6 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."],
+                spinning: ["Desulph Bath Conc. gpl", "Desulph Bath Temp.", "Bleach Bath Conc. gpl", "Bleach Bath Temp.", "Soft Finish ER %", "Soft Finish Temp.", "Soft Finish pH", "HEAD TANK TEMP MC6"]
+            }
+        };
+
+        const PROCESS_DEFAULTS = {
+            "MC2": ["Spinning Viscose Ball Fall", "Spinning Viscose Gamma no", "Spin Bath ZnSO4 gpl", "Spin Bath Acid gpl"],
+            "MC5": ["Spinning Viscose Ball Fall", "Machine Viscose RI", "Spin Bath Acid gpl", "MC 5 Spin bath Sp. Gr."],
+            "MC3": ["Spinning Viscose Ball Fall", "Spinning Viscose Alkali %", "Spin Bath Acid gpl", "Bleach Bath Conc. gpl"],
+            "MC6": ["Spinning Viscose Ball Fall", "Spinning Viscose Alkali %", "Spin Bath Acid gpl", "Bleach Bath Conc. gpl"]
+        };
+
+        // --- PRODUCT CONFIG ---
+        const PRODUCT_PARAM_CONFIG = {
+            "Modal": ["Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "L %", "B %", "Denier Cond", "Denier Cond CV", "Tenacity Cond.", "Tenacity Cond. CV", "Elongation Cond", "Elongation Cond CV", "Wet Denier", "Tenacity Wet", "Elongation Wet", "Shirley Fault Big", "Shirley Fault Small", "Neps", "Sulphur"],
+            "Grey_NW": ["Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "L %", "B %", "Denier Cond", "Denier Cond CV", "Tenacity Cond.", "Tenacity Cond. CV", "Elongation Cond", "Elongation Cond CV", "Wet Denier", "Tenacity Wet", "Elongation Wet", "Shirley Fault Big", "Shirley Fault Small", "Neps", "Sulphur", "NW Black Particle(</=1 mm)", "NW Black Particle(>1mm)", "NW Fibre Water Holding Cap", "Sinking Time(NW Fibre)"]
+        };
+
+        const MC_PRODUCT_MAPPING = {
+            "MC2": "stats_Product_Modal", 
+            "MC5": "stats_Product_Grey",
+            "MC3": "stats_Product_NonWoven",
+            "MC6": "stats_Product_NonWoven"
+        };
+
+        let chartInstances = {};
+
+        // =========================================================
+        // 3. UI INITIALIZATION
+        // =========================================================
+        window.onload = function() {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = startOfMonth.toISOString().split('T')[0];
+
+            injectGranularityControls(); // Add Radio Buttons
+            updateDropdownOptions();
+            updateDashboard();
+        };
+
+        // Inject Controls Programmatically
+        function injectGranularityControls() {
+            const headerFilterDiv = document.querySelector('.bg-slate-800');
+            if (!headerFilterDiv) return;
+
+            // Create Container
+            const container = document.createElement('div');
+            container.className = "flex flex-col ml-4 mr-4";
+
+            const label = document.createElement('label');
+            label.className = "text-[10px] text-slate-400 font-bold uppercase mb-1";
+            label.innerText = "View Mode";
+
+            const btnGroup = document.createElement('div');
+            btnGroup.className = "flex bg-slate-700 rounded p-0.5";
+
+            const modes = [
+                { id: 'viewHourly', label: 'Hourly', val: 'hourly' },
+                { id: 'viewDaily', label: 'Daily', val: 'daily' },
+                { id: 'viewMonthly', label: 'Monthly', val: 'monthly' }
+            ];
+
+            modes.forEach((m, idx) => {
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = 'granularity';
+                input.id = m.id;
+                input.value = m.val;
+                input.className = "hidden peer";
+                if(idx === 0) input.checked = true; // Default Hourly
+
+                const lbl = document.createElement('label');
+                lbl.htmlFor = m.id;
+                lbl.className = "text-xs font-bold px-3 py-1 rounded cursor-pointer text-slate-400 peer-checked:bg-indigo-500 peer-checked:text-white transition";
+                lbl.innerText = m.label;
+                lbl.onclick = () => setTimeout(updateDashboard, 50); // Small delay to allow radio update
+
+                const wrapper = document.createElement('div');
+                wrapper.appendChild(input);
+                wrapper.appendChild(lbl);
+                btnGroup.appendChild(wrapper);
+            });
+
+            container.appendChild(label);
+            container.appendChild(btnGroup);
+
+            // Insert before Date Inputs
+            const dateInput = document.getElementById('startDate');
+            if (dateInput && dateInput.parentElement) {
+                headerFilterDiv.insertBefore(container, dateInput.parentElement.previousElementSibling); 
+                // Attempt to place it nicely between MC filter and Date
+            }
         }
-    };
 
-    const PRODUCT_PARAM_CONFIG = {
-        "Modal": ["Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "L %", "B %", "Denier Cond", "Denier Cond CV", "Tenacity Cond.", "Tenacity Cond. CV", "Elongation Cond", "Elongation Cond CV", "Wet Denier", "Tenacity Wet", "Elongation Wet", "Shirley Fault Big", "Shirley Fault Small", "Neps", "Sulphur"],
-        "Grey_NW": ["Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "L %", "B %", "Denier Cond", "Denier Cond CV", "Tenacity Cond.", "Tenacity Cond. CV", "Elongation Cond", "Elongation Cond CV", "Wet Denier", "Tenacity Wet", "Elongation Wet", "Shirley Fault Big", "Shirley Fault Small", "Neps", "Sulphur", "NW Black Particle(</=1 mm)", "NW Black Particle(>1mm)", "NW Fibre Water Holding Cap", "Sinking Time(NW Fibre)"]
-    };
+        function getGranularity() {
+            const radios = document.getElementsByName('granularity');
+            for (let r of radios) {
+                if (r.checked) return r.value;
+            }
+            return 'hourly';
+        }
 
-    const MC_PRODUCT_MAPPING = {
-        "MC2": "stats_Product_Modal",
-        "MC3": "stats_Product_Grey",
-        "MC5": "stats_Product_NonWoven",
-        "MC6": "stats_Product_NonWoven"
-    };
+        function updateDropdownOptions() {
+            const mc = document.getElementById('mcFilter').value;
+            const procConfig = MACHINE_PROCESS_CONFIG[mc];
+            const defaults = PROCESS_DEFAULTS[mc];
 
-    let chartInstances = {};
+            const allProcessParams = [...procConfig.viscose, ...procConfig.auxiliary, ...procConfig.spinning];
 
-    // =========================================================
-    // 3. UI INITIALIZATION
-    // =========================================================
-    window.onload = function() {
-        const today = new Date();
-        // Default to Start of Current Month
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            for(let i=1; i<=4; i++) {
+                const el = document.getElementById(`selProc${i}`);
+                if(el) {
+                    const currentVal = el.value;
+                    el.innerHTML = '';
+                    allProcessParams.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item;
+                        opt.text = item;
+                        el.appendChild(opt);
+                    });
+                    if (!currentVal || !allProcessParams.includes(currentVal)) {
+                        if(defaults && defaults[i-1]) el.value = defaults[i-1];
+                    } else {
+                        el.value = currentVal;
+                    }
+                }
+            }
 
-        // Set format YYYY-MM-DD
-        document.getElementById('endDate').value = today.toISOString().split('T')[0];
-        // Adjust logic: if today is 1st or 2nd day, maybe show last month? 
-        // For now, adhere to "Start of Month" rule.
-        document.getElementById('startDate').value = startOfMonth.toISOString().split('T')[0];
+            const prodTypeKey = (mc === "MC2") ? "Modal" : "Grey_NW";
+            const prodParams = PRODUCT_PARAM_CONFIG[prodTypeKey];
 
-        updateDropdownOptions();
-        updateDashboard();
-    };
+            for(let i=1; i<=4; i++) {
+                const el = document.getElementById(`selProd${i}`);
+                if(el) {
+                    const currentVal = el.value;
+                    el.innerHTML = '';
+                    prodParams.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item;
+                        opt.text = item;
+                        el.appendChild(opt);
+                    });
+                    if(prodParams.includes(currentVal)) el.value = currentVal;
+                    else el.value = prodParams[i-1] || prodParams[0];
+                }
+            }
 
-    function updateDropdownOptions() {
-        const mc = document.getElementById('mcFilter').value;
-        const procConfig = MACHINE_PROCESS_CONFIG[mc];
+            fillSelect('corrY1', allProcessParams);
+            fillSelect('corrY2', prodParams);
+        }
 
-        const prodTypeKey = (mc === "MC2") ? "Modal" : "Grey_NW";
-        const prodParams = PRODUCT_PARAM_CONFIG[prodTypeKey];
-
-        const fillSelect = (id, items) => {
+        function fillSelect(id, items) {
             const el = document.getElementById(id);
             if (!el) return;
-            const currentVal = el.value;
             el.innerHTML = '';
             items.forEach(item => {
                 const opt = document.createElement('option');
@@ -356,553 +480,926 @@
                 opt.text = item;
                 el.appendChild(opt);
             });
-            if(items.includes(currentVal)) el.value = currentVal;
-        };
-
-        // Process Dropdowns
-        fillSelect('selProc1', procConfig.viscose);
-        fillSelect('selProc2', procConfig.auxiliary);
-        fillSelect('selProc3', procConfig.auxiliary);
-        fillSelect('selProc4', procConfig.spinning);
-
-        // Product Dropdowns
-        if(document.getElementById('selProd1')) fillSelect('selProd1', prodParams);
-        if(document.getElementById('selProd2')) fillSelect('selProd2', prodParams);
-        if(document.getElementById('selProd3')) fillSelect('selProd3', prodParams);
-        if(document.getElementById('selProd4')) fillSelect('selProd4', prodParams);
-
-        // Correlation Dropdowns
-        fillSelect('corrY1', [...procConfig.viscose, ...procConfig.auxiliary, ...procConfig.spinning]);
-        fillSelect('corrY2', prodParams);
-    }
-
-    // =========================================================
-    // 4. MAIN UPDATE LOGIC
-    // =========================================================
-    async function updateDashboard() {
-        const mc = document.getElementById('mcFilter').value;
-        const btn = document.querySelector('button[onclick="updateDashboard()"]');
-
-        if(btn) {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-            btn.disabled = true;
         }
 
-        // Update Labels
-        document.getElementById('lblMcProcess').innerText = mc;
-        document.getElementById('lblMcProduct').innerText = mc;
-        document.getElementById('aiMcContext').innerText = mc;
+        // =========================================================
+        // 4. MAIN UPDATE LOGIC (With Granularity & Limits)
+        // =========================================================
+        async function updateDashboard() {
+            const mc = document.getElementById('mcFilter').value;
+            const startStr = document.getElementById('startDate').value;
+            const endStr = document.getElementById('endDate').value;
+            const btn = document.querySelector('button[onclick="updateDashboard()"]');
+            const mode = getGranularity();
 
-        updateDropdownOptions();
+            // --- GUARD: DATE RANGE LIMITS ---
+            const d1 = new Date(startStr);
+            const d2 = new Date(endStr);
+            const diffTime = Math.abs(d2 - d1);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
-        try {
-            await Promise.all([
-                renderPulpSection(mc),  // Updated Pulp Logic
-                renderProcessCharts(mc),
-                renderProductCharts(mc),
-                renderCorrelation(mc)
-            ]);
-        } catch (e) {
-            console.error("Dashboard update error:", e);
-        } finally {
+            if (mode === 'hourly') {
+                if (diffDays > 90) {
+                    alert("⚠️ Performance Alert (Hourly): กรุณาเลือกช่วงเวลาไม่เกิน 90 วัน");
+                    return;
+                }
+            } else if (mode === 'daily') {
+                if (diffDays > 180) {
+                    alert("⚠️ Performance Alert (Daily): กรุณาเลือกช่วงเวลาไม่เกิน 180 วัน (6 เดือน)");
+                    return;
+                }
+            }
+            // Monthly has no limit
+
             if(btn) {
-                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                btn.disabled = true;
+            }
+
+            document.getElementById('lblMcProcess').innerText = `${mc} (${mode.toUpperCase()})`;
+            document.getElementById('lblMcProduct').innerText = `${mc} (${mode.toUpperCase()})`;
+            document.getElementById('aiMcContext').innerText = mc;
+
+            try {
+                await Promise.all([
+                    renderPulpSection(mc), // Pulp always daily logic
+                    renderProcessCharts(mc, startStr, endStr, mode),
+                    renderProductCharts(mc, startStr, endStr, mode),
+                    renderCorrelation(mc, startStr, endStr, mode)
+                ]);
+            } catch (e) {
+                console.error("Dashboard update error:", e);
+            } finally {
+                if(btn) {
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+                    btn.disabled = false;
+                }
             }
         }
-    }
+        async function updateSingleChart(type, index) {
+            const mc = document.getElementById('mcFilter').value;
+            const startStr = document.getElementById('startDate').value;
+            const endStr = document.getElementById('endDate').value;
+            const mode = getGranularity(); 
 
-    // =========================================================
-    // 5. PULP LOGIC (UPDATED: Trend & DB Routing)
-    // =========================================================
+            const selId = `sel${type}${index}`;
+            const chartId = `chart${type}${index}`;
 
-    // Helper to determine Document ID based on Date
-    // Logic: Nov 2025 onwards -> 'summary_2025', Before -> 'main_summary'
-    function getPulpDocID(year, monthIndex) { // monthIndex 0-11
-        if (year > 2025) return 'summary_2025';
-        if (year === 2025 && monthIndex >= 10) return 'summary_2025'; // Nov is 10
-        return 'main_summary';
-    }
+            const el = document.getElementById(selId);
+            if (!el || !el.value) return;
+            const param = el.value;
 
-    async function renderPulpSection(mc) {
-        const container = document.getElementById('pulpSupplierContainer');
-        container.innerHTML = '<div class="w-full text-center py-8"><i class="fas fa-circle-notch fa-spin text-orange-500"></i> Loading Pulp Data...</div>';
+            // เปลี่ยน Cursor เป็น Waiting
+            el.style.cursor = 'wait';
+            document.body.style.cursor = 'wait';
 
-        // 1. Prepare Dates
-        const startDateStr = document.getElementById('startDate').value;
-        const endDateStr = document.getElementById('endDate').value;
-        const targetSuppliers = MC_SUPPLIER_RULES[mc] || ["ARAUCO", "AVC", "PHOENIX", "AV NACKAWIC"];
+            try {
+                let result;
+                if (type === 'Proc') {
+                    result = await fetchProcessDataByType(mc, param, startStr, endStr, mode);
+                    updateProcessStabilityBadge(selId, result.cv);
+                    createDynamicLineChart(chartId, param, '#2563eb', result.labels, result.data, mode);
+                } else {
+                    result = await fetchProductDataByType(mc, param, startStr, endStr, mode);
+                    createDynamicLineChart(chartId, param, '#10b981', result.labels, result.data, mode);
+                }
+            } catch (e) {
+                console.error(`Error updating single chart ${type}${index}:`, e);
+            } finally {
+                el.style.cursor = 'default';
+                document.body.style.cursor = 'default';
+            }
+        }
+        // =========================================================
+        // 5. PULP LOGIC (Unchanged)
+        // =========================================================
+        function getPulpDocID(year, monthIndex) { 
+            if (year > 2025) return 'summary_2025';
+            if (year === 2025 && monthIndex >= 10) return 'summary_2025';
+            return 'main_summary';
+        }
 
-        try {
-            // 2. Fetch Current Period Data
-            const currentData = await fetchPulpStats(startDateStr, endDateStr, targetSuppliers);
+        async function renderPulpSection(mc) {
+            const container = document.getElementById('pulpSupplierContainer');
+            container.innerHTML = '<div class="w-full text-center py-8"><i class="fas fa-circle-notch fa-spin text-orange-500"></i> Loading Pulp Data...</div>';
 
-            // 3. Fetch Previous Period Data (For Trend Analysis)
-            // Logic: Get the month immediately preceding the Start Date
-            const sDate = new Date(startDateStr);
-            const prevMonthDate = new Date(sDate.getFullYear(), sDate.getMonth() - 1, 1);
-            const prevData = await fetchSingleMonthSummary(prevMonthDate, targetSuppliers);
+            const startDateStr = document.getElementById('startDate').value;
+            const endDateStr = document.getElementById('endDate').value;
+            const targetSuppliers = MC_SUPPLIER_RULES[mc] || ["ARAUCO", "AVC", "PHOENIX", "AV NACKAWIC"];
 
-            // 4. Render
-            container.innerHTML = ''; 
+            try {
+                const currentData = await fetchPulpStats(startDateStr, endDateStr, targetSuppliers);
+                const sDate = new Date(startDateStr);
+                const prevMonthDate = new Date(sDate.getFullYear(), sDate.getMonth() - 1, 1);
+                const prevData = await fetchSingleMonthSummaryPulp(prevMonthDate, targetSuppliers);
 
-            targetSuppliers.forEach(supplierName => {
-                const curSupData = currentData[supplierName] || {};
-                const prevSupData = prevData[supplierName] || {};
-                const lotCount = curSupData.lotCount || 0;
+                container.innerHTML = '';
+                targetSuppliers.forEach(supplierName => {
+                    const curSupData = currentData[supplierName] || {};
+                    const prevSupData = prevData[supplierName] || {};
+                    const lotCount = curSupData.lotCount || 0;
 
-                const rowHTML = `
-                    <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                        <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-100">
-                            <div class="w-1.5 h-6 bg-orange-500 rounded-full"></div>
-                            <h3 class="text-xl font-bold text-slate-700 tracking-wide">${supplierName}</h3>
-                            <span class="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100 ml-auto">
-                               ${lotCount > 0 ? `Based on ${lotCount} lots` : 'No COA Data'}
-                            </span>
+                    const rowHTML = `
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                            <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-100">
+                                <div class="w-1.5 h-6 bg-orange-500 rounded-full"></div>
+                                <h3 class="text-xl font-bold text-slate-700 tracking-wide">${supplierName}</h3>
+                                <span class="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100 ml-auto">
+                                   ${lotCount > 0 ? `Based on ${lotCount} lots` : 'No COA Data'}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-5 gap-4">
+                                ${renderPulpKPICard(curSupData, prevSupData, 'alpha')}
+                                ${renderPulpKPICard(curSupData, prevSupData, 'viscosity')}
+                                ${renderPulpKPICard(curSupData, prevSupData, 'whiteness')}
+                                ${renderPulpKPICard(curSupData, prevSupData, 'silica')}
+                                ${renderPulpKPICard(curSupData, prevSupData, 'calcium')}
+                            </div>
                         </div>
-                        <div class="grid grid-cols-5 gap-4">
-                            ${renderKPICard(curSupData, prevSupData, 'alpha')}
-                            ${renderKPICard(curSupData, prevSupData, 'viscosity')}
-                            ${renderKPICard(curSupData, prevSupData, 'whiteness')}
-                            ${renderKPICard(curSupData, prevSupData, 'silica')}
-                            ${renderKPICard(curSupData, prevSupData, 'calcium')}
-                        </div>
+                    `;
+                    container.innerHTML += rowHTML;
+                });
+            } catch (error) {
+                console.error("Render Pulp Error:", error);
+                container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading pulp data: ${error.message}</div>`;
+            }
+        }
+
+        function renderPulpKPICard(currData, prevData, paramKey) {
+            const config = PULP_PARAM_MAP[paramKey];
+            const val = currData[paramKey];
+            const hasData = (val !== null && val !== undefined);
+            const displayVal = hasData ? Number(val).toFixed(2) : '-';
+            const prevVal = prevData[paramKey];
+            const hasPrev = (prevVal !== null && prevVal !== undefined);
+
+            let trendHTML = '<span class="text-slate-300">-</span>';
+            let trendColorClass = "text-slate-800";
+
+            if (hasData && hasPrev) {
+                const diff = val - prevVal;
+                const isHigher = diff > 0;
+                const isBetter = (config.type === 'quality' && isHigher) || (config.type === 'impurity' && !isHigher);
+                const arrowIcon = isHigher ? 'fa-arrow-up' : 'fa-arrow-down';
+                const trendColor = isBetter ? 'text-emerald-500' : 'text-rose-500';
+                trendHTML = `
+                    <div class="flex items-center gap-1 ${trendColor} text-[10px] font-bold">
+                        <i class="fas ${arrowIcon}"></i>
+                        <span>${Math.abs(diff).toFixed(2)}</span>
                     </div>
+                    <span class="text-[9px] text-slate-400 ml-1">vs ${prevVal.toFixed(2)}</span>
                 `;
-                container.innerHTML += rowHTML;
-            });
+            } else if (hasData && !hasPrev) {
+                trendHTML = `<span class="text-[9px] text-slate-400">Prev: N/A</span>`;
+            }
 
-        } catch (error) {
-            console.error("Render Pulp Error:", error);
-            container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading pulp data: ${error.message}</div>`;
-        }
-    }
-
-    function renderKPICard(currData, prevData, paramKey) {
-        const config = PULP_PARAM_MAP[paramKey];
-
-        // Current Value
-        const val = currData[paramKey];
-        const hasData = (val !== null && val !== undefined);
-        const displayVal = hasData ? Number(val).toFixed(2) : '-';
-
-        // Previous Value & Trend
-        const prevVal = prevData[paramKey];
-        const hasPrev = (prevVal !== null && prevVal !== undefined);
-
-        let trendHTML = '<span class="text-slate-300">-</span>';
-        let trendColorClass = "text-slate-800"; // Default value color
-
-        if (hasData && hasPrev) {
-            const diff = val - prevVal;
-            const isHigher = diff > 0;
-            const isBetter = (config.type === 'quality' && isHigher) || (config.type === 'impurity' && !isHigher);
-
-            const arrowIcon = isHigher ? 'fa-arrow-up' : 'fa-arrow-down';
-            const trendColor = isBetter ? 'text-emerald-500' : 'text-rose-500';
-
-            // Update main value color if significant (optional, keep simple for now)
-            // trendColorClass = isBetter ? "text-emerald-700" : "text-rose-700";
-
-            trendHTML = `
-                <div class="flex items-center gap-1 ${trendColor} text-[10px] font-bold">
-                    <i class="fas ${arrowIcon}"></i>
-                    <span>${Math.abs(diff).toFixed(2)}</span>
+            return `
+                <div class="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100 items-start hover:border-indigo-100 transition h-24 relative group">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">${config.label}</span>
+                    <div class="flex items-baseline gap-1 mt-auto w-full">
+                        <span class="text-2xl font-bold ${trendColorClass} tracking-tight">${displayVal}</span>
+                        <span class="text-[10px] text-slate-400 mb-1">${config.unit}</span>
+                    </div>
+                    <div class="flex items-center w-full mt-1 h-4">
+                        ${trendHTML}
+                    </div>
                 </div>
-                <span class="text-[9px] text-slate-400 ml-1">vs ${prevVal.toFixed(2)}</span>
             `;
-        } else if (hasData && !hasPrev) {
-            trendHTML = `<span class="text-[9px] text-slate-400">Prev: N/A</span>`;
         }
 
-        return `
-            <div class="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100 items-start hover:border-indigo-100 transition h-24 relative group">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">${config.label}</span>
-                <div class="flex items-baseline gap-1 mt-auto w-full">
-                    <span class="text-2xl font-bold ${trendColorClass} tracking-tight">${displayVal}</span>
-                    <span class="text-[10px] text-slate-400 mb-1">${config.unit}</span>
-                </div>
-                <div class="flex items-center w-full mt-1 h-4">
-                    ${trendHTML}
-                </div>
-            </div>
-        `;
-    }
+        async function fetchPulpStats(start, end, targetSuppliers) {
+            const startD = new Date(start);
+            const endD = new Date(end);
+            const diffDays = Math.ceil(Math.abs(endD - startD) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 60) return await fetchRawPulpData(start, end, targetSuppliers);
+            else return await fetchSummaryPulpData(start, end, targetSuppliers);
+        }
 
-    // ---------------------------------------------------------
-    //  DATA FETCHING LOGIC (With DB Routing)
-    // ---------------------------------------------------------
+        async function fetchRawPulpData(startDate, endDate, targetSuppliers) {
+            const results = {};
+            targetSuppliers.forEach(sup => {
+                results[sup] = { lotCount: 0 };
+                Object.keys(PULP_PARAM_MAP).forEach(key => { results[sup][key + 'Sum'] = 0; results[sup][key + 'Count'] = 0; });
+            });
+            try {
+                const snapshot = await db.collection('rm_pulp_inspections')
+                    .where('receivedDate', '>=', startDate)
+                    .where('receivedDate', '<=', endDate).get();
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const supplier = data.supplier;
+                    const matchedSupplier = targetSuppliers.find(s => s.trim().toUpperCase() === supplier.trim().toUpperCase());
+                    if (matchedSupplier) {
+                        results[matchedSupplier].lotCount += 1;
+                        Object.keys(PULP_PARAM_MAP).forEach(pKey => {
+                            const dbParamKey = PULP_PARAM_MAP[pKey].dbKey;
+                            if (data.parameters && data.parameters[dbParamKey]) {
+                                const val = parseFloat(data.parameters[dbParamKey].coa);
+                                if (!isNaN(val)) {
+                                    results[matchedSupplier][pKey + 'Sum'] += val;
+                                    results[matchedSupplier][pKey + 'Count'] += 1;
+                                }
+                            }
+                        });
+                    }
+                });
+            } catch (error) { console.error("Error fetching raw pulp:", error); }
+            const finalResult = {};
+            targetSuppliers.forEach(sup => {
+                finalResult[sup] = { lotCount: results[sup].lotCount };
+                Object.keys(PULP_PARAM_MAP).forEach(pKey => {
+                    const sum = results[sup][pKey + 'Sum'];
+                    const count = results[sup][pKey + 'Count'];
+                    finalResult[sup][pKey] = count > 0 ? (sum / count) : null;
+                });
+            });
+            return finalResult;
+        }
 
-    // Helper to fetch summary for ONE specific month (used for Previous Month)
-    async function fetchSingleMonthSummary(dateObj, targetSuppliers) {
-        const year = dateObj.getFullYear();
-        const month = dateObj.getMonth(); // 0-11
-        const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
-
-        // Determine Doc
-        const docID = getPulpDocID(year, month);
-
-        const results = {};
-        targetSuppliers.forEach(s => results[s] = {});
-
-        try {
-            const docRef = db.collection("stats_pulp").doc(docID);
-            const docSnap = await docRef.get();
-
-            if (docSnap.exists) {
-                const data = docSnap.data();
-                const incoming = data.pulp_incoming || {};
-                const monthData = incoming[monthStr]; // Direct access to month key
-
-                if (monthData) {
-                    targetSuppliers.forEach(sup => {
-                        // Match supplier key case-insensitive
-                        const dbSupKey = Object.keys(monthData).find(k => k.trim().toUpperCase() === sup.trim().toUpperCase());
-                        if (dbSupKey) {
-                            const rec = monthData[dbSupKey];
-                            Object.keys(PULP_PARAM_MAP).forEach(pKey => {
-                                const dbKey = PULP_PARAM_MAP[pKey].dbKey;
-                                if (rec.params && rec.params[dbKey]) {
-                                    results[sup][pKey] = rec.params[dbKey].coa_avg;
-                                } else {
-                                    results[sup][pKey] = null;
+        async function fetchSummaryPulpData(start, end, targetSuppliers) {
+            const startD = new Date(start);
+            const endD = new Date(end);
+            const monthsToFetch = [];
+            let cur = new Date(startD); cur.setDate(1);
+            while (cur <= endD) {
+                const y = cur.getFullYear(); const m = cur.getMonth();
+                monthsToFetch.push({ year: y, month: m, str: `${y}-${String(m+1).padStart(2,'0')}` });
+                cur.setMonth(cur.getMonth() + 1);
+            }
+            const aggregated = {};
+            targetSuppliers.forEach(sup => {
+                aggregated[sup] = { lotCount: 0 };
+                Object.keys(PULP_PARAM_MAP).forEach(k => { aggregated[sup][k + 'Sum'] = 0; aggregated[sup][k + 'Count'] = 0; });
+            });
+            const docCache = {};
+            for (let mObj of monthsToFetch) {
+                const docID = getPulpDocID(mObj.year, mObj.month);
+                try {
+                    if (!docCache[docID]) docCache[docID] = await db.collection("stats_pulp").doc(docID).get();
+                    const docSnap = docCache[docID];
+                    if (docSnap.exists) {
+                        const data = docSnap.data();
+                        const incoming = data.pulp_incoming || {};
+                        const monthData = incoming[mObj.str];
+                        if (monthData) {
+                            targetSuppliers.forEach(sup => {
+                                const dbSupKey = Object.keys(monthData).find(k => k.trim().toUpperCase() === sup.trim().toUpperCase());
+                                if (dbSupKey) {
+                                    const rec = monthData[dbSupKey];
+                                    aggregated[sup].lotCount += (rec.lot_count || 0);
+                                    Object.keys(PULP_PARAM_MAP).forEach(pKey => {
+                                        const dbKey = PULP_PARAM_MAP[pKey].dbKey;
+                                        if (rec.params && rec.params[dbKey]) {
+                                            const val = rec.params[dbKey].coa_avg;
+                                            const count = rec.params[dbKey].coa_count || rec.lot_count;
+                                            if (val !== undefined && val !== null) {
+                                                aggregated[sup][pKey + 'Sum'] += (val * count);
+                                                aggregated[sup][pKey + 'Count'] += count;
+                                            }
+                                        }
+                                    });
                                 }
                             });
                         }
-                    });
-                }
+                    }
+                } catch (e) {}
             }
-        } catch (e) {
-            console.warn(`Error fetching prev month ${monthStr}:`, e);
-        }
-        return results;
-    }
-
-    // Main Fetcher (Decides Raw vs Summary)
-    async function fetchPulpStats(start, end, targetSuppliers) {
-        const startD = new Date(start);
-        const endD = new Date(end);
-        const diffTime = Math.abs(endD - startD);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays <= 60) {
-            // Raw Data (rm_pulp_inspections)
-            return await fetchRawPulpData(start, end, targetSuppliers);
-        } else {
-            // Summary Data (stats_pulp)
-            return await fetchSummaryPulpData(start, end, targetSuppliers);
-        }
-    }
-
-    // Fetch Raw (Unchanged logic, just ensure params match)
-    async function fetchRawPulpData(startDate, endDate, targetSuppliers) {
-        const results = {};
-        targetSuppliers.forEach(sup => {
-            results[sup] = { lotCount: 0 };
-            Object.keys(PULP_PARAM_MAP).forEach(key => {
-                results[sup][key + 'Sum'] = 0;
-                results[sup][key + 'Count'] = 0;
-            });
-        });
-
-        try {
-            const snapshot = await db.collection('rm_pulp_inspections')
-                .where('receivedDate', '>=', startDate)
-                .where('receivedDate', '<=', endDate)
-                .get();
-
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const supplier = data.supplier;
-                const matchedSupplier = targetSuppliers.find(s => s.trim().toUpperCase() === supplier.trim().toUpperCase());
-
-                if (matchedSupplier) {
-                    results[matchedSupplier].lotCount += 1;
+            const finalResult = {};
+            targetSuppliers.forEach(sup => {
+                if (aggregated[sup].lotCount > 0) {
+                    finalResult[sup] = { lotCount: aggregated[sup].lotCount };
                     Object.keys(PULP_PARAM_MAP).forEach(pKey => {
-                        const dbParamKey = PULP_PARAM_MAP[pKey].dbKey;
-                        if (data.parameters && data.parameters[dbParamKey]) {
-                            const val = parseFloat(data.parameters[dbParamKey].coa);
-                            if (!isNaN(val)) {
-                                results[matchedSupplier][pKey + 'Sum'] += val;
-                                results[matchedSupplier][pKey + 'Count'] += 1;
-                            }
-                        }
+                        const totalSum = aggregated[sup][pKey + 'Sum'];
+                        const totalCount = aggregated[sup][pKey + 'Count'];
+                        finalResult[sup][pKey] = (totalCount > 0) ? (totalSum / totalCount) : null;
                     });
                 }
             });
-        } catch (error) {
-            console.error("Error fetching raw pulp:", error);
+            return finalResult;
         }
 
-        const finalResult = {};
-        targetSuppliers.forEach(sup => {
-            finalResult[sup] = { lotCount: results[sup].lotCount };
-            Object.keys(PULP_PARAM_MAP).forEach(pKey => {
-                const sum = results[sup][pKey + 'Sum'];
-                const count = results[sup][pKey + 'Count'];
-                finalResult[sup][pKey] = count > 0 ? (sum / count) : null;
-            });
-        });
-        return finalResult;
-    }
-
-    // Fetch Summary (Updated to handle doc split inside the loop)
-    async function fetchSummaryPulpData(start, end, targetSuppliers) {
-        const startD = new Date(start);
-        const endD = new Date(end);
-
-        // Generate list of "YYYY-MM" to fetch
-        const monthsToFetch = [];
-        let cur = new Date(startD);
-        // Align to start of month
-        cur.setDate(1); 
-        while (cur <= endD) {
-            const y = cur.getFullYear();
-            const m = cur.getMonth();
-            monthsToFetch.push({ year: y, month: m, str: `${y}-${String(m+1).padStart(2,'0')}` });
-            cur.setMonth(cur.getMonth() + 1);
-        }
-
-        const aggregated = {};
-        targetSuppliers.forEach(sup => {
-            aggregated[sup] = { lotCount: 0 };
-            Object.keys(PULP_PARAM_MAP).forEach(k => { 
-                aggregated[sup][k + 'Sum'] = 0; 
-                aggregated[sup][k + 'Count'] = 0; 
-            });
-        });
-
-        // Use a cache to avoid re-fetching the same doc for multiple months
-        const docCache = {}; 
-
-        for (let mObj of monthsToFetch) {
-            const docID = getPulpDocID(mObj.year, mObj.month);
-
+        async function fetchSingleMonthSummaryPulp(dateObj, targetSuppliers) {
+            const year = dateObj.getFullYear();
+            const month = dateObj.getMonth();
+            const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+            const docID = getPulpDocID(year, month);
+            const results = {};
+            targetSuppliers.forEach(s => results[s] = {});
             try {
-                if (!docCache[docID]) {
-                    docCache[docID] = await db.collection("stats_pulp").doc(docID).get();
-                }
-
-                const docSnap = docCache[docID];
+                const docRef = db.collection("stats_pulp").doc(docID);
+                const docSnap = await docRef.get();
                 if (docSnap.exists) {
                     const data = docSnap.data();
                     const incoming = data.pulp_incoming || {};
-                    const monthData = incoming[mObj.str];
-
+                    const monthData = incoming[monthStr];
                     if (monthData) {
                         targetSuppliers.forEach(sup => {
                             const dbSupKey = Object.keys(monthData).find(k => k.trim().toUpperCase() === sup.trim().toUpperCase());
                             if (dbSupKey) {
                                 const rec = monthData[dbSupKey];
-                                aggregated[sup].lotCount += (rec.lot_count || 0);
-
                                 Object.keys(PULP_PARAM_MAP).forEach(pKey => {
                                     const dbKey = PULP_PARAM_MAP[pKey].dbKey;
                                     if (rec.params && rec.params[dbKey]) {
-                                        const val = rec.params[dbKey].coa_avg;
-                                        const count = rec.params[dbKey].coa_count || rec.lot_count;
-                                        if (val !== undefined && val !== null) {
-                                            aggregated[sup][pKey + 'Sum'] += (val * count);
-                                            aggregated[sup][pKey + 'Count'] += count;
-                                        }
+                                        results[sup][pKey] = rec.params[dbKey].coa_avg;
+                                    } else {
+                                        results[sup][pKey] = null;
                                     }
                                 });
                             }
                         });
                     }
                 }
+            } catch (e) {}
+            return results;
+        }
+
+        // =========================================================
+        // 6. DATA FETCHING - CENTRAL ROUTER
+        // =========================================================
+
+        // Utils
+        function getPreviousPeriodDates(startStr, endStr) {
+            const dStart = new Date(startStr);
+            const dEnd = new Date(endStr);
+            // ย้อนหลัง 1 เดือน
+            const prevStart = new Date(dStart);
+            prevStart.setMonth(dStart.getMonth() - 1);
+            const prevEnd = new Date(dEnd);
+            prevEnd.setMonth(dEnd.getMonth() - 1);
+
+            return {
+                start: prevStart.toISOString().split('T')[0],
+                end: prevEnd.toISOString().split('T')[0]
+            };
+        }
+        function findParamCategory(mc, paramName) {
+            const config = MACHINE_PROCESS_CONFIG[mc];
+            if (config.viscose.includes(paramName)) return 'Viscose';
+            if (config.auxiliary.includes(paramName)) return 'Auxiliary';
+            if (config.spinning.includes(paramName)) return 'Spinning';
+            return 'Viscose'; 
+        }
+
+        function calculateStats(arr) {
+            const n = arr.length;
+            if (n === 0) return { avg: 0, cv: 0 };
+            const mean = arr.reduce((a, b) => a + b, 0) / n;
+            const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+            const stdev = Math.sqrt(variance);
+            const cv = mean !== 0 ? (stdev / mean) * 100 : 0;
+            return { avg: mean, cv: cv };
+        }
+
+        // --- FETCHERS ---
+
+        async function fetchProcessDataByType(mc, paramName, start, end, mode) {
+            if (mode === 'monthly') return await fetchMonthlyProcessStats(mc, paramName, start, end);
+            if (mode === 'daily') return await fetchDailyProcessLogs(mc, paramName, start, end);
+            return await fetchHourlyProcessLogs(mc, paramName, start, end); // Default Hourly
+        }
+
+        async function fetchProductDataByType(mc, paramName, start, end, mode) {
+            if (mode === 'monthly') return await fetchMonthlyProductStats(mc, paramName, start, end);
+            if (mode === 'daily') return await fetchDailyProductLogs(mc, paramName, start, end);
+            return await fetchHourlyProductLogs(mc, paramName, start, end); // Default Hourly
+        }
+
+        // 1. HOURLY
+        async function fetchHourlyProcessLogs(mc, paramName, start, end) {
+            const category = findParamCategory(mc, paramName);
+            const labels = [];
+            const dataPoints = [];
+            try {
+                const snapshot = await db.collection('process_raw_logs')
+                    .where('machineId', '==', mc)
+                    .where('date', '>=', start).where('date', '<=', end)
+                    .orderBy('date', 'asc').get();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (!d.data) return;
+
+                    // แก้ไข: แปลง Category ให้ตรงกับใน Database (ลองทั้งตัวเล็กและตัวใหญ่)
+                    let targetData = null;
+                    if (d.data[category]) {
+                        targetData = d.data[category][paramName];
+                    } else if (d.data[category.toLowerCase()]) { // ✅ เพิ่มบรรทัดนี้: ลองหาแบบตัวพิมพ์เล็ก (auxiliary, viscose)
+                        targetData = d.data[category.toLowerCase()][paramName];
+                    }
+
+                    if (targetData) {
+                        const dateStr = d.date;
+                        for (let h = 0; h < 24; h++) {
+                            const val = targetData[h]; // ใช้ตัวแปรที่เราหาเจอ
+                            if (val !== undefined && val !== null && val !== "") {
+                                labels.push(`${dateStr} ${String(h).padStart(2,'0')}:00`);
+                                dataPoints.push(Number(val));
+                            }
+                        }
+                    }
+                });
+            } catch (e) { console.warn("Fetch Raw Process Error", e); }
+            const stats = calculateStats(dataPoints);
+            return { labels, data: dataPoints, avg: stats.avg, cv: stats.cv };
+        }
+
+        async function fetchHourlyProductLogs(mc, paramName, start, end) {
+            const labels = [];
+            const dataPoints = [];
+            try {
+                const snapshot = await db.collection('product_raw_logs')
+                    .where('machineId', '==', mc)
+                    .where('date', '>=', start).where('date', '<=', end)
+                    .orderBy('date', 'asc').get();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const dateStr = d.date;
+                    if (!d.data) return;
+                    const categories = ["Modal", "Grey", "NonWoven", "Viscose"];
+                    let hourlyData = null;
+                    for (let cat of categories) {
+                        if (d.data[cat] && d.data[cat][paramName]) {
+                            hourlyData = d.data[cat][paramName];
+                            break;
+                        }
+                    }
+                    if (hourlyData) {
+                        for (let h = 0; h < 24; h++) {
+                            const val = hourlyData[h];
+                            if (val !== undefined && val !== null && val !== "") {
+                                labels.push(`${dateStr} ${String(h).padStart(2,'0')}:00`);
+                                dataPoints.push(Number(val));
+                            }
+                        }
+                    }
+                });
+            } catch (e) { console.warn("Fetch Raw Product Error", e); }
+            return { labels, data: dataPoints };
+        }
+
+        // 2. DAILY (Aggregated from Raw)
+        async function fetchDailyProcessLogs(mc, paramName, start, end) {
+            const category = findParamCategory(mc, paramName);
+            const labels = [];
+            const dataPoints = [];
+            try {
+                const snapshot = await db.collection('process_raw_logs')
+                    .where('machineId', '==', mc)
+                    .where('date', '>=', start).where('date', '<=', end)
+                    .orderBy('date', 'asc').get();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (!d.data) return;
+
+                    // แก้ไข: หา Data ทั้งแบบตัวใหญ่และตัวเล็ก
+                    let targetData = null;
+                    if (d.data[category]) {
+                        targetData = d.data[category][paramName];
+                    } else if (d.data[category.toLowerCase()]) { // ✅ เพิ่มบรรทัดนี้
+                        targetData = d.data[category.toLowerCase()][paramName];
+                    }
+
+                    if (targetData) {
+                        let sum = 0, count = 0;
+                        for (let h = 0; h < 24; h++) {
+                            const val = targetData[h];
+                            if (val !== undefined && val !== null && val !== "") {
+                                sum += Number(val);
+                                count++;
+                            }
+                        }
+                        if (count > 0) {
+                            labels.push(d.date);
+                            dataPoints.push(sum / count);
+                        }
+                    }
+                });
+            } catch (e) { console.warn("Fetch Daily Process Error", e); }
+            const stats = calculateStats(dataPoints);
+            return { labels, data: dataPoints, avg: stats.avg, cv: stats.cv };
+        }
+
+        async function fetchDailyProductLogs(mc, paramName, start, end) {
+            const labels = [];
+            const dataPoints = [];
+            try {
+                const snapshot = await db.collection('product_raw_logs')
+                    .where('machineId', '==', mc)
+                    .where('date', '>=', start).where('date', '<=', end)
+                    .orderBy('date', 'asc').get();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (!d.data) return;
+                    const categories = ["Modal", "Grey", "NonWoven", "Viscose"];
+                    let hourlyData = null;
+                    for (let cat of categories) {
+                        if (d.data[cat] && d.data[cat][paramName]) {
+                            hourlyData = d.data[cat][paramName];
+                            break;
+                        }
+                    }
+                    if (hourlyData) {
+                        let sum = 0, count = 0;
+                        for (let h = 0; h < 24; h++) {
+                            const val = hourlyData[h];
+                            if (val !== undefined && val !== null && val !== "") {
+                                sum += Number(val);
+                                count++;
+                            }
+                        }
+                        if (count > 0) {
+                            labels.push(d.date);
+                            dataPoints.push(sum / count);
+                        }
+                    }
+                });
+            } catch (e) { console.warn("Fetch Daily Product Error", e); }
+            return { labels, data: dataPoints };
+        }
+
+        // 3. MONTHLY (From Stats Collection - Department Based)
+        async function fetchMonthlyProcessStats(mc, paramName, start, end) {
+            // 1. ระบุ Category และ Collection ให้ถูกต้อง
+            const category = findParamCategory(mc, paramName);
+
+            // Mapping ชื่อ Collection ให้ชัวร์
+            let baseCollection = "";
+            if (category === "Viscose") baseCollection = "stats_Viscose";
+            else if (category === "Auxiliary") baseCollection = "stats_Auxiliary";
+            else if (category === "Spinning") baseCollection = "stats_Spinning";
+
+            // เติม _Monthly ต่อท้าย
+            const collectionName = `${baseCollection}_Monthly`; 
+
+            const labels = [];
+            const dataPoints = [];
+            const minPoints = []; // ✅ เก็บไว้: ค่าต่ำสุด
+            const maxPoints = []; // ✅ เก็บไว้: ค่าสูงสุด
+            let totalWeightedCV = 0;
+
+            const startMonth = start.substring(0, 7);
+            const endMonth = end.substring(0, 7);
+
+            try {
+                const snapshot = await db.collection(collectionName)
+                    .where('machineId', '==', mc)
+                    .where('month', '>=', startMonth)
+                    .where('month', '<=', endMonth)
+                    .orderBy('month', 'asc')
+                    .get();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const monthStr = d.month;
+
+                    if (d.stats && d.stats[paramName]) {
+                        const s = d.stats[paramName];
+
+                        // ✅ ส่วนที่ 1: คำนวณ Average (แก้ปัญหากราฟไม่ขึ้น)
+                        let avg = 0;
+                        if (s.count > 0) {
+                            if (s.sum !== undefined) {
+                                avg = s.sum / s.count; // หารเลขเองเพื่อความชัวร์
+                            } else if (s.avg !== undefined) {
+                                avg = s.avg; // เผื่อข้อมูลเก่า
+                            }
+
+                            labels.push(monthStr);
+                            dataPoints.push(avg);
+
+                            // ✅ ส่วนที่ 2: Data Science Metrics (Min/Max)
+                            // ถ้าไม่มีค่า min เก็บไว้ ให้ใช้ค่า avg แทนไปก่อน กันกราฟพัง
+                            minPoints.push(s.min !== undefined ? s.min : avg);
+                            maxPoints.push(s.max !== undefined ? s.max : avg);
+
+                            // ✅ ส่วนที่ 3: คำนวณ CV (Standard Deviation)
+                            if (s.sumSq) {
+                                const variance = (s.sumSq / s.count) - (avg * avg);
+                                const sd = Math.sqrt(Math.max(0, variance));
+                                const cv = avg !== 0 ? (sd / avg) * 100 : 0;
+                                totalWeightedCV = cv; // อัปเดตค่า CV ล่าสุด
+                            }
+                        }
+                    }
+                });
             } catch (e) {
-                console.error(`Error processing month ${mObj.str}:`, e);
+                console.warn(`Fetch Monthly Error (${collectionName}):`, e);
+            }
+
+            // ส่งคืนค่าครบทุกตัว
+            return { 
+                labels, 
+                data: dataPoints, 
+                min: minPoints, 
+                max: maxPoints, 
+                cv: totalWeightedCV 
+            };
+        }
+
+        async function fetchMonthlyProductStats(mc, paramName, start, end) {
+            // 1. ชี้ไปที่ Collection _Monthly
+            const collectionName = `${MC_PRODUCT_MAPPING[mc]}_Monthly`; 
+
+            const labels = [];
+            const dataPoints = [];
+            const startMonth = start.substring(0, 7);
+            const endMonth = end.substring(0, 7);
+
+            try {
+                const snapshot = await db.collection(collectionName)
+                    .where('machineId', '==', mc)
+                    .where('month', '>=', startMonth)
+                    .where('month', '<=', endMonth)
+                    .orderBy('month', 'asc')
+                    .get();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const monthStr = d.month;
+
+                    if (d.stats && d.stats[paramName]) {
+                        const s = d.stats[paramName];
+
+                        // กรณี: Numeric (เช่น Tenacity, Whiteness)
+                        if (s.type === 'numeric' || (!s.type && s.sum !== undefined)) {
+                            const realAvg = s.count > 0 ? (s.sum / s.count) : 0;
+                            labels.push(monthStr);
+                            dataPoints.push(realAvg);
+                        } 
+                        // กรณี: Categorical (เช่น Grade E)
+                        // *หมายเหตุ: กราฟเส้นปกติจะพลอตได้แค่ค่าเดียว 
+                        // ถ้าเลือก Grade จะต้องเลือกว่าจะพลอต % ของเกรดอะไร (เช่น %E)
+                        // ในที่นี้สมมติว่าถ้าเป็น Grade ให้พลอต % ของตัวที่เลือก (เช่น E)
+                        // หรือถ้าไม่ได้เลือกเจาะจง อาจต้องข้ามไป
+                    }
+                });
+            } catch (e) {
+                console.warn(`Fetch Monthly Product Error (${collectionName}):`, e);
+            }
+            return { labels, data: dataPoints };
+        }
+
+        // =========================================================
+        // 7. RENDER & CHARTS
+        // =========================================================
+
+        async function renderProcessCharts(mc, start, end, mode) {
+            // 1. เตรียมช่วงเวลาเก่าไว้เทียบ
+            const prevPeriod = getPreviousPeriodDates(start, end);
+
+            for (let i = 1; i <= 4; i++) {
+                const chartId = `chartProc${i}`;
+                const selId = `selProc${i}`;
+                const el = document.getElementById(selId);
+
+                if(el && el.value) {
+                    const param = el.value;
+                    // 2. ดึงข้อมูล 2 รอบ (ปัจจุบัน และ อดีต)
+                    try {
+                        const [currentResult, prevResult] = await Promise.all([
+                            fetchProcessDataByType(mc, param, start, end, mode),
+                            fetchProcessDataByType(mc, param, prevPeriod.start, prevPeriod.end, mode)
+                        ]);
+
+                        // 3. วาดกราฟ (ข้อมูลปัจจุบัน)
+                        createDynamicLineChart(chartId, param, '#2563eb', currentResult.labels, currentResult.data, mode);
+
+                        // 4. สร้างป้าย CV เปรียบเทียบ (ส่งไป 2 ค่า)
+                        updateProcessStabilityBadge(selId, currentResult.cv, prevResult.cv);
+                    } catch (e) {
+                        console.error("Render Chart Error:", e);
+                    }
+                }
+            }
+        }
+        async function updateSingleChart(type, index) {
+            const mc = document.getElementById('mcFilter').value;
+            const startStr = document.getElementById('startDate').value;
+            const endStr = document.getElementById('endDate').value;
+            const mode = getGranularity();
+
+            // คำนวณช่วงเวลาเก่า
+            const prevPeriod = getPreviousPeriodDates(startStr, endStr);
+
+            const selId = `sel${type}${index}`;
+            const chartId = `chart${type}${index}`;
+            const el = document.getElementById(selId);
+            if (!el || !el.value) return;
+            const param = el.value;
+
+            el.style.cursor = 'wait';
+            document.body.style.cursor = 'wait';
+
+            try {
+                if (type === 'Proc') {
+                    // ดึงข้อมูล 2 รอบ
+                    const [result, prevResult] = await Promise.all([
+                        fetchProcessDataByType(mc, param, startStr, endStr, mode),
+                        fetchProcessDataByType(mc, param, prevPeriod.start, prevPeriod.end, mode)
+                    ]);
+
+                    updateProcessStabilityBadge(selId, result.cv, prevResult.cv);
+                    createDynamicLineChart(chartId, param, '#2563eb', result.labels, result.data, mode);
+                } else {
+                    // Product (ถ้าอนาคตอยากทำเทียบก็แก้ตรงนี้)
+                    const result = await fetchProductDataByType(mc, param, startStr, endStr, mode);
+                    createDynamicLineChart(chartId, param, '#10b981', result.labels, result.data, mode);
+                }
+            } catch (e) {
+                console.error(`Error updating single chart ${type}${index}:`, e);
+            } finally {
+                el.style.cursor = 'default';
+                document.body.style.cursor = 'default';
             }
         }
 
-        const finalResult = {};
-        targetSuppliers.forEach(sup => {
-            if (aggregated[sup].lotCount > 0) {
-                finalResult[sup] = { lotCount: aggregated[sup].lotCount };
-                Object.keys(PULP_PARAM_MAP).forEach(pKey => {
-                    const totalSum = aggregated[sup][pKey + 'Sum'];
-                    const totalCount = aggregated[sup][pKey + 'Count'];
-                    finalResult[sup][pKey] = (totalCount > 0) ? (totalSum / totalCount) : null;
-                });
+        async function renderProductCharts(mc, start, end, mode) {
+            for (let i = 1; i <= 4; i++) {
+                const selId = `selProd${i}`;
+                const chartId = `chartProd${i}`;
+                const el = document.getElementById(selId);
+                if(el && el.value) {
+                    const param = el.value;
+                    const result = await fetchProductDataByType(mc, param, start, end, mode);
+                    createDynamicLineChart(chartId, param, '#10b981', result.labels, result.data, mode);
+                }
             }
-        });
-        return finalResult;
-    }
+        }
 
-    // =========================================================
-    // 6. GENERIC CHART & UTILS (Existing Logic)
-    // =========================================================
-    async function fetchData(collectionName, machineId, paramName, startDate, endDate) {
-        try {
-            const snapshot = await db.collection(collectionName)
-                .where("machineId", "==", machineId)
-                .where("date", ">=", startDate)
-                .where("date", "<=", endDate)
-                .orderBy("date", "asc")
-                .get();
-            const labels = [];
-            const data = [];
-            snapshot.forEach(doc => {
-                const docData = doc.data();
-                if (docData.stats && docData.stats[paramName]) {
-                    labels.push(docData.date);
-                    const valObj = docData.stats[paramName];
-                    if (typeof valObj.avg === 'number') {
-                        data.push(valObj.avg);
-                    } else if (valObj.percentages && valObj.percentages['E']) {
-                        data.push(valObj.percentages['E']);
-                    } else {
-                        data.push(null);
+        function updateProcessStabilityBadge(selectId, currentCV, prevCV) {
+            const selectEl = document.getElementById(selectId);
+            if(!selectEl) return;
+            const parent = selectEl.parentElement;
+
+            // ลบ Badge เก่าออกก่อน
+            const oldBadge = parent.querySelector('.stability-badge');
+            if(oldBadge) oldBadge.remove();
+
+            if (currentCV === undefined || currentCV === null) return;
+
+            let comparisonHtml = '';
+            let bgColorClass = "bg-indigo-50 border-indigo-200 text-indigo-700"; // สีปกติ
+
+            // ถ้ามีข้อมูลเก่ามาเทียบ
+            if (prevCV !== undefined && prevCV !== null && prevCV > 0) {
+                const diff = currentCV - prevCV;
+                // ถ้าน้อยลง = ดี (สีเขียว), มากขึ้น = แย่ (สีแดง)
+                const isBetter = diff <= 0; 
+
+                const arrowIcon = diff > 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+                const colorClass = isBetter ? 'text-emerald-600' : 'text-rose-600';
+
+                // เปลี่ยนสีพื้นหลังตามผลลัพธ์
+                bgColorClass = isBetter ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200";
+
+                comparisonHtml = `
+                    <div class="flex items-center gap-1 ml-2 ${colorClass} border-l border-slate-200 pl-2">
+                        <i class="fas ${arrowIcon} text-[8px]"></i>
+                        <span class="text-[9px] font-bold">${Math.abs(diff).toFixed(2)}%</span>
+                    </div>
+                    <span class="text-[8px] text-slate-400 ml-1">vs ${prevCV.toFixed(2)}%</span>
+                `;
+            } else {
+                comparisonHtml = `<span class="text-[8px] text-slate-400 ml-2">Prev: -</span>`;
+            }
+
+            const badgeHtml = `
+                <div class="stability-badge flex items-center px-2 py-0.5 rounded border ${bgColorClass} ml-auto shadow-sm transition-all duration-300">
+                    <span class="text-[10px] font-bold text-slate-700">CV ${currentCV.toFixed(2)}%</span>
+                    ${comparisonHtml}
+                </div>
+            `;
+
+            selectEl.insertAdjacentHTML('afterend', badgeHtml);
+        }
+
+        async function renderCorrelation(mc, start, end, mode) {
+            const y1Param = document.getElementById('corrY1').value;
+            const y2Param = document.getElementById('corrY2').value;
+
+            const d1Result = await fetchProcessDataByType(mc, y1Param, start, end, mode);
+            const d2Result = await fetchProductDataByType(mc, y2Param, start, end, mode);
+
+            const scatterData = [];
+            const d2Map = new Map();
+            d2Result.labels.forEach((label, i) => d2Map.set(label, d2Result.data[i]));
+
+            d1Result.labels.forEach((label, i) => {
+                if (d2Map.has(label)) {
+                    scatterData.push({ x: d1Result.data[i], y: d2Map.get(label) });
+                }
+            });
+
+            const ctx = document.getElementById('correlationChart').getContext('2d');
+            if (chartInstances['corr']) chartInstances['corr'].destroy();
+            chartInstances['corr'] = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: `Correlation (${mode})`,
+                        data: scatterData,
+                        backgroundColor: '#4f46e5'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: y1Param } },
+                        y: { title: { display: true, text: y2Param } }
                     }
                 }
             });
-            return { labels, data };
-        } catch (error) {
-            console.warn(`Fetch error (${paramName}):`, error);
-            return { labels: [], data: [] };
         }
-    }
 
-    async function renderProcessCharts(mc) {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
-        const procConfig = MACHINE_PROCESS_CONFIG[mc];
-        const getCollection = (param) => {
-            if(procConfig.viscose.includes(param)) return 'stats_Viscose';
-            if(procConfig.auxiliary.includes(param)) return 'stats_Auxiliary';
-            return 'stats_Spinning';
-        };
-        const draw = async (selId, chartId) => {
-            const param = document.getElementById(selId).value;
-            const d = await fetchData(getCollection(param), mc, param, start, end);
-            createLineChart(chartId, param, '#2563eb', d.labels, d.data);
-        };
-        await draw('selProc1', 'chartProc1');
-        await draw('selProc2', 'chartProc2');
-        await draw('selProc3', 'chartProc3');
-        await draw('selProc4', 'chartProc4');
-    }
+        function createDynamicLineChart(canvasId, label, color, labels, dataPoints, mode) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
-    async function renderProductCharts(mc) {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
-        const collection = MC_PRODUCT_MAPPING[mc];
-        for (let i = 1; i <= 4; i++) {
-            const selId = `selProd${i}`;
-            const chartId = `chartProd${i}`;
-            const el = document.getElementById(selId);
-            if(el && el.value) {
-                const d = await fetchData(collection, mc, el.value, start, end);
-                createLineChart(chartId, el.value, '#10b981', d.labels, d.data);
+            // Style adjustments based on mode
+            let pointRadius = 2;
+            let tension = 0.3;
+            if (mode === 'hourly') {
+                pointRadius = dataPoints.length > 50 ? 0 : 1.5;
+                tension = 0.1; // Sharper for hourly
             }
-        }
-    }
 
-    async function renderCorrelation(mc) {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
-        const y1Param = document.getElementById('corrY1').value;
-        const y2Param = document.getElementById('corrY2').value;
-
-        let d1 = await fetchData('stats_Viscose', mc, y1Param, start, end);
-        if(!d1.data.length) d1 = await fetchData('stats_Auxiliary', mc, y1Param, start, end);
-        if(!d1.data.length) d1 = await fetchData('stats_Spinning', mc, y1Param, start, end);
-
-        const d2 = await fetchData(MC_PRODUCT_MAPPING[mc], mc, y2Param, start, end);
-        const scatterData = [];
-        d1.labels.forEach((date, idx) => {
-            const idx2 = d2.labels.indexOf(date);
-            if (idx2 !== -1 && d1.data[idx] !== null && d2.data[idx2] !== null) {
-                scatterData.push({ x: d1.data[idx], y: d2.data[idx2] });
-            }
-        });
-
-        const ctx = document.getElementById('correlationChart').getContext('2d');
-        if (chartInstances['corr']) chartInstances['corr'].destroy();
-
-        chartInstances['corr'] = new Chart(ctx, {
-            type: 'scatter',
-            data: {
-                datasets: [{
-                    label: 'Correlation',
-                    data: scatterData,
-                    backgroundColor: '#4f46e5'
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: {
-                    x: { title: { display: true, text: y1Param } },
-                    y: { title: { display: true, text: y2Param } }
+            chartInstances[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: dataPoints,
+                        borderColor: color,
+                        backgroundColor: color + '10',
+                        borderWidth: 1.5,
+                        pointRadius: pointRadius,
+                        pointHoverRadius: 4,
+                        fill: true,
+                        tension: tension
+                    }]
+                },
+                options: {
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) { return context[0].label; }
+                            }
+                        }
+                    },
+                    scales: { 
+                        x: { 
+                            display: true,
+                            ticks: { maxTicksLimit: 6, maxRotation: 0 },
+                            grid: { display: false }
+                        }, 
+                        y: { display: true } 
+                    }
                 }
-            }
-        });
-    }
-
-    function createLineChart(canvasId, label, color, labels, dataPoints) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-
-        chartInstances[canvasId] = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: label,
-                    data: dataPoints,
-                    borderColor: color,
-                    backgroundColor: color + '10',
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { x: { display: false }, y: { display: true } }
-            }
-        });
-    }
-
-    // =========================================================
-    // 7. AI CHAT LOGIC
-    // =========================================================
-    function toggleChat() {
-        document.getElementById('chatWindow').classList.toggle('hidden');
-    }
-    function handleEnter(e) {
-        if(e.key === 'Enter') sendChatMessage();
-    }
-    async function sendChatMessage() {
-        const input = document.getElementById('chatInput');
-        const msg = input.value;
-        if(!msg) return;
-        const container = document.getElementById('chatMessages');
-        container.innerHTML += `<div class="flex justify-end"><div class="chat-bubble-user p-3 shadow-sm max-w-[90%] text-white bg-indigo-600 rounded-l-xl rounded-br-xl">${msg}</div></div>`;
-        input.value = '';
-        container.scrollTop = container.scrollHeight;
-
-        const loadingId = 'ai-loading-' + Date.now();
-        container.innerHTML += `<div id="${loadingId}" class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-white text-slate-500 rounded-r-xl rounded-bl-xl"><i class="fas fa-circle-notch fa-spin"></i> กำลังวิเคราะห์ข้อมูล...</div></div>`;
-        container.scrollTop = container.scrollHeight;
-
-        try {
-            const askAI = functions.httpsCallable('askProductChat');
-            const result = await askAI({ question: msg });
-            document.getElementById(loadingId).remove();
-            let reply = result.data.text.replace(/\n/g, '<br>');
-            reply = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-            container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-white text-slate-800 rounded-r-xl rounded-bl-xl border border-slate-200">${reply}</div></div>`;
-        } catch (error) {
-            document.getElementById(loadingId).remove();
-            console.error("AI Error:", error);
-            container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-red-50 text-red-600 border border-red-200">AI Connection Error: ${error.message}</div></div>`;
+            });
         }
-        container.scrollTop = container.scrollHeight;
-    }
+
+        // =========================================================
+        // 8. AI CHAT LOGIC
+        // =========================================================
+        function toggleChat() {
+            document.getElementById('chatWindow').classList.toggle('hidden');
+        }
+        function handleEnter(e) {
+            if(e.key === 'Enter') sendChatMessage();
+        }
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value;
+            if(!msg) return;
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<div class="flex justify-end"><div class="chat-bubble-user p-3 shadow-sm max-w-[90%] text-white bg-indigo-600 rounded-l-xl rounded-br-xl">${msg}</div></div>`;
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+            const loadingId = 'ai-loading-' + Date.now();
+            container.innerHTML += `<div id="${loadingId}" class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-white text-slate-500 rounded-r-xl rounded-bl-xl"><i class="fas fa-circle-notch fa-spin"></i> กำลังวิเคราะห์ข้อมูล...</div></div>`;
+            container.scrollTop = container.scrollHeight;
+            try {
+                const askAI = functions.httpsCallable('askProductChat');
+                const result = await askAI({ question: msg });
+                document.getElementById(loadingId).remove();
+                let reply = result.data.text.replace(/\n/g, '<br>');
+                reply = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-white text-slate-800 rounded-r-xl rounded-bl-xl border border-slate-200">${reply}</div></div>`;
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                console.error("AI Error:", error);
+                container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-red-50 text-red-600 border border-red-200">AI Connection Error: ${error.message}</div></div>`;
+            }
+            container.scrollTop = container.scrollHeight;
+        }
     </script>
 </body>
 </html>

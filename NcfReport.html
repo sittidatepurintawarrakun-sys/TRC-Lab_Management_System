@@ -59,6 +59,16 @@
                              <button id="analyze-btn" class="btn btn-primary">
                                 <i class="fas fa-sparkles"></i> Analyze with AI
                              </button>
+                             
+                             <div id="admin-tools-container" class="hidden items-center gap-2 ml-4 border-l pl-4 border-gray-300">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Admin Tools:</span>
+                                <button id="manual-update-btn" class="btn bg-teal-600 text-white hover:bg-teal-700 text-sm py-1 px-3" title="Recalculate Dashboard Statistics">
+                                    <i class="fas fa-sync-alt"></i> Update Stats
+                                </button>
+                                <button id="manual-cleanup-btn" class="btn bg-rose-600 text-white hover:bg-rose-700 text-sm py-1 px-3" title="Delete records older than 2 years">
+                                    <i class="fas fa-trash-restore"></i> Clean Old NCF
+                                </button>
+                            </div>
                     </div>
                     <div id="auth-container">
                         <div id="user-info" class="hidden items-center gap-4">
@@ -192,7 +202,6 @@
 
             <script>
             document.addEventListener('DOMContentLoaded', () => {
-                // (ใหม่) --- 1. เพิ่ม Config กลับมา ---
                 const firebaseConfig = {
                     apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
                     authDomain: "lab-trc-management-system.firebaseapp.com",
@@ -201,44 +210,50 @@
                     messagingSenderId: "43919979160",
                     appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
                 };
-                // (ใหม่) --- 2. เรียก InitializeApp (สำคัญที่สุด) ---
+                
                 firebase.initializeApp(firebaseConfig);
             
                 const db = firebase.firestore();
                 db.settings({ experimentalForceLongPolling: true });
-                // (ใหม่) --- AUTH LOGIC ---
                 const auth = firebase.auth();
 
-                // (ใหม่) Initialize Functions
                 const functions = firebase.functions();
-                // (ใหม่) สร้างตัวแปรสำหรับเรียกใช้ฟังก์ชัน (ชื่อต้องตรงกับใน index.js)
+                
+                // Callable Functions (ต้องตรงกับชื่อใน index.js)
                 const getNcfAiAnalysis = functions.httpsCallable('getNcfAiAnalysis');
                 const askNcfChat = functions.httpsCallable('askNcfChat');
+                
+                // [ใหม่] เพิ่มฟังก์ชันสำหรับ Admin
+                const adminManualUpdateStats = functions.httpsCallable('manualUpdateStats');
+                const adminManualCleanup = functions.httpsCallable('manualCleanupOldRecords');
 
             const adminEmails = ["sittidate.p@adityabirla.com", "trc-qcl.laboratory@adityabirla.com", "laboratory.trc@adityabirla.com", "waraporn.jindanath@adityabirla.com"];
             let currentUser = null;
 
-            // (ใหม่) DOM Elements สำหรับ Auth
             const loginPromptBtn = $('#login-prompt-btn');
             const logoutBtn = $('#logout-btn');
             const userInfoDiv = $('#user-info');
             const userEmailSpan = $('#user-email');
 
-            // (ใหม่) Event Handlers สำหรับ Login/Logout (ใช้ Password ที่คุณกำหนด)
-            // (ใหม่) Event Handlers for Custom Modal
+            // Custom Modal Elements
             const passwordModal = $('#passwordModal');
             const passwordInput = $('#passwordInput');
             const modalOkBtn = $('#modalOkBtn');
             const modalCancelBtn = $('#modalCancelBtn');
-            let loginEmailAttempt = null; // Store email temporarily
+            let loginEmailAttempt = null;
+
+            // [ใหม่] Admin Tools Elements
+            const adminToolsContainer = $('#admin-tools-container');
+            const manualUpdateBtn = $('#manual-update-btn');
+            const manualCleanupBtn = $('#manual-cleanup-btn');
 
             loginPromptBtn.on('click', () => {
                 const email = prompt("Please enter your admin email:");
                 if (email) {
-                    loginEmailAttempt = email; // Store the entered email
-                    passwordInput.val('');    // Clear previous password input
-                    passwordModal.show();     // Show the custom modal
-                    passwordInput.focus();    // Focus on the password field
+                    loginEmailAttempt = email;
+                    passwordInput.val('');
+                    passwordModal.show();
+                    passwordInput.focus();
                 }
             });
 
@@ -248,24 +263,22 @@
                     auth.signInWithEmailAndPassword(loginEmailAttempt, password)
                         .catch(err => alert("Login Failed: " + err.message));
                 }
-                passwordModal.hide(); // Hide modal after attempt
-                loginEmailAttempt = null; // Clear stored email
+                passwordModal.hide();
+                loginEmailAttempt = null;
             });
 
             modalCancelBtn.on('click', () => {
-                passwordModal.hide(); // Hide modal on cancel
-                loginEmailAttempt = null; // Clear stored email
+                passwordModal.hide();
+                loginEmailAttempt = null;
             });
 
-            // (เพิ่ม) Allow pressing Enter key in password field to submit
             passwordInput.on('keypress', function(e) {
-                if (e.which === 13) { // 13 is the Enter key code
-                    modalOkBtn.click(); // Trigger the OK button click
+                if (e.which === 13) {
+                    modalOkBtn.click();
                 }
             });
             logoutBtn.on('click', () => auth.signOut());
 
-            // (ใหม่) ตัวจัดการสถานะการ Login
             auth.onAuthStateChanged(user => {
                 currentUser = user;
                 const isAdmin = user && adminEmails.includes(user.email.toLowerCase());
@@ -279,17 +292,65 @@
                     userInfoDiv.hide();
                 }
 
-                // (ใหม่) ส่วนสำคัญ: แสดง/ซ่อน คอลัมน์ "Actions"
-                // (วิธีนี้ใช้ Vanilla JS เพราะตารางนี้ไม่ได้ใช้ DataTables.js)
+                // Show/Hide Admin Actions in Table
                 const headers = document.querySelectorAll('.admin-actions-header');
                 const cells = document.querySelectorAll('.admin-actions-cell');
-
-                const displayStyle = isAdmin ? '' : 'none'; // ถ้าเป็น Admin ให้แสดง, ถ้าไม่ ให้ซ่อน
-
+                const displayStyle = isAdmin ? '' : 'none';
+                
                 headers.forEach(el => el.style.display = displayStyle);
                 cells.forEach(el => el.style.display = displayStyle);
+
+                // [ใหม่] Show/Hide Admin Tools Buttons
+                if (isAdmin) {
+                    adminToolsContainer.removeClass('hidden').addClass('flex');
+                } else {
+                    adminToolsContainer.removeClass('flex').addClass('hidden');
+                }
             });
-            // --- สิ้นสุดส่วน AUTH ---
+
+            // [ใหม่] Logic: ปุ่ม Update Stats (Recalculate)
+            manualUpdateBtn.on('click', async function() {
+                if(!confirm("Confirm Manual Update?\n\nThis will recalculate dashboard statistics from all records. It may take a few seconds.")) return;
+
+                const btn = $(this);
+                const originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+                try {
+                    const result = await adminManualUpdateStats();
+                    alert(`✅ Update Successful!\nMessage: ${result.data.message || 'Stats updated.'}`);
+                    fetchDashboardData(); // Refresh Graph
+                } catch (error) {
+                    console.error("Update Error:", error);
+                    alert(`❌ Update Failed: ${error.message}`);
+                } finally {
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+
+            // [ใหม่] Logic: ปุ่ม Clean Old Records
+            manualCleanupBtn.on('click', async function() {
+                const yearThreshold = 2; 
+                if(!confirm(`⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to delete records older than ${yearThreshold} years?\nThis action CANNOT be undone.`)) return;
+                
+                const confirmPass = prompt("Type 'DELETE' to confirm cleanup:");
+                if (confirmPass !== 'DELETE') return;
+
+                const btn = $(this);
+                const originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Cleaning...');
+
+                try {
+                    const result = await adminManualCleanup();
+                    alert(`✅ Cleanup Complete!\nDeleted: ${result.data.deletedCount} records.`);
+                    resetAndRender(); // Refresh Table
+                } catch (error) {
+                    console.error("Cleanup Error:", error);
+                    alert(`❌ Cleanup Failed: ${error.message}`);
+                } finally {
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
 
             // --- DOM Elements ---
             const tableBody = document.getElementById('ncfTableBody');
@@ -318,17 +379,17 @@
             // --- State Variables ---
             let monthlyTrendChart;
             let departmentCharts = {};
-            let currentFilteredRecords = []; // <--- currentFilteredRecords จะเก็บเฉพาะข้อมูลหน้าปัจจุบัน
+            let currentFilteredRecords = [];
             let currentRecord = null;
-            let isInitialLoad = true; // <-- ยังคงใช้สำหรับจัดการปุ่ม Export
+            let isInitialLoad = true;
             let currentPage = 1;
-            const rowsPerPage = 15; // <--- เปลี่ยนเป็น 15 ตามคำขอ
-            let lastVisibleDoc = null; // <--- (ใหม่) เก็บ doc สุดท้ายของหน้าที่แสดงผล
-            let pageDocHistory = [null]; // <--- (ใหม่) เก็บ doc แรกของแต่ละหน้า เพื่อใช้ย้อนกลับ
+            const rowsPerPage = 15;
+            let lastVisibleDoc = null;
+            let pageDocHistory = [null];
 
-            // ปิดปุ่ม Export ไว้ก่อนตอนเริ่มโหลดหน้า
             exportExcelBtn.disabled = true;
             exportExcelBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading Data...`;
+            
             // --- AI Copilot Logic ---
             copilotBtn.on('click', () => copilotSidebar.addClass('open'));
             closeCopilotBtn.on('click', () => copilotSidebar.removeClass('open'));
@@ -342,9 +403,9 @@
                 }
                 getGeminiInsights($(this));
             });
-                // (เขียนทับฟังก์ชันเดิม)
+
                 const getGeminiInsights = async (btn) => {
-                    copilotContent.html('<p class="text-center">   ✨    Analyzing data from server... Please wait a moment.</p>');
+                    copilotContent.html('<p class="text-center">    ✨    Analyzing data from server... Please wait a moment.</p>');
 
                     try {
                         const result = await getNcfAiAnalysis();
@@ -353,13 +414,12 @@
 
                     } catch (error) {
                         console.error("Error calling AI Analysis Function:", error);
-                        // (ใหม่) แสดง Error ที่มาจาก Cloud Function
                         copilotContent.html(`<p class="text-red-500">Sorry, the AI analysis failed. Error: ${error.message}</p>`);
                     } finally {
                         btn.prop('disabled', false).html('<i class="fas fa-sparkles"></i> Analyze with AI');
                     }
                 };
-                // (เขียนทับฟังก์ชันเดิม)
+
                 copilotChatSubmitBtn.on('click', async function() {
                     const question = copilotChatInput.val().trim();
                     if (!question) return;
@@ -367,24 +427,16 @@
                     const chatBtn = $(this);
                     chatBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
 
-                    // (ส่วนแสดงผลคำถามของผู้ใช้ - เหมือนเดิม)
                     const userQuestionHtml = `<div class="user-question mb-2 border-t pt-4 mt-4"><p class="font-semibold text-slate-800">You:</p><p>${question}</p></div>`;
                     copilotContent.append(userQuestionHtml);
                     const thinkingHtmlId = `thinking-${Date.now()}`;
-                    const thinkingHtml = `<div id="${thinkingHtmlId}" class="ai-answer"><p class="font-semibold text-purple-600">AI:</p><p>   🤔    Thinking...</p></div>`;
+                    const thinkingHtml = `<div id="${thinkingHtmlId}" class="ai-answer"><p class="font-semibold text-purple-600">AI:</p><p>    🤔    Thinking...</p></div>`;
                     copilotContent.append(thinkingHtml);
                     copilotContent.scrollTop(copilotContent[0].scrollHeight);
                     copilotChatInput.val('');
 
                     try {
-                        // (ลบ) ไม่ต้องดึง 'recordsForAnalysis'
-                        // (ลบ) ไม่ต้องสร้าง Prompt
-
-                        // (ใหม่) เรียก Cloud Function (V2)
-                        // (ส่งไปเฉพาะ 'question' ใน object)
                         const result = await askNcfChat({ question: question });
-
-                        // 'result.data' คือ { text: "..." }
                         const text = result.data.text;
                         $(`#${thinkingHtmlId}`).html(`<p class="font-semibold text-purple-600">AI:</p><div>${marked.parse(text)}</div>`);
 
@@ -396,58 +448,49 @@
                         copilotContent.scrollTop(copilotContent[0].scrollHeight);
                     }
                 });
-            // --- เพิ่มฟังก์ชันใหม่สำหรับจัดการ Pagination ---
+
+            // --- Pagination Functions ---
             const prevPageBtn = document.getElementById('prevPageBtn');
             const nextPageBtn = document.getElementById('nextPageBtn');
             const pageInfo = document.getElementById('pageInfo');
 
-            // (ใหม่) อัปเดต UI โดยไม่จำเป็นต้องรู้ Total
             const updatePaginationUI = (recordsFetchedCount) => {
                 pageInfo.textContent = `Page ${currentPage}`;
-                // จัดการปุ่ม Previous
                 prevPageBtn.disabled = currentPage === 1;
-                // จัดการปุ่ม Next
-                // ถ้าข้อมูลที่ดึงมาได้ น้อยกว่า "rowsPerPage" หมายความว่านี่คือหน้าสุดท้าย
                 nextPageBtn.disabled = recordsFetchedCount < rowsPerPage;
             };
 
             prevPageBtn.addEventListener('click', () => {
                 if (currentPage > 1) {
                     currentPage--;
-                    applyFiltersAndRender('prev'); // <--- (ใหม่) ส่งทิศทาง
+                    applyFiltersAndRender('prev');
                 }
             });
 
             nextPageBtn.addEventListener('click', () => {
-                // ไม่ต้องเช็ค totalPages, ปุ่ม next จะถูก disable เอง
                 currentPage++;
-                applyFiltersAndRender('next'); // <--- (ใหม่) ส่งทิศทาง
+                applyFiltersAndRender('next');
             });
 
             // --- Main Application Logic ---
             
-            // 2. เพิ่มฟังก์ชันใหม่สำหรับดึงข้อมูล Dashboard โดยเฉพาะ
             const fetchDashboardData = () => {
                 const summaryRef = db.collection("ncf_dashboard_summary").doc("main_stats");
 
-                // ใช้ onSnapshot เพื่อให้กราฟอัปเดต Real-time เมื่อเอกสารสรุปเปลี่ยน
-                // (นี่คือ 1 Read + Real-time Listeners บนเอกสารเดียว)
                 summaryRef.onSnapshot(doc => {
                     if (doc.exists) {
                         const summaryData = doc.data();
-                        // ส่งข้อมูลที่ประมวลผลแล้วไปให้ฟังก์ชัน updateDashboard
                         updateDashboard(summaryData);
                     } else {
-                        // กรณีที่เอกสารสรุปยังไม่ถูกสร้าง (เช่น ยังไม่มี NCF เลย)
                         console.warn("NCF Summary document (main_stats) does not exist yet.");
-                        updateDashboard({}); // ส่งค่าว่างไปเพื่อไม่ให้กราฟค้าง
+                        updateDashboard({});
                     }
                 }, error => {
                     console.error("Error fetching NCF dashboard data: ", error);
                 });
             };
+
             const renderTable = (records) => {
-                // (ใหม่) ตรวจสอบสถานะ Admin *ภายใน* ฟังก์ชันนี้เลย
                 const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase());
                 tableBody.innerHTML = '';
                 if (records.length === 0) {
@@ -463,6 +506,7 @@
                     if (status === 'Pending Response') statusBadge = `<span class="status-badge status-issued">Issued</span>`;
                     else if (status === 'Responded') statusBadge = `<span class="status-badge status-responded">Responded</span>`;
                     else if (status === 'Completed') statusBadge = `<span class="status-badge status-completed">Completed</span>`;
+                    
                     tr.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap font-medium text-indigo-600">${record.ncfNumber}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${record.to.department}</td>
@@ -484,35 +528,26 @@
                     `;
                     tableBody.appendChild(tr);
                     tr.addEventListener('click', () => {
-                    // (แก้ไข) ให้ค้นหาจาก 'currentFilteredRecords' (ที่มีแค่ 20 รายการ)
-                    currentRecord = currentFilteredRecords.find(r => r.id === record.id);
-                    // (ใหม่) เรียก Sidebar ในโหมด "ดำเนินการ"
-                    populateAndShowSidebar(currentRecord, 'progress');
+                        currentRecord = currentFilteredRecords.find(r => r.id === record.id);
+                        populateAndShowSidebar(currentRecord, 'progress');
                     });
                 });
             };
-            // (ใหม่) เปลี่ยนเป็น async function และรับ pageDirection
+
             const applyFiltersAndRender = async (pageDirection = 'first') => {
-                // 1. (เหมือนเดิม) ดึงค่าจาก Filters
                 const searchValue = searchInput.value.toLowerCase();
                 const deptValue = filterDepartment.value;
                 const statusValue = filterStatus.value;
                 const startDateValue = exportStartDate.value;
                 const endDateValue = exportEndDate.value;
 
-                // 2. (ใหม่) สร้าง Query
                 let query = db.collection("non_conformance_records");
 
-                // 3. (ใหม่) ประกอบ Query ตาม Filters
-                // Filter: Department
                 if (deptValue !== 'all') {
                     query = query.where("departmentCode", "==", deptValue);
                 }
 
-                // Filter: Status (จัดการ Logic "ซ่อน Completed" [cite: 506-507])
                 if (statusValue === 'all') {
-                    // *** นี่คือการแปลง Logic "!= 'Completed'" 
-                    //     ให้ Firestore Query ได้ (ต้องใช้ Index)
                     query = query.where("followUpStatus", "in", ["Pending Response", "Responded"]);
                 } else if (statusValue === 'Issued') {
                     query = query.where("followUpStatus", "==", "Pending Response");
@@ -520,42 +555,28 @@
                     query = query.where("followUpStatus", "==", statusValue);
                 }
 
-                // Filter: Date Range
                 if (startDateValue) {
-                    // ใช้วิธีสร้าง Date object เพื่อความแม่นยำ
                     query = query.where("createdAt", ">=", new Date(startDateValue + "T00:00:00"));
                 }
                 if (endDateValue) {
                     query = query.where("createdAt", "<=", new Date(endDateValue + "T23:59:59"));
                 }
 
-                // Filter: Search และการเรียงลำดับ (สำคัญ)
-                // Firestore ไม่อนุญาตให้ใช้ .where() แบบค้นหา (เช่น 'search-key') 
-                // ร่วมกับการเรียงลำดับ (orderBy) createdAt 
-                // เราจะใช้ Logic เดียวกับ Cloud Function (index.js) 
-                // คือ: ถ้ามีการ Search, ให้เรียงตาม ncfNumber
-                //      ถ้าไม่ Search, ให้เรียงตาม createdAt
                 if (searchValue) {
-                    // (ต้องมั่นใจว่า ncfNumber ใน DB เป็นตัวพิมพ์ใหญ่)
                     query = query.orderBy("ncfNumber")
-                                 .startAt(searchValue.toUpperCase())
-                                 .endAt(searchValue.toUpperCase() + '\uf8ff');
+                                     .startAt(searchValue.toUpperCase())
+                                     .endAt(searchValue.toUpperCase() + '\uf8ff');
                 } else {
-                    // (Default Order)
                     query = query.orderBy("createdAt", "desc");
                 }
 
-                // 4. (ใหม่) จัดการ Pagination
                 try {
                     if (pageDirection === 'prev') {
-                        // (ย้อนกลับไปใช้ Doc แรกของหน้า "ก่อนหน้า")
-                        // pageDocHistory[0] คือ null (สำหรับหน้า 1)
                         lastVisibleDoc = pageDocHistory[currentPage - 1]; 
-                        pageDocHistory.pop(); // เอา doc ของหน้าปัจจุบันทิ้งไป
+                        pageDocHistory.pop();
                     }
 
-                    // (สร้าง Query สำหรับหน้าปัจจุบัน)
-                    let pageQuery = query; // Copy query
+                    let pageQuery = query;
 
                     if (lastVisibleDoc && (pageDirection === 'next' || pageDirection === 'prev')) {
                          pageQuery = pageQuery.startAfter(lastVisibleDoc);
@@ -563,11 +584,9 @@
 
                     pageQuery = pageQuery.limit(rowsPerPage);
 
-                    // 5. (ใหม่) ดึงข้อมูล (ใช้ .get() แทน .onSnapshot() เพื่อประหยัด)
                     const snapshot = await pageQuery.get();
                     const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                    // 6. (ใหม่) อัปเดต State สำหรับ Pagination
                     if (!snapshot.empty) {
                         lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
                         if (pageDirection === 'next') {
@@ -575,23 +594,15 @@
                         }
                     }
 
-                    // (เก็บข้อมูลหน้าปัจจุบันไว้สำหรับ Export - แม้จะได้แค่ 20)
-                    // (เราจะแก้ไขปุ่ม Export ในขั้นตอนถัดไป)
                     currentFilteredRecords = records; 
-
-                    // 7. (เหมือนเดิม) แสดงผลตาราง
                     renderTable(records);
-
-                    // 8. (ใหม่) อัปเดต UI ปุ่ม Pagination
                     updatePaginationUI(records.length);
 
                 } catch (error) {
                     console.error("Error fetching paginated records: ", error);
                     tableBody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-red-500">Failed to load data. Error: ${error.message}</td></tr>`;
-                    // (อย่าลืมเปิดปุ่ม Export ถ้า Error)
-                    isInitialLoad = false; // (ถือว่าโหลดครั้งแรกเสร็จแล้ว แม้จะ error)
+                    isInitialLoad = false;
                 } finally {
-                    // (ใหม่) เปิดปุ่ม Export หลังจากโหลดครั้งแรกเสร็จ
                     if (isInitialLoad) {
                         exportExcelBtn.disabled = false;
                         exportExcelBtn.innerHTML = `<i class="fas fa-file-excel"></i> Export Excel`;
@@ -599,23 +610,19 @@
                     }
                 }
             };
-            // 
-            // 3. เขียนทับฟังก์ชัน updateDashboard ทั้งหมด
-                const updateDashboard = (summaryData) => {
-                // [FIX] แปลงข้อมูล "Flat" (จาก Firestore) ให้เป็น "Nested" (ที่กราฟต้องการ)
+
+            const updateDashboard = (summaryData) => {
                 const monthlyTrendData = {};
                 const deptStatusData = {};
 
-                // วนลูป Key ทั้งหมดใน summaryData ที่ได้มา (เช่น "monthlyTrend.2025-10.SPG")
                 for (const key in summaryData) {
                     const value = summaryData[key];
 
                     if (key.startsWith('monthlyTrend.')) {
-                        // key คือ "monthlyTrend.2025-10.SPG"
-                        const parts = key.split('.'); // ["monthlyTrend", "2025-10", "SPG"]
+                        const parts = key.split('.');
                         if (parts.length === 3) {
-                            const monthId = parts[1]; // "2025-10"
-                            const dept = parts[2];    // "SPG"
+                            const monthId = parts[1];
+                            const dept = parts[2];
 
                             if (!monthlyTrendData[monthId]) {
                                 monthlyTrendData[monthId] = {};
@@ -623,11 +630,10 @@
                             monthlyTrendData[monthId][dept] = value;
                         }
                     } else if (key.startsWith('departmentStatus.')) {
-                        // key คือ "departmentStatus.SPG.Pending Response"
-                        const parts = key.split('.'); // ["departmentStatus", "SPG", "Pending Response"]
+                        const parts = key.split('.');
                         if (parts.length === 3) {
-                            const dept = parts[1];    // "SPG"
-                            const status = parts[2]; // "Pending Response"
+                            const dept = parts[1];
+                            const status = parts[2];
 
                             if (!deptStatusData[dept]) {
                                 deptStatusData[dept] = {};
@@ -636,41 +642,34 @@
                         }
                     }
                 }
-                // สิ้นสุดการ [FIX]
 
-                // --- ส่วนที่ 1: กราฟเส้น Monthly Trend (ปรับปรุง Logic) ---
-
-                // 1.1 สร้างป้ายกำกับ 6 เดือนย้อนหลัง (เหมือนเดิม)
+                // --- Graph 1: Monthly Trend ---
                 const sixMonthsAgo = new Date();
                 sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
                 sixMonthsAgo.setDate(1);
-                const monthLabels = []; // ["May 25", "Jun 25", ...]
-                const monthIds = []; // ["2025-05", "2025-06", ...]
+                const monthLabels = [];
+                const monthIds = [];
                 for (let i = 0; i < 6; i++) {
                     const date = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth() + i, 1);
                     monthLabels.push(date.toLocaleString('en-US', { month: 'short', year: '2-digit' }));
                     monthIds.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
                 }
 
-                // 1.2 รวบรวมรายชื่อ Department ทั้งหมดจากข้อมูลสรุป
                 const allDeptsInSummary = new Set([
                     ...Object.values(monthlyTrendData).flatMap(month => Object.keys(month)),
                     ...Object.keys(deptStatusData)
                 ]);
-                const departments = Array.from(allDeptsInSummary).sort(); // ["ABEC", "AUX", "ETP", ...]
+                const departments = Array.from(allDeptsInSummary).sort();
 
-                // 1.3 เตรียมสี (เหมือนเดิม)
-                const departmentColors = { // 
+                const departmentColors = { 
                     'AUX': 'rgba(239, 68, 68, 1)', 'VIS': 'rgba(59, 130, 246, 1)',
                     'SPG': 'rgba(245, 158, 11, 1)', 'ETP': 'rgba(34, 197, 94, 1)',
                     'ABEC': 'rgba(139, 92, 246, 1)', 'FIBER': 'rgba(236, 72, 153, 1)',
                     'RM': 'rgba(107, 114, 128, 1)'
                 };
 
-                // 1.4 สร้าง Datasets โดยการวนลูป (Logic ใหม่)
                 const datasets = departments.map(dept => {
                     const data = monthIds.map(monthId => {
-                        // ดึงยอดจาก monthlyTrendData[monthId][dept]
                         return monthlyTrendData[monthId]?.[dept] || 0;
                     });
 
@@ -684,28 +683,19 @@
                     };
                 });
 
-                // 1.5 วาดกราฟ (เหมือนเดิม)
-                if (monthlyTrendChart) monthlyTrendChart.destroy(); // 
+                if (monthlyTrendChart) monthlyTrendChart.destroy();
                 monthlyTrendChart = new Chart(monthlyTrendCtx, {
                     type: 'line',
                     data: { labels: monthLabels, datasets: datasets },
                     options: { plugins: { legend: { position: 'top' } } }
                 });
 
-                // --- ส่วนที่ 2: กราฟวงกลม Department Status (ปรับปรุง Logic) ---
+                // --- Graph 2: Department Status ---
+                departmentStatusContainer.innerHTML = '';
+                Object.keys(departmentCharts).forEach(key => departmentCharts[key].destroy());
 
-                // 2.1 (ข้าม) ไม่ต้องคำนวณ deptStatusData 
-                // เพราะเราได้ `deptStatusData` มาจาก `summaryData` โดยตรงแล้ว
-
-                // 2.2 วาดกราฟ (เหมือนเดิม)
-                departmentStatusContainer.innerHTML = ''; // 
-                Object.keys(departmentCharts).forEach(key => departmentCharts[key].destroy()); // 
-
-                // วนลูปจาก deptStatusData ที่ได้มาเลย
                 Object.keys(deptStatusData).sort().forEach(dept => {
                     const statusCounts = deptStatusData[dept];
-
-                    // แปลงชื่อ Status จาก "Pending Response" (ใน DB) เป็น "Issued" (ที่แสดงผล)
                     const data = {
                         Issued: statusCounts["Pending Response"] || 0,
                         Responded: statusCounts["Responded"] || 0,
@@ -713,11 +703,8 @@
                     };
 
                     const total = data.Issued + data.Responded + data.Completed;
-
-                    // ถ้าไม่มีข้อมูลเลย ก็ข้ามไป ไม่ต้องแสดงกราฟ
                     if (total === 0) return;
 
-                    // ที่เหลือคือโค้ดวาดกราฟเดิม 
                     const chartWrapper = document.createElement('div');
                     chartWrapper.innerHTML = `<h4 class="font-bold text-gray-800">${dept}</h4><canvas id="chart-${dept}"></canvas><div class="font-semibold text-sm text-gray-600 mt-1">Total: ${total}</div>`;
                     departmentStatusContainer.appendChild(chartWrapper);
@@ -750,28 +737,24 @@
                         }
                     });
                 });
-            }; // (จุดสิ้นสุดของฟังก์ชันที่เขียนทับ)
-            // (ใหม่) แก้ไขฟังก์ชันทั้งหมดให้รับ "mode"
+            };
+
             const populateAndShowSidebar = (record, mode = 'progress') => {
                 const status = record.followUpStatus || 'Pending Response';
-                const isEditMode = (mode === 'edit'); // ตัวแปรเช็คโหมด
+                const isEditMode = (mode === 'edit');
 
                 let contentHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-1">NCF: ${record.ncfNumber}</h2>`;
 
                 if (isEditMode) {
                     contentHTML += `<p class="text-sm text-blue-600 font-semibold mb-6">Mode: Editing Record Data</p>`;
                 } else {
-                    // ‼️ แก้ไข: เปลี่ยนเป็น record.createdAt (เวลาที่กดบันทึก)
-                    // (เพิ่ม .toDate() เพราะ createdAt เป็น Timestamp ของ Firebase)
                     const issuedAt = (record.createdAt && record.createdAt.toDate) ? record.createdAt.toDate().toLocaleString('th-TH') : 'N/A';
                     contentHTML += `<p class="text-sm text-gray-500 mb-6">Issued on: ${issuedAt}</p>`;
                 }
 
-                // --- Part 1: Description ---
-                // (ถ้าเป็นโหมด Edit ให้แสดงเป็นช่อง Input, ถ้าเป็น Progress ให้แสดงเป็น Text)
+                // --- Part 1 ---
                 contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 1: Description</h3>`;
                 if (isEditMode) {
-                    // --- โหมดแก้ไข Part 1 ---
                     contentHTML += `<form id="editForm" class="space-y-4">
                         <div><label class="sidebar-label">To Department</label><input type="text" id="edit_toDepartment" class="sidebar-input border p-2" value="${record.to.department}"></div>
                         <div><label class="sidebar-label">Area / Process</label><input type="text" id="edit_areaProcess" class="sidebar-input border p-2" value="${record.part1.areaProcess}"></div>
@@ -780,13 +763,11 @@
                         <div><label class="sidebar-label">Issue Date</label><input type="text" id="edit_documentDate" class="sidebar-input border p-2" value="${record.documentDate}"></div>
                     `;
                 } else {
-                    // --- โหมด Progress Part 1 (Read-Only) ---
                     contentHTML += `<div class="grid grid-cols-2 gap-4">
                         <div><span class="sidebar-label">To Department</span><span class="sidebar-value">${record.to.department}</span></div>
                         <div><span class="sidebar-label">Area / Process</span><span class="sidebar-value">${record.part1.areaProcess}</span></div>
                         <div class="col-span-2"><span class="sidebar-label">Details</span><p class="sidebar-value" style="white-space: pre-wrap;">${record.part1.details}</p></div>
                         <div><span class="sidebar-label">Issuer</span><span class="sidebar-value">${record.part1.issuer}</span></div>
-
                                 <div>
                             <span class="sidebar-label">Finding Date</span>
                             <span class="sidebar-value">${record.documentDate || 'N/A'}</span>
@@ -795,14 +776,13 @@
                             <span class="sidebar-label">Finding Time</span>
                             <span class="sidebar-value">${record.findingDateTime ? new Date(record.findingDateTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
                         </div>
-                    </div>`; // (บรรทัดปิด div นี้จะเลื่อนมาเป็น 807)
+                    </div>`;
                 }
-                contentHTML += `</div>`; // ปิด Section Part 1 (หรือ ปิด <form> ถ้าเป็น Edit Mode)
+                contentHTML += `</div>`;
 
-                // --- Part 2: Response ---
+                // --- Part 2 ---
                 if (status === 'Pending Response') {
                     if (!isEditMode) {
-                        // โหมด Progress: แสดงฟอร์ม Part 2 ให้กรอก
                         contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 2: Response</h3><form id="responseForm" class="space-y-4">
                             <div><label for="containmentAction" class="sidebar-label">Containment Action:</label><textarea id="containmentAction" rows="3" class="sidebar-input border p-2"></textarea></div>
                             <div><label for="rootCause" class="sidebar-label">Root Cause:</label><textarea id="rootCause" rows="3" class="sidebar-input border p-2"></textarea></div>
@@ -813,13 +793,10 @@
                             <div><label for="approvalName" class="sidebar-label">Approval Name:</label><input type="text" id="approvalName" class="sidebar-input border p-2"></div>
                         </form></div>`;
                     }
-                    // ถ้าเป็น Edit Mode และ Status = Issued: ไม่ต้องแสดง Part 2 (ตามกฎข้อ 1)
-
-                } else { // (Status = Responded หรือ Completed)
+                } else {
                     const part2 = record.part2 || {};
                     contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 2: Response</h3>`;
                     if (isEditMode) {
-                        // โหมด Edit: แสดงฟอร์ม Part 2 (มีข้อมูลเดิม)
                         contentHTML += `
                             <div><label class="sidebar-label">Containment Action</label><textarea id="edit_containmentAction" rows="3" class="sidebar-input border p-2">${part2.containmentAction || ''}</textarea></div>
                             <div><label class="sidebar-label">Root Cause</label><textarea id="edit_rootCause" rows="3" class="sidebar-input border p-2">${part2.rootCause || ''}</textarea></div>
@@ -832,7 +809,6 @@
                             </div>
                         `;
                     } else {
-                        // โหมด Progress: แสดง Part 2 (Read-Only)
                         const respondedAt = part2.respondedAt ? new Date(part2.respondedAt.toDate()).toLocaleString('th-TH') : 'N/A';
                         contentHTML += `<div class="space-y-4">
                             <div><span class="sidebar-label">Containment Action</span><p class="sidebar-value">${part2.containmentAction || 'N/A'}</p></div>
@@ -847,22 +823,18 @@
                             </div>
                         </div>`;
                     }
-                    contentHTML += `</div>`; // ปิด Section Part 2
+                    contentHTML += `</div>`;
                 }
 
-                // --- Part 3: Follow Up ---
+                // --- Part 3 ---
                 if (status === 'Responded') {
                     if (!isEditMode) {
-                        // โหมด Progress: แสดงฟอร์ม Part 3 ให้กรอก
                         contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 3: Follow Up</h3><form id="closeForm" class="space-y-4"><div><span class="sidebar-label">Verification Result:</span><div class="flex gap-4 mt-2"><label><input type="radio" name="followUpResult" value="Satisfaction" required> Satisfaction</label><label><input type="radio" name="followUpResult" value="Unsatisfaction"> Unsatisfaction</label></div></div><div><label for="closingIssuer" class="sidebar-label">Verified By:</label><input type="text" id="closingIssuer" class="sidebar-input border p-2"></div></form></div>`;
                     }
-                    // ถ้าเป็น Edit Mode และ Status = Responded: ไม่ต้องแสดง Part 3 (ตามกฎข้อ 2)
-
                 } else if (status === 'Completed') {
                     const part3 = record.part3 || {};
                     contentHTML += `<div class="sidebar-section"><h3 class="font-bold text-lg mb-4 text-gray-700">Part 3: Follow Up</h3>`;
                     if (isEditMode) {
-                        // โหมด Edit: แสดงฟอร์ม Part 3 (มีข้อมูลเดิม)
                         const satChecked = (part3.followUpResult === 'Satisfaction') ? 'checked' : '';
                         const unsatChecked = (part3.followUpResult === 'Unsatisfaction') ? 'checked' : '';
                         contentHTML += `<div class="space-y-4">
@@ -875,25 +847,21 @@
                             <div><label class="sidebar-label">Verified By:</label><input type="text" id="edit_closingIssuer" class="sidebar-input border p-2" value="${part3.closingIssuerSign || ''}"></div>
                         </div>`;
                     } else {
-                        // โหมด Progress: แสดง Part 3 (Read-Only)
                         const completedAt = part3.completedAt ? new Date(part3.completedAt.toDate()).toLocaleString('th-TH') : 'N/A';
                         contentHTML += `<div class="space-y-4"><div class="grid grid-cols-2 gap-4"><div><span class="sidebar-label">Verification Result</span><p class="sidebar-value">${part3.followUpResult || 'N/A'}</p></div><div><span class="sidebar-label">Verified By</span><p class="sidebar-value">${part3.closingIssuerSign || 'N/A'}</p></div></div><div><span class="sidebar-label">Completed At</span><p class="sidebar-value">${completedAt}</p></div></div>`;
                     }
-                    contentHTML += `</div>`; // ปิด Section Part 3
+                    contentHTML += `</div>`;
                 }
 
-                // (จำเป็นต้องปิด <form> ของโหมด Edit)
                 if (isEditMode) {
-                    contentHTML += `</form>`; // ปิด <form id="editForm">
+                    contentHTML += `</form>`;
                 }
 
-                // --- Action Buttons (ปุ่มด้านล่าง) ---
+                // --- Action Buttons ---
                 contentHTML += `<div id="sidebarActions" class="mt-8 flex items-center gap-2 flex-wrap">`;
                 if (isEditMode) {
-                    // (ใหม่) โหมด Edit: แสดงปุ่ม Save
                     contentHTML += `<button id="saveChangesBtn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Save Changes</button>`;
                 } else {
-                    // (เดิม) โหมด Progress: แสดงปุ่มตาม Status
                     if (status === 'Pending Response') {
                         contentHTML += `<button id="submitResponseBtn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Submit Response</button>`;
                     } else if (status === 'Responded') {
@@ -902,32 +870,27 @@
                         contentHTML += `<span class="text-green-700 font-bold">This NCF has been closed.</span>`;
                     }
                 }
-                // ปุ่ม Export PDF (มีทั้ง 2 โหมด)
+                
+                // PDF Export
                 const isCompleted = (currentRecord.followUpStatus === 'Completed');
                 const disabledAttribute = isCompleted ? '' : 'disabled';
-                const disabledClasses = isCompleted
-                    ? 'hover:bg-green-700'
-                    : 'disabled:opacity-50 disabled:cursor-not-allowed';
-
-                // (2) สร้างปุ่ม Export F4 (ใช้ตัวแปรด้านบน)
+                const disabledClasses = isCompleted ? 'hover:bg-green-700' : 'disabled:opacity-50 disabled:cursor-not-allowed';
                 contentHTML += `<button id="exportF4Btn" class="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded ${disabledClasses} flex items-center justify-center" ${disabledAttribute}>`;
                 contentHTML += `  <i class="fas fa-file-excel mr-2"></i> Export F4`;
                 contentHTML += `</button>`;
 
-                // (3) สร้างข้อความหมายเหตุ (แสดง/ซ่อน ตามสถานะ)
                 const noteDisplayStyle = isCompleted ? 'style="display: none;"' : '';
                 contentHTML += `<p id="f4-export-note" class="text-xs text-center text-gray-500 mt-1" ${noteDisplayStyle}>`;
                 contentHTML += `  (Only Status: Completed)`;
                 contentHTML += `</p>`;
 
-                // (4) บรรทัดปิด div
                 contentHTML += `</div>`;
 
                 sidebarContent.innerHTML = contentHTML;
                 detailsSidebar.classList.add('open');
             };
+
             detailsSidebar.addEventListener('click', async (e) => {
-                // (ใหม่) --- LOGIC สำหรับโหมด EDIT ---
                 if (e.target.id === 'saveChangesBtn') {
                     const btn = e.target;
                     btn.disabled = true;
@@ -937,14 +900,12 @@
                         const updateData = {};
                         const status = currentRecord.followUpStatus || 'Pending Response';
 
-                        // --- ดึงข้อมูล Part 1 (มีเสมอ) ---
                         updateData['to.department'] = document.getElementById('edit_toDepartment').value;
                         updateData['part1.areaProcess'] = document.getElementById('edit_areaProcess').value;
                         updateData['part1.details'] = document.getElementById('edit_details').value;
                         updateData['part1.issuer'] = document.getElementById('edit_issuer').value;
                         updateData['documentDate'] = document.getElementById('edit_documentDate').value;
 
-                        // --- ดึงข้อมูล Part 2 (ถ้ามี) ---
                         if (status === 'Responded' || status === 'Completed') {
                             updateData['part2.containmentAction'] = document.getElementById('edit_containmentAction').value;
                             updateData['part2.rootCause'] = document.getElementById('edit_rootCause').value;
@@ -955,18 +916,14 @@
                             updateData['part2.approvalName'] = document.getElementById('edit_approvalName').value;
                         }
 
-                        // --- ดึงข้อมูล Part 3 (ถ้ามี) ---
                         if (status === 'Completed') {
                             const resultRadio = document.querySelector('input[name="edit_followUpResult"]:checked');
                             updateData['part3.followUpResult'] = resultRadio ? resultRadio.value : '';
                             updateData['part3.closingIssuerSign'] = document.getElementById('edit_closingIssuer').value;
                         }
 
-                        // --- อัปเดต Firestore ---
                         await db.collection("non_conformance_records").doc(currentRecord.id).update(updateData);
-
                         detailsSidebar.classList.remove('open');
-                        // (สำคัญ) โหลดข้อมูลตารางใหม่ เพราะข้อมูลอาจถูกเปลี่ยน
                         resetAndRender(); 
 
                     } catch (error) {
@@ -978,28 +935,21 @@
                 }
                 else if (e.target.id === 'exportF4Btn' || e.target.closest('#exportF4Btn')) {
                     const btn = e.target.closest('#exportF4Btn');
-                    if (btn.disabled) {
-                        return;
-                    }
+                    if (btn.disabled) return;
                     if (!currentRecord || !currentRecord.id) {
                         alert("Error: ไม่พบข้อมูลเอกสาร (currentRecord.id)");
                         return;
                     }
 
-                    console.log(`Requesting F4 export for docId: ${currentRecord.id}`);
                     btn.disabled = true;
                     btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Generating...`;
 
                     try {
-                        // (สำคัญ) เรียก Callable Function
                         const exportNcfToF4Format = firebase.functions().httpsCallable('exportNcfToF4Format');
-                        // ส่ง docId ไป
                         const result = await exportNcfToF4Format({ docId: currentRecord.id });
 
                         if (result.data && result.data.fileContents) {
-                            console.log(" ✅  File generated successfully. Downloading...");
                             const { fileContents, fileName } = result.data;
-                            // (สำคัญ) ต้องเพิ่มฟังก์ชัน downloadBase64File ในขั้นตอนถัดไป
                             downloadBase64File(
                                 fileContents,
                                 fileName || "F4_Export.xlsx",
@@ -1012,94 +962,77 @@
                         console.error("Error exporting F4 Excel:", error);
                         alert(`เกิดข้อผิดพลาดในการสร้างไฟล์ F4:\n${error.message}`);
                     } finally {
-                        // คืนค่าปุ่มกลับปกติ (ถ้ายัง Completed)
                         if (currentRecord.followUpStatus === 'Completed') {
                             btn.disabled = false;
                         }
                         btn.innerHTML = `<i class="fas fa-file-excel mr-2"></i> Export F4`;
                     }
                 }
-
-                // (เดิม) --- LOGIC สำหรับโหมด PROGRESS ---
-            if (e.target.id === 'submitResponseBtn') {
-            const btn = e.target;
-            btn.disabled = true;
-            btn.textContent = 'Submitting...';
-            try {
-            await db.collection("non_conformance_records").doc(currentRecord.id).update({
-            'part2.containmentAction': document.getElementById('containmentAction').value,
-            'part2.rootCause': document.getElementById('rootCause').value,
-            'part2.correctiveAction': document.getElementById('correctiveAction').value,
-            'part2.inChargePerson': document.getElementById('inChargePerson').value,
-            'part2.targetDate': document.getElementById('targetDate').value,
-            'part2.responder': document.getElementById('responderName').value,
-            'part2.approvalName': document.getElementById('approvalName').value,
-            'part2.respondedAt': firebase.firestore.FieldValue.serverTimestamp(),
-            followUpStatus: 'Responded'
-            });
-                detailsSidebar.classList.remove('open');
-                           resetAndRender(); // <--- เพิ่มบรรทัดนี้
-                // (หมายเหตุ: ที่จริง onSnapshot ของ dashboard จะทำงานเอง
-                //  แต่การเรียก resetAndRender() จะทำให้ตารางอัปเดตทันที)
-                } catch (error) {
-            console.error("Error submitting response: ", error);
-            alert("Failed to submit response.");
-            btn.disabled = false;
-            btn.textContent = 'Submit Response';
-            }
-            }
-            if (e.target.id === 'submitCloseBtn') {
-            const btn = e.target;
-            btn.disabled = true;
-            btn.textContent = 'Closing...';
-            try {
-            await db.collection("non_conformance_records").doc(currentRecord.id).update({
-            'part3.followUpResult': document.querySelector('input[name="followUpResult"]:checked').value,
-            'part3.closingIssuerSign': document.getElementById('closingIssuer').value,
-            'part3.completedAt': firebase.firestore.FieldValue.serverTimestamp(),
-            followUpStatus: 'Completed'
-            });
-                detailsSidebar.classList.remove('open');
-                           resetAndRender(); // <--- เพิ่มบรรทัดนี้
-                } catch (error) {
-                console.error("Error closing NCF: ", error);
-            alert("Failed to close NCF.");
-            btn.disabled = false;
-            btn.textContent = 'Mark as Completed & Close';
-            }
-            }
+                else if (e.target.id === 'submitResponseBtn') {
+                    const btn = e.target;
+                    btn.disabled = true;
+                    btn.textContent = 'Submitting...';
+                    try {
+                        await db.collection("non_conformance_records").doc(currentRecord.id).update({
+                            'part2.containmentAction': document.getElementById('containmentAction').value,
+                            'part2.rootCause': document.getElementById('rootCause').value,
+                            'part2.correctiveAction': document.getElementById('correctiveAction').value,
+                            'part2.inChargePerson': document.getElementById('inChargePerson').value,
+                            'part2.targetDate': document.getElementById('targetDate').value,
+                            'part2.responder': document.getElementById('responderName').value,
+                            'part2.approvalName': document.getElementById('approvalName').value,
+                            'part2.respondedAt': firebase.firestore.FieldValue.serverTimestamp(),
+                            followUpStatus: 'Responded'
+                        });
+                        detailsSidebar.classList.remove('open');
+                        resetAndRender();
+                    } catch (error) {
+                        console.error("Error submitting response: ", error);
+                        alert("Failed to submit response.");
+                        btn.disabled = false;
+                        btn.textContent = 'Submit Response';
+                    }
+                }
+                else if (e.target.id === 'submitCloseBtn') {
+                    const btn = e.target;
+                    btn.disabled = true;
+                    btn.textContent = 'Closing...';
+                    try {
+                        await db.collection("non_conformance_records").doc(currentRecord.id).update({
+                            'part3.followUpResult': document.querySelector('input[name="followUpResult"]:checked').value,
+                            'part3.closingIssuerSign': document.getElementById('closingIssuer').value,
+                            'part3.completedAt': firebase.firestore.FieldValue.serverTimestamp(),
+                            followUpStatus: 'Completed'
+                        });
+                        detailsSidebar.classList.remove('open');
+                        resetAndRender();
+                    } catch (error) {
+                        console.error("Error closing NCF: ", error);
+                        alert("Failed to close NCF.");
+                        btn.disabled = false;
+                        btn.textContent = 'Mark as Completed & Close';
+                    }
+                }
             });
 
-            // (ใหม่) ฟังก์ชันสำหรับ "แก้ไข" (เปิด Sidebar)
             window.editRecord = (event, recordId) => {
-            // ป้องกันไม่ให้ Event การคลิกอื่นๆ ทำงาน
-            event.stopPropagation(); 
-
-            // ค้นหาข้อมูล Record ที่ตรงกับ id นี้ จากข้อมูลที่เราแสดงผลอยู่
-            const recordToEdit = currentFilteredRecords.find(r => r.id === recordId);
-
-            if (recordToEdit) {
-            currentRecord = recordToEdit;
-            // (ใหม่) เรียก Sidebar ในโหมด "แก้ไข"
-            populateAndShowSidebar(currentRecord, 'edit');
-            } else {
-            alert("Error: Could not find record data to edit.");
-            }
+                event.stopPropagation(); 
+                const recordToEdit = currentFilteredRecords.find(r => r.id === recordId);
+                if (recordToEdit) {
+                    currentRecord = recordToEdit;
+                    populateAndShowSidebar(currentRecord, 'edit');
+                } else {
+                    alert("Error: Could not find record data to edit.");
+                }
             };
 
-                // (ใหม่) ฟังก์ชันสำหรับลบเอกสาร
-                window.deleteRecord = (event, recordId) => {
-                // ป้องกันไม่ให้ Sidebar เปิดขึ้นมาเมื่อกดปุ่มลบ
+            window.deleteRecord = (event, recordId) => {
                 event.stopPropagation(); 
-
-                if (!confirm(`Are you sure you want to delete this NCF record?\nID: ${recordId}\n\nThis action cannot be undone.`)) {
-                    return;
-                }
+                if (!confirm(`Are you sure you want to delete this NCF record?\nID: ${recordId}\n\nThis action cannot be undone.`)) return;
 
                 db.collection("non_conformance_records").doc(recordId).delete()
                     .then(() => {
                         alert("Record deleted successfully!");
-                        // (สำคัญ) เรียก resetAndRender() เพื่อโหลดข้อมูลตารางหน้าแรกใหม่
                         resetAndRender(); 
                     })
                     .catch(error => {
@@ -1109,13 +1042,12 @@
             };
 
             const resetAndRender = () => {
-            currentPage = 1;
-            lastVisibleDoc = null; // <--- (ใหม่) รีเซ็ต doc สุดท้าย
-            pageDocHistory = [null]; // <--- (ใหม่) รีเซ็ตประวัติการแบ่งหน้า
-            applyFiltersAndRender('first'); // <--- (ใหม่) ส่งทิศทาง
+                currentPage = 1;
+                lastVisibleDoc = null;
+                pageDocHistory = [null]; 
+                applyFiltersAndRender('first'); 
             };
 
-            // (ใหม่) ย้ายคำสั่งเรียกใช้มาไว้ข้างล่าง
             fetchDashboardData();
             resetAndRender();
 
@@ -1132,7 +1064,7 @@
                 filterStatus.value = 'all';
                 exportStartDate.value = '';
                 exportEndDate.value = '';
-                resetAndRender(); // <-- เรียกใช้ฟังก์ชันใหม่
+                resetAndRender();
             });
             const formatTimestamp = (timestamp) => {
                 if (timestamp && typeof timestamp.toDate === 'function') {
@@ -1143,120 +1075,110 @@
                 }
                 return '';
             };
-        // (ใหม่) ทำให้ Listener เป็น async
-        exportExcelBtn.addEventListener('click', async () => {
 
-            // (ใหม่) ฟังก์ชันสำหรับดึงข้อมูล Export (จำกัดที่ 1000 รายการ)
-            const fetchAllFilteredRecordsForExport = async () => {
-                // (คัดลอก Logic การสร้าง Query มาจาก applyFiltersAndRender)
-                const searchValue = searchInput.value.toLowerCase();
-                const deptValue = filterDepartment.value;
-                const statusValue = filterStatus.value;
-                const startDateValue = exportStartDate.value;
-                const endDateValue = exportEndDate.value;
+            exportExcelBtn.addEventListener('click', async () => {
+                const fetchAllFilteredRecordsForExport = async () => {
+                    const searchValue = searchInput.value.toLowerCase();
+                    const deptValue = filterDepartment.value;
+                    const statusValue = filterStatus.value;
+                    const startDateValue = exportStartDate.value;
+                    const endDateValue = exportEndDate.value;
 
-                let query = db.collection("non_conformance_records");
+                    let query = db.collection("non_conformance_records");
 
-                if (deptValue !== 'all') {
-                    query = query.where("departmentCode", "==", deptValue);
+                    if (deptValue !== 'all') {
+                        query = query.where("departmentCode", "==", deptValue);
+                    }
+                    if (statusValue !== 'all') {
+                        if (statusValue === 'Issued') {
+                        query = query.where("followUpStatus", "==", "Pending Response");
+                        } else {
+                        query = query.where("followUpStatus", "==", statusValue);
+                        }
+                    }
+                    if (startDateValue) {
+                        query = query.where("createdAt", ">=", new Date(startDateValue + "T00:00:00"));
+                    }
+                    if (endDateValue) {
+                        query = query.where("createdAt", "<=", new Date(endDateValue + "T23:59:59"));
+                    }
+                    if (searchValue) {
+                        query = query.orderBy("ncfNumber")
+                                         .startAt(searchValue.toUpperCase())
+                                         .endAt(searchValue.toUpperCase() + '\uf8ff');
+                    } else {
+                        query = query.orderBy("createdAt", "desc");
+                    }
+
+                    const snapshot = await query.get();
+                    if (snapshot.empty) {
+                        return [];
+                    }
+                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                };
+
+                exportExcelBtn.disabled = true;
+                exportExcelBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparing...`;
+
+                try {
+                    const recordsToExport = await fetchAllFilteredRecordsForExport();
+
+                    if (recordsToExport.length === 0) {
+                        alert("No data to export based on the current filters.");
+                        return;
+                    }
+
+                    const formattedData = recordsToExport.map(record => ({
+                        "NCF Number": record.ncfNumber,
+                        "Issue Date": record.documentDate,
+                        "Finding Time": record.findingDateTime ? new Date(record.findingDateTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '',
+                        "Department": record.to?.department || '',
+                        "Area Process": record.part1?.areaProcess || '',
+                        "Description of Nonconformance": record.part1?.details || '',
+                        "Issuer": record.part1?.issuer || '',
+                        "Containment Action": record.part2?.containmentAction || '',
+                        "Root Cause": record.part2?.rootCause || '',
+                        "Corrective Action": record.part2?.correctiveAction || '',
+                        "In-Charge Person": record.part2?.inChargePerson || '',
+                        "Target Date": record.part2?.targetDate || '',
+                        "Responder": record.part2?.responder || '',
+                        "Approval": record.part2?.approvalName || '',
+                        "Responded Date": formatTimestamp(record.part2?.respondedAt),
+                        "Verification Result": record.part3?.followUpResult || '',
+                        "Verified By": record.part3?.closingIssuerSign || '',
+                        "Completed Date": formatTimestamp(record.part3?.completedAt),
+                        "Status": record.followUpStatus || 'Issued'
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                    worksheet['!cols'] = [
+                        { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 25 }, { wch: 50 },
+                        { wch: 20 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 20 },
+                        { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+                        { wch: 20 }, { wch: 20 }, { wch: 15 }
+                    ];
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "NCF Records");
+                    XLSX.writeFile(workbook, "Nonconformance_Report_Detailed.xlsx");
+
+                } catch (error) {
+                    console.error("Error exporting Excel: ", error);
+                    alert("An error occurred while preparing the export file.");
+                } finally {
+                    exportExcelBtn.disabled = false;
+                    exportExcelBtn.innerHTML = `<i class="fas fa-file-excel"></i> Export Excel`;
                 }
-                if (statusValue !== 'all') {
-                // กรองเฉพาะเมื่อผู้ใช้เลือก Status ที่ต้องการจริงๆ
-                if (statusValue === 'Issued') {
-                query = query.where("followUpStatus", "==", "Pending Response");
-                } else {
-                // กรอง "Responded" หรือ "Completed" ตามที่ผู้ใช้เลือก
-                query = query.where("followUpStatus", "==", statusValue);
-                }
-                }
-                if (startDateValue) {
-                    query = query.where("createdAt", ">=", new Date(startDateValue + "T00:00:00"));
-                }
-                if (endDateValue) {
-                    query = query.where("createdAt", "<=", new Date(endDateValue + "T23:59:59"));
-                }
-                if (searchValue) {
-                    query = query.orderBy("ncfNumber")
-                                 .startAt(searchValue.toUpperCase())
-                                 .endAt(searchValue.toUpperCase() + '\uf8ff');
-                } else {
-                    query = query.orderBy("createdAt", "desc");
-                }
+            });
 
-                // *** (สำคัญ) ดึงข้อมูลโดยไม่แบ่งหน้า แต่จำกัดไว้ที่ 1000 ***
-                // const snapshot = await query.limit(1000).get(); 
-                const snapshot = await query.get();
-                if (snapshot.empty) {
-                    return [];
-                }
-                return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            };
-
-            // --- (เริ่ม Logic ของปุ่ม) ---
-            exportExcelBtn.disabled = true;
-            exportExcelBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparing...`;
-
-            try {
-                // (ใหม่) เรียกดึงข้อมูลทั้งหมดสำหรับ Export
-                const recordsToExport = await fetchAllFilteredRecordsForExport();
-
-                if (recordsToExport.length === 0) {
-                    alert("No data to export based on the current filters.");
-                    return;
-                }
-
-                // (เหมือนเดิม) แปลงข้อมูล
-                const formattedData = recordsToExport.map(record => ({
-                    "NCF Number": record.ncfNumber,
-                    "Issue Date": record.documentDate,
-                    "Finding Time": record.findingDateTime ? new Date(record.findingDateTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '',
-                    "Department": record.to?.department || '',
-                    "Area Process": record.part1?.areaProcess || '',
-                    "Description of Nonconformance": record.part1?.details || '',
-                    "Issuer": record.part1?.issuer || '',
-                    "Containment Action": record.part2?.containmentAction || '',
-                    "Root Cause": record.part2?.rootCause || '',
-                    "Corrective Action": record.part2?.correctiveAction || '',
-                    "In-Charge Person": record.part2?.inChargePerson || '',
-                    "Target Date": record.part2?.targetDate || '',
-                    "Responder": record.part2?.responder || '',
-                    "Approval": record.part2?.approvalName || '',
-                    "Responded Date": formatTimestamp(record.part2?.respondedAt),
-                    "Verification Result": record.part3?.followUpResult || '',
-                    "Verified By": record.part3?.closingIssuerSign || '',
-                    "Completed Date": formatTimestamp(record.part3?.completedAt),
-                    "Status": record.followUpStatus || 'Issued'
-                }));
-
-                // (เหมือนเดิม) สร้างไฟล์ Excel
-                const worksheet = XLSX.utils.json_to_sheet(formattedData);
-                worksheet['!cols'] = [
-                    { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 25 }, { wch: 50 },
-                    { wch: 20 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 20 },
-                    { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
-                    { wch: 20 }, { wch: 20 }, { wch: 15 }
-                ];
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "NCF Records");
-                XLSX.writeFile(workbook, "Nonconformance_Report_Detailed.xlsx");
-
-            } catch (error) {
-                console.error("Error exporting Excel: ", error);
-                alert("An error occurred while preparing the export file.");
-            } finally {
-                exportExcelBtn.disabled = false;
-                exportExcelBtn.innerHTML = `<i class="fas fa-file-excel"></i> Export Excel`;
+            function downloadBase64File(base64Data, fileName, mimeType) {
+                const linkSource = `data:${mimeType};base64,${base64Data}`;
+                const downloadLink = document.createElement("a");
+                downloadLink.href = linkSource;
+                downloadLink.download = fileName;
+                downloadLink.click();
             }
         });
-                function downloadBase64File(base64Data, fileName, mimeType) {
-                    const linkSource = `data:${mimeType};base64,${base64Data}`;
-                    const downloadLink = document.createElement("a");
-                    downloadLink.href = linkSource;
-                    downloadLink.download = fileName;
-                    downloadLink.click();
-                }
-});
-</script>
+        </script>
 
 <div id="passwordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[100]" style="display: none;">
   <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
