@@ -532,7 +532,8 @@
 
             try {
                 // Ensure User is Auth (Double check)
-                if (!firebase.auth().currentUser) throw new Error("Please Login first.");
+                const currentUser = firebase.auth().currentUser;
+                const userEmail = currentUser ? currentUser.email : "Guest/Anonymous";
 
                 const headerData = {
                     supplier: document.getElementById('inp_supplier').value,
@@ -542,7 +543,7 @@
                     coaDate: document.getElementById('inp_coaDate').value,
                     remarks: document.getElementById('inp_remarks').value,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedBy: firebase.auth().currentUser.email // Track who updated
+                    updatedBy: userEmail // ✅ ใช้ตัวแปรที่เราสร้างไว้แทน
                 };
 
                 if (!headerData.supplier || !headerData.batchNo) {
@@ -576,7 +577,7 @@
                     await db.collection('rm_pulp_inspections').doc(currentDocId).update(docData);
                 } else {
                     docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-                    docData.bookedBy = firebase.auth().currentUser.email;
+                    docData.bookedBy = userEmail;
                     await db.collection('rm_pulp_inspections').add(docData);
                 }
 

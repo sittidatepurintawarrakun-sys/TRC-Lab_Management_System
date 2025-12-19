@@ -127,7 +127,7 @@
         
         const db = firebase.firestore();
         db.settings({ experimentalForceLongPolling: true });
-        const functions = firebase.functions();
+        const functions = firebase.app().functions('asia-southeast1');
 
         // ==========================================
         // 2. MACHINE CONFIGURATION
