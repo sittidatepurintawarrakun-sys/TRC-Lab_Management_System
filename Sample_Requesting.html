@@ -17,6 +17,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
 
@@ -35,6 +36,14 @@
         .btn-primary:disabled { background-color: #94a3b8; cursor: not-allowed; }
         .form-file-button { background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.2s; }
         .form-file-button:hover { background-color: #e2e8f0; }
+        
+        /* สไตล์ปุ่ม Admin */
+        .btn-admin { font-size: 0.875rem; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; }
+        .btn-ai { background-color: #8b5cf6; } /* สีม่วง */
+        .btn-ai:hover { background-color: #7c3aed; }
+        .btn-cleanup { background-color: #ef4444; } /* สีแดง */
+        .btn-cleanup:hover { background-color: #dc2626; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="antialiased">
@@ -47,9 +56,20 @@
             </a>
         </div>
 
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-vial-circle-check text-blue-700"></i> Sample Requesting</h1>
-            <p class="text-slate-500 mt-2">Submit a new sample for laboratory testing.</p>
+        <header class="mb-8 flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-vial-circle-check text-blue-700"></i> Sample Requesting</h1>
+                <p class="text-slate-500 mt-2">Submit a new sample for laboratory testing.</p>
+            </div>
+            
+            <div id="admin-controls" class="hidden flex flex-wrap gap-2">
+                <button id="btn-update-ai" class="btn-admin btn-ai shadow-sm" type="button">
+                    <i class="fas fa-robot"></i> Run AI Analysis
+                </button>
+                <button id="btn-cleanup" class="btn-admin btn-cleanup shadow-sm" type="button">
+                    <i class="fas fa-trash-restore"></i> Clean Old Data
+                </button>
+            </div>
         </header>
 
         <div class="card p-8">
@@ -233,6 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const db = app.firestore();
     const storage = app.storage();
     const auth = app.auth();
+    // ⭐ Initialize Functions Region
+    const functions = app.functions('asia-southeast1');
     
     // บังคับให้ Firestore ใช้ Long Polling ซึ่งเสถียรกว่าใน Replit
     db.settings({ experimentalForceLongPolling: true }); 
@@ -250,6 +272,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const reasonSelect = document.getElementById('reasonForTest');
     const otherReasonContainer = document.getElementById('otherReasonContainer');
     const otherReasonInput = document.getElementById('otherReason');
+
+    // Admin Elements
+    const adminControls = document.getElementById('admin-controls');
+    const btnUpdateAi = document.getElementById('btn-update-ai');
+    const btnCleanup = document.getElementById('btn-cleanup');
+    const adminEmails = [
+        "sittidate.p@adityabirla.com",
+        "trc-qcl.laboratory@adityabirla.com",
+        "laboratory.trc@adityabirla.com",
+        "waraporn.jindanath@adityabirla.com"
+    ];
 
 
     // --- Auto-fill fields ---
@@ -270,8 +303,80 @@ document.addEventListener('DOMContentLoaded', () => {
             if (requesterNameInput && !requesterNameInput.value && user.displayName) {
                 requesterNameInput.value = user.displayName;
             }
+
+            // ⭐ Show Admin Controls if User is Admin
+            if (adminEmails.includes(user.email.toLowerCase())) {
+                adminControls.classList.remove('hidden');
+            }
+        } else {
+             adminControls.classList.add('hidden');
         }
     });
+
+    // --- ⭐ Admin Button Handlers (Manual Trigger) ---
+
+    // 1. Manual AI Analysis
+    btnUpdateAi.addEventListener('click', async () => {
+        const originalText = btnUpdateAi.innerHTML;
+        btnUpdateAi.disabled = true;
+        btnUpdateAi.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+
+        try {
+            // เรียกชื่อ Function: manualTriggerSampleAiAnalysis (ต้องตรวจสอบว่า Backend มีฟังก์ชันชื่อนี้หรือชื่ออื่น)
+            const analyzeFunc = functions.httpsCallable('manualTriggerSampleAiAnalysis');
+            const result = await analyzeFunc();
+
+            if (result.data.success) {
+                Swal.fire('AI Analysis Complete', result.data.message, 'success');
+            } else {
+                Swal.fire('Analysis Info', result.data.message || 'Process completed.', 'info');
+            }
+        } catch (error) {
+            console.error("AI Analysis Error:", error);
+            Swal.fire('Error', error.message, 'error');
+        } finally {
+            btnUpdateAi.disabled = false;
+            btnUpdateAi.innerHTML = originalText;
+        }
+    });
+
+    // 2. Manual Clean Up
+    btnCleanup.addEventListener('click', async () => {
+        const confirmResult = await Swal.fire({
+            title: 'Are you sure?',
+            text: "This will delete old Sample Request records (Submitted/InProgress > 6 months, Completed > 5 years). This cannot be undone!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (!confirmResult.isConfirmed) return;
+
+        const originalText = btnCleanup.innerHTML;
+        btnCleanup.disabled = true;
+        btnCleanup.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cleaning...';
+
+        try {
+            // เรียกชื่อ Function: manualDeleteOldSampleRecords (ต้องตรวจสอบว่า Backend มีฟังก์ชันชื่อนี้)
+            const cleanupFunc = functions.httpsCallable('manualDeleteOldSampleRecords');
+            const result = await cleanupFunc();
+
+            if (result.data.success) {
+                Swal.fire('Cleanup Complete', `Deleted ${result.data.deletedCount} old records.`, 'success');
+            } else {
+                Swal.fire('Cleanup Info', result.data.message, 'info');
+            }
+        } catch (error) {
+            console.error("Cleanup Error:", error);
+            Swal.fire('Error', error.message, 'error');
+        } finally {
+            btnCleanup.disabled = false;
+            btnCleanup.innerHTML = originalText;
+        }
+    });
+
     
     // --- File Input Listener ---
     photoInput.addEventListener('change', () => {
@@ -486,9 +591,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     rawTestsList.forEach(testName => {
                         testsRequiredArray.push({
                             testName: testName,
-                            sampleId: i,                
+                            sampleId: i,                 
                             sampleLabel: `Sample #${i}`, 
-                            timePoint: timeLabel,       
+                            timePoint: timeLabel,        
                             status: 'Pending',
                             result: ''
                         });

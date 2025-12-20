@@ -22,6 +22,7 @@
                      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
                      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
                      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+                    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
                      <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
                      <style>
                      body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #334155; }
@@ -61,437 +62,420 @@
                          }
                      </style>
                      </head>
-                     <body class="antialiased">
-                     <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
-                     <div class="max-w-7xl mx-auto">
-                     <div class="mb-6">
-                     <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
-                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                     </a>
-                     </div>
-                     <header class="mb-8 flex justify-between items-center">
-                     <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-chart-pie text-blue-700"></i> Bale Checking Report</h1>
-                     <div id="auth-container">
-                     <div id="user-info" class="hidden items-center gap-4">
-                     <span id="user-email" class="text-slate-600 text-sm"></span>
-                     <button id="logout-btn" class="btn btn-primary text-sm">Logout</button>
-                     </div>
-                     <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
-                     </div>
-                     </header>
-                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                     <div class="kpi-card card">
-                     <div id="kpi-total-issues" class="value">-</div>
-                     <div class="label">Total Issues</div>
-                     </div>
-                     <div class="kpi-card card">
-                     <div id="kpi-top-issue" class="value truncate">-</div>
-                     <div class="label">Most Frequent Issue</div>
-                     </div>
-                     </div>
-                     <div class="grid grid-cols-1 gap-6 mb-8">
-                     <div class="card p-6 h-[450px] flex flex-col">
-                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Top 10 Issues</h2>
-                     <div class="relative flex-grow"><canvas id="topIssuesChart"></canvas></div>
-                     </div>
-                     <div class="card p-6 h-[450px] flex flex-col">
-                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Comparison by Department</h2>
-                     <div class="relative flex-grow"><canvas id="departmentComparisonChart"></canvas></div>
-                     </div>
-                     </div>
-                     <div class="card p-6 h-[450px] flex flex-col mb-8">
-                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Trend (Last 3 Active Months)</h2>
-                     <div class="relative flex-grow"><canvas id="issueTrendChart"></canvas></div>
-                     </div>
-                     <div class="card p-6 overflow-x-auto">
-                     <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                     <div class="flex items-center">
-                     <h2 class="text-xl font-bold text-slate-800">All Records</h2>
-                     </div>
-                     <div class="flex items-center gap-4">
-                     <div class="font-semibold text-slate-700 text-sm">Export by date range:</div>
-                     <input type="date" id="exportStartDate" class="form-input" style="width: 160px;">
-                     <input type="date" id="exportEndDate" class="form-input" style="width: 160px;">
-                     <button id="clearFiltersBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear All Filters</button>
-                     <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel"></i> Export Excel</button>
-                     </div>
-                     </div>
-                     <div class="table-wrapper" id="table-container">
-                     <table class="w-full text-sm text-left text-slate-500" id="recordsTable">
-                     <thead class="text-xs text-slate-700 uppercase bg-slate-100">
-                     <tr>
-                     <th class="px-6 py-3">Inspection Date</th>
-                     <th class="px-6 py-3">Department</th>
-                     <th class="px-6 py-3">Photo Ref</th>
-                     <th class="px-6 py-3">Customer</th>
-                     <th class="px-6 py-3">Bale No.</th>
-                     <th class="px-6 py-3">Checked By</th>
-                     <th class="px-6 py-3">Issue Problem</th>
-                     <th class="px-6 py-3">Notes</th>
-                     <th class="px-6 py-3">Actions</th>
-                     </tr>
-                     </thead>
-                     <tbody></tbody>
-                     </table>
-                     </div>
-                     </div>
-                     </div>
-                     </div>
+                         <body class="antialiased">
+                         <div class="relative min-h-screen p-4 sm:p-6 lg:p-8">
+                         <div class="max-w-7xl mx-auto">
+                         <div class="mb-6">
+                         <a href="index.html" class="text-slate-600 hover:text-blue-700 font-semibold text-sm">
+                         <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                         </a>
+                         </div>
+                         <header class="mb-8 flex justify-between items-center">
+                         <h1 class="text-3xl font-bold text-slate-800"><i class="fas fa-chart-pie text-blue-700"></i> Bale Checking Report</h1>
+                         <div id="auth-container">
+                         <div id="user-info" class="hidden items-center gap-4">
+                         <span id="user-email" class="text-slate-600 text-sm"></span>
+                         <button id="cleanup-btn" class="btn btn-secondary text-sm" style="background-color: #ef4444; border: none; display: none; color: white;">
+                         <i class="fas fa-trash-restore mr-1"></i> Clean Old Data
+                         </button>
+                         <button id="logout-btn" class="btn btn-primary text-sm">Logout</button>
+                         </div>
+                         <button id="login-prompt-btn" class="btn btn-primary">Admin Login</button>
+                         </div>
+                         </header>
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                         <div class="kpi-card card">
+                         <div id="kpi-total-issues" class="value">-</div>
+                         <div class="label">Total Issues</div>
+                         </div>
+                         <div class="kpi-card card">
+                         <div id="kpi-top-issue" class="value truncate">-</div>
+                         <div class="label">Most Frequent Issue</div>
+                         </div>
+                         </div>
+                         <div class="grid grid-cols-1 gap-6 mb-8">
+                         <div class="card p-6 h-[450px] flex flex-col">
+                         <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Top 10 Issues</h2>
+                         <div class="relative flex-grow"><canvas id="topIssuesChart"></canvas></div>
+                         </div>
+                         <div class="card p-6 h-[450px] flex flex-col">
+                         <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Comparison by Department</h2>
+                         <div class="relative flex-grow"><canvas id="departmentComparisonChart"></canvas></div>
+                         </div>
+                         </div>
+                         <div class="card p-6 h-[450px] flex flex-col mb-8">
+                         <h2 class="text-lg font-bold text-slate-800 mb-4 flex-shrink-0">Issue Trend (Last 3 Active Months)</h2>
+                         <div class="relative flex-grow"><canvas id="issueTrendChart"></canvas></div>
+                         </div>
+                         <div class="card p-6 overflow-x-auto">
+                         <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                         <div class="flex items-center">
+                         <h2 class="text-xl font-bold text-slate-800">All Records</h2>
+                         </div>
+                         <div class="flex items-center gap-4">
+                         <div class="font-semibold text-slate-700 text-sm">Export by date range:</div>
+                         <input type="date" id="exportStartDate" class="form-input" style="width: 160px;">
+                         <input type="date" id="exportEndDate" class="form-input" style="width: 160px;">
+                         <button id="clearFiltersBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Clear All Filters</button>
+                         <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel"></i> Export Excel</button>
+                         </div>
+                         </div>
+                         <div class="table-wrapper" id="table-container">
+                         <table class="w-full text-sm text-left text-slate-500" id="recordsTable">
+                         <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                         <tr>
+                         <th class="px-6 py-3">Inspection Date</th>
+                         <th class="px-6 py-3">Department</th>
+                         <th class="px-6 py-3">Photo Ref</th>
+                         <th class="px-6 py-3">Customer</th>
+                         <th class="px-6 py-3">Bale No.</th>
+                         <th class="px-6 py-3">Checked By</th>
+                         <th class="px-6 py-3">Issue Problem</th>
+                         <th class="px-6 py-3">Notes</th>
+                         <th class="px-6 py-3">Actions</th>
+                         </tr>
+                         </thead>
+                         <tbody></tbody>
+                         </table>
+                         </div>
+                         </div>
+                         </div>
+                         </div>
                          <script>
                          $(document).ready(function() {
-                             // ===================================================================================
-                             // 1. SETUP FIREBASE & VARIABLES
-                             //    (กำหนดค่าเชื่อมต่อ Firebase, ตัวแปร Global, และค่าเริ่มต้นต่างๆ)
-                             // ===================================================================================
-                             const mainFirebaseConfig = {
-                                 apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-                                 authDomain: "lab-trc-management-system.firebaseapp.com",
-                                 projectId: "lab-trc-management-system",
-                                 storageBucket: "lab-trc-management-system.firebasestorage.app",
-                                 messagingSenderId: "43919979160",
-                                 appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-                             };
-                             const photoFirebaseConfig = {
-                                 apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
-                                 authDomain: "trc-photo-data.firebaseapp.com",
-                                 projectId: "trc-photo-data",
-                                 storageBucket: "trc-photo-data.firebasestorage.app",
-                                 messagingSenderId: "656245706360",
-                                 appId: "1:656245706360:web:6de7bd9d296158bc57678d"
-                             };
+                         // ===================================================================================
+                         // 1. SETUP FIREBASE & VARIABLES
+                         // ===================================================================================
+                         const mainFirebaseConfig = {
+                         apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                         authDomain: "lab-trc-management-system.firebaseapp.com",
+                         projectId: "lab-trc-management-system",
+                         storageBucket: "lab-trc-management-system.firebasestorage.app",
+                         messagingSenderId: "43919979160",
+                         appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+                         };
+                         const photoFirebaseConfig = {
+                         apiKey: "AIzaSyCtJrG-GT19tRArvSywcb7RMYVsdsicjG0",
+                         authDomain: "trc-photo-data.firebaseapp.com",
+                         projectId: "trc-photo-data",
+                         storageBucket: "trc-photo-data.firebasestorage.app",
+                         messagingSenderId: "656245706360",
+                         appId: "1:656245706360:web:6de7bd9d296158bc57678d"
+                         };
+                         const mainApp = firebase.initializeApp(mainFirebaseConfig);
+                         const photoApp = firebase.initializeApp(photoFirebaseConfig, 'photoStorageApp');
+                         const db = mainApp.firestore();
+                         const storage = photoApp.storage();
+                         const auth = mainApp.auth();
+                         db.settings({ experimentalForceLongPolling: true });
 
-                             const mainApp = firebase.initializeApp(mainFirebaseConfig);
-                             const photoApp = firebase.initializeApp(photoFirebaseConfig, 'photoStorageApp');
-                             const db = mainApp.firestore();
-                             const storage = photoApp.storage();
-                             const auth = mainApp.auth();
-                             db.settings({ experimentalForceLongPolling: true });
+                         // DOM Variables
+                         const loginPromptBtn = $('#login-prompt-btn');
+                         const logoutBtn = $('#logout-btn');
+                         const userInfoDiv = $('#user-info');
+                         const userEmailSpan = $('#user-email');
+                         const exportStartDateInput = document.getElementById('exportStartDate');
+                         const exportEndDateInput = document.getElementById('exportEndDate');
+                         const clearFiltersBtn = $('#clearFiltersBtn');
+                         const cleanupBtn = $('#cleanup-btn'); // ⭐ เพิ่มตัวแปรปุ่ม cleanup
 
-                             // DOM Variables
-                             const loginPromptBtn = $('#login-prompt-btn');
-                             const logoutBtn = $('#logout-btn');
-                             const userInfoDiv = $('#user-info');
-                             const userEmailSpan = $('#user-email');
-                             const exportStartDateInput = document.getElementById('exportStartDate');
-                             const exportEndDateInput = document.getElementById('exportEndDate');
-                             const clearFiltersBtn = $('#clearFiltersBtn');
+                         // State Variables
+                         const adminEmails = ["sittidate.p@adityabirla.com", "trc-qcl.laboratory@adityabirla.com", "laboratory.trc@adityabirla.com", "waraporn.jindanath@adityabirla.com"];
+                         let currentUser = null;
+                         let recordsTable;
+                         let chartInstances = {};
 
-                             // State Variables
-                             const adminEmails = ["sittidate.p@adityabirla.com", "trc-qcl.laboratory@adityabirla.com", "laboratory.trc@adityabirla.com", "waraporn.jindanath@adityabirla.com"];
-                             let currentUser = null;
-                             let recordsTable;
-                             let dashboardRecords = []; // (คงไว้ - แม้ Hybrid Model จะไม่ได้ใช้ แต่เผื่ออนาคต)
-                             let chartInstances = {};
+                         // ===================================================================================
+                         // 2. AUTHENTICATION LOGIC & BUTTON HANDLERS
+                         // ===================================================================================
+                         loginPromptBtn.on('click', () => {
+                         const email = prompt("Please enter your admin email:");
+                         if (email) {
+                         const password = prompt("Please enter your password:");
+                         if (password) {
+                         auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
+                         }
+                         }
+                         });
+                         logoutBtn.on('click', () => auth.signOut());
 
-                             // ===================================================================================
-                             // 2. AUTHENTICATION LOGIC
-                             //    (จัดการการ Login, Logout, และการแสดงผลปุ่ม/ข้อมูลผู้ใช้)
-                             // ===================================================================================
-                             loginPromptBtn.on('click', () => {
-                                 const email = prompt("Please enter your admin email:");
-                                 if (email) {
-                                     const password = prompt("Please enter your password:");
-                                     if (password) {
-                                         auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
-                                     }
-                                 }
-                             });
-                             logoutBtn.on('click', () => auth.signOut());
-                             auth.onAuthStateChanged(user => {
-                                 currentUser = user;
-                                 if (user) {
-                                     loginPromptBtn.hide();
-                                     userInfoDiv.show().css('display', 'flex');
-                                     userEmailSpan.text(user.email);
-                                 } else {
-                                     loginPromptBtn.show();
-                                     userInfoDiv.hide();
-                                 }
-                                 if (recordsTable) {
-                                     const isAdmin = currentUser && adminEmails.includes(currentUser.email.toLowerCase());
-                                     recordsTable.column(8).visible(isAdmin);
-                                 }
-                             });
+                         // --- 2.1 Logic สำหรับปุ่ม Clean Up (เพิ่มใหม่) ---
+                         cleanupBtn.on('click', async () => {
+                         const confirmed = confirm("⚠️ WARNING: This will delete all Bale Checking records older than 2 YEARS.\n\nThis action cannot be undone. Are you sure?");
+                         if (!confirmed) return;
 
-                             // ===================================================================================
-                             // 3. HELPER & CHART/KPI FUNCTIONS (DEFINITIONS)
-                             //    (ส่วนนี้คือ "คำสั่ง" หรือ "ฟังก์ชัน" ที่เราสร้างไว้ แต่ยังไม่ถูกเรียกใช้งาน)
-                             // ===================================================================================
+                         const originalText = cleanupBtn.html();
+                         cleanupBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Cleaning...');
 
-                             // --- 3.1 Helper Function (Format Date) ---
-                             const formatDate = (dateString) => {
-                                 if (!dateString) return '';
-                                 const date = new Date(dateString);
-                                 return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}, ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                             };
+                         try {
+                         // ตรวจสอบว่าโหลด Functions Library มาหรือยัง
+                         if (!firebase.functions) {
+                             throw new Error("Firebase Functions library not loaded. Please add <script src='...firebase-functions-compat.js'><\/script> in <head>");
+                         }
+                         const cleanupFunction = mainApp.functions('asia-southeast1').httpsCallable('manualDeleteOldBaleRecords');
+                         const result = await cleanupFunction();
 
-                             // --- 3.2 KPI Cards (Total Issues & Most Frequent Issue) ---
-                             const updateKpiCards = (summaryData) => {
-                                 const totalIssues = summaryData.totalIssues || 0;
-                                 const topIssue = summaryData.topIssue || '-';
-                                 $('#kpi-total-issues').text(totalIssues);
-                                 $('#kpi-top-issue').text(topIssue);
-                             };
+                         if (result.data.success) {
+                             alert(`✅ Cleanup Complete!\n\nDeleted: ${result.data.deletedCount} records.`);
+                             if (recordsTable) recordsTable.draw();
+                         } else {
+                             alert("Cleanup finished with message: " + result.data.message);
+                         }
+                         } catch (error) {
+                         console.error("Cleanup Error:", error);
+                         alert("❌ Error: " + error.message);
+                         } finally {
+                         cleanupBtn.prop('disabled', false).html(originalText);
+                         }
+                         });
 
-                             // --- 3.3 Top 10 Issues Chart ---
-                             const createTopIssuesChart = (issueCounts) => {
-                                 if (!issueCounts || Object.keys(issueCounts).length === 0) issueCounts = {};
-                                 const issueTotals = Object.entries(issueCounts).map(([issue, total]) => ({ issue, total }));
-                                 const sortedIssues = issueTotals.sort((a, b) => b.total - a.total).slice(0, 10);
-                                 const labels = sortedIssues.map(item => item.issue);
-                                 const data = sortedIssues.map(item => item.total);
-                                 const totalRecordsCount = issueTotals.reduce((sum, item) => sum + item.total, 0);
-                                 const ctx = document.getElementById('topIssuesChart').getContext('2d');
-                                 if (chartInstances.topIssues) chartInstances.topIssues.destroy();
-                                 chartInstances.topIssues = new Chart(ctx, {
-                                     type: 'bar',
-                                     data: { labels: labels, datasets: [{ label: 'Issue Count', data: data, backgroundColor: '#3b82f6' }] },
-                                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { const count = context.raw;
-                                     const percentage = totalRecordsCount > 0 ? (count / totalRecordsCount * 100).toFixed(1) : 0; return `Count: ${count} (${percentage}%)`;
-                                     } } } }, scales: { x: { beginAtZero: true } } }
-                                 });
-                             };
+                         auth.onAuthStateChanged(user => {
+                         currentUser = user;
+                         if (user) {
+                         loginPromptBtn.hide();
+                         userInfoDiv.show().css('display', 'flex');
+                         userEmailSpan.text(user.email);
 
-                             // --- 3.4 Department Comparison Chart ---
-                             const createDepartmentComparisonChart = (departmentData) => {
-                                 if (!departmentData || Object.keys(departmentData).length === 0) departmentData = {};
-                                 const labels = Object.keys(departmentData);
-                                 const spinningData = labels.map(issue => departmentData[issue]['Spinning'] || 0);
-                                 const warehouseData = labels.map(issue => departmentData[issue]['Warehouse'] || 0);
-                                 const ctx = document.getElementById('departmentComparisonChart').getContext('2d');
-                                 if (chartInstances.deptCompare) chartInstances.deptCompare.destroy();
-                                 chartInstances.deptCompare = new Chart(ctx, {
-                                     type: 'bar',
-                                     data: { labels: labels, datasets: [{ label: 'Spinning', data: spinningData, backgroundColor: '#f97316' }, { label: 'Warehouse', data: warehouseData, backgroundColor: '#8b5cf6' }] },
-                                     options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } } }
-                                 });
-                             };
+                         // ⭐ ตรวจสอบว่าเป็น Admin หรือไม่ แล้วโชว์ปุ่ม Clean Up
+                         if (adminEmails.includes(user.email.toLowerCase())) {
+                             cleanupBtn.show();
+                         } else {
+                             cleanupBtn.hide();
+                         }
 
-                             // --- 3.5 Issue Trend (Last 3 Active Months) Chart ---
-                             //     ( ⭐  CLEANUP: ลบ Debug Console.log ออก )
-                             const createIssueTrendChart = async () => {
-                                 const ctx = document.getElementById('issueTrendChart').getContext('2d');
-                                 if (chartInstances.issueTrend) chartInstances.issueTrend.destroy();
+                         } else {
+                         loginPromptBtn.show();
+                         userInfoDiv.hide();
+                         cleanupBtn.hide();
+                         }
+                         if (recordsTable) {
+                         const isAdmin = currentUser && adminEmails.includes(currentUser.email.toLowerCase());
+                         recordsTable.column(8).visible(isAdmin);
+                         }
+                         });
 
-                                 try {
-                                     // 1. ดึงข้อมูล 3 เดือนล่าสุด
-                                     const trendQuery = db.collection("dashboard_monthly_summary")
-                                                          .orderBy(firebase.firestore.FieldPath.documentId(), "desc")
-                                                          .limit(3);
-                                     const snapshot = await trendQuery.get();
+                         // ===================================================================================
+                         // 3. HELPER & CHART/KPI FUNCTIONS
+                         // ===================================================================================
+                         const formatDate = (dateString) => {
+                         if (!dateString) return '';
+                         const date = new Date(dateString);
+                         return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}, ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                         };
 
-                                     if (snapshot.empty) {
-                                         console.warn("createIssueTrendChart: Snapshot is EMPTY.");
-                                         chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
-                                         return;
-                                     }
+                         const updateKpiCards = (summaryData) => {
+                         const totalIssues = summaryData.totalIssues || 0;
+                         const topIssue = summaryData.topIssue || '-';
+                         $('#kpi-total-issues').text(totalIssues);
+                         $('#kpi-top-issue').text(topIssue);
+                         };
 
-                                     // 2. แปลงข้อมูล
-                                     const monthlyDocs = snapshot.docs.map(doc => doc.data()).reverse();
-                                     const lastThreeMonths = snapshot.docs.map(doc => doc.id).reverse(); // ใช้ doc.id ซึ่งควรจะเป็น "YYYY-MM"
+                         const createTopIssuesChart = (issueCounts) => {
+                         if (!issueCounts || Object.keys(issueCounts).length === 0) issueCounts = {};
+                         const issueTotals = Object.entries(issueCounts).map(([issue, total]) => ({ issue, total }));
+                         const sortedIssues = issueTotals.sort((a, b) => b.total - a.total).slice(0, 10);
+                         const labels = sortedIssues.map(item => item.issue);
+                         const data = sortedIssues.map(item => item.total);
+                         const totalRecordsCount = issueTotals.reduce((sum, item) => sum + item.total, 0);
+                         const ctx = document.getElementById('topIssuesChart').getContext('2d');
+                         if (chartInstances.topIssues) chartInstances.topIssues.destroy();
+                         chartInstances.topIssues = new Chart(ctx, {
+                         type: 'bar',
+                         data: { labels: labels, datasets: [{ label: 'Issue Count', data: data, backgroundColor: '#3b82f6' }] },
+                         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { const count = context.raw;
+                         const percentage = totalRecordsCount > 0 ? (count / totalRecordsCount * 100).toFixed(1) : 0; return `Count: ${count} (${percentage}%)`;
+                         } } } }, scales: { x: { beginAtZero: true } } }
+                         });
+                         };
 
-                                     // 3. รวมคะแนน
-                                     const metadataFields = ['docId', 'year', 'month', 'totalIssues', 'issueCounts']; 
-                                     const totalCountsInPeriod = {};
+                         const createDepartmentComparisonChart = (departmentData) => {
+                         if (!departmentData || Object.keys(departmentData).length === 0) departmentData = {};
+                         const labels = Object.keys(departmentData);
+                         const spinningData = labels.map(issue => departmentData[issue]['Spinning'] || 0);
+                         const warehouseData = labels.map(issue => departmentData[issue]['Warehouse'] || 0);
+                         const ctx = document.getElementById('departmentComparisonChart').getContext('2d');
+                         if (chartInstances.deptCompare) chartInstances.deptCompare.destroy();
+                         chartInstances.deptCompare = new Chart(ctx, {
+                         type: 'bar',
+                         data: { labels: labels, datasets: [{ label: 'Spinning', data: spinningData, backgroundColor: '#f97316' }, { label: 'Warehouse', data: warehouseData, backgroundColor: '#8b5cf6' }] },
+                         options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } } }
+                         });
+                         };
 
-                                     monthlyDocs.forEach(doc => {
-                                         for (const issue in doc) {
-                                             if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
-                                                 totalCountsInPeriod[issue] = (totalCountsInPeriod[issue] || 0) + doc[issue];
-                                             }
-                                         }
-                                     });
+                         const createIssueTrendChart = async () => {
+                         const ctx = document.getElementById('issueTrendChart').getContext('2d');
+                         if (chartInstances.issueTrend) chartInstances.issueTrend.destroy();
+                         try {
+                         const trendQuery = db.collection("dashboard_monthly_summary").orderBy(firebase.firestore.FieldPath.documentId(), "desc").limit(3);
+                         const snapshot = await trendQuery.get();
+                         if (snapshot.empty) {
+                         chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
+                         return;
+                         }
+                         const monthlyDocs = snapshot.docs.map(doc => doc.data()).reverse();
+                         const lastThreeMonths = snapshot.docs.map(doc => doc.id).reverse();
+                         const metadataFields = ['docId', 'year', 'month', 'totalIssues', 'issueCounts'];
+                         const totalCountsInPeriod = {};
+                         monthlyDocs.forEach(doc => {
+                         for (const issue in doc) {
+                         if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
+                         totalCountsInPeriod[issue] = (totalCountsInPeriod[issue] || 0) + doc[issue];
+                         }
+                         }
+                         });
+                         const topIssues = Object.entries(totalCountsInPeriod).sort(([, a], [, b]) => b - a).slice(0, 7).map(entry => entry[0]);
+                         const DISTINCT_COLORS = ['#E6194B', '#3CB44B', '#4363D8', '#F58231', '#911EB4', '#46F0F0', '#FABEBE', '#008080', '#E6BEFF', '#9A6324'];
+                         const POINT_STYLES = ['circle', 'rect', 'triangle', 'rectRot', 'star', 'cross', 'rectRounded'];
+                         let datasets = topIssues.map((issue, index) => {
+                         const data = monthlyDocs.map(doc => doc[issue] || 0);
+                         return { label: issue, data: data, borderColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length], backgroundColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length] + '33', pointStyle: POINT_STYLES[index % POINT_STYLES.length], pointRadius: 6, tension: 0.1, fill: false };
+                         });
+                         const otherIssuesData = monthlyDocs.map(doc => {
+                         let otherCount = 0;
+                         for (const issue in doc) {
+                         if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
+                         if (!topIssues.includes(issue)) {
+                         otherCount += doc[issue];
+                         }
+                         }
+                         }
+                         return otherCount;
+                         });
+                         if (otherIssuesData.some(count => count > 0)) {
+                         datasets.push({ label: 'Other Issues', data: otherIssuesData, borderColor: '#808080', backgroundColor: '#80808033', borderDash: [5, 5], pointStyle: 'line', pointRadius: 5, tension: 0.1, fill: false });
+                         }
+                         chartInstances.issueTrend = new Chart(ctx, {
+                         type: 'line',
+                         data: {
+                         labels: lastThreeMonths.map(m => new Date(m + '-02').toLocaleString('default', { month: 'short', year: '2-digit' })),
+                         datasets: datasets
+                         },
+                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, } }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Number of Issues' } } } }
+                         });
+                         } catch (error) {
+                         console.error("createIssueTrendChart: ERROR:", error);
+                         chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
+                         }
+                         };
 
-                                     // 4. หา Top 7
-                                     const topIssues = Object.entries(totalCountsInPeriod).sort(([, a], [, b]) => b - a).slice(0, 7).map(entry => entry[0]);
-                                     const DISTINCT_COLORS = ['#E6194B', '#3CB44B', '#4363D8', '#F58231', '#911EB4', '#46F0F0', '#FABEBE', '#008080', '#E6BEFF', '#9A6324'];
-                                     const POINT_STYLES = ['circle', 'rect', 'triangle', 'rectRot', 'star', 'cross', 'rectRounded'];
+                         // ===================================================================================
+                         // 4. DATATABLE, FILTERS & EXPORT
+                         // ===================================================================================
+                         const initializeDataTable = (summaryData) => {
+                         recordsTable = $('#recordsTable').DataTable({
+                         searching: false,
+                         autoWidth: false,
+                         scrollY: '50vh',
+                         scrollCollapse: true,
+                         stateSave: true,
+                         serverSide: true, processing: true, pageLength: 15, order: [[0, 'desc']],
+                         ajax: async (data, callback, settings) => {
+                         try {
+                         let query = db.collection("bale_checking_records");
+                         const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
+                         const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
+                         query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
+                         const orderSettings = data.order[0]; const orderColumnIndex = orderSettings.column; const orderDirection = orderSettings.dir;
+                         const orderColumnName = ['inspectionDate', 'department', null, 'customerName', 'baleNumber', 'checkedBy', 'issueProblem'][orderColumnIndex]; if (orderColumnName) query = query.orderBy(orderColumnName, orderDirection);
+                         const totalRecordsSnapshot = await query.get(); const recordsFiltered = totalRecordsSnapshot.size;
+                         if (data.start > 0) { const firstDocSnapshot = await query.limit(data.start).get(); const lastVisible = firstDocSnapshot.docs[firstDocSnapshot.docs.length - 1]; query = query.startAfter(lastVisible); }
+                         const pagedSnapshot = await query.limit(data.length).get();
+                         const recordsData = pagedSnapshot.docs.map(doc => {
+                         return { id: doc.id, ...doc.data() };
+                         });
+                         callback({ draw: data.draw, recordsTotal: recordsFiltered, recordsFiltered: recordsFiltered, data: recordsData });
+                         } catch (error) { console.error("Error fetching data for DataTable:", error); callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
+                         }
+                         },
+                         columns: [ { data: 'inspectionDate', render: (d) => formatDate(d) }, { data: 'department' }, { data: 'photoURL', orderable: false, searchable: false, render: (url) => url ?
+                         `<a href="${url}" target="_blank"><img src="${url}" class="thumbnail" alt="Bale Image"></a>` : 'No Photo' }, { data: 'customerName' }, { data: 'baleNumber' }, { data: 'checkedBy' }, { data: 'issueProblem' }, { data: 'notes', render: (d) => `<div class="notes-column">${d ||
+                         ''}</div>` }, { data: null, orderable: false, searchable: false, render: (data, type, row) => `<div class="flex justify-center items-center gap-2"><button onclick="editRecord('${row.id}')" class="action-btn" title="Edit Record"><i class="fas fa-edit text-blue-500 hover:text-blue-700 fa-lg"></i></button><button onclick="deleteRecord('${row.id}', '${row.photoFileName || ''}')" class="action-btn" title="Delete Record"><i class="fas fa-trash-alt text-red-500 hover:text-red-700 fa-lg"></i></button</div>` } ],
+                         columnDefs: [
+                         { targets: 7, width: "250px" },
+                         { targets: 8, visible: false, width: "80px" }
+                         ],
+                         initComplete: function () {
+                         const api = this.api();
+                         const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase()); api.column(8).visible(isAdmin);
+                         setTimeout(() => {
+                         this.api().columns.adjust();
+                         }, 200);
+                         }
+                         });
+                         };
 
-                                     // 5. สร้าง Datasets
-                                     let datasets = topIssues.map((issue, index) => {
-                                         const data = monthlyDocs.map(doc => doc[issue] || 0); 
-                                         return { label: issue, data: data, borderColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length], backgroundColor: DISTINCT_COLORS[index % DISTINCT_COLORS.length] + '33', pointStyle: POINT_STYLES[index % POINT_STYLES.length], pointRadius: 6, tension: 0.1, fill: false };
-                                     });
+                         window.editRecord = (recordId) => { window.location.href = `Bale_Checking.html?id=${recordId}`; };
+                         window.deleteRecord = (recordId, photoFileName) => {
+                         if (!confirm(`Are you sure you want to delete this record?\nID: ${recordId}`)) return;
+                         const deleteFirestoreRecord = () => db.collection("bale_checking_records").doc(recordId).delete();
+                         if (photoFileName) {
+                         const photoRef = storage.ref(`bale_images/${photoFileName}`);
+                         photoRef.delete().then(deleteFirestoreRecord)
+                         .then(() => { alert("Record and photo deleted successfully!"); recordsTable.draw(); })
+                         .catch(error => {
+                         if (error.code === 'storage/object-not-found') { deleteFirestoreRecord().then(() => { alert("Record deleted (photo not found in storage)."); recordsTable.draw(); }).catch(dbError => alert("Error: " + dbError.message));
+                         } else { alert("Error: " + error.message); }
+                         });
+                         } else { deleteFirestoreRecord().then(() => { alert("Record deleted successfully!"); recordsTable.draw(); }).catch(error => alert("Error: " + error.message)); }
+                         };
 
-                                     // 6. คำนวณ Other Issues
-                                     const otherIssuesData = monthlyDocs.map(doc => {
-                                         let otherCount = 0;
-                                         for (const issue in doc) {
-                                             if (Object.prototype.hasOwnProperty.call(doc, issue) && !metadataFields.includes(issue)) {
-                                                 if (!topIssues.includes(issue)) {
-                                                     otherCount += doc[issue];
-                                                 }
-                                             }
-                                         }
-                                         return otherCount;
-                                     });
-                                     if (otherIssuesData.some(count => count > 0)) {
-                                         datasets.push({ label: 'Other Issues', data: otherIssuesData, borderColor: '#808080', backgroundColor: '#80808033', borderDash: [5, 5], pointStyle: 'line', pointRadius: 5, tension: 0.1, fill: false });
-                                     }
+                         clearFiltersBtn.on('click', function() {
+                         exportStartDateInput.value = '';
+                         exportEndDateInput.value = '';
+                         recordsTable.search('').draw();
+                         });
 
-                                     // 7. สร้าง Chart
-                                     chartInstances.issueTrend = new Chart(ctx, {
-                                         type: 'line',
-                                         data: {
-                                             labels: lastThreeMonths.map(m => new Date(m + '-02').toLocaleString('default', { month: 'short', year: '2-digit' })), 
-                                             datasets: datasets
-                                         },
-                                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, } }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Number of Issues' } } } }
-                                     });
+                         $('#exportStartDate, #exportEndDate').on('change', () => {
+                         recordsTable.draw();
+                         });
 
-                                 } catch (error) {
-                                     console.error("createIssueTrendChart: CRITICAL ERROR:", error);
-                                     chartInstances.issueTrend = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
-                                 }
-                             };
+                         $('#exportExcel').on('click', async () => {
+                         const exportBtn = $('#exportExcel'); exportBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Exporting...');
+                         try {
+                         let query = db.collection("bale_checking_records");
+                         const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
+                         const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
+                         query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
+                         query = query.orderBy('inspectionDate', 'desc');
+                         const snapshot = await query.get();
+                         if (snapshot.empty) { alert("No data to export for the selected filters."); return; }
+                         const allFilteredRecords = snapshot.docs.map(doc => doc.data());
+                         const formattedData = allFilteredRecords.map(record => ({ "Date": formatDate(record.inspectionDate), "Department": record.department, "Customer": record.customerName, "Bale No.": record.baleNumber, "Checked By": record.checkedBy, "Issue": record.issueProblem, "Notes": record.notes || '', "Photo Link": record.photoURL ? { t: 's', v: 'View Image', l: { Target: record.photoURL, Tooltip: "Click to view image" } } : '' }));
+                         const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                         worksheet['!cols'] = [{ wch: 22 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 30 }, { wch: 15 }];
+                         const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, worksheet, "Bale Records");
+                         XLSX.writeFile(wb, "Bale_Checking_Report_Filtered.xlsx");
+                         } catch (error) { console.error("Error exporting Excel:", error); alert("Failed to export data. Please check the console.");
+                         } finally { exportBtn.prop('disabled', false).html('<i class="fas fa-file-excel"></i> Export Excel'); }
+                         });
 
-                             // ===================================================================================
-                             // 4. DATATABLE, FILTERS & EXPORT (DEFINITIONS & HANDLERS)
-                             //    (ฟังก์ชันและการตั้งค่าที่เกี่ยวข้องกับตารางข้อมูล "All Records")
-                             // ===================================================================================
-
-                             // --- 4.1 "All Records" Table Initialization (รวม Filter Dropdowns) ---
-                             //     (  ⭐   UPDATE: ลบ filterRow, ลบการอ่าน filter ใน ajax, ลบการสร้าง filter ใน initComplete)
-                                 const initializeDataTable = (summaryData) => { 
-                                 recordsTable = $('#recordsTable').DataTable({
-                                     //  ⭐   UPDATE: เพิ่มบรรทัดนี้เพื่อซ่อนช่อง Search
-                                     searching: false, 
-                                     autoWidth: false,
-                                     scrollY: '50vh',
-                                     scrollCollapse: true,
-                                     stateSave: true,
-                                     serverSide: true, processing: true, pageLength: 15, order: [[0, 'desc']],
-                                     ajax: async (data, callback, settings) => {
-                                         try {
-                                             let query = db.collection("bale_checking_records");
-                                             const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
-                                             const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
-                                             query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
-
-                                             const orderSettings = data.order[0]; const orderColumnIndex = orderSettings.column; const orderDirection = orderSettings.dir;
-                                             const orderColumnName = ['inspectionDate', 'department', null, 'customerName', 'baleNumber', 'checkedBy', 'issueProblem'][orderColumnIndex]; if (orderColumnName) query = query.orderBy(orderColumnName, orderDirection);
-                                             const totalRecordsSnapshot = await query.get(); const recordsFiltered = totalRecordsSnapshot.size;
-                                             if (data.start > 0) { const firstDocSnapshot = await query.limit(data.start).get(); const lastVisible = firstDocSnapshot.docs[firstDocSnapshot.docs.length - 1]; query = query.startAfter(lastVisible); }
-                                             const pagedSnapshot = await query.limit(data.length).get();
-                                             const recordsData = pagedSnapshot.docs.map(doc => {
-                                                 return { id: doc.id, ...doc.data() };
-                                             });
-                                             callback({ draw: data.draw, recordsTotal: recordsFiltered, recordsFiltered: recordsFiltered, data: recordsData });
-                                         } catch (error) { console.error("Error fetching data for DataTable:", error); callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-                                         }
-                                     },
-                                     columns: [ { data: 'inspectionDate', render: (d) => formatDate(d) }, { data: 'department' }, { data: 'photoURL', orderable: false, searchable: false, render: (url) => url ?
-                                     `<a href="${url}" target="_blank"><img src="${url}" class="thumbnail" alt="Bale Image"></a>` : 'No Photo' }, { data: 'customerName' }, { data: 'baleNumber' }, { data: 'checkedBy' }, { data: 'issueProblem' }, { data: 'notes', render: (d) => `<div class="notes-column">${d ||
-                                     ''}</div>` }, { data: null, orderable: false, searchable: false, render: (data, type, row) => `<div class="flex justify-center items-center gap-2"><button onclick="editRecord('${row.id}')" class="action-btn" title="Edit Record"><i class="fas fa-edit text-blue-500 hover:text-blue-700 fa-lg"></i></button><button onclick="deleteRecord('${row.id}', '${row.photoFileName || ''}')" class="action-btn" title="Delete Record"><i class="fas fa-trash-alt text-red-500 hover:text-red-700 fa-lg"></i></button</div>` } ],
-                                     columnDefs: [
-                                         { targets: 7, width: "250px" }, // (เพิ่มบรรทัดนี้: กำหนดความกว้างคอลัมน์ "Notes" ให้ตรงกับ CSS)
-                                         { targets: 8, visible: false, width: "80px" } // (อันนี้ของเดิม: คอลัมน์ Actions)
-                                     ],
-                                     initComplete: function () {
-                                         const api = this.api();
-                                         const isAdmin = currentUser && adminEmails.includes(currentUser.email?.toLowerCase()); api.column(8).visible(isAdmin);
-                                         setTimeout(() => {
-                                             this.api().columns.adjust();
-                                         }, 200);
-                                     }
-                                 });
-                                 };
-
-                             // --- 4.2 Table Actions (Edit / Delete) ---
-                             window.editRecord = (recordId) => { window.location.href = `Bale_Checking.html?id=${recordId}`; };
-                             window.deleteRecord = (recordId, photoFileName) => {
-                                 if (!confirm(`Are you sure you want to delete this record?\nID: ${recordId}`)) return;
-                                 const deleteFirestoreRecord = () => db.collection("bale_checking_records").doc(recordId).delete();
-                                 if (photoFileName) {
-                                     const photoRef = storage.ref(`bale_images/${photoFileName}`);
-                                     photoRef.delete().then(deleteFirestoreRecord)
-                                     .then(() => { alert("Record and photo deleted successfully!"); recordsTable.draw(); })
-                                     .catch(error => {
-                                         if (error.code === 'storage/object-not-found') { deleteFirestoreRecord().then(() => { alert("Record deleted (photo not found in storage)."); recordsTable.draw(); }).catch(dbError => alert("Error: " + dbError.message));
-                                         } else { alert("Error: " + error.message); }
-                                     });
-                                 } else { deleteFirestoreRecord().then(() => { alert("Record deleted successfully!"); recordsTable.draw(); }).catch(error => alert("Error: " + error.message)); }
-                             };
-
-                             // --- 4.3 Filter Event Handlers ---
-                             //     ( ⭐  BUG FIX: ลบโค้ดที่ซ้ำซ้อนออก )
-                             clearFiltersBtn.on('click', function() { 
-                                 exportStartDateInput.value = ''; 
-                                 exportEndDateInput.value = ''; 
-                                 // [ลบ] $('#recordsTable .filter-row .select2')...
-                                 recordsTable.search('').draw(); 
-                             });
-                             //  ⭐   UPDATE: เพิ่มโค้ดนี้กลับเข้ามา
-                             $('#exportStartDate, #exportEndDate').on('change', () => { 
-                                 recordsTable.draw(); 
-                             });
-                          
-                             // --- 4.4 Export to Excel Handler ---
-                             $('#exportExcel').on('click', async () => {
-                                 const exportBtn = $('#exportExcel'); exportBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Exporting...');
-                                 try {
-                                     let query = db.collection("bale_checking_records");
-                                     const startDate = exportStartDateInput.value; if (startDate) query = query.where('inspectionDate', '>=', new Date(startDate).toISOString());
-                                     const endDate = exportEndDateInput.value; if (endDate) { const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
-                                     query = query.where('inspectionDate', '<=', endOfDay.toISOString()); }
-
-                                     // [ลบ] $('.filter-row .select2').each... (เดิม 463)
-
-                                     query = query.orderBy('inspectionDate', 'desc');
-                                     const snapshot = await query.get();
-                                     if (snapshot.empty) { alert("No data to export for the selected filters."); return; }
-                                     const allFilteredRecords = snapshot.docs.map(doc => doc.data());
-                                     const formattedData = allFilteredRecords.map(record => ({ "Date": formatDate(record.inspectionDate), "Department": record.department, "Customer": record.customerName, "Bale No.": record.baleNumber, "Checked By": record.checkedBy, "Issue": record.issueProblem, "Notes": record.notes || '', "Photo Link": record.photoURL ? { t: 's', v: 'View Image', l: { Target: record.photoURL, Tooltip: "Click to view image" } } : '' }));
-                                     const worksheet = XLSX.utils.json_to_sheet(formattedData);
-                                     worksheet['!cols'] = [{ wch: 22 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 30 }, { wch: 15 }];
-                                     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, worksheet, "Bale Records");
-                                     XLSX.writeFile(wb, "Bale_Checking_Report_Filtered.xlsx");
-                                 } catch (error) { console.error("Error exporting Excel:", error); alert("Failed to export data. Please check the console.");
-                                 } finally { exportBtn.prop('disabled', false).html('<i class="fas fa-file-excel"></i> Export Excel'); }
-                             });
-
-                             // ===================================================================================
-                             // 5. MAIN FUNCTION TO FETCH DATA AND RENDER PAGE (EXECUTION)
-                             //    (นี่คือ "Hybrid Model" ที่ถูกต้อง)
-                             // ===================================================================================
-
-                             // --- 5.1 Main Data Fetch Function ---
-                             const fetchAndRenderData = async () => {
-                                 // --- ส่วนที่ 1: ดึงข้อมูลสรุป (Summary) ---
-                                 const summaryPromise = db.collection("dashboard_summary").doc("main_stats").get(); // ( ✅ 1 read)
-
-                                 try {
-                                     const [summaryDoc] = await Promise.all([summaryPromise]);
-
-                                     let summaryDataForFilters = null;
-
-                                     if (summaryDoc.exists) {
-                                         const summaryData = summaryDoc.data();
-                                         summaryDataForFilters = summaryData; 
-
-                                         updateKpiCards(summaryData);
-                                         createTopIssuesChart(summaryData.issueCounts);
-                                         createDepartmentComparisonChart(summaryData.departmentComparison);
-                                         createIssueTrendChart(); // ( ✅ 3 reads from monthly summary)
-
-                                     } else {
-                                         console.error("Error: main_stats document does not exist!");
-                                     }
-
-                                     // --- เริ่มสร้างตาราง "All Records" ---
-                                     initializeDataTable(summaryDataForFilters); // ( ✅ 15 reads from table ajax)
-
-                                 } catch (error) {
-                                     console.error("An error occurred while fetching data:", error);
-                                     alert("Failed to load page data. Please check the console for errors.");
-                                     initializeDataTable(null); 
-                                 }
-                             }; // (จบฟังก์ชัน fetchAndRenderData)
-
-                             // --- 5.2 Start Execution ---
-                             fetchAndRenderData();
-
+                         // ===================================================================================
+                         // 5. MAIN FETCH & RENDER
+                         // ===================================================================================
+                         const fetchAndRenderData = async () => {
+                         const summaryPromise = db.collection("dashboard_summary").doc("main_stats").get();
+                         try {
+                         const [summaryDoc] = await Promise.all([summaryPromise]);
+                         let summaryDataForFilters = null;
+                         if (summaryDoc.exists) {
+                         const summaryData = summaryDoc.data();
+                         summaryDataForFilters = summaryData;
+                         updateKpiCards(summaryData);
+                         createTopIssuesChart(summaryData.issueCounts);
+                         createDepartmentComparisonChart(summaryData.departmentComparison);
+                         createIssueTrendChart();
+                         } else {
+                         console.error("Error: main_stats document does not exist!");
+                         }
+                         initializeDataTable(summaryDataForFilters);
+                         } catch (error) {
+                         console.error("An error occurred while fetching data:", error);
+                         alert("Failed to load page data. Please check the console for errors.");
+                         initializeDataTable(null);
+                         }
+                         };
+                         fetchAndRenderData();
                          });
                          </script>
-                     </body>
-                     </html>
+                         </body>
+                         </html>
