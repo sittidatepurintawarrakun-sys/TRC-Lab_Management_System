@@ -1,62 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Tool - Regenerate Monthly Stats</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-
+    <title>Quality Report</title>
     <style>
-        body { font-family: sans-serif; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .console-log { font-family: monospace; font-size: 0.8rem; }
+        body { font-family: sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; font-size: 12px; }
+        th, td { border: 1px solid #999; padding: 5px; text-align: center; }
+        
+        /* Header Colors match your Excel */
+        .header-green { background-color: #92d050; font-weight: bold; }
+        .header-sub { background-color: #c4d79b; font-weight: bold; }
+        .row-grey { background-color: #808080; color: white; }
+        .highlight-yellow { background-color: #ffff00; }
+        
+        /* Layout */
+        .text-left { text-align: left; }
     </style>
 </head>
 <body>
 
-    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg border border-slate-200">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                <i class="fas fa-tools"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-slate-800">System Admin Tool</h1>
-            <p class="text-slate-500 text-sm mt-1">Regenerate Monthly Statistics</p>
-        </div>
+    <h2>Quality Report (NonWoven)</h2>
+    <div id="loading">กำลังโหลดข้อมูล...</div>
+    
+    <table id="reportTable" style="display:none;">
+        <thead>
+            <tr class="header-green">
+                <th style="width: 200px;">MC</th>
+                <th colspan="4">MC3 NW</th>
+                <th colspan="4">MC6 NW</th>
+                <th colspan="4">Total</th>
+            </tr>
+            <tr>
+                <td class="text-left">Total Production Bales</td>
+                <td colspan="4" id="mc3-total">0</td>
+                <td colspan="4" id="mc6-total">0</td>
+                <td colspan="4" id="grand-total">0</td>
+            </tr>
+            <tr class="header-sub">
+                <th>Grade</th>
+                <th>E</th> <th>ST</th> <th>O</th> <th>I</th>
+                <th>E</th> <th>ST</th> <th>O</th> <th>I</th>
+                <th>E</th> <th>ST</th> <th>O</th> <th>I</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
 
-        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm text-yellow-700 font-bold">Warning</p>
-                    <p class="text-xs text-yellow-600 mt-1">
-                        This process will re-calculate and <b>overwrite</b> all existing monthly summary data based on raw daily logs.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <button id="btnRun" onclick="runRegenerate()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
-            <i class="fas fa-rocket"></i>
-            <span>Start Regenerate Process</span>
-        </button>
-
-        <div class="mt-6">
-            <label class="text-xs font-bold text-slate-400 uppercase">Process Log:</label>
-            <div id="logArea" class="console-log bg-slate-900 text-green-400 p-4 rounded-lg h-48 overflow-y-auto mt-2 border border-slate-700">
-                <span class="text-slate-500">> Ready to start...</span><br>
-            </div>
-        </div>
-    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
 
     <script>
-        // =========================================================
-        // 1. FIREBASE CONFIG (Copied from your Dashboard)
-        // =========================================================
+        // 1. ใส่ Config ของคุณที่นี่
         const firebaseConfig = {
             apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
             authDomain: "lab-trc-management-system.firebaseapp.com",
@@ -65,70 +62,138 @@
             messagingSenderId: "43919979160",
             appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
         };
-
-        // Initialize Firebase
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const functions = firebase.functions(); // Default region
+        const db = firebase.firestore();
+        db.settings({ experimentalForceLongPolling: true });
+        const functions = firebase.app().functions('asia-southeast1');
 
-        // =========================================================
-        // 2. LOGIC
-        // =========================================================
-        const logArea = document.getElementById('logArea');
-        const btn = document.getElementById('btnRun');
+        // 2. กำหนด Parameter ที่ต้องการแสดงในตาราง (ตาม Excel)
+        const parameters = [
+            "Denier", "Tenacity", "Elongation", "Berger Whiteness", 
+            "OPU", "Moisture", "Hard Ends", "Shirley faults", 
+            "Spinning Fault", "Fused Filament", "Splinters", "Cut Length",
+            "Residual Sulphur", "Wet Modulus", "Contamination/foregin",
+            "Black Particle(>1mm)", "Black Particle(<=1mm)", "Foaming", "Sinking Time"
+        ];
 
-        function log(msg, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            let colorClass = 'text-green-400';
-            if (type === 'error') colorClass = 'text-red-400';
-            if (type === 'warn') colorClass = 'text-yellow-400';
+        // ชื่อเกรดที่ใช้ mapping (ใน Database อาจเป็น A, B ต้องแก้ให้ตรงกับ Excel E, ST...)
+        const gradeKeys = ['E', 'ST', 'O', 'I']; 
+
+        async function fetchData() {
+            const monthTarget = "2025-11"; // ตัวอย่าง: เลือกเดือนที่ต้องการ
             
-            logArea.innerHTML += `<div class="${colorClass}"><span class="text-slate-500">[${timestamp}]</span> ${msg}</div>`;
-            logArea.scrollTop = logArea.scrollHeight;
+            // ดึงข้อมูล MC3 และ MC6
+            const [docMC3, docMC6] = await Promise.all([
+                db.collection('stats_Product_NonWoven_Monthly').doc(`MC3_${monthTarget}`).get(),
+                db.collection('stats_Product_NonWoven_Monthly').doc(`MC6_${monthTarget}`).get()
+            ]);
+
+            const dataMC3 = docMC3.exists ? docMC3.data() : { stats: {} };
+            const dataMC6 = docMC6.exists ? docMC6.data() : { stats: {} };
+
+            renderTable(dataMC3, dataMC6);
         }
 
-        async function runRegenerate() {
-            // Confirm
-            if(!confirm("Are you sure you want to regenerate ALL monthly stats?")) return;
+        function renderTable(d1, d2) {
+            const tbody = document.getElementById('tableBody');
+            let html = '';
 
-            // UI State
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing... (This may take time)';
+            // --- ส่วนที่ 1: Grade Wise Production (แถวบนสุด) ---
+            // สมมติว่ามี Parameter ชื่อ "FinalGrade" หรือ "Grade" ที่เก็บยอดรวมเกรดจริง
+            const g1 = getGradeCounts(d1.stats['Grade']); 
+            const g2 = getGradeCounts(d2.stats['Grade']);
+            const gTotal = sumGrades(g1, g2);
+
+            // Update Total Bales Row
+            document.getElementById('mc3-total').innerText = g1.total;
+            document.getElementById('mc6-total').innerText = g2.total;
+            document.getElementById('grand-total').innerText = gTotal.total;
+
+            // Row: Grade Wise Production
+            html += `<tr><td class="text-left">Grade Wise Production</td>${renderGradeCells(g1, false)}${renderGradeCells(g2, false)}${renderGradeCells(gTotal, false)}</tr>`;
             
-            log("🚀 Initializing Cloud Function request...", 'warn');
+            // Row: Grade Wise %
+            html += `<tr><td class="text-left">Grade Wise %</td>${renderGradeCells(g1, true)}${renderGradeCells(g2, true)}${renderGradeCells(gTotal, true)}</tr>`;
+            
+            // Separator
+            html += `<tr class="row-grey"><td colspan="13">&nbsp;</td></tr>`;
 
-            try {
-                // Call Function
-                const regenerateFn = functions.httpsCallable('regenerateMonthlyStats');
-                
-                log("⏳ Sending request to server... please wait.");
-                
-                const result = await regenerateFn();
-                const data = result.data;
+            // --- ส่วนที่ 2: Parameter Loop ---
+            parameters.forEach(param => {
+                const s1 = getGradeCounts(d1.stats[param]); // ดึง stats ของ parameter นั้น
+                const s2 = getGradeCounts(d2.stats[param]);
+                const sTotal = sumGrades(s1, s2);
 
-                log("----------------------------------------");
-                log(`✅ SUCCESS! Message: ${data.message}`);
-                
-                if(data.logs && data.logs.length > 0) {
-                    data.logs.forEach(l => log(`Server: ${l}`));
-                }
-                
-                log("🎉 Data regeneration complete. You can close this page.");
-                alert("Data Regeneration Complete!");
+                // เช็คว่าเป็นแถวที่ต้อง Highlight เหลืองไหม (ตัวอย่าง)
+                const hlClass = (param.includes("Shirley") || param.includes("Black Particle")) ? "highlight-yellow" : "";
 
-            } catch (error) {
-                console.error(error);
-                log("----------------------------------------");
-                log(`❌ ERROR: ${error.message}`, 'error');
-                log("Please check if the function is deployed correctly.", 'error');
-                alert("Error: " + error.message);
-            } finally {
-                // Reset UI
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                btn.innerHTML = '<i class="fas fa-rocket"></i> <span>Run Again</span>';
+                html += `<tr>
+                    <td class="text-left ${hlClass}">${param}</td>
+                    ${renderGradeCells(s1, true)}
+                    ${renderGradeCells(s2, true)}
+                    ${renderGradeCells(sTotal, true)}
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('reportTable').style.display = 'table';
+        }
+
+        // Helper: ดึงค่า Count ของแต่ละเกรดออกมาจาก Stats Object
+        function getGradeCounts(statObj) {
+            // Default: ถ้าไม่มีข้อมูล ให้เป็น 0 ทั้งหมด
+            const res = { E:0, ST:0, O:0, I:0, total: 0 };
+
+            if (!statObj) return res;
+
+            // กรณี 1: ข้อมูลเป็น Categorical (มี counts: { E: 100, ST: 20 })
+            if (statObj.type === 'categorical' && statObj.counts) {
+                res.E = statObj.counts['E'] || statObj.counts['A'] || 0; // map A -> E ถ้าจำเป็น
+                res.ST = statObj.counts['ST'] || statObj.counts['B'] || 0;
+                res.O = statObj.counts['O'] || 0;
+                res.I = statObj.counts['I'] || 0;
+                res.total = statObj.totalCount || (res.E + res.ST + res.O + res.I);
+            } 
+            
+            // กรณี 2: ข้อมูลเป็น Numeric (มีแต่ avg, min, max) -> *ปัญหาที่กล่าวถึงข้างต้น*
+            // เราไม่รู้ว่า avg 2.5 คือเกรดอะไร จึงสมมติให้เข้าเกรด E 100% ไปก่อน (หรือแสดงเป็นขีด -)
+            else if (statObj.type === 'numeric') {
+                // **ตรงนี้ต้องแก้ถ้าอยากให้ตัดเกรดจากค่าตัวเลข**
+                // ตอนนี้สมมติให้เป็น E 100% เพื่อให้ตารางไม่พัง
+                res.E = statObj.count || 0; 
+                res.total = statObj.count || 0;
             }
+
+            return res;
         }
+
+        // Helper: รวมยอด 2 เครื่อง
+        function sumGrades(a, b) {
+            return {
+                E: a.E + b.E,
+                ST: a.ST + b.ST,
+                O: a.O + b.O,
+                I: a.I + b.I,
+                total: a.total + b.total
+            };
+        }
+
+        // Helper: สร้าง HTML 4 ช่อง (E, ST, O, I)
+        function renderGradeCells(data, isPercent) {
+            let html = '';
+            gradeKeys.forEach(k => {
+                let val = data[k];
+                if (isPercent) {
+                    // คำนวณ % : (จำนวนเกรดนี้ / จำนวนรวม) * 100
+                    val = data.total > 0 ? ((val / data.total) * 100).toFixed(2) : "0.00";
+                }
+                html += `<td>${val}</td>`;
+            });
+            return html;
+        }
+
+        fetchData();
     </script>
 </body>
 </html>
