@@ -1,364 +1,397 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Import Product Quality (Fibre)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Import Product Quality (Fibre)</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
 
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #059669; border-radius: 4px; }
-    </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-6">
+        <style>
+            body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+            ::-webkit-scrollbar { width: 8px; }
+            ::-webkit-scrollbar-track { background: #f1f1f1; }
+            ::-webkit-scrollbar-thumb { background: #059669; border-radius: 4px; }
+        </style>
+    </head>
+    <body class="min-h-screen flex items-center justify-center p-6">
 
-    <div class="bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+        <div class="bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
 
-        <div class="bg-emerald-900 text-white p-8 md:w-1/3 flex flex-col justify-between">
-            <div>
-                <a href="Product_Record.html" class="inline-flex items-center text-blue-300 hover:text-white mb-6 transition-colors duration-200 group">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    <span class="text-sm font-semibold">Back to Product</span>
-                </a>
-                <h1 class="text-3xl font-bold mb-2">📦 Product Data Import</h1>
-                <p class="text-emerald-200 mb-6">ระบบบันทึกคุณภาพเส้นใย (Fibre Lab)</p>
+            <div class="bg-emerald-900 text-white p-8 md:w-1/3 flex flex-col justify-between">
+                <div>
+                    <a href="Product_Record.html" class="inline-flex items-center text-blue-300 hover:text-white mb-6 transition-colors duration-200 group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        <span class="text-sm font-semibold">Back to Product</span>
+                    </a>
+                    <h1 class="text-3xl font-bold mb-2">📦 Product Data Import</h1>
+                    <p class="text-emerald-200 mb-6">ระบบบันทึกคุณภาพเส้นใย (Fibre Lab)</p>
 
-                <div class="space-y-4 text-sm">
-                    <div class="bg-emerald-800 bg-opacity-50 p-4 rounded-lg border border-emerald-700">
-                        <h3 class="font-bold text-yellow-300 mb-2">🧩 Logic การแยกผลิตภัณฑ์</h3>
-                        <ul class="list-disc ml-4 text-emerald-100 space-y-1 leading-relaxed">
-                            <li><strong>MC2:</strong> บันทึกเป็น Modal เสมอ</li>
-                            <li><strong>MC3, 5, 6:</strong> เช็ค Material Code</li>
-                            <li>ถ้าลงท้าย <strong>'N'</strong> = Non-Woven</li>
-                            <li>ถ้าไม่ใช่ = Grey Fibre</li>
-                        </ul>
-                    </div>
+                    <div class="space-y-4 text-sm">
+                        <div class="bg-emerald-800 bg-opacity-50 p-4 rounded-lg border border-emerald-700">
+                            <h3 class="font-bold text-yellow-300 mb-2">🧩 Logic การแยกผลิตภัณฑ์</h3>
+                            <ul class="list-disc ml-4 text-emerald-100 space-y-1 leading-relaxed">
+                                <li><strong>MC2:</strong> บันทึกเป็น Modal เสมอ</li>
+                                <li><strong>MC3, 5, 6:</strong> เช็ค Material Code</li>
+                                <li>ถ้าลงท้าย <strong>'N'</strong> = Non-Woven</li>
+                                <li>ถ้าไม่ใช่ = Grey Fibre</li>
+                            </ul>
+                        </div>
 
-                    <div class="bg-emerald-800 bg-opacity-50 p-4 rounded-lg border border-emerald-700">
-                         <h3 class="font-bold text-yellow-300 mb-2">🕒 Production Date Logic</h3>
-                         <p class="text-emerald-100">
-                            ใช้ <strong>Prod_Date + Time From</strong><br>
-                            ตัดรอบวันผลิตที่ 07:00 AM<br>
-                            <span class="text-xs text-gray-300">(เช่น ตี 5 ของวันที่ 2 ถือเป็นของวันที่ 1)</span>
-                         </p>
+                        <div class="bg-emerald-800 bg-opacity-50 p-4 rounded-lg border border-emerald-700">
+                             <h3 class="font-bold text-yellow-300 mb-2">🕒 Production Date Logic</h3>
+                             <p class="text-emerald-100">
+                                ระบบจะตรวจสอบ <strong>Format วันที่</strong> จาก Excel อัตโนมัติ โดยเทียบกับ <strong>"เดือน"</strong> ที่ท่านเลือก
+                             </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="mt-8 text-xs text-emerald-400 opacity-70">
-                Pulp & Fibre Business Intelligence<br>System by Sittidate Purintawarrakun
-            </div>
-        </div>
-
-        <div class="p-8 md:w-2/3 bg-gray-50">
-
-            <div class="mb-6">
-                <label class="block text-gray-700 font-bold mb-2">เลือกเครื่องจักร (Select Machine)</label>
-                <select id="machineSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white shadow-sm transition">
-                    <option value="">-- กรุณาเลือก --</option>
-                    <option value="MC2">MC2 (Modal)</option>
-                    <option value="MC3">MC3 (Non Woven)</option>
-                    <option value="MC5">MC5 (Grey)</option>
-                    <option value="MC6">MC6 (Non Woven)</option>
-                </select>
-            </div>
-
-            <div class="mb-6">
-                <label class="block text-gray-700 font-bold mb-2">วางข้อมูล Excel (Paste Data)</label>
-                <textarea id="pasteArea" rows="12" 
-                    class="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:border-emerald-500 transition resize-y bg-white"
-                    placeholder="Copy ข้อมูลทั้งหมดจาก Excel (รวม Header บรรทัดแรก) มาวางที่นี่..."></textarea>
-            </div>
-
-            <div class="flex gap-3">
-                <button onclick="processProduct()" id="uploadBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2">
-                    <span>📦</span> Upload Product Data
-                </button>
-                <button onclick="clearForm()" class="px-6 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-white hover:shadow-md transition bg-gray-100">
-                    Clear
-                </button>
-            </div>
-
-            <div id="statusArea" class="mt-6 hidden transition-all duration-300">
-                <div id="statusMessage" class="p-4 rounded-lg mb-2 shadow-sm"></div>
-                <div class="bg-gray-900 rounded-lg p-3 border border-gray-700 shadow-inner">
-                    <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
-                        <span class="text-gray-400 text-xs uppercase font-bold tracking-wider">System Log</span>
-                    </div>
-                    <div id="logDetails" class="text-xs text-green-400 font-mono h-32 overflow-y-auto whitespace-pre-wrap leading-relaxed"></div>
+                <div class="mt-8 text-xs text-emerald-400 opacity-70">
+                    Pulp & Fibre Business Intelligence<br>System by Sittidate Purintawarrakun
                 </div>
             </div>
 
+            <div class="p-8 md:w-2/3 bg-gray-50">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">เลือกเครื่องจักร (Machine)</label>
+                        <select id="machineSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white shadow-sm transition">
+                            <option value="">-- Select MC --</option>
+                            <option value="MC2">MC2 (Modal)</option>
+                            <option value="MC3">MC3 (Non Woven)</option>
+                            <option value="MC5">MC5 (Grey)</option>
+                            <option value="MC6">MC6 (Non Woven)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">เดือนของข้อมูล (Data Month)</label>
+                        <input type="month" id="targetMonth" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white shadow-sm transition">
+                        <p class="text-[10px] text-gray-400 mt-1">* ระบบจะใช้เดือนนี้เพื่อแก้ปัญหาวันที่สลับกัน (Day/Month Swap)</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-bold mb-2">วางข้อมูล Excel (Paste Data)</label>
+                    <textarea id="pasteArea" rows="12" 
+                        class="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:border-emerald-500 transition resize-y bg-white"
+                        placeholder="Copy ข้อมูลทั้งหมดจาก Excel (รวม Header บรรทัดแรก) มาวางที่นี่..."></textarea>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="processProduct()" id="uploadBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2">
+                        <span>📦</span> Upload Product Data
+                    </button>
+                    <button onclick="clearForm()" class="px-6 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-white hover:shadow-md transition bg-gray-100">
+                        Clear
+                    </button>
+                </div>
+
+                <div id="statusArea" class="mt-6 hidden transition-all duration-300">
+                    <div id="statusMessage" class="p-4 rounded-lg mb-2 shadow-sm"></div>
+                    <div class="bg-gray-900 rounded-lg p-3 border border-gray-700 shadow-inner">
+                        <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+                            <span class="text-gray-400 text-xs uppercase font-bold tracking-wider">System Log</span>
+                        </div>
+                        <div id="logDetails" class="text-xs text-green-400 font-mono h-32 overflow-y-auto whitespace-pre-wrap leading-relaxed"></div>
+                    </div>
+                </div>
+
+            </div>
         </div>
-    </div>
 
-    <script>
-        // ==========================================
-        // 1. FIREBASE CONFIGURATION
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-            authDomain: "lab-trc-management-system.firebaseapp.com",
-            projectId: "lab-trc-management-system",
-            storageBucket: "lab-trc-management-system.appspot.com",
-            messagingSenderId: "43919979160",
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
+        <script>
+            // ==========================================
+            // 1. FIREBASE CONFIGURATION
+            // ==========================================
+            const firebaseConfig = {
+                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                authDomain: "lab-trc-management-system.firebaseapp.com",
+                projectId: "lab-trc-management-system",
+                storageBucket: "lab-trc-management-system.appspot.com",
+                messagingSenderId: "43919979160",
+                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+            };
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        db.settings({ experimentalForceLongPolling: true });
-        const functions = firebase.app().functions('asia-southeast1');
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            db.settings({ experimentalForceLongPolling: true });
+            const functions = firebase.app().functions('asia-southeast1');
 
-        // ==========================================
-        // 2. COLUMN CONFIGURATION (Updated)
-        // ==========================================
-        // ตัด Insp OK ออก, เพิ่ม Batch/Material Code ไว้หน้าสุด
-        const PARAM_LISTS = {
-            "Modal": [
-                "Material Code", "Batch", // <-- สำคัญ: เก็บไว้ตรวจสอบย้อนกลับ
-                "Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "OPU Grade", 
-                "Final Squeeze Roler Moisture", "L %", "B %", "BL %", "Length Grade", "Dyeability dL", "Dyeability dE", 
-                "Denier Cond", "Den Cond Grade", "Denier Cond CV", "Den Cond CV Grade", "Denier SD", "Tenacity Cond.", 
-                "Tenacity Cond. Grade", "Tenacity Cond. CV", "Tenacity Cond. CV Grade", "Tenacity Cond SD", "Young Modulus @ 1%", 
-                "Tenacity Cond. At 5%", "Tenacity Cond. At 10%", "Elongation Cond", "Elong Cond. Grade", "Elongation Cond CV", 
-                "Elongation Cond SD", "Wet Denier", "Wet Denier CV", "Tenacity Wet", "Tenacity Wet CV", "Elongation Wet", 
-                "Elongation Wet CV", "Tenacity Wet WCRatio", "Tenacity Wet Modulus", "Tenacity Wet Modulus Grade", 
-                "Shirley Fault Big", "Shirley Fault Small", "Shirley Fault Spack", "Shirley Fault Weight", "Shirley Fault Grade", 
-                "Neps", "PH(Chemical)", "Brightbleached", "Alkalinity", "Sulphur", "Sulphur Grade", "Room Condition RH", 
-                "Room Condition Temperature", "Quick Diag Eff Length", "Forte Moisture", "Forte Moisture Grade", 
-                "Good Cross Section %", "Good CS Grade", "FW:Big Fault", "FW:Fused Fiber", "FW:Specks", "FW:Total Nos", 
-                "FW:Total Wt(mg)", "Total Splinters Grade", "Net Weight", "Invoice Weight", "Over All Grade"
-            ],
-            "Grey_NW": [
-                "Material Code", "Batch", // <-- สำคัญ: เก็บไว้ตรวจสอบย้อนกลับ
-                "Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "OPU Grade", 
-                "Final Squeeze Roler Moisture", "Big", "Small", "Speck", "Spg.Fault Grade", "Stuck up", "L %", "B %", "BL %", 
-                "Length Grade", "Dyeability dL", "Dyeability dE", "Denier Cond", "Den Cond Grade", "Denier Cond CV", 
-                "Den Cond CV Grade", "Denier SD", "Tenacity Cond.", "Tenacity Cond. Grade", "Tenacity Cond. CV", 
-                "Tenacity Cond. CV Grade", "Tenacity Cond SD", "Young Modulus @ 1%", "Tenacity Cond. At 5%", 
-                "Tenacity Cond. At 10%", "Elongation Cond", "Elong Cond. Grade", "Elongation Cond CV", "Elongation Cond SD", 
-                "Wet Denier", "Wet Denier CV", "Tenacity Wet", "Tenacity Wet CV", "Elongation Wet", "Elongation Wet CV", 
-                "Tenacity Wet WCRatio", "Tenacity Wet Modulus", "Tenacity Wet Modulus Grade", "Shirley Fault Big", 
-                "Shirley Fault Small", "Shirley Fault Spack", "Shirley Fault Weight", "Shirley Fault Grade", "Neps", 
-                "PH(Chemical)", "Brightbleached", "Alkalinity", "Sulphur", "Sulphur Grade", "Room Condition RH", 
-                "Room Condition Temperature", "Quick Diag Eff Length", "Forte Moisture", "Forte Moisture Grade", 
-                "% Ash (Semi Dull)", "% Ash (Full Dull)", "NW Black Particle(</=1 mm)", "NW Black Particle(</=1 mm) Grade", 
-                "NW Black Particle(>1mm)", "NW Black Particle(>1mm) Grade", "FW:Big Fault", "FW:Fused Fiber", "FW:Specks", 
-                "FW:Total Nos", "FW:Total Wt(mg)", "Total Splinters Grade", "Net Weight", "Invoice Weight", "NW Fibre Crimp", 
-                "NW Fibre Sulphate Ash", "NW Fibre Water Soluble Sub", "NW Fibre Ether Soluble Sub", "NW Fibre Water Holding Cap", 
-                "Sinking Time(NW Fibre)", "NW Sinking Time Grade", "Fiber Foam Test(NW Fibre)", "NW Foam Test Grade", "Over All Grade"
-            ]
-        };
+            // ==========================================
+            // 2. COLUMN CONFIGURATION
+            // ==========================================
+            const PARAM_LISTS = {
+                "Modal": [
+                    "Material Code", "Batch",
+                    "Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "OPU Grade", 
+                    "Final Squeeze Roler Moisture", "L %", "B %", "BL %", "Length Grade", "Dyeability dL", "Dyeability dE", 
+                    "Denier Cond", "Den Cond Grade", "Denier Cond CV", "Den Cond CV Grade", "Denier SD", "Tenacity Cond.", 
+                    "Tenacity Cond. Grade", "Tenacity Cond. CV", "Tenacity Cond. CV Grade", "Tenacity Cond SD", "Young Modulus @ 1%", 
+                    "Tenacity Cond. At 5%", "Tenacity Cond. At 10%", "Elongation Cond", "Elong Cond. Grade", "Elongation Cond CV", 
+                    "Elongation Cond SD", "Wet Denier", "Wet Denier CV", "Tenacity Wet", "Tenacity Wet CV", "Elongation Wet", 
+                    "Elongation Wet CV", "Tenacity Wet WCRatio", "Tenacity Wet Modulus", "Tenacity Wet Modulus Grade", 
+                    "Shirley Fault Big", "Shirley Fault Small", "Shirley Fault Spack", "Shirley Fault Weight", "Shirley Fault Grade", 
+                    "Neps", "PH(Chemical)", "Brightbleached", "Alkalinity", "Sulphur", "Sulphur Grade", "Room Condition RH", 
+                    "Room Condition Temperature", "Quick Diag Eff Length", "Forte Moisture", "Forte Moisture Grade", 
+                    "Good Cross Section %", "Good CS Grade", "FW:Big Fault", "FW:Fused Fiber", "FW:Specks", "FW:Total Nos", 
+                    "FW:Total Wt(mg)", "Total Splinters Grade", "Net Weight", "Invoice Weight", "Over All Grade"
+                ],
+                "Grey_NW": [
+                    "Material Code", "Batch",
+                    "Brightness", "Whiteness", "Whitness Grade", "Yellow Index", "Wet Lump", "Den Quick", "OPU", "OPU Grade", 
+                    "Final Squeeze Roler Moisture", "Big", "Small", "Speck", "Spg.Fault Grade", "Stuck up", "L %", "B %", "BL %", 
+                    "Length Grade", "Dyeability dL", "Dyeability dE", "Denier Cond", "Den Cond Grade", "Denier Cond CV", 
+                    "Den Cond CV Grade", "Denier SD", "Tenacity Cond.", "Tenacity Cond. Grade", "Tenacity Cond. CV", 
+                    "Tenacity Cond. CV Grade", "Tenacity Cond SD", "Young Modulus @ 1%", "Tenacity Cond. At 5%", 
+                    "Tenacity Cond. At 10%", "Elongation Cond", "Elong Cond. Grade", "Elongation Cond CV", "Elongation Cond SD", 
+                    "Wet Denier", "Wet Denier CV", "Tenacity Wet", "Tenacity Wet CV", "Elongation Wet", "Elongation Wet CV", 
+                    "Tenacity Wet WCRatio", "Tenacity Wet Modulus", "Tenacity Wet Modulus Grade", "Shirley Fault Big", 
+                    "Shirley Fault Small", "Shirley Fault Spack", "Shirley Fault Weight", "Shirley Fault Grade", "Neps", 
+                    "PH(Chemical)", "Brightbleached", "Alkalinity", "Sulphur", "Sulphur Grade", "Room Condition RH", 
+                    "Room Condition Temperature", "Quick Diag Eff Length", "Forte Moisture", "Forte Moisture Grade", 
+                    "% Ash (Semi Dull)", "% Ash (Full Dull)", "NW Black Particle(</=1 mm)", "NW Black Particle(</=1 mm) Grade", 
+                    "NW Black Particle(>1mm)", "NW Black Particle(>1mm) Grade", "FW:Big Fault", "FW:Fused Fiber", "FW:Specks", 
+                    "FW:Total Nos", "FW:Total Wt(mg)", "Total Splinters Grade", "Net Weight", "Invoice Weight", "NW Fibre Crimp", 
+                    "NW Fibre Sulphate Ash", "NW Fibre Water Soluble Sub", "NW Fibre Ether Soluble Sub", "NW Fibre Water Holding Cap", 
+                    "Sinking Time(NW Fibre)", "NW Sinking Time Grade", "Fiber Foam Test(NW Fibre)", "NW Foam Test Grade", "Over All Grade"
+                ]
+            };
 
-        // ==========================================
-        // 3. HELPER FUNCTIONS
-        // ==========================================
+            // ==========================================
+            // 3. HELPER FUNCTIONS
+            // ==========================================
 
-        // รวม Date + Time แล้วคำนวณวันผลิต (07:00 Cutoff)
-        function getProductionDate(dateStr, timeStr) {
-            if (!dateStr) return null;
-
-            // 1. แยกวันที่ด้วย - หรือ /
-            let separator = dateStr.includes('/') ? '/' : '-';
-            const dParts = dateStr.trim().split(separator);
-
-            if (dParts.length !== 3) return null;
-
-            // 2. บังคับอ่านค่าตามตำแหน่ง DD-MM-YY (แก้ปัญหา US Format)
-            let day = parseInt(dParts[0], 10);    // ตัวแรกเป็น วัน เสมอ
-            let month = parseInt(dParts[1], 10) - 1; // ตัวสองเป็น เดือน เสมอ (Javascript นับเดือนเริ่มที่ 0)
-            let year = parseInt(dParts[2], 10);   // ตัวสามเป็น ปี
-
-            // แก้ปี 2 หลัก (เช่น 25 -> 2025)
-            if (year < 100) year += 2000;
-
-            // 3. จัดการเวลา
-            if (!timeStr) timeStr = "12:00:00 PM";
-            const tParts = timeStr.trim().split(/[:\s]+/);
-            let hour = 0, min = 0;
-            let ampm = '';
-
-            if (tParts.length >= 2) {
-                hour = parseInt(tParts[0], 10);
-                min = parseInt(tParts[1], 10);
-                const lastPart = tParts[tParts.length - 1].toUpperCase();
-                if (lastPart === 'AM' || lastPart === 'PM') ampm = lastPart;
+            function log(msg) {
+                const logDiv = document.getElementById('logDetails');
+                const newLine = document.createElement('div');
+                newLine.innerHTML = `> ${msg}`;
+                logDiv.appendChild(newLine);
+                logDiv.scrollTop = logDiv.scrollHeight;
             }
 
-            if (ampm === 'PM' && hour < 12) hour += 12;
-            if (ampm === 'AM' && hour === 12) hour = 0;
+            function clearForm() {
+                document.getElementById('pasteArea').value = '';
+                document.getElementById('statusArea').classList.add('hidden');
+                document.getElementById('logDetails').innerHTML = '';
+            }
 
-            const dateObj = new Date(year, month, day, hour, min);
+            // --- NEW: นักสืบหา Format วันที่ ---
+            function detectDateFormat(dataRows, dateColIndex, targetMonthIndex) {
+                let scoreDMY = 0; // คะแนนฝั่ง วัน-เดือน-ปี (10-11-25 = 10 พ.ย.)
+                let scoreMDY = 0; // คะแนนฝั่ง เดือน-วัน-ปี (10-11-25 = 11 ต.ค.)
 
-            // ============================================
-            // Logic ตัดรอบวัน (07:00 AM) ถูกปิดไว้ตามที่คุณต้องการ
-            // if (dateObj.getHours() < 7) {
-            //    dateObj.setDate(dateObj.getDate() - 1);
-            // }
-            // ============================================
+                // สุ่มตรวจ 10 แถวแรก
+                for (let i = 0; i < Math.min(dataRows.length, 10); i++) {
+                    const row = dataRows[i];
+                    if (!row[dateColIndex]) continue;
 
-            const yyyy = dateObj.getFullYear();
-            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const dd = String(dateObj.getDate()).padStart(2, '0');
+                    let separator = row[dateColIndex].includes('/') ? '/' : '-';
+                    const parts = row[dateColIndex].trim().split(separator);
 
-            return `${yyyy}-${mm}-${dd}`;
-        }
+                    if (parts.length >= 2) {
+                        const val1 = parseInt(parts[0], 10); // ตัวแรก
+                        const val2 = parseInt(parts[1], 10); // ตัวสอง
 
-        function log(msg) {
-            const logDiv = document.getElementById('logDetails');
-            const newLine = document.createElement('div');
-            newLine.innerHTML = `> ${msg}`;
-            logDiv.appendChild(newLine);
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
+                        // ถ้าตัวที่ 2 ตรงกับเดือนที่เลือก (เช่นเลือก Nov=11 แล้วเจอเลข 11 ที่ตำแหน่ง 2) -> เป็น DD-MM
+                        if (val2 === targetMonthIndex + 1) scoreDMY++;
 
-        function clearForm() {
-            document.getElementById('pasteArea').value = '';
-            document.getElementById('statusArea').classList.add('hidden');
-            document.getElementById('logDetails').innerHTML = '';
-        }
-
-        // ==========================================
-        // 4. MAIN PROCESS FUNCTION
-        // ==========================================
-        async function processProduct() {
-            const rawText = document.getElementById('pasteArea').value;
-            const machineId = document.getElementById('machineSelect').value;
-            const statusArea = document.getElementById('statusArea');
-            const statusMsg = document.getElementById('statusMessage');
-            const btn = document.getElementById('uploadBtn');
-
-            // Basic Validation
-            if (!machineId) { alert("กรุณาเลือก Machine ก่อนครับ"); return; }
-            if (!rawText.trim()) { alert("กรุณาวางข้อมูลก่อนครับ"); return; }
-
-            // UI Loading
-            statusArea.classList.remove('hidden');
-            statusMsg.className = 'bg-emerald-100 text-emerald-800 p-4 rounded-lg flex items-center shadow-sm';
-            statusMsg.innerHTML = '<span class="animate-spin mr-3 text-xl">⏳</span> <div><span class="font-bold">Processing...</span><br><span class="text-xs">Analyzing Batch, Grades & Calculating Stats</span></div>';
-
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('logDetails').innerHTML = '';
-
-            try {
-                log(`Starting analysis for <b>${machineId}</b>...`);
-
-                // 1. Parse Excel Rows
-                const rows = rawText.trim().split('\n').map(r => r.split('\t'));
-                const headers = rows[0].map(h => h.trim());
-                const dataRows = rows.slice(1);
-
-                // 2. Identify Key Columns
-                const idxDate = headers.findIndex(h => h === 'Prod_Date');
-                const idxTime = headers.findIndex(h => h === 'Time From');
-                const idxMatCode = headers.findIndex(h => h === 'Material Code');
-
-                if (idxDate === -1 || idxTime === -1) {
-                    throw new Error("ไม่พบ Column 'Prod_Date' หรือ 'Time From' กรุณาตรวจสอบหัวตาราง");
+                        // ถ้าตัวที่ 1 ตรงกับเดือนที่เลือก (เช่นเลือก Nov=11 แล้วเจอเลข 11 ที่ตำแหน่ง 1) -> เป็น MM-DD
+                        if (val1 === targetMonthIndex + 1) scoreMDY++;
+                    }
                 }
 
-                const groupedData = {}; // { "YYYY-MM-DD": { "Modal": {...}, "Grey": {...} } }
-                let count = 0;
+                // ตัดสินใจ: ถ้าคะแนน MM-DD ชนะขาด ให้ใช้ MM-DD, นอกนั้นใช้ Standard (DD-MM)
+                if (scoreMDY > scoreDMY) {
+                    return 'MDY'; // แบบ US (เดือนขึ้นก่อน)
+                }
+                return 'DMY'; // แบบปกติ (วันขึ้นก่อน)
+            }
 
-                // 3. Iterate Rows
-                dataRows.forEach((row, rowIndex) => {
-                    const dateStr = row[idxDate];
-                    const timeStr = row[idxTime];
-                    const matCode = idxMatCode !== -1 ? row[idxMatCode] : "";
+            // --- UPDATED: แปลงวันที่โดยอิงจาก Format ที่ Detect ได้ ---
+            function getProductionDate(dateStr, timeStr, detectedFormat) {
+                if (!dateStr) return null;
+                let separator = dateStr.includes('/') ? '/' : '-';
+                const dParts = dateStr.trim().split(separator);
+                if (dParts.length !== 3) return null;
 
-                    if (!dateStr) return;
+                let day, month, year;
 
-                    // --- Date Logic ---
-                    const prodDate = getProductionDate(dateStr, timeStr);
-                    if (!prodDate) {
-                        log(`Warning: Row ${rowIndex+1} Invalid Date. Skipped.`);
-                        return;
+                // ใช้ Format ที่นักสืบหามาได้
+                if (detectedFormat === 'MDY') {
+                    month = parseInt(dParts[0], 10) - 1; // ตัวแรกคือเดือน
+                    day = parseInt(dParts[1], 10);       // ตัวสองคือวัน
+                } else {
+                    day = parseInt(dParts[0], 10);       // ตัวแรกคือวัน (Default)
+                    month = parseInt(dParts[1], 10) - 1; // ตัวสองคือเดือน
+                }
+
+                year = parseInt(dParts[2], 10);
+                if (year < 100) year += 2000;
+
+                // จัดการเวลา
+                if (!timeStr) timeStr = "12:00:00 PM";
+                const tParts = timeStr.trim().split(/[:\s]+/);
+                let hour = 0, min = 0;
+                let ampm = '';
+                if (tParts.length >= 2) {
+                    hour = parseInt(tParts[0], 10);
+                    min = parseInt(tParts[1], 10);
+                    const lastPart = tParts[tParts.length - 1].toUpperCase();
+                    if (lastPart === 'AM' || lastPart === 'PM') ampm = lastPart;
+                }
+                if (ampm === 'PM' && hour < 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+
+                const dateObj = new Date(year, month, day, hour, min);
+
+                const yyyy = dateObj.getFullYear();
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+
+            // ==========================================
+            // 4. MAIN PROCESS FUNCTION (Updated)
+            // ==========================================
+            async function processProduct() {
+                const rawText = document.getElementById('pasteArea').value;
+                const machineId = document.getElementById('machineSelect').value;
+                const targetMonthStr = document.getElementById('targetMonth').value; 
+
+                // Basic Validation
+                if (!machineId) { alert("กรุณาเลือก Machine"); return; }
+                if (!targetMonthStr) { alert("กรุณาเลือก 'เดือนของข้อมูล (Data Month)' ก่อนครับ\n(เพื่อให้ระบบอ่านวันที่จาก Excel ได้ถูกต้อง)"); return; }
+                if (!rawText.trim()) { alert("กรุณาวางข้อมูล"); return; }
+
+                const targetDateObj = new Date(targetMonthStr);
+                const targetMonthIndex = targetDateObj.getMonth(); // 0-11
+
+                // UI Loading
+                const statusArea = document.getElementById('statusArea');
+                const statusMsg = document.getElementById('statusMessage');
+                const btn = document.getElementById('uploadBtn');
+
+                statusArea.classList.remove('hidden');
+                statusMsg.className = 'bg-emerald-100 text-emerald-800 p-4 rounded-lg flex items-center shadow-sm';
+                statusMsg.innerHTML = '<span class="animate-spin mr-3 text-xl">⏳</span> <div><span class="font-bold">Processing...</span><br><span class="text-xs">Checking Date Format & Calculating Stats</span></div>';
+
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('logDetails').innerHTML = '';
+
+                try {
+                    log(`Starting analysis for <b>${machineId}</b> (Month: ${targetMonthStr})...`);
+
+                    // 1. Parse Excel Rows
+                    const rows = rawText.trim().split('\n').map(r => r.split('\t'));
+                    const headers = rows[0].map(h => h.trim());
+                    const dataRows = rows.slice(1);
+
+                    // 2. Identify Key Columns
+                    const idxDate = headers.findIndex(h => h === 'Prod_Date');
+                    const idxTime = headers.findIndex(h => h === 'Time From');
+                    const idxMatCode = headers.findIndex(h => h === 'Material Code');
+
+                    if (idxDate === -1 || idxTime === -1) {
+                        throw new Error("ไม่พบ Column 'Prod_Date' หรือ 'Time From' กรุณาตรวจสอบหัวตาราง");
                     }
 
-                    // --- Product Type Logic ---
-                    let productType = "Grey"; 
-                    if (machineId === 'MC2') {
-                        productType = "Modal";
-                    } else {
-                        // MC3, 5, 6 Check Material Code
-                        if (matCode && matCode.trim().toUpperCase().endsWith('N')) {
-                            productType = "NonWoven";
-                        } else {
-                            productType = "Grey";
+                    // --- Auto Detect Format ---
+                    const detectedFormat = detectDateFormat(dataRows, idxDate, targetMonthIndex);
+                    log(`Auto-Detected Date Format: <b>${detectedFormat}</b> ${detectedFormat === 'MDY' ? '(Month First)' : '(Day First)'}`);
+
+                    const groupedData = {}; 
+                    let count = 0;
+
+                    // 3. Iterate Rows
+                    dataRows.forEach((row, rowIndex) => {
+                        const dateStr = row[idxDate];
+                        const timeStr = row[idxTime];
+                        const matCode = idxMatCode !== -1 ? row[idxMatCode] : "";
+
+                        if (!dateStr) return;
+
+                        // --- Date Logic (ใช้ Format ที่ Detect ได้) ---
+                        const prodDate = getProductionDate(dateStr, timeStr, detectedFormat);
+                        if (!prodDate) {
+                            log(`Warning: Row ${rowIndex+1} Invalid Date. Skipped.`);
+                            return;
                         }
-                    }
 
-                    // Prepare Object Structure
-                    if (!groupedData[prodDate]) groupedData[prodDate] = {};
-                    if (!groupedData[prodDate][productType]) groupedData[prodDate][productType] = {};
-
-                    // Pick Correct Param List
-                    const targetParams = (productType === 'Modal') ? PARAM_LISTS['Modal'] : PARAM_LISTS['Grey_NW'];
-
-                    // --- Map Values ---
-                    targetParams.forEach(param => {
-                        // Exact match search
-                        const hIdx = headers.findIndex(h => h === param);
-
-                        if (hIdx !== -1) {
-                            let rawVal = row[hIdx];
-                            if (rawVal !== undefined && rawVal !== null && rawVal.trim() !== "") {
-
-                                // Remove commas (e.g. "1,200.00")
-                                const cleanStr = rawVal.toString().replace(/,/g, '').trim();
-                                const numVal = parseFloat(cleanStr);
-
-                                let finalVal = rawVal.trim();
-                                // If it's a valid number, store as number. Else store as string.
-                                if (!isNaN(numVal) && isFinite(cleanStr)) {
-                                    finalVal = numVal;
-                                } 
-
-                                if (!groupedData[prodDate][productType][param]) {
-                                    groupedData[prodDate][productType][param] = [];
-                                }
-                                groupedData[prodDate][productType][param].push(finalVal);
+                        // --- Product Type Logic ---
+                        let productType = "Grey"; 
+                        if (machineId === 'MC2') {
+                            productType = "Modal";
+                        } else {
+                            if (matCode && matCode.trim().toUpperCase().endsWith('N')) {
+                                productType = "NonWoven";
+                            } else {
+                                productType = "Grey";
                             }
                         }
+
+                        // Prepare Object Structure
+                        if (!groupedData[prodDate]) groupedData[prodDate] = {};
+                        if (!groupedData[prodDate][productType]) groupedData[prodDate][productType] = {};
+
+                        // Pick Correct Param List
+                        const targetParams = (productType === 'Modal') ? PARAM_LISTS['Modal'] : PARAM_LISTS['Grey_NW'];
+
+                        // --- Map Values ---
+                        targetParams.forEach(param => {
+                            const hIdx = headers.findIndex(h => h === param);
+                            if (hIdx !== -1) {
+                                let rawVal = row[hIdx];
+                                if (rawVal !== undefined && rawVal !== null && rawVal.trim() !== "") {
+                                    const cleanStr = rawVal.toString().replace(/,/g, '').trim();
+                                    const numVal = parseFloat(cleanStr);
+                                    let finalVal = rawVal.trim();
+
+                                    if (!isNaN(numVal) && isFinite(cleanStr)) {
+                                        finalVal = numVal;
+                                    } 
+
+                                    if (!groupedData[prodDate][productType][param]) {
+                                        groupedData[prodDate][productType][param] = [];
+                                    }
+                                    groupedData[prodDate][productType][param].push(finalVal);
+                                }
+                            }
+                        });
+                        count++;
                     });
-                    count++;
-                });
 
-                const datesFound = Object.keys(groupedData);
-                log(`Processed ${count} rows. Dates: [${datesFound.join(', ')}]`);
+                    const datesFound = Object.keys(groupedData);
+                    log(`Processed ${count} rows. Dates: [${datesFound.join(', ')}]`);
 
-                if (datesFound.length === 0) throw new Error("No valid data found.");
+                    if (datesFound.length === 0) throw new Error("No valid data found.");
 
-                // 4. Send to Backend
-                log("Sending payload to Cloud Function...");
-                const func = functions.httpsCallable('processProductData');
-                const result = await func({ groupedData, machineId });
+                    // 4. Send to Backend
+                    log("Sending payload to Cloud Function...");
+                    const func = functions.httpsCallable('processProductData');
+                    const result = await func({ groupedData, machineId });
 
-                statusMsg.className = 'bg-green-100 text-green-800 p-4 rounded-lg shadow-sm border border-green-200';
-                statusMsg.innerHTML = `✅ <b>Success!</b> ${result.data.message}`;
-                log("Upload Complete.");
+                    statusMsg.className = 'bg-green-100 text-green-800 p-4 rounded-lg shadow-sm border border-green-200';
+                    statusMsg.innerHTML = `✅ <b>Success!</b> ${result.data.message}`;
+                    log("Upload Complete.");
 
-            } catch (err) {
-                console.error(err);
-                statusMsg.className = 'bg-red-100 text-red-800 p-4 rounded-lg shadow-sm border border-red-200';
-                statusMsg.innerHTML = `❌ <b>Error:</b> ${err.message}`;
-                log(`<span style="color:#ff6b6b">Error: ${err.message}</span>`);
-            } finally {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                } catch (err) {
+                    console.error(err);
+                    statusMsg.className = 'bg-red-100 text-red-800 p-4 rounded-lg shadow-sm border border-red-200';
+                    statusMsg.innerHTML = `❌ <b>Error:</b> ${err.message}`;
+                    log(`<span style="color:#ff6b6b">Error: ${err.message}</span>`);
+                } finally {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
             }
-        }
-    </script>
-</body>
-</html>
+        </script>
+    </body>
+    </html>
