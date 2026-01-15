@@ -1,199 +1,296 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <title>Quality Report</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        table { border-collapse: collapse; width: 100%; font-size: 12px; }
-        th, td { border: 1px solid #999; padding: 5px; text-align: center; }
-        
-        /* Header Colors match your Excel */
-        .header-green { background-color: #92d050; font-weight: bold; }
-        .header-sub { background-color: #c4d79b; font-weight: bold; }
-        .row-grey { background-color: #808080; color: white; }
-        .highlight-yellow { background-color: #ffff00; }
-        
-        /* Layout */
-        .text-left { text-align: left; }
-    </style>
-</head>
-<body>
+                    <!DOCTYPE html>
+                    <html lang="th">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>🧪 Test Product Aggregation</title>
+                        <style>
+                            * {
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
+                            }
 
-    <h2>Quality Report (NonWoven)</h2>
-    <div id="loading">กำลังโหลดข้อมูล...</div>
-    
-    <table id="reportTable" style="display:none;">
-        <thead>
-            <tr class="header-green">
-                <th style="width: 200px;">MC</th>
-                <th colspan="4">MC3 NW</th>
-                <th colspan="4">MC6 NW</th>
-                <th colspan="4">Total</th>
-            </tr>
-            <tr>
-                <td class="text-left">Total Production Bales</td>
-                <td colspan="4" id="mc3-total">0</td>
-                <td colspan="4" id="mc6-total">0</td>
-                <td colspan="4" id="grand-total">0</td>
-            </tr>
-            <tr class="header-sub">
-                <th>Grade</th>
-                <th>E</th> <th>ST</th> <th>O</th> <th>I</th>
-                <th>E</th> <th>ST</th> <th>O</th> <th>I</th>
-                <th>E</th> <th>ST</th> <th>O</th> <th>I</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            </tbody>
-    </table>
+                            body {
+                                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                min-height: 100vh;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                padding: 20px;
+                            }
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+                            .container {
+                                background: white;
+                                border-radius: 20px;
+                                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                                padding: 40px;
+                                max-width: 600px;
+                                width: 100%;
+                            }
 
-    <script>
-        // 1. ใส่ Config ของคุณที่นี่
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                            h1 {
+                                color: #333;
+                                margin-bottom: 10px;
+                                font-size: 28px;
+                            }
+
+                            .subtitle {
+                                color: #666;
+                                margin-bottom: 30px;
+                                font-size: 14px;
+                            }
+
+                            .form-group {
+                                margin-bottom: 20px;
+                            }
+
+                            label {
+                                display: block;
+                                color: #555;
+                                font-weight: 600;
+                                margin-bottom: 8px;
+                                font-size: 14px;
+                            }
+
+                            input, select {
+                                width: 100%;
+                                padding: 12px 16px;
+                                border: 2px solid #e0e0e0;
+                                border-radius: 10px;
+                                font-size: 16px;
+                                transition: border-color 0.3s;
+                            }
+
+                            input:focus, select:focus {
+                                outline: none;
+                                border-color: #667eea;
+                            }
+
+                            button {
+                                width: 100%;
+                                padding: 15px;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                color: white;
+                                border: none;
+                                border-radius: 10px;
+                                font-size: 16px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: transform 0.2s, box-shadow 0.2s;
+                                margin-top: 10px;
+                            }
+
+                            button:hover {
+                                transform: translateY(-2px);
+                                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+                            }
+
+                            button:active {
+                                transform: translateY(0);
+                            }
+
+                            button:disabled {
+                                background: #ccc;
+                                cursor: not-allowed;
+                                transform: none;
+                            }
+
+                            .result {
+                                margin-top: 30px;
+                                padding: 20px;
+                                border-radius: 10px;
+                                display: none;
+                            }
+
+                            .result.success {
+                                background: #d4edda;
+                                border: 2px solid #28a745;
+                                color: #155724;
+                            }
+
+                            .result.error {
+                                background: #f8d7da;
+                                border: 2px solid #dc3545;
+                                color: #721c24;
+                            }
+
+                            .result.loading {
+                                background: #fff3cd;
+                                border: 2px solid #ffc107;
+                                color: #856404;
+                                display: block;
+                            }
+
+                            .result h3 {
+                                margin-bottom: 10px;
+                                font-size: 18px;
+                            }
+
+                            .result pre {
+                                background: rgba(0,0,0,0.05);
+                                padding: 15px;
+                                border-radius: 8px;
+                                overflow-x: auto;
+                                font-size: 13px;
+                                line-height: 1.6;
+                                max-height: 300px;
+                                overflow-y: auto;
+                            }
+
+                            .spinner {
+                                border: 3px solid #f3f3f3;
+                                border-top: 3px solid #667eea;
+                                border-radius: 50%;
+                                width: 30px;
+                                height: 30px;
+                                animation: spin 1s linear infinite;
+                                margin: 10px auto;
+                            }
+
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+
+                            .info-box {
+                                background: #e7f3ff;
+                                border-left: 4px solid #2196F3;
+                                padding: 15px;
+                                margin-bottom: 20px;
+                                border-radius: 5px;
+                                font-size: 14px;
+                                color: #0d47a1;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h1>🧪 Test Product Aggregation</h1>
+                            <p class="subtitle">ทดสอบการรวมข้อมูลรายวันเป็นรายเดือน</p>
+
+                            <div class="info-box">
+                                ℹ️ Function นี้จะอ่านข้อมูลทั้งหมดในเดือนที่เลือก แล้วรวมเป็นสถิติรายเดือน
+                            </div>
+
+                            <form id="testForm">
+                                <div class="form-group">
+                                    <label for="machineId">🏭 Machine ID:</label>
+                                    <select id="machineId" required>
+                                        <option value="">-- เลือก Machine --</option>
+                                        <option value="MC2">MC2</option>
+                                        <option value="MC3">MC3</option>
+                                        <option value="MC5" selected>MC5</option>
+                                        <option value="MC6">MC6</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="monthId">📅 Month (YYYY-MM):</label>
+                                    <input type="month" id="monthId" required value="2025-11">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="productType">📦 Product Type:</label>
+                                    <select id="productType" required>
+                                        <option value="">-- เลือกประเภท --</option>
+                                        <option value="Modal">Modal</option>
+                                        <option value="Grey">Grey</option>
+                                        <option value="NonWoven" selected>NonWoven</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" id="submitBtn">
+                                    🚀 เริ่มทดสอบ Aggregation
+                                </button>
+                            </form>
+
+                            <div id="result" class="result"></div>
+                        </div>
+
+                        <!-- Firebase SDK -->
+                        <script type="module">
+                            import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+                            import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+
+                            // 🔧 ใส่ Firebase Config ของคุณที่นี่
+                            const firebaseConfig = {
+                                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
             authDomain: "lab-trc-management-system.firebaseapp.com",
             projectId: "lab-trc-management-system",
             storageBucket: "lab-trc-management-system.appspot.com",
             messagingSenderId: "43919979160",
             appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        db.settings({ experimentalForceLongPolling: true });
-        const functions = firebase.app().functions('asia-southeast1');
+                            };
 
-        // 2. กำหนด Parameter ที่ต้องการแสดงในตาราง (ตาม Excel)
-        const parameters = [
-            "Denier", "Tenacity", "Elongation", "Berger Whiteness", 
-            "OPU", "Moisture", "Hard Ends", "Shirley faults", 
-            "Spinning Fault", "Fused Filament", "Splinters", "Cut Length",
-            "Residual Sulphur", "Wet Modulus", "Contamination/foregin",
-            "Black Particle(>1mm)", "Black Particle(<=1mm)", "Foaming", "Sinking Time"
-        ];
+                            const app = initializeApp(firebaseConfig);
+                            const functions = getFunctions(app, 'asia-southeast1'); // ใช้ Region เดียวกับ Backend
 
-        // ชื่อเกรดที่ใช้ mapping (ใน Database อาจเป็น A, B ต้องแก้ให้ตรงกับ Excel E, ST...)
-        const gradeKeys = ['E', 'ST', 'O', 'I']; 
+                            const form = document.getElementById('testForm');
+                            const resultDiv = document.getElementById('result');
+                            const submitBtn = document.getElementById('submitBtn');
 
-        async function fetchData() {
-            const monthTarget = "2025-11"; // ตัวอย่าง: เลือกเดือนที่ต้องการ
-            
-            // ดึงข้อมูล MC3 และ MC6
-            const [docMC3, docMC6] = await Promise.all([
-                db.collection('stats_Product_NonWoven_Monthly').doc(`MC3_${monthTarget}`).get(),
-                db.collection('stats_Product_NonWoven_Monthly').doc(`MC6_${monthTarget}`).get()
-            ]);
+                            form.addEventListener('submit', async (e) => {
+                                e.preventDefault();
 
-            const dataMC3 = docMC3.exists ? docMC3.data() : { stats: {} };
-            const dataMC6 = docMC6.exists ? docMC6.data() : { stats: {} };
+                                const machineId = document.getElementById('machineId').value;
+                                const monthId = document.getElementById('monthId').value;
+                                const productType = document.getElementById('productType').value;
 
-            renderTable(dataMC3, dataMC6);
-        }
+                                if (!machineId || !monthId || !productType) {
+                                    showResult('error', 'กรุณากรอกข้อมูลให้ครบถ้วน');
+                                    return;
+                                }
 
-        function renderTable(d1, d2) {
-            const tbody = document.getElementById('tableBody');
-            let html = '';
+                                // Show loading
+                                resultDiv.className = 'result loading';
+                                resultDiv.innerHTML = `
+                                    <h3>⏳ กำลังประมวลผล...</h3>
+                                    <div class="spinner"></div>
+                                    <p>กรุณารอสักครู่ (อาจใช้เวลา 10-30 วินาที)</p>
+                                `;
+                                resultDiv.style.display = 'block';
+                                submitBtn.disabled = true;
 
-            // --- ส่วนที่ 1: Grade Wise Production (แถวบนสุด) ---
-            // สมมติว่ามี Parameter ชื่อ "FinalGrade" หรือ "Grade" ที่เก็บยอดรวมเกรดจริง
-            const g1 = getGradeCounts(d1.stats['Grade']); 
-            const g2 = getGradeCounts(d2.stats['Grade']);
-            const gTotal = sumGrades(g1, g2);
+                                try {
+                                    // เรียก Cloud Function
+                                    const testFunction = httpsCallable(functions, 'manualTestProductAggregation');
+                                    const result = await testFunction({
+                                        machineId,
+                                        monthId,
+                                        productType
+                                    });
 
-            // Update Total Bales Row
-            document.getElementById('mc3-total').innerText = g1.total;
-            document.getElementById('mc6-total').innerText = g2.total;
-            document.getElementById('grand-total').innerText = gTotal.total;
+                                    console.log('Result:', result.data);
 
-            // Row: Grade Wise Production
-            html += `<tr><td class="text-left">Grade Wise Production</td>${renderGradeCells(g1, false)}${renderGradeCells(g2, false)}${renderGradeCells(gTotal, false)}</tr>`;
-            
-            // Row: Grade Wise %
-            html += `<tr><td class="text-left">Grade Wise %</td>${renderGradeCells(g1, true)}${renderGradeCells(g2, true)}${renderGradeCells(gTotal, true)}</tr>`;
-            
-            // Separator
-            html += `<tr class="row-grey"><td colspan="13">&nbsp;</td></tr>`;
+                                    if (result.data.success) {
+                                        showResult('success', result.data.message, result.data);
+                                    } else {
+                                        showResult('error', result.data.message || 'เกิดข้อผิดพลาด');
+                                    }
 
-            // --- ส่วนที่ 2: Parameter Loop ---
-            parameters.forEach(param => {
-                const s1 = getGradeCounts(d1.stats[param]); // ดึง stats ของ parameter นั้น
-                const s2 = getGradeCounts(d2.stats[param]);
-                const sTotal = sumGrades(s1, s2);
+                                } catch (error) {
+                                    console.error('Error:', error);
+                                    showResult('error', `❌ เกิดข้อผิดพลาด: ${error.message}`);
+                                } finally {
+                                    submitBtn.disabled = false;
+                                }
+                            });
 
-                // เช็คว่าเป็นแถวที่ต้อง Highlight เหลืองไหม (ตัวอย่าง)
-                const hlClass = (param.includes("Shirley") || param.includes("Black Particle")) ? "highlight-yellow" : "";
+                            function showResult(type, message, data = null) {
+                                resultDiv.className = `result ${type}`;
+                                resultDiv.style.display = 'block';
 
-                html += `<tr>
-                    <td class="text-left ${hlClass}">${param}</td>
-                    ${renderGradeCells(s1, true)}
-                    ${renderGradeCells(s2, true)}
-                    ${renderGradeCells(sTotal, true)}
-                </tr>`;
-            });
+                                let html = `<h3>${type === 'success' ? '✅ สำเร็จ!' : '❌ เกิดข้อผิดพลาด'}</h3>`;
+                                html += `<p>${message}</p>`;
 
-            tbody.innerHTML = html;
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('reportTable').style.display = 'table';
-        }
+                                if (data) {
+                                    html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                                }
 
-        // Helper: ดึงค่า Count ของแต่ละเกรดออกมาจาก Stats Object
-        function getGradeCounts(statObj) {
-            // Default: ถ้าไม่มีข้อมูล ให้เป็น 0 ทั้งหมด
-            const res = { E:0, ST:0, O:0, I:0, total: 0 };
-
-            if (!statObj) return res;
-
-            // กรณี 1: ข้อมูลเป็น Categorical (มี counts: { E: 100, ST: 20 })
-            if (statObj.type === 'categorical' && statObj.counts) {
-                res.E = statObj.counts['E'] || statObj.counts['A'] || 0; // map A -> E ถ้าจำเป็น
-                res.ST = statObj.counts['ST'] || statObj.counts['B'] || 0;
-                res.O = statObj.counts['O'] || 0;
-                res.I = statObj.counts['I'] || 0;
-                res.total = statObj.totalCount || (res.E + res.ST + res.O + res.I);
-            } 
-            
-            // กรณี 2: ข้อมูลเป็น Numeric (มีแต่ avg, min, max) -> *ปัญหาที่กล่าวถึงข้างต้น*
-            // เราไม่รู้ว่า avg 2.5 คือเกรดอะไร จึงสมมติให้เข้าเกรด E 100% ไปก่อน (หรือแสดงเป็นขีด -)
-            else if (statObj.type === 'numeric') {
-                // **ตรงนี้ต้องแก้ถ้าอยากให้ตัดเกรดจากค่าตัวเลข**
-                // ตอนนี้สมมติให้เป็น E 100% เพื่อให้ตารางไม่พัง
-                res.E = statObj.count || 0; 
-                res.total = statObj.count || 0;
-            }
-
-            return res;
-        }
-
-        // Helper: รวมยอด 2 เครื่อง
-        function sumGrades(a, b) {
-            return {
-                E: a.E + b.E,
-                ST: a.ST + b.ST,
-                O: a.O + b.O,
-                I: a.I + b.I,
-                total: a.total + b.total
-            };
-        }
-
-        // Helper: สร้าง HTML 4 ช่อง (E, ST, O, I)
-        function renderGradeCells(data, isPercent) {
-            let html = '';
-            gradeKeys.forEach(k => {
-                let val = data[k];
-                if (isPercent) {
-                    // คำนวณ % : (จำนวนเกรดนี้ / จำนวนรวม) * 100
-                    val = data.total > 0 ? ((val / data.total) * 100).toFixed(2) : "0.00";
-                }
-                html += `<td>${val}</td>`;
-            });
-            return html;
-        }
-
-        fetchData();
-    </script>
-</body>
-</html>
+                                resultDiv.innerHTML = html;
+                            }
+                        </script>
+                    </body>
+                    </html>

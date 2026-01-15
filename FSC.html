@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRC Department Portal (Entry Only)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { initializeFirestore, doc, setDoc, arrayUnion, collection, Timestamp, runTransaction } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // --- 1. CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = initializeFirestore(app, {
+            experimentalForceLongPolling: true,
+        });
+
+        // --- 2. CONSTANTS (ORIGINAL) ---
+        const PULP_OPTIONS = `
+            <option value="ARAUCO FSC Mix Credit">1. ARAUCO FSC Mix Credit</option>
+            <option value="ARAUCO FSC Control Wood">2. ARAUCO FSC Control Wood</option>
+            <option value="ARAUCO PEFC">3. ARAUCO PEFC</option>
+            <option value="AVN FSC Mix Credit">4. AVN FSC Mix Credit</option>
+            <option value="AVN FSC Control Wood">5. AVN FSC Control Wood</option>
+            <option value="AVN PEFC">6. AVN PEFC</option>
+            <option value="AVC FSC Mix Credit">7. AVC FSC Mix Credit</option>
+            <option value="AVC FSC Control Wood">8. AVC FSC Control Wood</option>
+            <option value="AVC PEFC">9. AVC PEFC</option>
+            <option value="PHOENIX Mix Credit">10. PHOENIX Mix Credit</option>
+            <option value="PHOENIX Control Wood">11. PHOENIX Control Wood</option>
+            <option value="PHOENIX PEFC">12. PHOENIX PEFC</option>
+            <option value="SAICCOR FSC Mix Credit 70%">13. SAICCOR FSC Mix Credit 70%</option>
+        `;
+        const LINE_OPTIONS = `
+            <option value="MC2">Line MC2</option>
+            <option value="MC3">Line MC3</option>
+            <option value="MC5">Line MC5</option>
+            <option value="MC6">Line MC6</option>
+        `;
+
+        // --- CONSTANTS (NEW STORE) ---
+        const PULP_OPTIONS_STORE = `
+            <option value="ARAUCO FSC Mix Credit">ARAUCO FSC Mix Credit</option>
+            <option value="ARAUCO FSC Control Wood">ARAUCO FSC Control Wood</option>
+            <option value="ARAUCO PEFC">ARAUCO PEFC</option>
+            <option value="AVN FSC Mix Credit">AVN FSC Mix Credit</option>
+            <option value="AVN FSC Control Wood">AVN FSC Control Wood</option>
+            <option value="AVN PEFC">AVN PEFC</option>
+            <option value="AVC FSC Mix Credit">AVC FSC Mix Credit</option>
+            <option value="AVC FSC Control Wood">AVC FSC Control Wood</option>
+            <option value="AVC PEFC">AVC PEFC</option>
+            <option value="PHOENIX Mix Credit">PHOENIX Mix Credit</option>
+            <option value="PHOENIX Control Wood">PHOENIX Control Wood</option>
+            <option value="PHOENIX PEFC">PHOENIX PEFC</option>
+            <option value="SAICCOR FSC Mix Credit 70%">SAICCOR FSC Mix Credit 70%</option>
+        `;
+
+        // --- 3. STORE LOGIC (BATCH LEDGER ONLY) ---
+        
+        // ฟังก์ชันเพิ่มแถวใหม่ (Ledger Row)
+        window.addStoreRow = () => {
+            const tbody = document.getElementById('storeEntryTable');
+            const row = document.createElement('tr');
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Default IN color (Green tint)
+            row.className = "border-b transition-colors bg-green-50/50"; 
+
+            row.innerHTML = `
+                <td class="p-2">
+                    <input type="date" name="s_date" value="${today}" class="w-full text-xs border border-gray-300 rounded p-2 font-bold text-gray-600 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </td>
+                <td class="p-2">
+                    <select name="s_type" onchange="changeRowColor(this)" class="w-full text-xs border border-gray-300 rounded p-2 font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                        <option value="IN" class="text-green-700">📥 รับเข้า (Buy)</option>
+                        <option value="OUT" class="text-red-700">📤 จ่ายออก (Issue)</option>
+                    </select>
+                </td>
+                <td class="p-2">
+                    <select name="s_brand" class="w-full text-xs border border-gray-300 rounded p-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                        ${PULP_OPTIONS_STORE}
+                    </select>
+                </td>
+                <td class="p-2">
+                    <select name="s_grade" class="w-full text-xs border border-gray-300 rounded p-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                        <option value="NORMAL">✅ Normal</option>
+                        <option value="OFF">❌ Off Grade</option>
+                    </select>
+                </td>
+                <td class="p-2">
+                    <input type="text" name="s_doc" placeholder="PO / Line / Ref..." class="w-full text-xs border border-gray-300 rounded p-2 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </td>
+                <td class="p-2">
+                    <input type="number" name="s_weight" step="0.001" placeholder="0.000" class="w-full text-sm font-mono text-right font-bold border border-gray-300 rounded p-2 bg-white text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </td>
+                <td class="p-2 text-center">
+                    <button onclick="this.closest('tr').remove()" class="text-gray-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50 transition">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+            lucide.createIcons();
+            
+            // Scroll to bottom automatically
+            const container = document.getElementById('storeEntryContainer');
+            container.scrollTop = container.scrollHeight;
+        };
+
+        // Helper: เปลี่ยนสีแถวตาม Type
+        window.changeRowColor = (selectEl) => {
+            const row = selectEl.closest('tr');
+            if(selectEl.value === 'IN') {
+                row.classList.remove('bg-red-50/50');
+                row.classList.add('bg-green-50/50');
+            } else {
+                row.classList.remove('bg-green-50/50');
+                row.classList.add('bg-red-50/50');
+            }
+        };
+
+        // ฟังก์ชันบันทึกข้อมูลทั้งหมด (Batch Save)
+        window.saveStoreBatch = async () => {
+            const rows = document.querySelectorAll('#storeEntryTable tr');
+            if(rows.length === 0) return alert("⚠️ กรุณาเพิ่มรายการก่อนบันทึก");
+
+            const btn = document.getElementById('btnSaveBatch');
+            const originalBtnText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `⏳ กำลังบันทึก ${rows.length} รายการ...`;
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            try {
+                // วนลูปบันทึกทีละรายการ
+                for (const row of rows) {
+                    const date = row.querySelector('[name="s_date"]').value;
+                    const type = row.querySelector('[name="s_type"]').value;
+                    const brand = row.querySelector('[name="s_brand"]').value;
+                    const grade = row.querySelector('[name="s_grade"]').value;
+                    const docVal = row.querySelector('[name="s_doc"]').value;
+                    const weight = parseFloat(row.querySelector('[name="s_weight"]').value);
+
+                    if(!date || !weight || weight <= 0) {
+                        row.classList.add('border-l-4', 'border-red-500'); 
+                        errorCount++;
+                        continue; 
+                    }
+
+                    await runTransaction(db, async (transaction) => {
+                        // 1. เตรียม Reference
+                        const logRef = doc(collection(db, "store_transaction_logs"));
+                        const invKey = `${brand}__${grade}`;
+                        const invRef = doc(db, "store_inventory_balance", invKey);
+
+                        // 2. READ (ต้องทำก่อน Write เสมอ!) 
+                        const invDoc = await transaction.get(invRef);
+
+                        // 3. คำนวณ Logic
+                        let currentBal = 0;
+                        if(invDoc.exists()) currentBal = invDoc.data().balance || 0;
+                        const newBal = type === 'IN' ? currentBal + weight : currentBal - weight;
+
+                        // 4. WRITE (ทำทีหลังสุด)
+                        // บันทึก Log
+                        transaction.set(logRef, {
+                            type, brand, grade, weight, 
+                            docRef: docVal, date, 
+                            recordedAt: Timestamp.now()
+                        });
+
+                        // อัปเดต Balance
+                        transaction.set(invRef, { balance: newBal }, { merge: true });
+                    });
+
+                    successCount++;
+                    row.remove(); 
+                }
+
+                if(errorCount > 0) {
+                    alert(`⚠️ บันทึกสำเร็จ ${successCount} รายการ \n❌ ไม่สำเร็จ ${errorCount} รายการ (กรุณาตรวจสอบช่องข้อมูล)`);
+                } else {
+                    alert(`✅ บันทึกรายการทั้งหมดเรียบร้อย! (${successCount} รายการ)`);
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("❌ System Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+                if(document.querySelectorAll('#storeEntryTable tr').length === 0) {
+                    // ใส่ try-catch กัน error เรื่อง lucide ถ้าเน็ตช้า
+                    try { window.addStoreRow(); } catch(e) {}
+                }
+            }
+        };
+
+        // --- 4. ORIGINAL LOGIC FOR OTHER DEPTS (Viscose, Spinning, Marketing) ---
+        window.addRow = (dept) => {
+            if(dept === 'Store') return; 
+            const tableId = `table${dept}`;
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const row = document.createElement('tr');
+            row.className = "border-b hover:bg-gray-50 transition";
+            const today = new Date().toISOString().split('T')[0];
+            let innerHTML = `<td class="p-2"><input type="date" name="date" value="${today}" class="w-full border rounded p-1 text-sm bg-gray-50"></td>`;
+            
+            if (dept === 'Viscose') {
+                innerHTML += `
+                    <td class="p-2"><select name="line" class="w-full border rounded p-1 text-sm">${LINE_OPTIONS}</select></td>
+                    <td class="p-2"><select name="brand" class="w-full border rounded p-1 text-sm">${PULP_OPTIONS}</select></td>
+                    <td class="p-2"><input type="number" name="weight" step="0.001" class="w-full border rounded p-1 text-sm text-right font-bold text-orange-600"></td>
+                `;
+            } else if (dept === 'Spinning') {
+                innerHTML += `
+                    <td class="p-2"><select name="line" class="w-full border rounded p-1 text-sm">${LINE_OPTIONS}</select></td>
+                    <td class="p-2"><input type="number" name="weight" step="0.001" class="w-full border rounded p-1 text-sm text-right font-bold text-teal-600"></td>
+                    <td class="p-2"><input type="text" name="lot" placeholder="Lot/Batch" class="w-full border rounded p-1 text-sm"></td>
+                `;
+            } else if (dept === 'Marketing') {
+                innerHTML += `
+                    <td class="p-2"><input type="text" name="invoice" placeholder="INV-XXXX" class="w-full border rounded p-1 text-sm font-bold"></td>
+                    <td class="p-2">
+                        <select name="claim" class="w-full border rounded p-1 text-sm">
+                            <option value="FSC Mix">FSC Mix Credit</option>
+                            <option value="PEFC 100%">PEFC 100%</option>
+                            <option value="None">None (General)</option>
+                        </select>
+                    </td>
+                    <td class="p-2"><input type="number" name="weight" step="0.001" class="w-full border rounded p-1 text-sm text-right font-bold text-purple-600"></td>
+                `;
+            }
+            innerHTML += `
+                <td class="p-2 text-center">
+                    <button onclick="this.closest('tr').remove()" class="text-gray-400 hover:text-red-500 rounded-full p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+            `;
+            row.innerHTML = innerHTML;
+            table.appendChild(row);
+            lucide.createIcons();
+        };
+
+        window.saveData = async (dept) => {
+            const rows = document.querySelectorAll(`#table${dept} tr`);
+            const btn = document.getElementById(`btnSave${dept}`);
+            const originalText = btn.innerHTML;
+            const payloadByDate = {};
+            let count = 0;
+            rows.forEach(row => {
+                const date = row.querySelector('[name="date"]').value;
+                if(!date) return;
+                const baseData = { recordedAt: Timestamp.now() };
+                
+                if (dept === 'Viscose') {
+                    const line = row.querySelector('[name="line"]').value;
+                    const brand = row.querySelector('[name="brand"]').value;
+                    const weight = parseFloat(row.querySelector('[name="weight"]').value) || 0;
+                    if (weight > 0) {
+                        if (!payloadByDate[date]) payloadByDate[date] = [];
+                        payloadByDate[date].push({ ...baseData, line, brand, weight });
+                        count++;
+                    }
+                } else if (dept === 'Spinning') {
+                    const line = row.querySelector('[name="line"]').value;
+                    const weight = parseFloat(row.querySelector('[name="weight"]').value) || 0;
+                    const lot = row.querySelector('[name="lot"]').value;
+                    if (weight > 0) {
+                        if (!payloadByDate[date]) payloadByDate[date] = [];
+                        payloadByDate[date].push({ ...baseData, line, weight, lot });
+                        count++;
+                    }
+                } else if (dept === 'Marketing') {
+                    const invoice = row.querySelector('[name="invoice"]').value;
+                    const claim = row.querySelector('[name="claim"]').value;
+                    const weight = parseFloat(row.querySelector('[name="weight"]').value) || 0;
+                    if (weight > 0) {
+                        if (!payloadByDate[date]) payloadByDate[date] = [];
+                        payloadByDate[date].push({ ...baseData, invoice, claim, weight });
+                        count++;
+                    }
+                }
+            });
+
+            if (count === 0) return alert("⚠️ กรุณากรอกข้อมูลน้ำหนักอย่างน้อย 1 รายการ");
+            btn.innerHTML = "⏳ Saving...";
+            btn.disabled = true;
+            try {
+                const promises = [];
+                for (const [dateKey, transactions] of Object.entries(payloadByDate)) {
+                    const docId = `${dept}_${dateKey}`;
+                    const docRef = doc(db, "FSC_PEFC_RAW_LOGS", docId);
+                    promises.push(setDoc(docRef, {
+                        department: dept, date: dateKey, month: dateKey.substring(0, 7),
+                        lastUpdated: Timestamp.now(), transactions: arrayUnion(...transactions)
+                    }, { merge: true }));
+                }
+                await Promise.all(promises);
+                alert(`✅ บันทึกข้อมูล ${dept} เรียบร้อย! (${count} รายการ)`);
+                document.getElementById(`table${dept}`).innerHTML = "";
+                window.addRow(dept);
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error: " + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        window.openTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabName).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-slate-700', 'text-white', 'shadow-inner');
+                el.classList.add('text-slate-300', 'hover:bg-slate-700/50');
+            });
+            const activeBtn = document.getElementById(`btn${tabName}`);
+            activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-700/50');
+            activeBtn.classList.add('bg-slate-700', 'text-white', 'shadow-inner');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Start with Store tab (Entry only)
+            window.addStoreRow(); 
+            // Load other depts
+            ['Viscose', 'Spinning', 'Marketing'].forEach(d => window.addRow(d));
+        });
+    </script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+    <div class="flex h-screen overflow-hidden">
+        
+        <aside class="w-64 bg-slate-800 text-white flex flex-col shadow-xl z-20">
+            <div class="p-6 border-b border-slate-700">
+                <h1 class="text-xl font-bold flex items-center gap-2 text-blue-400">
+                    <i data-lucide="layers"></i> TRC Portal
+                </h1>
+                <p class="text-xs text-slate-400 mt-1 ml-7">Production Control</p>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <button id="btnStore" onclick="openTab('Store')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 bg-slate-700 text-white shadow-inner transition">
+                    <i data-lucide="package"></i> Store (Pulp)
+                </button>
+                <button id="btnViscose" onclick="openTab('Viscose')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
+                    <i data-lucide="flask-conical"></i> Viscose
+                </button>
+                <button id="btnSpinning" onclick="openTab('Spinning')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
+                    <i data-lucide="activity"></i> Spinning
+                </button>
+                <button id="btnMarketing" onclick="openTab('Marketing')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
+                    <i data-lucide="coins"></i> Marketing
+                </button>
+            </nav>
+            <div class="p-4 bg-slate-900 text-xs text-center text-slate-500">
+                FSC/PEFC Control System v2.1 (Batch Entry)
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-6">
+            
+            <div id="Store" class="tab-content h-full">
+                <div class="flex flex-col bg-white rounded-xl shadow border border-slate-200 overflow-hidden h-full">
+                    
+                    <div class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                <i data-lucide="clipboard-list" class="text-blue-600"></i> บันทึกรายการ (Daily Pulp Ledger)
+                            </h2>
+                            <p class="text-xs text-slate-400">กรอกรายการ รับเข้า/จ่ายออก ได้หลายรายการ (ระบบจะบันทึกสต็อกให้อัตโนมัติ)</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="addStoreRow()" class="flex items-center gap-1 px-4 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-bold text-sm transition border border-blue-200">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว
+                            </button>
+                            <button id="btnSaveBatch" onclick="saveStoreBatch()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow flex items-center gap-2 transition">
+                                <i data-lucide="save"></i> บันทึกข้อมูล
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto" id="storeEntryContainer">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b">
+                                <tr>
+                                    <th class="p-3 w-40">Date</th>
+                                    <th class="p-3 w-40">Transaction Type</th>
+                                    <th class="p-3">Brand</th>
+                                    <th class="p-3 w-32">Grade</th>
+                                    <th class="p-3 w-48">Ref / Document</th>
+                                    <th class="p-3 w-32 text-right">Weight (T)</th>
+                                    <th class="p-3 w-16"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="storeEntryTable" class="text-sm">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="Viscose" class="tab-content hidden h-full">
+                <h2 class="text-lg font-bold text-orange-800 mb-2 flex items-center gap-2">
+                    <i data-lucide="flask-conical"></i> Viscose Consumption
+                </h2>
+                <div class="bg-white p-4 rounded-xl shadow border border-slate-200">
+                    <div class="overflow-x-auto border rounded mb-4">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                <tr>
+                                    <th class="p-2 w-32">Date</th>
+                                    <th class="p-2 w-32">Line</th>
+                                    <th class="p-2">Brand</th>
+                                    <th class="p-2 w-32 text-right">Used (Ton)</th>
+                                    <th class="p-2 w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableViscose"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="addRow('Viscose')" class="px-4 py-2 bg-gray-200 rounded font-bold hover:bg-gray-300 transition">+ เพิ่มแถว</button>
+                        <button id="btnSaveViscose" onclick="saveData('Viscose')" class="px-6 py-2 bg-orange-600 text-white rounded font-bold hover:bg-orange-700 shadow flex-1 transition">บันทึก Viscose</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="Spinning" class="tab-content hidden h-full">
+                <h2 class="text-lg font-bold text-teal-800 mb-2 flex items-center gap-2">
+                    <i data-lucide="activity"></i> Spinning Output
+                </h2>
+                <div class="bg-white p-4 rounded-xl shadow border border-slate-200">
+                    <div class="overflow-x-auto border rounded mb-4">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                <tr>
+                                    <th class="p-2 w-32">Date</th>
+                                    <th class="p-2 w-32">Line</th>
+                                    <th class="p-2 w-48 text-right">Output (Ton)</th>
+                                    <th class="p-2">Lot / Batch</th>
+                                    <th class="p-2 w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableSpinning"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="addRow('Spinning')" class="px-4 py-2 bg-gray-200 rounded font-bold hover:bg-gray-300 transition">+ เพิ่มแถว</button>
+                        <button id="btnSaveSpinning" onclick="saveData('Spinning')" class="px-6 py-2 bg-teal-600 text-white rounded font-bold hover:bg-teal-700 shadow flex-1 transition">บันทึก Spinning</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="Marketing" class="tab-content hidden h-full">
+                <h2 class="text-lg font-bold text-purple-800 mb-2 flex items-center gap-2">
+                    <i data-lucide="coins"></i> Marketing Sales
+                </h2>
+                <div class="bg-white p-4 rounded-xl shadow border border-slate-200">
+                    <div class="overflow-x-auto border rounded mb-4">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                <tr>
+                                    <th class="p-2 w-32">Date</th>
+                                    <th class="p-2 w-48">Invoice No.</th>
+                                    <th class="p-2 w-48">Claim Type</th>
+                                    <th class="p-2 w-48 text-right">Weight (Ton)</th>
+                                    <th class="p-2 w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableMarketing"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="addRow('Marketing')" class="px-4 py-2 bg-gray-200 rounded font-bold hover:bg-gray-300 transition">+ เพิ่มแถว</button>
+                        <button id="btnSaveMarketing" onclick="saveData('Marketing')" class="px-6 py-2 bg-purple-600 text-white rounded font-bold hover:bg-purple-700 shadow flex-1 transition">บันทึก Marketing</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

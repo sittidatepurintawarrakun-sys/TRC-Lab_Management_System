@@ -327,7 +327,8 @@
                     สวัสดีครับ ผมพร้อมช่วยวิเคราะห์ข้อมูล Pulp & Fibre ครับ 🏭 <br>
                     ขณะนี้คุณกำลังดูข้อมูลของ <b><span id="aiMcContext">MC2</span></b>
                     <br><br>
-                    <i>ลองถามเช่น:</i> "ทำไม Tenacity ของ MC2 ถึงตกในช่วง 3 วันที่ผ่านมา?"
+                    <i>ลองถามเช่น:</i> "ทำไม Tenacity ถึงตก ในช่วง 3 วันที่ผ่านมา?" <br>
+                    (พิมพ์ <b>"save"</b> เพื่อบันทึกข้อมูลเก็บไว้ สำหรับ AI Machine Learning)
                 </div>
             </div>
             <div class="p-2 border-t flex gap-2 bg-white">
@@ -359,6 +360,7 @@
 
         // CACHE SYSTEM (Optimization)
         let REQUEST_CACHE = {};
+        let SHARED_FILTER_TIMELINE = null;
         function clearCache() { 
             REQUEST_CACHE = {}; 
             console.log("Cache cleared");
@@ -532,7 +534,7 @@
         };
 
         let chartInstances = {};
-
+        
         // =========================================================
         // 2. UI INITIALIZATION
         // =========================================================
@@ -556,6 +558,25 @@
 
         function handleMCChange() {
             clearCache(); // New MC means new data
+
+            // --- [เพิ่มส่วนนี้] Reset View Mode to Daily ---
+            const dailyRadio = document.querySelector('input[name="granularity"][value="daily"]');
+            if (dailyRadio) {
+                dailyRadio.checked = true;
+            }
+            // ------------------------------------------
+
+            //  ✅  [FIXED] สั่ง Reset Material Filter ทันทีเมื่อเปลี่ยนเครื่อง
+            const matSelect = document.getElementById('materialFilter');
+            if (matSelect) {
+                matSelect.value = "ALL"; // บังคับกลับมาเป็น ALL
+                // ล้าง Option เก่าทิ้งด้วยเพื่อความเนียน (เดี๋ยวข้อมูลใหม่โหลดเสร็จมันจะเติมให้เอง)
+                matSelect.innerHTML = '<option value="ALL">All Materials (Mixed)</option>';
+            }
+
+            // ล้าง List Material ที่จำไว้ด้วย
+            if (typeof FOUND_MATERIALS !== 'undefined') FOUND_MATERIALS.clear();
+
             updateDropdownOptions();
             updateDashboard(true);
         }
@@ -690,20 +711,8 @@
         }
         // [START ADD]: Logic สำหรับ Material Filter
         function handleMaterialChange() {
-            clearCache(); // ต้องเคลียร์ Cache เพราะเราจะดึงใหม่แบบมีเงื่อนไข
-            // รีโหลดเฉพาะส่วน Product (Part 3) เพื่อความเร็ว
-            const mc = document.getElementById('mcFilter').value;
-            const start = document.getElementById('startDate').value;
-            const end = document.getElementById('endDate').value;
-            const mode = getGranularity();
-
-            // แสดงสถานะ Loading เล็กๆ
-            const loader = document.getElementById('matLoading');
-            if(loader) loader.classList.remove('hidden');
-
-            renderProductCharts(mc, start, end, mode).then(() => {
-                if(loader) loader.classList.add('hidden');
-            });
+            
+            updateDashboard(true);
         }
 
         // ตัวแปร global เก็บรายการ Material ที่เจอในช่วงเวลานั้นๆ (ป้องกัน dropdown รีเซ็ตตัวเองตอนกดเลือก)
@@ -746,14 +755,22 @@
             document.getElementById('lblMcProduct').innerText = `${mc} (${mode.toUpperCase()})`;
             document.getElementById('aiMcContext').innerText = mc;
 
-            try {
-                await Promise.all([
-                    renderPulpSection(mc),
-                    renderProcessCharts(mc, startStr, endStr, mode),
-                    renderProductCharts(mc, startStr, endStr, mode),
-                    renderCorrelation(mc, startStr, endStr, mode)
-                ]);
-            } catch (e) {
+                    try {
+                        // [STEP 1] รีเซ็ตค่า Timeline ก่อน
+                        SHARED_FILTER_TIMELINE = null;
+
+                        // [STEP 2] โหลด Product (Part 3) ให้เสร็จก่อน! (เพื่อคำนวณวันที่มีการผลิต)
+                        await renderProductCharts(mc, startStr, endStr, mode);
+
+                        // [STEP 3] หลังจาก Product เสร็จแล้ว ค่อยโหลด Process (Part 2) 
+                        // Process จะได้อ่านค่า SHARED_FILTER_TIMELINE ที่ Product ทำเสร็จไว้แล้ว
+                        await Promise.all([
+                            renderPulpSection(mc),
+                            renderProcessCharts(mc, startStr, endStr, mode),
+                            renderCorrelation(mc, startStr, endStr, mode)
+                        ]);
+
+                    } catch (e) {
                 console.error("Dashboard update error:", e);
             } finally {
                 if(btn) { btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh'; btn.disabled = false; }
@@ -816,11 +833,14 @@
             });
         }
         async function fetchProductDataByType(mc, paramName, start, end, mode) {
-            const cacheKey = `prod_${mc}_${paramName}_${start}_${end}_${mode}`;
+            // เพิ่ม Material Filter ลงใน Cache Key เพื่อให้ Cache แยกกันตาม Material
+            const mat = document.getElementById('materialFilter') ? document.getElementById('materialFilter').value : "ALL";
+            const cacheKey = `prod_${mc}_${paramName}_${start}_${end}_${mode}_${mat}`;
+
             return await getCachedData(cacheKey, async () => {
                 if (mode === 'monthly') return await fetchMonthlyProductStats(mc, paramName, start, end);
-                if (mode === 'daily') return await fetchDailyProductLogs(mc, paramName, start, end);
-                return await fetchHourlyProductLogs(mc, paramName, start, end);
+                if (mode === 'daily') return await fetchDailyProductStats(mc, paramName, start, end); // เปลี่ยนชื่อฟังก์ชันจาก Logs เป็น Stats
+                return await fetchHourlyProductLogs(mc, paramName, start, end); // Hourly ยังคงใช้ Raw Logs
             });
         }
 
@@ -865,121 +885,79 @@
             return { labels: masterLabels, data: finalData, avg: stats.avg, cv: stats.cv };
         }
 
-        async function fetchDailyProductLogs(mc, paramName, start, end) {
+        async function fetchDailyProductStats(mc, paramName, start, end) {
             const productType = MC_COLLECTION_MAP[mc] || "Modal";
+            const collectionName = `stats_Product_${productType}`; 
             const selectedMat = document.getElementById('materialFilter') ? document.getElementById('materialFilter').value : "ALL";
+
+            // ✅ [ADDED 1]: ถ้าเป็นกราฟตัวแรก ให้เคลียร์รายชื่อเก่าทิ้งก่อน (กันค่าซ้ำสะสมจากครั้งก่อนหน้า)
+            const firstChartParam = document.getElementById('selProd1') ? document.getElementById('selProd1').value : "";
+            if (paramName === firstChartParam) {
+                FOUND_MATERIALS.clear();
+            }
+
             const masterLabels = generateDateLabels(start, end, 'daily');
             const dataMap = new Map();
 
-            // Reset Material List หากเป็นการโหลดครั้งแรกของกราฟหลัก
-            if(paramName === document.getElementById('selProd1').value) FOUND_MATERIALS.clear();
-
             try {
-                // Fetch Stats (Daily)
-                const snapshot = await db.collection(`stats_Product_${productType}`)
+                const snapshot = await db.collection(collectionName)
                     .where('machineId', '==', mc)
                     .where('date', '>=', start)
                     .where('date', '<=', end)
                     .get();
 
-                const datesNeedRaw = []; // วันที่ต้องไปดึง Raw (เพราะเป็นข้อมูลเก่า 2025 และมีการ Filter Material)
-
                 snapshot.forEach(doc => {
                     const d = doc.data();
-
-                    // 1. เก็บรายการ Material ที่เจอ เพื่อใส่ Dropdown
-                    if (d.materials_breakdown) {
-                        Object.keys(d.materials_breakdown).forEach(m => FOUND_MATERIALS.add(m));
-                    } else {
-                        // ถ้าไม่มี breakdown แสดงว่าเป็นปี 2025 -> เรายังไม่รู้ว่ามี Material อะไรบ้างในวันนี้
-                        // ต้องรอไปดึง Raw (หรือข้ามไปก่อนถ้ารีบ)
-                        if (selectedMat !== "ALL") datesNeedRaw.push(d.date);
-                    }
-
-                    // 2. ดึงค่า Value
                     let val = null;
 
-                    // Case A: ALL Materials
+                    // -------------------------------------------------------------
+                    // ✅ [ADDED 2]: ดึงรายชื่อ Material จาก breakdown ใส่ Dropdown
+                    // -------------------------------------------------------------
+                    // เราเช็คว่าวันนั้นมี materialBreakdown ไหม ถ้ามีให้ดึง Key ทั้งหมดเก็บไว้
+                    if (d.materialBreakdown) {
+                        Object.keys(d.materialBreakdown).forEach(matCode => {
+                            // กรอง key ที่ไม่ใช่ข้อมูลจริงออก (เช่น _meta)
+                            if (matCode !== '_meta') {
+                                FOUND_MATERIALS.add(matCode);
+                            }
+                        });
+                    }
+                    // -------------------------------------------------------------
+
+                    // CASE 1: เลือก ALL -> ดูค่ารวมใน d.stats
                     if (selectedMat === "ALL") {
                         if (d.stats && d.stats[paramName]) {
                             val = d.stats[paramName].avg;
                         }
-                    }
-                    // Case B: Filtered Material (Hybrid)
+                    } 
+                    // CASE 2: เลือก Material Specific -> เจาะดูใน d.materialBreakdown
                     else {
-                        if (d.materials_breakdown && d.materials_breakdown[selectedMat]) {
-                            // ปี 2026+: ดึงจาก Breakdown ได้เลย เร็วมาก!
-                            if (d.materials_breakdown[selectedMat][paramName]) {
-                                val = d.materials_breakdown[selectedMat][paramName].avg;
+                        if (d.materialBreakdown && d.materialBreakdown[selectedMat]) {
+                            const matStats = d.materialBreakdown[selectedMat];
+                            if (matStats[paramName]) {
+                                val = matStats[paramName].avg;
                             }
-                        } else {
-                            // ปี 2025: ไม่มี Breakdown -> ต้องไปดึง Raw
-                            datesNeedRaw.push(d.date);
                         }
                     }
 
-                    if (val !== null) dataMap.set(d.date, val);
+                    if (val !== null && val !== undefined) {
+                        dataMap.set(d.date, Number(val));
+                    }
                 });
+            } catch (e) {
+                console.warn("Fetch Daily Product Stats Error", e);
+            }
 
-                // 3. Fallback: Fetch Raw Logs เฉพาะวันที่จำเป็น
-                // (วันที่เป็นข้อมูลเก่า และ user ดันเลือก filter material)
-                if (datesNeedRaw.length > 0) {
-                    // เพื่อประสิทธิภาพ: ถ้าช่วงกว้างมาก อาจจะเตือน user แต่ในที่นี้ดึงหมด
-                    // ใช้ query แบบ range ถ้ารายการวันที่ต่อเนื่องกัน หรือ where 'in' ถ้าไม่เยอะ
-                    // แบบง่าย: ดึงช่วง start-end ของ Raw logs เลย (ซ้ำซ้อนหน่อยแต่ชัวร์)
-                    const rawSnap = await db.collection('product_raw_logs')
-                        .where('machineId', '==', mc)
-                        .where('date', '>=', start) // อาจจะ optimize ให้แคบลงตาม datesNeedRaw ได้
-                        .where('date', '<=', end)
-                        .get();
+            // ✅ [ADDED 3]: ถ้าเป็นกราฟตัวแรก โหลดเสร็จแล้วให้สั่งอัปเดต UI Dropdown ทันที
+            if (paramName === firstChartParam) {
+                updateMaterialDropdownUI();
+            }
 
-                    rawSnap.forEach(doc => {
-                        const d = doc.data();
-                        if (!datesNeedRaw.includes(d.date)) return; // ข้ามวันที่เราได้จาก Stats แล้ว
+            const finalData = masterLabels.map(label => dataMap.has(label) ? dataMap.get(label) : null);
+            const validData = finalData.filter(v => v !== null);
+            const stats = calculateStats(validData);
 
-                        const pData = d.data[productType] || d.data["Modal"];
-                        if (!pData) return;
-
-                        // Harvest Materials for Dropdown (Old Data)
-                        const matKey = Object.keys(pData).find(k => k.toLowerCase().includes("material"));
-                        if (matKey && pData[matKey]) {
-                            pData[matKey].forEach(m => { if(m) FOUND_MATERIALS.add(String(m)); });
-                        }
-
-                        // Calculate Value from Raw
-                        if (selectedMat !== "ALL") {
-                            // Filter Logic
-                            let targetKey = paramName;
-                            if (!pData[targetKey]) {
-                                 // Find approximate key match
-                                 const cleanParam = paramName.toLowerCase().replace(/[^a-z0-9]/g, "");
-                                 const foundKey = Object.keys(pData).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanParam);
-                                 if (foundKey) targetKey = foundKey;
-                            }
-
-                            if (pData[targetKey] && matKey && pData[matKey]) {
-                                const vals = pData[targetKey];
-                                const mats = pData[matKey];
-                                let sum = 0, count = 0;
-                                for(let i=0; i<vals.length; i++) {
-                                    if(String(mats[i]) === selectedMat && vals[i] !== null && vals[i] !== "") {
-                                        sum += Number(vals[i]);
-                                        count++;
-                                    }
-                                }
-                                if (count > 0) dataMap.set(d.date, sum/count);
-                            }
-                        }
-                    });
-                }
-
-            } catch (e) { console.warn("Hybrid Product Chart Error", e); }
-
-            if(paramName === document.getElementById('selProd1').value) updateMaterialDropdownUI();
-
-            const finalData = masterLabels.map(dateLabel => dataMap.has(dateLabel) ? dataMap.get(dateLabel) : null);
-            const stats = calculateStats(finalData.filter(v => v !== null));
-            return { labels: masterLabels, data: finalData, avg: stats.avg };
+            return { labels: masterLabels, data: finalData, avg: stats.avg, cv: stats.cv };
         }
 
         // --- 2. MONTHLY FETCHERS (เหมือนเดิมได้ เพราะเดือนมักจะต่อเนื่อง แต่ถ้าอยากชัวร์ก็ใช้ logic เดียวกันได้) ---
@@ -1020,27 +998,111 @@
         }
 
         async function fetchMonthlyProductStats(mc, paramName, start, end) {
-            // ... (ใช้ Code เดิม) ...
             const productType = MC_COLLECTION_MAP[mc] || "Modal";
+            const selectedMat = document.getElementById('materialFilter') ? document.getElementById('materialFilter').value : "ALL";
             const collectionName = `stats_Product_${productType}_Monthly`;
-            const labels = [], dataPoints = [];
-            try {
-                const startM = start.substring(0,7); const endM = end.substring(0,7);
-                const snapshot = await db.collection(collectionName)
-                    .where('machineId', '==', mc)
-                    .where('month', '>=', startM)
-                    .where('month', '<=', endM)
-                    .orderBy('month', 'asc').get();
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    if(d.stats && d.stats[paramName]) {
-                        const s = d.stats[paramName];
-                        let avg = s.avg !== undefined ? s.avg : (s.count > 0 ? s.sum/s.count : 0);
-                        labels.push(d.month);
-                        dataPoints.push(avg);
+
+            // 1. สร้าง List เดือน (YYYY-MM)
+            let [startYear, startMonth] = start.split('-').map(Number);
+            let [endYear, endMonth] = end.split('-').map(Number);
+            const monthsToFetch = [];
+
+            let currY = startYear;
+            let currM = startMonth;
+            while (currY < endYear || (currY === endYear && currM <= endMonth)) {
+                const mStr = `${currY}-${String(currM).padStart(2, '0')}`;
+                monthsToFetch.push(mStr);
+                currM++;
+                if (currM > 12) { currM = 1; currY++; }
+            }
+
+            const labels = [];
+            const dataPoints = [];
+
+            // Helper: ค้นหาและคำนวณ Avg (เพราะใน DB ไม่มี field avg)
+            const findAndCalculateAvg = (statsObj, searchKey) => {
+                if (!statsObj) return null;
+
+                // 1. Normal Search
+                let targetData = statsObj[searchKey];
+
+                // 2. Smart Search (ตัดจุด ตัดช่องว่าง) กรณีชื่อไม่ตรงเป๊ะ
+                if (!targetData) {
+                    const cleanSearch = searchKey.toLowerCase().replace(/[^a-z0-9]/g, "");
+                    const foundKey = Object.keys(statsObj).find(k => 
+                        k.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanSearch
+                    );
+                    if (foundKey) targetData = statsObj[foundKey];
+                }
+
+                // 3. Calculate Average (Sum / Count)
+                if (targetData) {
+                    // กรณีมี field avg อยู่แล้ว (เผื่อไว้)
+                    if (targetData.avg !== undefined) return Number(targetData.avg);
+
+                    // กรณีไม่มี avg ต้องคำนวณเองจาก sum / count (ตามรูป Database ของคุณ)
+                    if (targetData.sum !== undefined && targetData.count > 0) {
+                        return Number(targetData.sum) / Number(targetData.count);
                     }
-                });
-            } catch(e) { console.warn("Monthly Product Error", e); }
+                }
+
+                return null;
+            };
+
+            try {
+                // CASE 1: ALL (Main Collection)
+                if (selectedMat === "ALL") {
+                    const startM = monthsToFetch[0];
+                    const endM = monthsToFetch[monthsToFetch.length - 1];
+
+                    const snapshot = await db.collection(collectionName)
+                        .where('machineId', '==', mc)
+                        .where('month', '>=', startM)
+                        .where('month', '<=', endM)
+                        .orderBy('month', 'asc').get();
+
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        const val = findAndCalculateAvg(d.stats, paramName); // คำนวณ Avg
+                        if (val !== null) {
+                            labels.push(d.month);
+                            dataPoints.push(Number(val)); // ใส่ค่าลงกราฟ
+                        }
+                    });
+                } 
+                // CASE 2: Specific Material (Subcollection) - วิ่งตรงไปหยิบ
+                else {
+                    const promises = monthsToFetch.map(async (monthId) => {
+                        const docId = `${mc}_${monthId}`;
+                        const matDocRef = db.collection(collectionName)
+                                            .doc(docId)
+                                            .collection('materials')
+                                            .doc(selectedMat);
+
+                        const snap = await matDocRef.get();
+                        return { month: monthId, snap: snap };
+                    });
+
+                    const results = await Promise.all(promises);
+
+                    results.forEach(({ month, snap }) => {
+                        if (snap.exists) {
+                            const d = snap.data();
+                            // ใน Subcollection ก็เก็บใน field 'stats' เหมือนกัน
+                            const val = findAndCalculateAvg(d.stats, paramName); // คำนวณ Avg
+
+                            if (val !== null) {
+                                labels.push(month);
+                                dataPoints.push(Number(val));
+                            }
+                        }
+                    });
+                }
+
+            } catch (e) {
+                console.warn("Fetch Monthly Product Error", e);
+            }
+
             const stats = calculateStats(dataPoints);
             return { labels, data: dataPoints, avg: stats.avg };
         }
@@ -1126,6 +1188,18 @@
             const cv = mean!==0 ? (Math.sqrt(variance)/mean)*100 : 0;
             return { avg: mean, cv: cv };
         }
+        function compressDataOnly(labels, data) {
+            const cleanLabels = [];
+            const cleanData = [];
+            for (let i = 0; i < labels.length; i++) {
+                // เก็บเฉพาะข้อมูลที่ไม่ใช่ Null, Undefined หรือค่าว่าง
+                if (data[i] !== null && data[i] !== undefined && data[i] !== "") {
+                    cleanLabels.push(labels[i]);
+                    cleanData.push(data[i]);
+                }
+            }
+            return { labels: cleanLabels, data: cleanData };
+        }
         function getPreviousPeriodDates(startStr, endStr) {
             const dStart = new Date(startStr);
             const dEnd = new Date(endStr);
@@ -1202,20 +1276,49 @@
                 let result, prevResult;
                 
                 // Parallel Fetch Current vs Previous
-                if (type === 'Proc') {
-                    [result, prevResult] = await Promise.all([
-                        fetchProcessDataByType(mc, param, start, end, mode),
-                        fetchProcessDataByType(mc, param, prevPeriod.start, prevPeriod.end, mode)
-                    ]);
-                    updateProcessStabilityBadge(selId, result.cv, prevResult.cv, false);
-                    createDynamicLineChart(chartId, param, '#2563eb', result.labels, result.data, mode);
-                } else {
+                    if (type === 'Proc') {
+                        [result, prevResult] = await Promise.all([
+                            fetchProcessDataByType(mc, param, start, end, mode),
+                            fetchProcessDataByType(mc, param, prevPeriod.start, prevPeriod.end, mode)
+                        ]);
+
+                        // [NEW] Logic Sync Process -> Product
+                        let finalLabels = result.labels;
+                        let finalData = result.data;
+
+                        // ถ้ามี Timeline จาก Product ส่งมา (แปลว่ามีการกรอง Material หรือตัดวันหยุด)
+                        if (SHARED_FILTER_TIMELINE && SHARED_FILTER_TIMELINE.length > 0) {
+                            const targetLabels = SHARED_FILTER_TIMELINE;
+                            const procMap = new Map();
+                            // Map ข้อมูล Process เดิมเก็บไว้
+                            result.labels.forEach((l, i) => procMap.set(l, result.data[i]));
+
+                            // สร้างข้อมูลชุดใหม่ โดยดึงเฉพาะ "เวลา" ที่ตรงกับ Product เท่านั้น
+                            finalData = targetLabels.map(t => procMap.has(t) ? procMap.get(t) : null);
+                            finalLabels = targetLabels;
+                        }
+
+                        updateProcessStabilityBadge(selId, result.cv, prevResult.cv, false);
+                        // ใช้ finalLabels และ finalData ในการพล็อต
+                        createDynamicLineChart(chartId, param, '#2563eb', finalLabels, finalData, mode);
+
+                    } else {
                     [result, prevResult] = await Promise.all([
                         fetchProductDataByType(mc, param, start, end, mode),
                         fetchProductDataByType(mc, param, prevPeriod.start, prevPeriod.end, mode)
                     ]);
+
+                    // [EDITED] ตัดข้อมูลว่างทิ้งเฉพาะกราฟ Product (Part 3)
+                    const compressed = compressDataOnly(result.labels, result.data);
+
+                    // [NEW] บันทึก Timeline ที่มีข้อมูลจริง เก็บไว้ให้ Process (Part 2) ใช้ตาม
+                    // เช็คว่าถ้ายังไม่มีใครบันทึก (เป็นกราฟตัวแรกที่โหลดเสร็จ) ให้บันทึกเลย
+                    if (compressed.labels.length > 0 && !SHARED_FILTER_TIMELINE) {
+                        SHARED_FILTER_TIMELINE = compressed.labels;
+                    }
+
                     updateProcessStabilityBadge(selId, result.avg, prevResult.avg, true);
-                    createDynamicLineChart(chartId, param, '#10b981', result.labels, result.data, mode);
+                    createDynamicLineChart(chartId, param, '#10b981', compressed.labels, compressed.data, mode);
                 }
             } catch (e) {
                 console.error(`Chart ${type}${index} Error`, e);
@@ -1237,142 +1340,103 @@
         async function fetchAndRenderGrades(mc, start, end, mode) {
             const productType = MC_COLLECTION_MAP[mc] || "Modal";
             const selectedMat = document.getElementById('materialFilter') ? document.getElementById('materialFilter').value : "ALL";
-            let gradeCounts = { E: 0, ST: 0, I: 0, O: 0 };
+            const collectionName = `stats_Product_${productType}`; // Base name
 
-            // Config: ชื่อ Parameter ที่เก็บเกรด
-            const gradeParamNames = ["Over All Grade", "overallgrade", "Length Grade", "Grade"];
+            let gradeCounts = { E: 0, ST: 0, I: 0, O: 0 };
+            const gradeFields = ["Over All Grade", "Length Grade", "Grade"];
 
             try {
-                // --- Strategy: Fetch STATS First (รองรับทั้งปี 2025 และ 2026+) ---
-                // เราจะดึง Stats ก่อนเสมอ เพราะ:
-                // 1. ถ้าเป็นปี 2025: Stats มีข้อมูลรวม (ALL) -> ใช้ได้เลยถ้าไม่ Filter Material
-                // 2. ถ้าเป็นปี 2026+: Stats มี materials_breakdown -> ใช้ได้เลยแม้จะ Filter Material
-                // 3. ถ้าต้องเจาะลึก 2025 แบบ Filter Material -> ค่อยไปดึง Raw Logs เฉพาะวันที่ขาด
-
-                let collectionName = (mode === 'daily') ? `stats_Product_${productType}` : `stats_Product_${productType}_Monthly`;
-                let query = db.collection(collectionName).where("machineId", "==", mc);
-
+                // --- MODE: MONTHLY ---
                 if (mode === 'monthly') {
-                    query = query.where("month", ">=", start.substring(0,7)).where("month", "<=", end.substring(0,7));
-                } else {
-                    query = query.where("date", ">=", start).where("date", "<=", end);
-                }
+                    const startM = start.substring(0, 7);
+                    const endM = end.substring(0, 7);
+                    const monthlyColName = `${collectionName}_Monthly`;
 
-                const snapshot = await query.get();
-                const docsMissingBreakdown = []; // เก็บรายการวันที่เป็นข้อมูลเก่า (ไม่มี Breakdown)
-
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-
-                    // CASE A: User เลือก "ALL" -> ง่ายสุด ใช้ Stats รวมได้เลย (ทั้งเก่าและใหม่รองรับหมด)
                     if (selectedMat === "ALL") {
-                        // หา Parameter เกรดที่ถูกต้อง
-                        let gStats = null;
-                        for(let name of gradeParamNames) { if(d.stats && d.stats[name]) { gStats = d.stats[name]; break; } }
-
-                        if (gStats && gStats.counts) {
-                            gradeCounts.E += (gStats.counts.E || gStats.counts.EXCELLENT || 0);
-                            gradeCounts.ST += (gStats.counts.ST || gStats.counts.STANDARD || 0);
-                            gradeCounts.I += (gStats.counts.I || gStats.counts.INTERMEDIATE || 0);
-                            // รวม Off Grade และอื่นๆ
-                            Object.keys(gStats.counts).forEach(k => {
-                                if(!['E','EXCELLENT','ST','STANDARD','I','INTERMEDIATE'].includes(k)) gradeCounts.O += gStats.counts[k];
-                            });
-                        }
-                    }
-                    // CASE B: User เลือกเจาะจง Material
-                    else {
-                        // 1. ลองหาใน materials_breakdown ก่อน (สำหรับข้อมูลปี 2026+)
-                        if (d.materials_breakdown && d.materials_breakdown[selectedMat]) {
-                            // เยี่ยม! เจอข้อมูลแยก Material แล้ว (ไม่ต้องโหลด Raw)
-                            let gStats = null;
-                            for(let name of gradeParamNames) { 
-                                if(d.materials_breakdown[selectedMat][name]) { 
-                                    gStats = d.materials_breakdown[selectedMat][name]; break; 
-                                } 
-                            }
-                            if (gStats && gStats.counts) {
-                                gradeCounts.E += (gStats.counts.E || gStats.counts.EXCELLENT || 0);
-                                gradeCounts.ST += (gStats.counts.ST || gStats.counts.STANDARD || 0);
-                                gradeCounts.I += (gStats.counts.I || gStats.counts.INTERMEDIATE || 0);
-                                Object.keys(gStats.counts).forEach(k => {
-                                    if(!['E','EXCELLENT','ST','STANDARD','I','INTERMEDIATE'].includes(k)) gradeCounts.O += gStats.counts[k];
-                                });
-                            }
-                        } 
-                        // 2. ถ้าไม่มี breakdown (แสดงว่าเป็นข้อมูลเก่าปี 2025) -> ต้องไปโหลด Raw Logs
-                        else {
-                            docsMissingBreakdown.push(mode === 'daily' ? d.date : d.month);
-                        }
-                    }
-                });
-
-                // --- FALLBACK: Load Raw Logs for Missing Dates (Hybrid Logic) ---
-                // ถ้ามีการเลือก Material Filter และมีข้อมูลบางวันที่ไม่มี Breakdown (ข้อมูลปี 2025)
-                if (selectedMat !== "ALL" && docsMissingBreakdown.length > 0) {
-                    // เพื่อไม่ให้โค้ดซับซ้อน เราจะดึง Raw Logs ของช่วงเวลานั้นทั้งหมดมาคำนวณซ้ำเฉพาะส่วนที่ขาด
-                    // (หรือถ้าขี้เกียจซับซ้อน ดึงทับไปเลยก็ได้ แต่เปลือง Read)
-                    // เอาแบบ Simple: ถ้าเจอข้อมูลเก่าผสม ให้เรียกฟังก์ชันคำนวณจาก Raw เฉพาะช่วงนั้น
-
-                    // หา Min/Max date ของช่วงที่ขาด
-                    docsMissingBreakdown.sort();
-                    const missingStart = docsMissingBreakdown[0];
-                    const missingEnd = docsMissingBreakdown[docsMissingBreakdown.length-1];
-
-                    // ดึง Raw Logs
-                    let rawQuery = db.collection("product_raw_logs").where("machineId", "==", mc);
-                    if(mode === 'monthly') {
-                         // แปลงเดือนเป็นช่วงวันที่คร่าวๆ
-                         rawQuery = rawQuery.where("date", ">=", missingStart + "-01").where("date", "<=", missingEnd + "-31");
+                        // ... (Logic เดิมของ ALL) ...
+                        const snapshot = await db.collection(monthlyColName)
+                            .where('machineId', '==', mc)
+                            .where('month', '>=', startM).where('month', '<=', endM).get();
+                        snapshot.forEach(doc => processGradeDoc(doc.data(), "stats")); // Helper
                     } else {
-                         rawQuery = rawQuery.where("date", ">=", missingStart).where("date", "<=", missingEnd);
+                        // ✅ [UPDATED] ใช้ Direct Fetch แบบเดียวกับกราฟ
+                        let current = new Date(start);
+                        const endDate = new Date(end);
+                        const monthsToFetch = [];
+                        while (current <= endDate) {
+                            const mStr = current.toISOString().slice(0, 7);
+                            if(!monthsToFetch.includes(mStr)) monthsToFetch.push(mStr);
+                            current.setMonth(current.getMonth() + 1);
+                        }
+                        if(!monthsToFetch.includes(endM)) monthsToFetch.push(endM);
+
+                        const promises = monthsToFetch.map(monthId => 
+                            db.collection(monthlyColName)
+                              .doc(`${mc}_${monthId}`)
+                              .collection('materials')
+                              .doc(selectedMat)
+                              .get()
+                        );
+
+                        const snapshots = await Promise.all(promises);
+                        snapshots.forEach(snap => {
+                            if(snap.exists) processGradeDoc(snap.data(), "stats");
+                        });
                     }
+                } 
+                // --- MODE: DAILY ---
+                else {
+                     // ... (Logic เดิมของ Daily) ...
+                     const snapshot = await db.collection(collectionName)
+                        .where('machineId', '==', mc)
+                        .where('date', '>=', start).where('date', '<=', end).get();
 
-                    const rawSnap = await rawQuery.get();
-                    rawSnap.forEach(doc => {
+                     snapshot.forEach(doc => {
+                         const targetKey = (selectedMat === "ALL") ? "stats" : "materialBreakdown";
                          const d = doc.data();
-                         if(!d.data) return;
-                         const pData = d.data[productType] || d.data["Modal"];
-                         if(!pData) return;
-
-                         // Logic นับเกรดแบบ Raw
-                         const gradeKey = Object.keys(pData).find(k => gradeParamNames.some(n => k.toLowerCase().includes(n.toLowerCase())));
-                         const matKey = Object.keys(pData).find(k => k.toLowerCase().includes("material"));
-
-                         if(gradeKey && pData[gradeKey] && matKey && pData[matKey]) {
-                             const gradeArr = pData[gradeKey];
-                             const matArr = pData[matKey];
-                             for(let i=0; i<gradeArr.length; i++) {
-                                 if(String(matArr[i]) === selectedMat) {
-                                     const g = String(gradeArr[i]).toUpperCase();
-                                     if (g.startsWith("E")) gradeCounts.E++;
-                                     else if (g.startsWith("ST")) gradeCounts.ST++;
-                                     else if (g.startsWith("I")) gradeCounts.I++;
-                                     else gradeCounts.O++;
-                                 }
+                         if (selectedMat !== "ALL") {
+                             // เจาะ Breakdown
+                             if (d.materialBreakdown && d.materialBreakdown[selectedMat]) {
+                                 processGradeStats(d.materialBreakdown[selectedMat]);
                              }
+                         } else {
+                             processGradeDoc(d, "stats");
                          }
-                    });
+                     });
                 }
 
-                // Render Result
+                // --- Helper Functions ภายใน (เพื่อลด Code ซ้ำ) ---
+                function processGradeDoc(data, keyName) {
+                    if(data[keyName]) processGradeStats(data[keyName]);
+                }
+                function processGradeStats(statsObj) {
+                    for (const f of gradeFields) {
+                        if (statsObj[f] && statsObj[f].counts) {
+                            const c = statsObj[f].counts;
+                            gradeCounts.E += (c.E || 0);
+                            gradeCounts.ST += (c.ST || 0);
+                            gradeCounts.I += (c.I || 0);
+                            gradeCounts.O += (c.O || 0);
+                            break;
+                        }
+                    }
+                }
+
+                // Render UI (เหมือนเดิม)
                 const total = gradeCounts.E + gradeCounts.ST + gradeCounts.I + gradeCounts.O;
                 ['E', 'ST', 'I', 'O'].forEach(g => {
                     const elPct = document.getElementById(`grade-${g.toLowerCase()}-pct`);
                     const elTon = document.getElementById(`grade-${g.toLowerCase()}-ton`);
                     if (elPct) {
-                        elPct.style.opacity = '0.5';
-                        setTimeout(() => {
-                            elPct.innerText = total > 0 ? ((gradeCounts[g] / total) * 100).toFixed(1) + "%" : "0.0%";
-                            elPct.style.opacity = '1';
-                        }, 100);
+                        const pct = total > 0 ? ((gradeCounts[g] / total) * 100).toFixed(1) : "0.0";
+                        elPct.innerText = `${pct}%`;
+                        // Color Logic
+                        if(g==='E') elPct.className = `text-2xl font-bold ${pct >= 90 ? 'text-emerald-600' : 'text-yellow-600'}`;
                     }
                     if (elTon) elTon.innerText = gradeCounts[g].toLocaleString();
                 });
 
-            } catch (e) {
-                console.warn("Hybrid Grade Fetch Error", e);
-            }
+            } catch (e) { console.error("Grade Error:", e); }
         }
 
         const LOWER_IS_BETTER_KEYWORDS = [
@@ -1623,6 +1687,35 @@
             }
             return results;
         }
+        // =========================================================
+        // [FIXED] MISSING FUNCTION: CORRELATION RENDERER
+        // =========================================================
+        async function renderCorrelation(mc, start, end, mode) {
+            // ฟังก์ชันนี้จะถูกเรียกเมื่อกด Refresh หรือเปลี่ยน Filter
+            // สำหรับ Part 4 เราต้องการแค่ "เตรียมพร้อม" แต่ไม่ควร "Plot กราฟอัตโนมัติ" 
+            // เพราะมันต้องรอ User เลือกตัวแปร X, Y เองก่อน
+
+            // 1. ตรวจสอบว่ามี Instance กราฟเก่าค้างอยู่ไหม ถ้ามีให้ Clear ทิ้ง (กันสับสน)
+            if (chartInstances['trend']) {
+                chartInstances['trend'].destroy();
+                delete chartInstances['trend'];
+            }
+            if (chartInstances['scatter']) {
+                chartInstances['scatter'].destroy();
+                delete chartInstances['scatter'];
+            }
+
+            // 2. Clear ข้อมูล AI Analysis เก่าทิ้ง
+            currentTrendData = null;
+            currentScatterData = null;
+            const aiResultBox = document.getElementById('aiAnalysisResult');
+            if(aiResultBox) aiResultBox.classList.add('hidden');
+
+            // 3. (Optional) อาจจะรีเซ็ต Dropdown ถ้าต้องการ
+            // initCorrelationControls(); // ปกติถูกเรียกใน updateDropdownOptions อยู่แล้ว
+
+            return Promise.resolve(); // ส่ง Promise เปล่ากลับไปเพื่อให้ updateDashboard ทำงานต่อได้ไม่สะดุด
+        }
 
         // =========================================================
         // 8. NEW CORRELATION & AI ROOT CAUSE FINDER (HYBRID: Trend + Scatter)
@@ -1631,6 +1724,7 @@
         // ตัวแปร Global เก็บข้อมูลสำหรับส่งให้ AI (แยก 2 กราฟ)
         let currentTrendData = null;   
         let currentScatterData = null; 
+        let latestAnalysisContext = null;
         let chatHistoryLog = []; 
         let currentAIContext = "";
 
@@ -1674,31 +1768,33 @@
 
         // ฟังก์ชัน Reset (ปุ่ม Reset All)
         function resetSection4() {
-            // 1. Clear Checkboxes
-            document.querySelectorAll('.corr-input-check').forEach(cb => cb.checked = false);
+          // Clear Charts
+          if (chartInstances['trend']) {
+            chartInstances['trend'].destroy();
+            delete chartInstances['trend'];
+          }
+          if (chartInstances['scatter']) {
+            chartInstances['scatter'].destroy();
+            delete chartInstances['scatter'];
+          }
 
-            // 2. Reset Dropdowns (เลือกตัวแรกสุด)
-            const selects = ['corrTrendTarget', 'corrScatterX', 'corrScatterY'];
-            selects.forEach(id => {
-                const el = document.getElementById(id);
-                if(el && el.options.length > 0) el.selectedIndex = 0;
-            });
+          // Clear Data
+          currentTrendData = null;
+          currentScatterData = null;
 
-            // 3. Clear Charts (ล้างกราฟ)
-            if (chartInstances['trend']) {
-                chartInstances['trend'].destroy();
-                delete chartInstances['trend'];
-            }
-            if (chartInstances['scatter']) {
-                chartInstances['scatter'].destroy();
-                delete chartInstances['scatter'];
-            }
+          // ⚠️ ไม่ควร Reset latestAnalysisContext ทันที
+          // เพราะ User อาจต้องการถามต่อใน Chatbot
+          // แต่ควรเคลียร์ UI ของ Part 4
+          const aiBox = document.getElementById('aiAnalysisResult');
+          if (aiBox) aiBox.classList.add('hidden');
 
-            // 4. Clear Data & AI Result
-            currentTrendData = null;
-            currentScatterData = null;
-            document.getElementById('aiAnalysisResult').classList.add('hidden');
-            document.getElementById('aiTextContent').innerHTML = '';
+          // ✅ Reset Checkboxes & Dropdowns
+          document.querySelectorAll('.corr-input-check').forEach(cb => cb.checked = false);
+          const selects = ['corrTrendTarget', 'corrScatterX', 'corrScatterY'];
+          selects.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.options.length > 0) el.selectedIndex = 0;
+          });
         }
 
         // ฟังก์ชันวาดกราฟ Trend (Chart A)
@@ -1724,37 +1820,51 @@
             const targetPromise = fetchProductDataByType(mc, targetParam, start, end, mode);
 
             try {
-                const [targetData, ...inputsData] = await Promise.all([targetPromise, ...inputPromises]);
+                const [targetDataRaw, ...inputsDataRaw] = await Promise.all([targetPromise, ...inputPromises]);
 
-                // 4. Prepare Datasets
-                const datasets = [];
+                // 1. Clean Target (Product) -> สร้าง "Master Timeline" ที่มีข้อมูลจริง
+                const cleanTarget = compressDataOnly(targetDataRaw.labels, targetDataRaw.data);
+                const validTimestamps = cleanTarget.labels; // รายชื่อวัน/เวลา ที่มี Product จริงๆ
 
-                // Target (Output) - แกนขวา - สีแดง
-                datasets.push({
-                    label: `TARGET: ${targetParam}`,
-                    data: targetData.data,
-                    borderColor: '#dc2626', backgroundColor: '#dc2626',
-                    yAxisID: 'yRight', type: 'line', borderWidth: 3, pointRadius: 0, tension: 0.4, fill: false
+                // 2. Map Inputs (Process) -> ดึงเฉพาะค่า ณ วัน/เวลา ที่ตรงกับ Product
+                // สร้าง Map เพื่อให้ค้นหาข้อมูล Process ตามเวลาได้เร็วๆ
+                const inputsSynced = inputsDataRaw.map(rawProc => {
+                    const procMap = new Map();
+                    rawProc.labels.forEach((t, i) => procMap.set(t, rawProc.data[i]));
+
+                    // ดึงค่า Process ตาม Timestamps ของ Product เท่านั้น
+                    const syncedData = validTimestamps.map(t => procMap.has(t) ? procMap.get(t) : null);
+                    return { data: syncedData };
                 });
 
-                // Inputs (Process) - แกนซ้าย - เส้นประหลากสี
+                // 4. Prepare Datasets (ใช้ cleanTarget และ inputsSynced)
+                const datasets = [];
+
+                // Target (Output) - ใช้ข้อมูลที่ Clean แล้ว
+                datasets.push({
+                    label: `TARGET: ${targetParam}`,
+                    data: cleanTarget.data, // ใช้ data ที่ตัดว่างแล้ว
+                    borderColor: '#dc2626', backgroundColor: '#dc2626',
+                    yAxisID: 'yRight', type: 'line', borderWidth: 3, pointRadius: 3, tension: 0.4, fill: false
+                });
+
+                // Inputs (Process) - ใช้ข้อมูลที่ Sync แล้ว
                 const colors = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777'];
-                inputsData.forEach((result, index) => {
+                inputsSynced.forEach((result, index) => {
                     datasets.push({
                         label: selectedInputs[index],
-                        data: result.data,
+                        data: result.data, // ใช้ data ที่ Sync แล้ว
                         borderColor: colors[index % colors.length], backgroundColor: colors[index % colors.length],
-                        yAxisID: 'yLeft', type: 'line', borderWidth: 1.5, borderDash: [5, 5], pointRadius: 0, tension: 0.3, fill: false
+                        yAxisID: 'yLeft', type: 'line', borderWidth: 1.5, borderDash: [5, 5], pointRadius: 3, tension: 0.3, fill: false
                     });
                 });
 
-                // 5. Render Chart
+                // 5. Render Chart (อย่าลืมแก้ labels เป็น cleanTarget.labels)
                 const ctx = document.getElementById('chartTrend').getContext('2d');
                 if (chartInstances['trend']) chartInstances['trend'].destroy();
-
                 chartInstances['trend'] = new Chart(ctx, {
                     type: 'line',
-                    data: { labels: targetData.labels, datasets: datasets },
+                    data: { labels: cleanTarget.labels, datasets: datasets }, // ใช้ Labels ที่ตัดว่างแล้ว
                     options: {
                         responsive: true, maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
@@ -1766,12 +1876,12 @@
                     }
                 });
 
-                // Save for AI
+                // Save for AI (อัปเดตให้ส่งข้อมูลที่ Clean แล้วไปให้ AI)
                 currentTrendData = {
                     targetName: targetParam,
-                    targetData: targetData.data,
-                    labels: targetData.labels,
-                    inputs: inputsData.map((d, i) => ({ name: selectedInputs[i], data: d.data }))
+                    targetData: cleanTarget.data,
+                    labels: cleanTarget.labels,
+                    inputs: inputsSynced.map((d, i) => ({ name: selectedInputs[i], data: d.data }))
                 };
 
             } catch (error) { console.error("Trend Chart Error:", error); }
@@ -1851,7 +1961,7 @@
             let trendPayload = null;
             if (currentTrendData) {
                 const len = currentTrendData.labels.length;
-                const startIdx = Math.max(0, len - 20); // เอา 20 จุดล่าสุด
+                const startIdx = 0;
 
                 const simplifiedData = [];
                 for (let i = startIdx; i < len; i++) {
@@ -1879,7 +1989,7 @@
             // 2. Prepare Scatter Payload
             let scatterPayload = null;
             if (currentScatterData) {
-                const points = currentScatterData.points.slice(0, 50).map(p => ({
+                    const points = currentScatterData.points.map(p => ({
                     x: Number(p.x.toFixed(2)),
                     y: Number(p.y.toFixed(2))
                 }));
@@ -1903,6 +2013,17 @@
                 });
 
                 const aiText = result.data.analysis;
+                latestAnalysisContext = {
+                    analysisResult: aiText,
+                    parameters: {
+                        target: document.getElementById('corrTrendTarget').value,
+                        inputs: trendPayload ? trendPayload.inputs : []
+                    },
+                    trendSnapshot: trendPayload,
+                    scatterSnapshot: scatterPayload,
+                    analyzedAt: new Date().toISOString()
+                };
+                console.log("✅ Analysis Context Saved for Chatbot:", latestAnalysisContext);
                 // 1. เก็บ Context และเริ่ม History ใหม่สำหรับ KM
                 currentAIContext = document.getElementById('mcFilter').value; 
                 chatHistoryLog = []; 
@@ -1911,7 +2032,24 @@
                 chatHistoryLog.push({ role: "ai", content: aiText });
 
                 // เพิ่มคำแนะนำท้ายข้อความ ให้ User รู้ว่า Save ได้
-                const hintMessage = `<br><br><span class="text-xs text-slate-400 italic bg-slate-50 px-2 py-1 rounded border border-slate-200"><i class="fas fa-lightbulb text-yellow-500 mr-1"></i>พิมพ์ <b>"save"</b> หรือ <b>"บันทึก"</b> ในช่องแชทมุมขวาล่าง เพื่อเก็บเคสนี้เป็นความรู้ใหม่ (KM)</span>`;
+                const hintMessage = `
+                  <div class="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+                    <div class="flex items-center gap-2 text-indigo-700 font-bold text-sm mb-2">
+                      <i class="fas fa-lightbulb"></i>
+                      <span>💡 Quick Actions</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                      <button onclick="translateToEnglish()" 
+                              class="bg-white border border-indigo-300 rounded px-3 py-2 hover:bg-indigo-50 transition">
+                        🌍 Translate to English
+                      </button>
+                      <button onclick="openChatWithContext()" 
+                              class="bg-white border border-purple-300 rounded px-3 py-2 hover:bg-purple-50 transition">
+                        💬 Ask Follow-up Questions
+                      </button>
+                    </div>
+                  </div>
+                `;
                 
                 content.innerHTML = aiText
                 .replace(/\n/g, '<br>')
@@ -1929,7 +2067,10 @@
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
-            const pointRadius = (mode === 'hourly' && dataPoints.length > 50) ? 0 : 2;
+            // ตรวจสอบ: ถ้ามีจุดเดียว ให้บังคับโชว์จุดใหญ่หน่อย
+            const isSinglePoint = dataPoints.length === 1;
+            const pointRadius = (mode === 'hourly' && dataPoints.length > 50) ? 0 : (isSinglePoint ? 6 : 3); // ขยายจุดถ้ามีจุดเดียว
+
             chartInstances[canvasId] = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1938,10 +2079,10 @@
                         label: label,
                         data: dataPoints,
                         borderColor: color,
-                        backgroundColor: color + '10',
-                        borderWidth: 1.5,
-                        pointRadius: pointRadius,
-                        pointHoverRadius: 4,
+                        backgroundColor: color + '20', // จางลงหน่อย
+                        borderWidth: 2,
+                        pointRadius: pointRadius,      // ใช้ค่าที่คำนวณใหม่
+                        pointHoverRadius: 6,
                         fill: true,
                         tension: 0.3
                     }]
@@ -1952,7 +2093,12 @@
                     interaction: { mode: 'index', intersect: false },
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { display: true, ticks: { maxTicksLimit: 6 } },
+                        x: { 
+                            display: true, 
+                            ticks: { maxTicksLimit: 6 },
+                            // ✅ [สำคัญ] เพิ่มบรรทัดนี้: จัดให้จุดอยู่ตรงกลาง ถ้ามีจุดเดียวมันจะไม่ชิดขอบ
+                            offset: true 
+                        },
                         y: { display: true }
                     }
                 }
@@ -1963,50 +2109,124 @@
         // =========================================================
         function toggleChat() { document.getElementById('chatWindow').classList.toggle('hidden'); }
         function handleEnter(e) { if(e.key === 'Enter') sendChatMessage(); }
+
         async function sendChatMessage() {
+            // ✅ [แก้ไขจุดที่ 1] ประกาศตัวแปร input เป็นสิ่งแรกสุด เพื่อป้องกัน Error
             const input = document.getElementById('chatInput');
-            const msg = input.value;
-            if(!msg) return;
             const container = document.getElementById('chatMessages');
-            container.innerHTML += `<div class="flex justify-end"><div class="chat-bubble-user p-3 shadow-sm max-w-[90%] text-white bg-indigo-600 rounded-l-xl rounded-br-xl">${msg}</div></div>`;
-            input.value = '';
-            // 1. เก็บ History ฝั่ง User
-            chatHistoryLog.push({ role: "user", content: msg });
 
-            // 2. ดักจับคำสั่ง SAVE (รองรับทั้ง "save" และ "บันทึก")
-            if (msg.toLowerCase() === "save" || msg.toLowerCase() === "บันทึก") {
-                container.innerHTML += `<div id="km-saving" class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-orange-50 text-orange-600 border border-orange-200"><i class="fas fa-save fa-spin mr-2"></i> กำลังบันทึก Case นี้เป็นความรู้ใหม่...</div></div>`;
+            // ถ้าหา input ไม่เจอ ให้หยุดทำงาน (กัน Error)
+            if (!input) return;
+
+            const msg = input.value.trim();
+            if (!msg) return;
+
+                const systemCommands = [
+                    "Yes, please translate.",
+                    "ช่วยแปลผลวิเคราะห์ด้านบนเป็นภาษาอังกฤษให้หน่อยครับ (Translate analysis to English)"
+                ];
+
+                //  🧠  Smart Detection (Logic ตรวจจับคำว่า แปล)
+                //  เพิ่มเงื่อนไข !systemCommands.includes(msg) เพื่อบอกว่า "ถ้าเป็นคำสั่งยืนยัน ให้ข้ามการดักจับไปเลย"
+                if (latestAnalysisContext &&
+                    !systemCommands.includes(msg) &&  // <--- เพิ่มบรรทัดนี้ครับ
+                    (msg.includes('แปล') || msg.includes('translate') ||
+                    msg.includes('อังกฤษ') || msg.includes('english'))) {
+
+                // แสดงการ์ดพิเศษ
+            container.innerHTML += `
+                <div class="chat-bubble-ai p-4 bg-blue-50 border-2 border-blue-200">
+                    <div class="font-bold text-blue-800 mb-2">
+                        🔗  Detected: Translation Request from Part 4
+                    </div>
+                    <button onclick="confirmTranslation()"
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        ✅  Yes, translate the analysis above
+                    </button>
+                    <button onclick="askNormalQuestion('${msg}')"
+                        class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 ml-2">
+                        ❌  No, I'm asking something else
+                    </button>
+                </div>
+                `;
+                input.value = ''; 
                 container.scrollTop = container.scrollHeight;
-
-                try {
-                    const saveKM = functions.httpsCallable('saveIncidentFromChat');
-                    const res = await saveKM({ history: chatHistoryLog, context: currentAIContext });
-
-                    document.getElementById("km-saving").remove();
-                    container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-green-50 text-green-700 border border-green-200"><i class="fas fa-check-circle mr-2"></i> ${res.data.message}</div></div>`;
-                } catch (err) {
-                    if(document.getElementById("km-saving")) document.getElementById("km-saving").remove();
-                    container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-red-50 text-red-600">Save Failed: ${err.message}</div></div>`;
-                }
-                container.scrollTop = container.scrollHeight;
-                return; // จบการทำงาน ไม่ส่งไปหา Chatbot ปกติ
+                return;
             }
-            container.innerHTML += `<div id="ai-loading" class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-white text-slate-500 rounded-r-xl rounded-bl-xl"><i class="fas fa-circle-notch fa-spin"></i> Thinking...</div></div>`;
+
+            // 2. แสดงข้อความ User
+            container.innerHTML += `<div class="flex justify-end"><div class="chat-bubble-user p-3 shadow-sm text-white rounded-l-xl rounded-br-xl">${msg}</div></div>`;
+            input.value = '';
             container.scrollTop = container.scrollHeight;
+
+            // 3. แสดง Loading
+            const loadingId = "ai-loading-" + Date.now();
+            container.innerHTML += `<div id="${loadingId}" class="flex justify-start"><div class="chat-bubble-ai p-3 bg-gray-100 text-gray-500 rounded-r-xl rounded-bl-xl"><i class="fas fa-spinner fa-spin"></i> กำลังวิเคราะห์ข้อมูล...</div></div>`;
+            container.scrollTop = container.scrollHeight;
+
+            // ดักจับคำสั่ง SAVE
+            if (msg.toLowerCase() === "save" || msg.toLowerCase() === "บันทึก") {
+                 document.getElementById(loadingId).remove();
+                 container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 bg-yellow-50 text-yellow-700">ฟังก์ชันบันทึกยังไม่ถูกเปิดใช้งานครับ</div></div>`;
+                 return;
+            }
 
             try {
+                // 4. เตรียมข้อมูล Context
+                const currentMachineUI = document.getElementById('mcFilter')?.value || "ALL";
+
+                // เรียก Cloud Function (ชื่อฟังก์ชันต้องตรงกับ Backend)
                 const askAI = functions.httpsCallable('askProductChat');
-                const result = await askAI({ question: msg });
-                document.getElementById("ai-loading").remove();
-                let reply = result.data.text.replace(/\n/g, '<br>');
-                chatHistoryLog.push({ role: "ai", content: result.data.text });
-                container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-white text-slate-800 rounded-r-xl rounded-bl-xl border border-slate-200">${reply}</div></div>`;
+
+                // 5. ส่งข้อมูล
+                const response = await askAI({
+                    question: msg,
+                    history: chatHistoryLog,
+                    // ส่งผลวิเคราะห์จาก Part 4 ไปให้แชทอ่านด้วย
+                    analysisContext: latestAnalysisContext, 
+                    uiContext: {
+                        machine: currentMachineUI,
+                        timestamp: new Date().toISOString()
+                    }
+                });
+
+                // 6. แสดงผลลัพธ์
+                const loadingEl = document.getElementById(loadingId);
+                if(loadingEl) loadingEl.remove();
+
+                const reply = response.data.text; 
+
+                // แปลง Markdown เป็น HTML
+                const formattedReply = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
+                container.innerHTML += `
+                <div class="flex justify-start mb-3">
+                    <div class="chat-bubble-ai p-3 shadow-sm bg-white text-slate-800 rounded-r-xl rounded-bl-xl border border-slate-200 text-sm leading-relaxed max-w-[85%]">
+                        <div>${formattedReply}</div>
+                        <div class="mt-2 pt-2 border-t border-slate-100 flex justify-end">
+                            <button onclick="saveThisChatToKM('${loadingId}')" 
+                                    id="btn-save-${loadingId}"
+                                    class="text-[10px] bg-slate-50 border border-slate-300 text-slate-600 px-2 py-1 rounded hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all">
+                                <i class="fas fa-save mr-1"></i> บันทึกเข้า Knowledge Base
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+                // 7. อัปเดตประวัติการคุย
+                chatHistoryLog.push({ role: "user", content: msg });
+                chatHistoryLog.push({ role: "model", content: reply });
+
             } catch (error) {
-                if(document.getElementById("ai-loading")) document.getElementById("ai-loading").remove();
-                container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-red-50 text-red-600">Error: ${error.message}</div></div>`;
+                const loadingEl = document.getElementById(loadingId);
+                if(loadingEl) loadingEl.remove();
+
+                container.innerHTML += `<div class="flex justify-start"><div class="chat-bubble-ai p-3 shadow-sm bg-red-50 text-red-600 text-xs">Error: ${error.message}<br>(Check Console for details)</div></div>`;
+                console.error("Chat Error:", error);
             }
+
             container.scrollTop = container.scrollHeight;
         }
+
         function updateMaterialDropdownUI() {
             const select = document.getElementById('materialFilter');
             if(!select) return;
@@ -2029,6 +2249,83 @@
                 select.value = currentVal;
             } else {
                 select.value = "ALL";
+            }
+        }
+
+        // =========================================================
+        // HELPER FUNCTIONS FOR CHAT & AI ACTIONS
+        // =========================================================
+
+        // 1. ฟังก์ชันสำหรับปุ่ม "Translate to English" ในกล่อง AI Result
+        function translateToEnglish() {
+            const input = document.getElementById('chatInput');
+            // เปิด Chat Window ก่อน
+            document.getElementById('chatWindow').classList.remove('hidden');
+            // ใส่ข้อความและส่งทันที
+            input.value = "ช่วยแปลผลวิเคราะห์ด้านบนเป็นภาษาอังกฤษให้หน่อยครับ (Translate analysis to English)";
+            sendChatMessage();
+        }
+
+        // 2. ฟังก์ชันสำหรับปุ่ม "Ask Follow-up Questions"
+        function openChatWithContext() {
+            document.getElementById('chatWindow').classList.remove('hidden');
+            const input = document.getElementById('chatInput');
+            input.focus();
+            input.placeholder = "ถามต่อจากผลวิเคราะห์ได้เลยครับ...";
+        }
+
+        // 3. ฟังก์ชันยืนยันการแปล (ใน Chat Bubble ที่ AI เสนอ)
+        function confirmTranslation() {
+            const input = document.getElementById('chatInput');
+            input.value = "Yes, please translate.";
+            sendChatMessage();
+            // ลบการ์ดถามทิ้ง (Optional: เพื่อความสะอาด)
+            const chatContainer = document.getElementById('chatMessages');
+            const lastMsg = chatContainer.lastElementChild;
+            if(lastMsg) lastMsg.remove(); 
+        }
+
+        // 4. ฟังก์ชันปฏิเสธการแปล (พิมพ์คำถามอื่นแทน)
+        function askNormalQuestion(originalMsg) {
+             const input = document.getElementById('chatInput');
+             // เอาข้อความเดิมที่ User พิมพ์กลับมาใส่ใน Input ให้เขาแก้
+             input.value = originalMsg; 
+             input.focus();
+             // ลบการ์ดถามทิ้ง
+             const chatContainer = document.getElementById('chatMessages');
+             const lastMsg = chatContainer.lastElementChild;
+             if(lastMsg) lastMsg.remove();
+        }
+
+        async function saveThisChatToKM(id) {
+            const btn = document.getElementById(`btn-save-${id}`);
+            const originalText = btn.innerHTML;
+
+            if(!confirm("คุณต้องการบันทึกบทสนทนานี้เป็นความรู้ใหม่ (KM) ใช่หรือไม่?")) return;
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+
+                // ใช้ตัวแปร functions (asia-southeast1)
+                const saveKM = functions.httpsCallable('saveIncidentFromChat'); 
+
+                const result = await saveKM({
+                    history: chatHistoryLog, 
+                    context: document.getElementById('mcFilter')?.value || "ALL",
+                    aiAnalysis: latestAnalysisContext // ส่ง Context ของ AI ไปด้วยถ้ามี
+                });
+
+                if (result.data.success) {
+                    btn.className = "text-[10px] bg-emerald-500 text-white px-2 py-1 rounded pointer-events-none";
+                    btn.innerHTML = '<i class="fas fa-check"></i> บันทึกสำเร็จ (Saved to KM)';
+                }
+            } catch (error) {
+                console.error("Save KM Error:", error);
+                alert("บันทึกไม่สำเร็จ: " + error.message);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.className = "text-[10px] bg-red-50 border border-red-300 text-red-600 px-2 py-1 rounded hover:bg-red-600 hover:text-white transition-all";
             }
         }
     </script>

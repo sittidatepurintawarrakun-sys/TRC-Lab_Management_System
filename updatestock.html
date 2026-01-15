@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initial Stock Setup (One-time use)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // รายชื่อ Brand ที่มีในระบบ (ตรงกับใน Dropdown)
+        const brands = [
+            // ARAUCO
+            { id: "ARAUCO FSC Mix Credit", name: "ARAUCO FSC Mix Credit" },
+            { id: "ARAUCO FSC Control Wood", name: "ARAUCO FSC Control Wood" },
+            { id: "ARAUCO PEFC", name: "ARAUCO PEFC" },
+
+            // AVN
+            { id: "AVN FSC Mix Credit", name: "AVN FSC Mix Credit" },
+            { id: "AVN FSC Control Wood", name: "AVN FSC Control Wood" },
+            { id: "AVN PEFC", name: "AVN PEFC" },
+
+            // AVC
+            { id: "AVC FSC Mix Credit", name: "AVC FSC Mix Credit" },
+            { id: "AVC FSC Control Wood", name: "AVC FSC Control Wood" },
+            { id: "AVC PEFC", name: "AVC PEFC" },
+
+            // PHOENIX
+            { id: "PHOENIX Mix Credit", name: "PHOENIX Mix Credit" },
+            { id: "PHOENIX Control Wood", name: "PHOENIX Control Wood" },
+            { id: "PHOENIX PEFC", name: "PHOENIX PEFC" },
+
+            // SAICCOR
+            { id: "SAICCOR FSC Mix Credit 70%", name: "SAICCOR FSC Mix Credit 70%" }
+        ];
+
+        // สร้าง Input อัตโนมัติเมื่อโหลดหน้าเว็บ
+        window.initForm = () => {
+            const container = document.getElementById('stockInputs');
+            let html = "";
+
+            brands.forEach(b => {
+                // สร้างช่องกรอกสำหรับ Normal Grade
+                html += `
+                <div class="grid grid-cols-12 gap-4 items-center mb-2 bg-gray-50 p-2 rounded border">
+                    <div class="col-span-5 text-sm font-bold text-gray-700">${b.name}</div>
+                    <div class="col-span-3 text-xs text-green-600 font-bold bg-green-100 px-2 py-1 rounded w-fit">NORMAL</div>
+                    <div class="col-span-4">
+                        <input type="number" id="${b.id}__NORMAL" step="0.001" placeholder="0.000" class="w-full border rounded p-1 text-right font-mono text-blue-800 font-bold">
+                    </div>
+                </div>`;
+
+                // สร้างช่องกรอกสำหรับ Off Grade
+                html += `
+                <div class="grid grid-cols-12 gap-4 items-center mb-4 p-2 border-b">
+                    <div class="col-span-5 text-sm text-gray-500 pl-4">↳ (Off Grade)</div>
+                    <div class="col-span-3 text-xs text-red-600 font-bold bg-red-100 px-2 py-1 rounded w-fit">OFF GRADE</div>
+                    <div class="col-span-4">
+                        <input type="number" id="${b.id}__OFF" step="0.001" placeholder="0.000" class="w-full border rounded p-1 text-right font-mono text-red-800">
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        };
+
+        window.saveInitialStock = async () => {
+            if(!confirm("⚠️ ยืนยันการตั้งค่ายอดยกมา?\nค่าเก่าในระบบ (ถ้ามี) จะถูกทับด้วยค่าใหม่นี้ทันที")) return;
+
+            const inputs = document.querySelectorAll('input[type="number"]');
+            const btn = document.getElementById('btnSave');
+            btn.disabled = true;
+            btn.innerText = "⏳ Saving...";
+
+            let count = 0;
+            try {
+                const promises = [];
+                inputs.forEach(input => {
+                    const val = parseFloat(input.value);
+                    if (val > 0) { // บันทึกเฉพาะช่องที่มีค่ามากกว่า 0
+                        const docId = input.id; // ID คือ "BRAND__GRADE"
+                        const docRef = doc(db, "store_inventory_balance", docId);
+
+                        // ใช้ setDoc เพื่อเขียนทับ Balance ไปเลย โดยไม่สร้าง Log Transaction
+                        promises.push(setDoc(docRef, { balance: val }, { merge: true }));
+                        count++;
+                    }
+                });
+
+                await Promise.all(promises);
+                alert(`✅ บันทึกยอดยกมาสำเร็จ ${count} รายการ!`);
+
+            } catch (error) {
+                console.error(error);
+                alert("❌ Error: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "💾 บันทึกยอดยกมา (Save Initial Stock)";
+            }
+        };
+
+        window.onload = initForm;
+    </script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
+            <h1 class="text-xl font-bold">⚙️ ตั้งค่ายอดยกมา (Initial Stock Setup)</h1>
+            <span class="text-xs bg-indigo-500 px-2 py-1 rounded">Admin Tool</span>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 text-sm text-yellow-800">
+                <strong>คำแนะนำ:</strong> กรอกเฉพาะรายการที่มีสต็อกคงเหลืออยู่จริง (ไม่ต้องกรอกทุกช่อง) <br>
+                ระบบจะบันทึกยอดนี้เป็น <strong>"ยอดคงเหลือปัจจุบัน"</strong> ทันที โดยไม่สร้าง Transaction Log
+            </div>
+
+            <div id="stockInputs" class="mb-6 max-h-[60vh] overflow-y-auto pr-2">
+                </div>
+
+            <button id="btnSave" onclick="saveInitialStock()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-lg text-lg transition">
+                💾 บันทึกยอดยกมา (Save Initial Stock)
+            </button>
+        </div>
+    </div>
+</body>
+</html>
