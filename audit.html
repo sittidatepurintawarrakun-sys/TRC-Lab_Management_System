@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Audit Assistant (Secured)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // --- ตั้งค่า Firebase ---
+        // TODO: ใส่ค่า Config ของคุณที่นี่
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        // รายชื่อ Admin ตาม Rules ที่ให้มา
+        const ADMIN_EMAILS = [
+            'sittidate.p@adityabirla.com',
+            'trc-qcl.laboratory@adityabirla.com',
+            'laboratory.trc@adityabirla.com',
+            'waraporn.jindanath@adityabirla.com',
+            'datejub@hotmail.com' 
+        ];
+
+        let db, auth;
+        let currentUser = null;
+        let isAdmin = false;
+
+        // Initialize Firebase
+        if (firebaseConfig.apiKey) {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Listener ตรวจสอบสถานะ Login
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    isAdmin = ADMIN_EMAILS.includes(user.email);
+                    window.updateUIForUser(user, isAdmin);
+                } else {
+                    currentUser = null;
+                    isAdmin = false;
+                    window.showLoginScreen();
+                }
+            });
+        } else {
+            console.log("Offline Mode: Firebase Config missing");
+        }
+
+        // Expose Functions to Window
+        window.handleLogin = async (email, password) => {
+            if (!auth) { alert("กรุณาใส่ Firebase Config ในโค้ดก่อนครับ"); return; }
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged จะทำงานต่อเอง
+            } catch (error) {
+                console.error(error);
+                alert("Login Failed: " + error.message);
+            }
+        };
+
+        window.handleLogout = async () => {
+            if (auth) await signOut(auth);
+            window.location.reload();
+        };
+
+        // ฟังก์ชันบันทึกข้อมูล (จะเช็คสิทธิ์จาก Rules ใน Backend อัตโนมัติ)
+        window.saveFindingToFirebase = async (data) => {
+            if (db && currentUser) {
+                try {
+                    // ตัวอย่าง: บันทึกลง non_conformance_records หรือ audit_findings
+                    await addDoc(collection(db, 'non_conformance_records'), {
+                        ...data,
+                        recordedBy: currentUser.email,
+                        recordedUid: currentUser.uid,
+                        timestamp: serverTimestamp()
+                    });
+                    console.log("Saved to Firestore successfully");
+                    return true;
+                } catch (e) {
+                    console.error("Error saving:", e);
+                    alert("บันทึกไม่สำเร็จ: คุณอาจไม่มีสิทธิ์ (Permission Denied)");
+                    return false;
+                }
+            }
+        };
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Glass Effect for Login */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <!-- App Container -->
+    <div id="app" class="max-w-5xl mx-auto p-4 md:p-6 pb-24 relative">
+
+        <!-- User Profile Badge (Top Right) -->
+        <div id="user-badge" class="hidden absolute top-4 right-4 z-50 flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-md border border-slate-200">
+            <div class="flex flex-col text-right leading-tight">
+                <span id="user-email" class="text-xs font-bold text-slate-700">user@example.com</span>
+                <span id="user-role" class="text-[10px] text-slate-500">Auditor</span>
+            </div>
+            <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 transition">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+
+        <!-- STEP 1: Login Screen -->
+        <div id="login-screen" class="flex flex-col items-center justify-center min-h-[90vh] fade-in">
+            <div class="glass-panel p-8 rounded-2xl shadow-xl max-w-sm w-full border border-white/50 relative overflow-hidden">
+                <!-- Decoration -->
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+
+                <div class="text-center mb-8">
+                    <div class="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
+                        <i class="fas fa-fingerprint text-3xl text-blue-600"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-800">Smart Audit</h1>
+                    <p class="text-slate-500 text-sm">เข้าสู่ระบบเพื่อเริ่มการตรวจประเมิน</p>
+                </div>
+
+                <form onsubmit="event.preventDefault(); submitLogin();" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1 ml-1">EMAIL</label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="email" id="email-input" required 
+                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition focus:bg-white"
+                                placeholder="name@adityabirla.com">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1 ml-1">PASSWORD</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="password" id="password-input" required 
+                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition focus:bg-white"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-4">
+                        เข้าสู่ระบบ <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="mt-6 pt-4 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-400">
+                        *สำหรับทดสอบ: ระบบจะตรวจสอบสิทธิ์ Admin ตามรายชื่อที่กำหนด
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Department Selection (Hidden) -->
+        <div id="select-screen" class="hidden fade-in pt-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
+                <i class="fas fa-layer-group text-blue-600"></i> เลือกพื้นที่เข้าตรวจ (Scope)
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="dept-grid">
+                <!-- Cards will be injected by JS -->
+            </div>
+        </div>
+
+        <!-- STEP 3: Loading (Hidden) -->
+        <div id="loading-screen" class="hidden flex-col items-center justify-center min-h-[60vh] fade-in">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-6"></div>
+            <h3 class="text-xl font-semibold text-slate-700">กำลังประมวลผล...</h3>
+            <p class="text-slate-500 mt-2 text-sm">จำลองการดึงข้อมูลความเสี่ยงและสร้าง Checklist</p>
+        </div>
+
+        <!-- STEP 4: Audit Interface (Hidden) -->
+        <div id="audit-screen" class="hidden fade-in pt-6">
+            <!-- Header -->
+            <div class="bg-white p-6 rounded-2xl mb-8 shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl" id="dept-icon">🏭</div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800" id="audit-title">Audit Room</h2>
+                        <p class="text-slate-500 text-sm">Checklist generated from Risk Assessment</p>
+                    </div>
+                </div>
+                <button onclick="resetApp()" class="px-4 py-2 text-slate-500 hover:text-slate-800 text-sm font-medium bg-slate-50 rounded-lg hover:bg-slate-100 transition">
+                    <i class="fas fa-arrow-left mr-1"></i> เปลี่ยนแผนก
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Checklist Column -->
+                <div class="lg:col-span-2 space-y-6" id="checklist-container">
+                    <!-- Questions will be injected here -->
+                </div>
+
+                <!-- Copilot Column -->
+                <div class="lg:col-span-1">
+                    <div class="sticky top-6 bg-white rounded-xl shadow-lg border border-slate-200 p-4 h-[calc(100vh-100px)] flex flex-col">
+                        <div class="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+                            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <h3 class="font-bold text-slate-800">AI Assistant (Backend)</h3>
+                        </div>
+
+                        <!-- Chat History -->
+                        <div id="chat-history" class="flex-1 overflow-y-auto space-y-3 mb-4 pr-2 custom-scrollbar p-2 bg-slate-50 rounded">
+                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 text-sm text-blue-800 shadow-sm">
+                                <i class="fas fa-robot mr-1"></i> ระบบเชื่อมต่อ Backend จำลองเรียบร้อยครับ <br>
+                                คุณสามารถถามคำถามหรือขอคำแนะนำเกี่ยวกับมาตรฐานได้เลย
+                            </div>
+                        </div>
+
+                        <!-- Chat Input -->
+                        <div class="relative">
+                            <input type="text" id="chat-input"
+                                placeholder="ถาม AI... (เช่น 'เจอถังสีวางอยู่ ผิดไหม?')"
+                                class="w-full border border-slate-300 rounded-full py-2 px-4 pr-10 text-sm focus:outline-none focus:border-blue-500 shadow-sm"
+                                onkeypress="handleChatEnter(event)">
+                            <button onclick="sendMessage()" class="absolute right-2 top-2 text-blue-600 hover:text-blue-800 p-1">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // --- MOCK DATA (ใช้แทน AI ชั่วคราว) ---
+        let CURRENT_DEPT = "";
+
+        const DEPARTMENT_CONTEXT = {
+            "Maintenance": {
+                icon: "🔧",
+                riskLevel: "High",
+                color: "orange",
+                lastIssues: ["PM Record ไม่ตรงตามแผน", "พบน้ำมันรั่วไหล"],
+                kpiStatus: "Downtime เพิ่ม 5%",
+                standards: ["ISO 45001", "ISO 14001", "ISO 9001"],
+                // Mock Checklist สำหรับ Demo
+                mockChecklist: [
+                    { id: 1, question: "ตรวจสอบบันทึกการซ่อมบำรุง (PM) เครื่อง Mixer #3 ว่าตรงตามแผนหรือไม่?", requirement: "ISO 9001 Cl. 7.1.3", risk: "High", guidance: "ขอดูใบ Job Order เดือนล่าสุด เทียบกับ Master Plan" },
+                    { id: 2, question: "พื้นที่เก็บสารเคมี/น้ำมันหล่อลื่น มีถาดรอง (Secondary Containment) หรือไม่?", requirement: "ISO 14001 Cl. 8.1", risk: "High", guidance: "ตรวจสอบสภาพถาดรอง ต้องไม่มีรอยแตก และไม่มีคราบน้ำมันขัง" },
+                    { id: 3, question: "พนักงานสวมใส่อุปกรณ์ PPE ครบถ้วนขณะปฏิบัติงานซ่อมหรือไม่?", requirement: "ISO 45001 Cl. 8.1.2", risk: "Medium", guidance: "สังเกตการปฏิบัติงานจริง หน้างาน" }
+                ]
+            },
+            "Production-Food": {
+                icon: "🏭",
+                riskLevel: "Critical",
+                color: "red",
+                lastIssues: ["พนักงานไม่สวมหมวกคลุมผม", "เอกสาร CCP ย้อนหลัง"],
+                kpiStatus: "Customer Complaint 2 เคส",
+                standards: ["GMP", "HACCP", "Halal", "ISO 22000"],
+                mockChecklist: [
+                    { id: 1, question: "จุด CCP Metal Detector มีการทดสอบ Test Piece ครบทุกชั่วโมงหรือไม่?", requirement: "HACCP / ISO 22000", risk: "Critical", guidance: "สุ่มตรวจบันทึกย้อนหลัง 24 ชม. และสังเกตการทำจริง" },
+                    { id: 2, question: "พนักงานล้างมือและสวมหมวกคลุมผมถูกต้องก่อนเข้าไลน์ผลิตหรือไม่?", requirement: "GMP / Hygiene", risk: "High", guidance: "สังเกตจุดล้างมือก่อนเข้าไลน์" }
+                ]
+            },
+            "Warehouse": {
+                icon: "📦",
+                riskLevel: "Medium",
+                color: "green",
+                lastIssues: ["ไม้พาเลทปนกัน (FSC/Non-FSC)"],
+                kpiStatus: "Stock Accuracy 98%",
+                standards: ["FSC", "PEFC", "ISO 9001"],
+                mockChecklist: [
+                    { id: 1, question: "มีการแยกป้ายชี้บ่งชัดเจนระหว่างไม้ FSC และ Non-FSC หรือไม่?", requirement: "FSC-STD-40-004", risk: "Medium", guidance: "เดินสำรวจพื้นที่จัดเก็บไม้พาเลท" },
+                    { id: 2, question: "สุ่มนับสต็อกจริงเทียบกับในระบบ SAP ว่าตรงกันหรือไม่?", requirement: "ISO 9001 Cl. 8.5.1", risk: "Medium", guidance: "สุ่ม 3 รายการสินค้า" }
+                ]
+            }
+        };
+
+        // --- AUTH & NAVIGATION ---
+
+        function submitLogin() {
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            window.handleLogin(email, password);
+        }
+
+        // Called by Firebase Listener
+        window.showLoginScreen = () => {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('select-screen').classList.add('hidden');
+            document.getElementById('user-badge').classList.add('hidden');
+            document.getElementById('audit-screen').classList.add('hidden');
+        };
+
+        window.updateUIForUser = (user, isAdmin) => {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('select-screen').classList.remove('hidden');
+
+            // Show User Badge
+            const userBadge = document.getElementById('user-badge');
+            userBadge.classList.remove('hidden');
+            document.getElementById('user-email').innerText = user.email;
+            document.getElementById('user-role').innerText = isAdmin ? "Lead Auditor (Admin)" : "Internal Auditor";
+            document.getElementById('user-role').className = isAdmin ? "text-[10px] text-blue-600 font-bold" : "text-[10px] text-slate-500";
+
+            renderDeptSelection();
+        };
+
+        function resetApp() {
+            document.getElementById('audit-screen').classList.add('hidden');
+            document.getElementById('select-screen').classList.remove('hidden');
+            document.getElementById('checklist-container').innerHTML = '';
+        }
+
+        // --- APP LOGIC ---
+
+        function renderDeptSelection() {
+            const container = document.getElementById('dept-grid');
+            container.innerHTML = '';
+
+            for (const [name, info] of Object.entries(DEPARTMENT_CONTEXT)) {
+                const riskColorClass = info.riskLevel === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' : 
+                                     info.riskLevel === 'High' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-green-50 text-green-700 border-green-200';
+
+                const card = `
+                    <div onclick="selectDept('${name}')" class="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-lg transition cursor-pointer overflow-hidden group relative">
+                        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition">
+                            <span class="text-6xl">${info.icon}</span>
+                        </div>
+                        <div class="p-6 relative z-10">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-xl font-bold text-slate-800">${name}</h3>
+                            </div>
+                             <span class="text-xs px-2 py-1 rounded-full border ${riskColorClass} font-semibold mb-4 inline-block">${info.riskLevel} Risk</span>
+
+                            <div class="text-sm text-slate-600 mb-4 space-y-2">
+                                <p class="flex items-center gap-2"><i class="fas fa-exclamation-circle text-slate-400"></i> ${info.lastIssues[0]}</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-4">
+                                ${info.standards.slice(0,3).map(s => `<span class="text-[10px] uppercase bg-slate-100 px-2 py-1 rounded text-slate-500 font-medium">${s}</span>`).join('')}
+                            </div>
+                            <div class="mt-6 pt-4 border-t border-slate-100 text-right">
+                                <span class="text-blue-600 font-medium text-sm group-hover:underline flex items-center justify-end gap-1">Start Audit <i class="fas fa-chevron-right text-xs"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            }
+        }
+
+        async function selectDept(deptName) {
+            CURRENT_DEPT = deptName;
+            document.getElementById('select-screen').classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('hidden');
+            document.getElementById('loading-screen').style.display = 'flex';
+
+            // Simulate AI Delay
+            await new Promise(r => setTimeout(r, 1500));
+
+            const checklistData = DEPARTMENT_CONTEXT[deptName].mockChecklist;
+            renderChecklist(checklistData);
+
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('loading-screen').style.display = '';
+            document.getElementById('audit-screen').classList.remove('hidden');
+            document.getElementById('audit-title').innerText = `${deptName} Audit`;
+            document.getElementById('dept-icon').innerText = DEPARTMENT_CONTEXT[deptName].icon;
+        }
+
+        function renderChecklist(data) {
+            const container = document.getElementById('checklist-container');
+            container.innerHTML = '';
+
+            data.forEach((item, index) => {
+                const html = `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" style="animation-delay: ${index * 0.1}s">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200 flex gap-3 items-start">
+                            <span class="bg-slate-800 text-white font-bold rounded-lg w-8 h-8 flex items-center justify-center shrink-0 text-sm">${index + 1}</span>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-slate-800 text-lg leading-snug">${item.question}</h3>
+                                <div class="flex flex-wrap items-center gap-2 mt-2">
+                                    <span class="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100"><i class="fas fa-book mr-1"></i>${item.requirement}</span>
+                                    <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">${item.risk} Risk</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Guidance Block -->
+                        <div class="p-3 bg-amber-50/50 border-b border-amber-100 text-sm text-slate-700 flex gap-3">
+                            <i class="fas fa-lightbulb text-amber-500 mt-0.5"></i> 
+                            <div><strong class="text-amber-700">คำแนะนำ:</strong> ${item.guidance}</div>
+                        </div>
+
+                        <div class="p-4 space-y-3">
+                            <textarea id="finding-${item.id}" class="w-full border border-slate-200 bg-slate-50 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition" rows="2" placeholder="บันทึกสิ่งที่พบ... (เช่น 'ปกติดี' หรือ 'พบรอยรั่ว')"></textarea>
+
+                            <div class="flex justify-between items-center pt-2">
+                                <button class="text-slate-400 hover:text-slate-600 text-sm flex items-center gap-1 transition">
+                                    <i class="fas fa-camera"></i> <span class="hidden sm:inline">แนบรูปถ่าย</span>
+                                </button>
+                                <button onclick="analyzeFinding(${item.id})" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm font-medium">
+                                    <i class="fas fa-gavel text-slate-400"></i> ประเมินผล
+                                </button>
+                            </div>
+                            <div id="result-${item.id}" class="hidden mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200 text-sm animate-pulse"></div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        async function analyzeFinding(id) {
+            const findingText = document.getElementById(`finding-${id}`).value;
+            if (!findingText) { alert("กรุณากรอกสิ่งที่พบก่อนครับ"); return; }
+
+            const resultDiv = document.getElementById(`result-${id}`);
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<span class="flex items-center gap-2 text-slate-500"><i class="fas fa-circle-notch fa-spin"></i> ส่งข้อมูลไป Backend...</span>';
+
+            // Simulate Backend Processing
+            await new Promise(r => setTimeout(r, 1000));
+            resultDiv.classList.remove('animate-pulse');
+
+            // Mock Logic
+            let mockAnalysis = "";
+            let statusColor = "";
+            if (findingText.includes("ปกติ") || findingText.includes("เรียบร้อย") || findingText.includes("ครบ")) {
+                mockAnalysis = "ผลการประเมิน: <strong>Conform (ผ่าน)</strong><br>สอดคล้องตามมาตรฐาน ไม่พบข้อบกพร่อง";
+                statusColor = "border-green-200 bg-green-50 text-green-800";
+            } else {
+                mockAnalysis = "ผลการประเมิน: <strong>Potential NC (มีความเสี่ยง)</strong><br>อาจไม่สอดคล้องตามข้อกำหนด กรุณารวบรวมหลักฐานเพิ่มเติมและออกใบ CAR";
+                statusColor = "border-red-200 bg-red-50 text-red-800";
+            }
+
+            resultDiv.className = `mt-3 p-3 rounded-lg border text-sm ${statusColor}`;
+            resultDiv.innerHTML = `<div class="flex gap-2"><i class="fas fa-robot mt-1"></i> <div>${mockAnalysis}</div></div>`;
+
+            // Try saving to Firestore
+            if (window.saveFindingToFirebase) {
+                window.saveFindingToFirebase({
+                    dept: CURRENT_DEPT,
+                    questionId: id,
+                    finding: findingText,
+                    analysis: mockAnalysis
+                });
+            }
+        }
+
+        // --- MOCK CHAT ---
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addChatMessage('user', text);
+            input.value = '';
+
+            setTimeout(() => {
+                const reply = "รับทราบครับ ข้อมูลนี้จะถูกบันทึกไว้ในระบบเพื่อใช้ในการ Audit ครั้งถัดไป (Demo Response)";
+                addChatMessage('ai', reply);
+            }, 800);
+        }
+
+        function addChatMessage(role, text) {
+            const history = document.getElementById('chat-history');
+            const isUser = role === 'user';
+            const html = `
+                <div class="flex ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2">
+                    <div class="${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'} p-3 rounded-lg text-sm max-w-[85%] shadow-sm">
+                        ${text}
+                    </div>
+                </div>
+            `;
+            history.innerHTML += html;
+            history.scrollTop = history.scrollHeight;
+        }
+
+        function handleChatEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+    </script>
+</body>
+</html>
