@@ -1,296 +1,530 @@
-                    <!DOCTYPE html>
-                    <html lang="th">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>🧪 Test Product Aggregation</title>
-                        <style>
-                            * {
-                                margin: 0;
-                                padding: 0;
-                                box-sizing: border-box;
-                            }
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-IMS Audit System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-                            body {
-                                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                min-height: 100vh;
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                padding: 20px;
-                            }
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
 
-                            .container {
-                                background: white;
-                                border-radius: 20px;
-                                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                                padding: 40px;
-                                max-width: 600px;
-                                width: 100%;
-                            }
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid white; }
+        .hidden { display: none !important; }
+        .std-checkbox:checked + div { 
+            background-color: #eef2ff; border-color: #6366f1; color: #4338ca; 
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex text-slate-800 relative bg-slate-50">
 
-                            h1 {
-                                color: #333;
-                                margin-bottom: 10px;
-                                font-size: 28px;
-                            }
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-slate-100 transition-opacity duration-500 overflow-hidden">
+        
+        <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
+            <i class="fas fa-clipboard-check absolute -top-10 -left-10 text-9xl text-blue-100/50 rotate-12 transform"></i>
+            <i class="fas fa-magnifying-glass-chart absolute bottom-10 right-10 text-8xl text-indigo-100/40 -rotate-12 transform"></i>
+            <i class="fas fa-file-contract absolute top-20 right-20 text-7xl text-slate-200/60 rotate-45 transform"></i>
+            <i class="fas fa-scale-balanced absolute bottom-32 left-20 text-8xl text-blue-50/80 -rotate-6 transform"></i>
+             <i class="fas fa-shield-alt absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[12rem] text-slate-100/30"></i>
+        </div>
 
-                            .subtitle {
-                                color: #666;
-                                margin-bottom: 30px;
-                                font-size: 14px;
-                            }
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-sm text-center shadow-xl border-white/40 relative z-10 backdrop-blur-xl bg-white/60">
+            <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl shadow-md">
+                <i class="fas fa-shield-halved"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-2 text-slate-800">IMS Audit Login</h1>
+            <p class="text-sm text-slate-500 mb-6">เข้าสู่ระบบเพื่อเริ่มการตรวจประเมิน</p>
+            
+            <form onsubmit="event.preventDefault(); handleLogin();" class="space-y-4">
+                <div class="relative">
+                    <i class="fas fa-envelope absolute left-4 top-3.5 text-slate-400"></i>
+                    <input type="email" id="email" class="w-full pl-10 p-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Email" required>
+                </div>
+                <div class="relative">
+                    <i class="fas fa-lock absolute left-4 top-3.5 text-slate-400"></i>
+                    <input type="password" id="password" class="w-full pl-10 p-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Password" required>
+                </div>
+                <button type="submit" id="btn-login" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md hover:shadow-lg transform active:scale-95">
+                    เข้าสู่ระบบ <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
 
-                            .form-group {
-                                margin-bottom: 20px;
-                            }
+    <div id="app-layout" class="hidden w-full h-full flex">
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20">
+            <div class="p-6 font-bold text-white text-xl flex items-center gap-2 border-b border-slate-800">
+                <i class="fas fa-robot text-blue-500"></i> AI-IMS
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="switchView('planner')" class="w-full text-left p-3 rounded-xl hover:bg-slate-800 hover:text-white transition flex gap-3 items-center group">
+                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-blue-600 transition">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    Create Plan (AI)
+                </button>
+                <button onclick="switchView('execution')" class="w-full text-left p-3 rounded-xl hover:bg-slate-800 hover:text-white transition flex gap-3 items-center group">
+                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-blue-600 transition">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    My Audits
+                </button>
+            </nav>
 
-                            label {
-                                display: block;
-                                color: #555;
-                                font-weight: 600;
-                                margin-bottom: 8px;
-                                font-size: 14px;
-                            }
+            <div class="p-4 border-t border-slate-800 bg-slate-900/50">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div id="user-display" class="text-sm font-bold text-white truncate">User</div>
+                        <div class="text-xs text-slate-500">Auditor</div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full py-2 px-4 bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white rounded-lg transition flex items-center justify-center gap-2">
+                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                </button>
+            </div>
+        </aside>
 
-                            input, select {
-                                width: 100%;
-                                padding: 12px 16px;
-                                border: 2px solid #e0e0e0;
-                                border-radius: 10px;
-                                font-size: 16px;
-                                transition: border-color 0.3s;
-                            }
+        <main class="flex-1 overflow-auto bg-slate-50 relative">
+            <header class="bg-white p-4 border-b flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                <h2 id="page-title" class="text-xl font-bold text-slate-800">Dashboard</h2>
+            </header>
 
-                            input:focus, select:focus {
-                                outline: none;
-                                border-color: #667eea;
-                            }
-
-                            button {
-                                width: 100%;
-                                padding: 15px;
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                color: white;
-                                border: none;
-                                border-radius: 10px;
-                                font-size: 16px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: transform 0.2s, box-shadow 0.2s;
-                                margin-top: 10px;
-                            }
-
-                            button:hover {
-                                transform: translateY(-2px);
-                                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-                            }
-
-                            button:active {
-                                transform: translateY(0);
-                            }
-
-                            button:disabled {
-                                background: #ccc;
-                                cursor: not-allowed;
-                                transform: none;
-                            }
-
-                            .result {
-                                margin-top: 30px;
-                                padding: 20px;
-                                border-radius: 10px;
-                                display: none;
-                            }
-
-                            .result.success {
-                                background: #d4edda;
-                                border: 2px solid #28a745;
-                                color: #155724;
-                            }
-
-                            .result.error {
-                                background: #f8d7da;
-                                border: 2px solid #dc3545;
-                                color: #721c24;
-                            }
-
-                            .result.loading {
-                                background: #fff3cd;
-                                border: 2px solid #ffc107;
-                                color: #856404;
-                                display: block;
-                            }
-
-                            .result h3 {
-                                margin-bottom: 10px;
-                                font-size: 18px;
-                            }
-
-                            .result pre {
-                                background: rgba(0,0,0,0.05);
-                                padding: 15px;
-                                border-radius: 8px;
-                                overflow-x: auto;
-                                font-size: 13px;
-                                line-height: 1.6;
-                                max-height: 300px;
-                                overflow-y: auto;
-                            }
-
-                            .spinner {
-                                border: 3px solid #f3f3f3;
-                                border-top: 3px solid #667eea;
-                                border-radius: 50%;
-                                width: 30px;
-                                height: 30px;
-                                animation: spin 1s linear infinite;
-                                margin: 10px auto;
-                            }
-
-                            @keyframes spin {
-                                0% { transform: rotate(0deg); }
-                                100% { transform: rotate(360deg); }
-                            }
-
-                            .info-box {
-                                background: #e7f3ff;
-                                border-left: 4px solid #2196F3;
-                                padding: 15px;
-                                margin-bottom: 20px;
-                                border-radius: 5px;
-                                font-size: 14px;
-                                color: #0d47a1;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <h1>🧪 Test Product Aggregation</h1>
-                            <p class="subtitle">ทดสอบการรวมข้อมูลรายวันเป็นรายเดือน</p>
-
-                            <div class="info-box">
-                                ℹ️ Function นี้จะอ่านข้อมูลทั้งหมดในเดือนที่เลือก แล้วรวมเป็นสถิติรายเดือน
-                            </div>
-
-                            <form id="testForm">
-                                <div class="form-group">
-                                    <label for="machineId">🏭 Machine ID:</label>
-                                    <select id="machineId" required>
-                                        <option value="">-- เลือก Machine --</option>
-                                        <option value="MC2">MC2</option>
-                                        <option value="MC3">MC3</option>
-                                        <option value="MC5" selected>MC5</option>
-                                        <option value="MC6">MC6</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="monthId">📅 Month (YYYY-MM):</label>
-                                    <input type="month" id="monthId" required value="2025-11">
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="productType">📦 Product Type:</label>
-                                    <select id="productType" required>
-                                        <option value="">-- เลือกประเภท --</option>
-                                        <option value="Modal">Modal</option>
-                                        <option value="Grey">Grey</option>
-                                        <option value="NonWoven" selected>NonWoven</option>
-                                    </select>
-                                </div>
-
-                                <button type="submit" id="submitBtn">
-                                    🚀 เริ่มทดสอบ Aggregation
-                                </button>
-                            </form>
-
-                            <div id="result" class="result"></div>
+            <div class="p-8 pb-32">
+                
+                <div id="view-planner" class="max-w-4xl mx-auto">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="text-xl font-bold mb-6 flex gap-2 items-center text-indigo-700">
+                            <i class="fas fa-magic"></i> AI Integrated Checklist Generator
+                        </h3>
+                        
+                        <div class="mb-6">
+                            <label class="block font-bold mb-2 text-slate-700">Target Department</label>
+                            <select id="dept-select" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                <option>Production (ฝ่ายผลิต)</option>
+                                <option>Warehouse (คลังสินค้า)</option>
+                                <option>HR (ทรัพยากรบุคคล)</option>
+                                <option>Maintenance (ซ่อมบำรุง)</option>
+                                <option>QA/QC (ควบคุมคุณภาพ)</option>
+                            </select>
                         </div>
 
-                        <!-- Firebase SDK -->
-                        <script type="module">
-                            import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-                            import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+                        <div class="mb-6">
+                            <label class="block font-bold mb-3 text-slate-700">Select Standards (IMS Scope)</label>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="ISO9001" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
+                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 9001 (Quality)</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="ISO14001" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
+                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 14001 (Env)</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="ISO45001" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
+                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 45001 (Safety)</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="ISO50001" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
+                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 50001 (Energy)</span>
+                                    </div>
+                                </label>
 
-                            // 🔧 ใส่ Firebase Config ของคุณที่นี่
-                            const firebaseConfig = {
-                                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="GMP" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
+                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">GMP / HACCP</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="Halal" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
+                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">Halal</span>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="FSC" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-emerald-50 border-emerald-100 flex items-center gap-2 transition h-full">
+                                        <i class="fas fa-tree text-emerald-500"></i> <span class="text-sm font-semibold">FSC (CoC)</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" name="std" value="PEFC" class="std-checkbox hidden">
+                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-emerald-50 border-emerald-100 flex items-center gap-2 transition h-full">
+                                        <i class="fas fa-tree text-emerald-500"></i> <span class="text-sm font-semibold">PEFC</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <label class="block font-bold mb-2 text-slate-700">
+                                <i class="fas fa-chart-line text-indigo-500"></i> Performance & Context Input
+                            </label>
+                            <textarea id="performance-context" class="w-full p-4 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" rows="3" placeholder="ระบุข้อมูลสำคัญ เช่น: ยอดขายตกต่ำ, มีอุบัติเหตุสารเคมีรั่วไหลเมื่อเดือนที่แล้ว, หรือค่า Zinc ในน้ำเสียเกินมาตรฐาน... (AI จะใช้ข้อมูลนี้เน้นคำถาม)"></textarea>
+                            <div class="flex items-center gap-2 mt-2">
+                                <input type="checkbox" id="include-history" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" checked>
+                                <label for="include-history" class="text-sm text-slate-600 cursor-pointer">
+                                    ให้ AI ดึงประวัติ **NC/Fail** ครั้งที่แล้วของแผนกนี้มาสร้างคำถาม Follow-up อัตโนมัติ (จากฐานข้อมูล)
+                                </label>
+                            </div>
+                        </div>
+
+                        <button onclick="generateChecklist()" id="btn-gen" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95 flex justify-center items-center gap-2">
+                            <i class="fas fa-robot"></i> Generate Checklist via Gemini AI
+                        </button>
+                    </div>
+
+                    <div id="preview-area" class="hidden mt-8 space-y-4 animate-[fadeIn_0.5s_ease-out]">
+                        <div class="flex justify-between items-end">
+                            <h3 class="font-bold text-lg text-slate-700">Preview & Edit</h3>
+                            <button onclick="savePlan()" class="bg-emerald-600 text-white px-6 py-2 rounded-lg shadow hover:bg-emerald-700 transition font-bold flex items-center gap-2">
+                                <i class="fas fa-save"></i> Confirm & Save
+                            </button>
+                        </div>
+                        <div id="preview-list" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <div id="view-execution" class="hidden">
+                    <div id="audit-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                    
+                    <div id="audit-room" class="hidden bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 p-4 border-b flex justify-between items-center sticky top-0 z-10">
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800" id="room-title">Audit Room</h3>
+                                <p class="text-xs text-slate-500">บันทึกผลการตรวจ</p>
+                            </div>
+                            <button onclick="closeRoom()" class="text-slate-400 hover:text-slate-600 transition">
+                                <i class="fas fa-times-circle text-2xl"></i>
+                            </button>
+                        </div>
+                        <div id="room-questions" class="p-6 space-y-6 max-h-[75vh] overflow-y-auto"></div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- UTILS: Simple Logger ---
+        function log(msg, type='info') {
+            if(type==='error') console.error(msg);
+            else console.log(msg);
+        }
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
             authDomain: "lab-trc-management-system.firebaseapp.com",
             projectId: "lab-trc-management-system",
             storageBucket: "lab-trc-management-system.appspot.com",
             messagingSenderId: "43919979160",
             appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-                            };
+        };
 
-                            const app = initializeApp(firebaseConfig);
-                            const functions = getFunctions(app, 'asia-southeast1'); // ใช้ Region เดียวกับ Backend
+        let auth, db, functions;
+        let checklistData = [];
+        let currentAuditId = null;
 
-                            const form = document.getElementById('testForm');
-                            const resultDiv = document.getElementById('result');
-                            const submitBtn = document.getElementById('submitBtn');
+        // --- INIT APP ---
+        try {
+            firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+            db.settings({ experimentalForceLongPolling: true, merge: true });
+            functions = firebase.app().functions("asia-southeast1");
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+            alert("System Error: Check Console");
+        }
 
-                            form.addEventListener('submit', async (e) => {
-                                e.preventDefault();
+        // --- AUTH OBSERVER ---
+        if(auth) {
+            auth.onAuthStateChanged(user => {
+                const loginScreen = document.getElementById('login-screen');
+                const appLayout = document.getElementById('app-layout');
 
-                                const machineId = document.getElementById('machineId').value;
-                                const monthId = document.getElementById('monthId').value;
-                                const productType = document.getElementById('productType').value;
+                if(user) {
+                    // Hide Login / Show App
+                    loginScreen.style.display = 'none';
+                    appLayout.classList.remove('hidden');
+                    appLayout.classList.add('flex');
+                    
+                    document.getElementById('user-display').innerText = user.email;
+                    switchView('planner');
+                } else {
+                    // Show Login / Hide App
+                    loginScreen.style.display = 'flex';
+                    appLayout.classList.add('hidden');
+                    appLayout.classList.remove('flex');
+                }
+            });
+        }
 
-                                if (!machineId || !monthId || !productType) {
-                                    showResult('error', 'กรุณากรอกข้อมูลให้ครบถ้วน');
-                                    return;
-                                }
+        // --- LOGIN HANDLER ---
+        function handleLogin() {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            const btn = document.getElementById('btn-login');
 
-                                // Show loading
-                                resultDiv.className = 'result loading';
-                                resultDiv.innerHTML = `
-                                    <h3>⏳ กำลังประมวลผล...</h3>
-                                    <div class="spinner"></div>
-                                    <p>กรุณารอสักครู่ (อาจใช้เวลา 10-30 วินาที)</p>
-                                `;
-                                resultDiv.style.display = 'block';
-                                submitBtn.disabled = true;
+            if(!e || !p) return alert("กรุณากรอกข้อมูลให้ครบ");
 
-                                try {
-                                    // เรียก Cloud Function
-                                    const testFunction = httpsCallable(functions, 'manualTestProductAggregation');
-                                    const result = await testFunction({
-                                        machineId,
-                                        monthId,
-                                        productType
-                                    });
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> กำลังตรวจสอบ...';
+            btn.disabled = true;
 
-                                    console.log('Result:', result.data);
+            auth.signInWithEmailAndPassword(e, p)
+                .then(() => {
+                    // Success handled by onAuthStateChanged
+                })
+                .catch(err => {
+                    alert("เข้าสู่ระบบไม่สำเร็จ: " + err.message);
+                    btn.innerHTML = 'เข้าสู่ระบบ <i class="fas fa-arrow-right ml-2"></i>';
+                    btn.disabled = false;
+                });
+        }
 
-                                    if (result.data.success) {
-                                        showResult('success', result.data.message, result.data);
-                                    } else {
-                                        showResult('error', result.data.message || 'เกิดข้อผิดพลาด');
-                                    }
+        function logout() {
+            if(confirm("ต้องการออกจากระบบใช่หรือไม่?")) {
+                auth.signOut().then(() => window.location.reload());
+            }
+        }
 
-                                } catch (error) {
-                                    console.error('Error:', error);
-                                    showResult('error', `❌ เกิดข้อผิดพลาด: ${error.message}`);
-                                } finally {
-                                    submitBtn.disabled = false;
-                                }
-                            });
+        // --- APP FUNCTIONS ---
+        function switchView(view) {
+            ['planner', 'execution'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            if(view === 'execution') loadAudits();
+        }
 
-                            function showResult(type, message, data = null) {
-                                resultDiv.className = `result ${type}`;
-                                resultDiv.style.display = 'block';
+        async function generateChecklist() {
+            const dept = document.getElementById('dept-select').value;
+            // แก้ selector ให้แม่นยำขึ้น
+            const stds = Array.from(document.querySelectorAll('input[name="std"]:checked')).map(c => c.value);
 
-                                let html = `<h3>${type === 'success' ? '✅ สำเร็จ!' : '❌ เกิดข้อผิดพลาด'}</h3>`;
-                                html += `<p>${message}</p>`;
+            // ดึงค่าใหม่ที่เพิ่มเข้ามา
+            const perfContext = document.getElementById('performance-context').value;
+            const incHistory = document.getElementById('include-history').checked;
 
-                                if (data) {
-                                    html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
-                                }
+            if(stds.length === 0) return alert("กรุณาเลือกมาตรฐานอย่างน้อย 1 ข้อ");
 
-                                resultDiv.innerHTML = html;
-                            }
-                        </script>
-                    </body>
-                    </html>
+            const btn = document.getElementById('btn-gen');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI กำลังวิเคราะห์ประวัติและสร้าง Checklist...';
+            btn.disabled = true;
+
+            try {
+                const fn = functions.httpsCallable('generateAuditChecklist');
+                // ส่ง parameters เพิ่มไปให้ backend
+                const result = await fn({ 
+                    department: dept, 
+                    standards: stds,
+                    customNote: "", // อันนี้อาจจะไม่จำเป็นแล้วถ้ามี performanceContext
+                    performanceContext: perfContext,
+                    includeHistory: incHistory
+                });
+
+                checklistData = result.data.data;
+
+                // ... (Render Preview Logic เหมือนเดิม) ...
+                const div = document.getElementById('preview-list');
+                document.getElementById('preview-area').classList.remove('hidden');
+
+                // Render ให้สวยงามขึ้น แยกสีตามประเภทคำถาม
+                div.innerHTML = checklistData.map((item, idx) => {
+                    // เช็คว่าเป็นคำถาม Follow-up จาก NC เก่าหรือไม่?
+                    const isFollowUp = item.question.includes("Corrective Action") || item.question.includes("NC");
+                    const borderClass = isFollowUp ? "border-l-4 border-red-500 bg-red-50" : "border-l-4 border-indigo-500 bg-white";
+                    const badge = isFollowUp ? `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">FOLLOW-UP NC</span>` : `<span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold uppercase">${item.standard || item.clause}</span>`;
+
+                    return `
+                    <div class="${borderClass} p-5 rounded-xl shadow-sm hover:shadow-md transition mb-4">
+                        <div class="flex justify-between items-start mb-2">
+                            ${badge}
+                            <span class="text-xs text-slate-400 font-mono">${item.question_type || 'Open'}</span>
+                        </div>
+                        <textarea id="q-${idx}" class="w-full font-semibold text-slate-700 p-2 bg-transparent rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none transition" rows="2">${item.question}</textarea>
+                        <div class="text-sm text-slate-500 mt-2 flex items-start gap-2 bg-slate-50/50 p-2 rounded">
+                            <i class="fas fa-search mt-1 text-indigo-400"></i> 
+                            <span><span class="font-semibold text-indigo-900">Evidence:</span> ${item.expected_evidence}</span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                document.getElementById('preview-area').scrollIntoView({ behavior: 'smooth' });
+
+            } catch(e) {
+                console.error(e);
+                alert("Error: " + e.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function savePlan() {
+            if(!confirm("ยืนยันการสร้างแผนการตรวจ?")) return;
+
+            const updatedQs = checklistData.map((q, i) => ({
+                ...q,
+                question: document.getElementById(`q-${i}`).value,
+                status: 'Pending',
+                finding: ''
+            }));
+            const dept = document.getElementById('dept-select').value;
+            const stds = Array.from(document.querySelectorAll('input[name="std"]:checked')).map(c => c.value);
+
+            try {
+                const fn = functions.httpsCallable('saveAuditPlan');
+                await fn({ department: dept, standards: stds, questions: updatedQs });
+                
+                alert("บันทึกแผนเรียบร้อย!");
+                checklistData = [];
+                document.getElementById('preview-area').classList.add('hidden');
+                switchView('execution');
+            } catch(e) {
+                alert("บันทึกไม่สำเร็จ: " + e.message);
+            }
+        }
+
+        async function loadAudits() {
+            const list = document.getElementById('audit-list');
+            list.innerHTML = '<div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูล...</div>';
+            
+            try {
+                const snap = await db.collection('audit_plans')
+                    .where('auditorId', '==', auth.currentUser.uid)
+                    .orderBy('createdAt', 'desc').get();
+                
+                list.innerHTML = '';
+                if(snap.empty) { 
+                    list.innerHTML = '<div class="col-span-full text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">ยังไม่มีแผนการตรวจ <br>ไปที่เมนู Create Plan เพื่อเริ่มใช้งาน</div>'; 
+                    return; 
+                }
+
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const total = d.questions.length;
+                    const done = d.questions.filter(q => q.status !== 'Pending').length;
+                    const percent = Math.round((done/total)*100) || 0;
+
+                    list.innerHTML += `
+                    <div onclick="openAudit('${doc.id}')" class="bg-white p-6 rounded-2xl border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition cursor-pointer group">
+                        <div class="flex justify-between mb-3">
+                            <span class="font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full text-sm">${d.department}</span>
+                            <span class="text-xs text-slate-400 mt-1">${d.createdAt ? new Date(d.createdAt.seconds*1000).toLocaleDateString() : '-'}</span>
+                        </div>
+                        <div class="text-sm text-slate-600 mb-4 h-10 overflow-hidden text-ellipsis line-clamp-2">${d.standards.join(', ')}</div>
+                        
+                        <div class="flex justify-between text-xs text-slate-500 mb-1">
+                            <span>ความคืบหน้า</span>
+                            <span class="font-bold text-indigo-600">${percent}%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-indigo-500 h-full transition-all duration-500 group-hover:bg-indigo-600" style="width: ${percent}%"></div>
+                        </div>
+                    </div>`;
+                });
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = '<div class="col-span-full text-center text-red-400">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+            }
+        }
+
+        async function openAudit(id) {
+            currentAuditId = id;
+            document.getElementById('audit-list').classList.add('hidden');
+            document.getElementById('audit-room').classList.remove('hidden');
+            
+            const doc = await db.collection('audit_plans').doc(id).get();
+            const data = doc.data();
+            
+            document.getElementById('room-title').innerText = `Audit: ${data.department}`;
+            document.getElementById('room-questions').innerHTML = data.questions.map((q, i) => `
+                <div class="p-5 border border-slate-200 rounded-xl bg-slate-50 mb-4 shadow-sm">
+                    <div class="flex justify-between text-xs text-slate-500 mb-2 font-mono">
+                        <span class="bg-slate-200 px-2 py-0.5 rounded text-slate-700">${q.clause}</span>
+                        <span>Risk Focus: ${q.risk_focus || '-'}</span>
+                    </div>
+                    <div class="font-bold text-lg mb-3 text-slate-800">${q.question}</div>
+                    
+                    <div class="bg-amber-50 p-3 text-sm text-amber-900 rounded-lg mb-4 border border-amber-100 flex gap-2">
+                        <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i>
+                        <span>Guidance: ${q.expected_evidence}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="text-xs font-bold text-slate-600 ml-1">สิ่งที่ตรวจพบ (Findings)</label>
+                        <textarea id="find-${i}" class="w-full p-3 border border-slate-300 rounded-lg mt-1 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="บันทึกหลักฐาน หรือสิ่งที่พบ..." rows="2" onblur="updateFinding(${i}, this.value)">${q.finding||''}</textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="setStatus(${i}, 'Pass')" class="flex-1 py-2 rounded-lg font-bold text-sm transition ${q.status==='Pass'?'bg-emerald-600 text-white shadow-md':'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'}">
+                            <i class="fas fa-check mr-1"></i> Conform
+                        </button>
+                        <button onclick="setStatus(${i}, 'Fail')" class="flex-1 py-2 rounded-lg font-bold text-sm transition ${q.status==='Fail'?'bg-rose-600 text-white shadow-md':'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'}">
+                            <i class="fas fa-times mr-1"></i> NC
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Scroll to top of room
+            document.getElementById('audit-room').scrollIntoView();
+        }
+
+        async function setStatus(idx, status) {
+            // Optimistic UI Update
+            const btnArea = document.querySelector(`#room-questions > div:nth-child(${idx+1}) .flex.gap-3`);
+            const passBtn = btnArea.children[0];
+            const failBtn = btnArea.children[1];
+
+            if(status === 'Pass') {
+                passBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-emerald-600 text-white shadow-md";
+                failBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-white border border-slate-300 text-slate-600";
+            } else {
+                passBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-white border border-slate-300 text-slate-600";
+                failBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-rose-600 text-white shadow-md";
+            }
+
+            // Save to DB
+            const ref = db.collection('audit_plans').doc(currentAuditId);
+            const d = (await ref.get()).data();
+            d.questions[idx].status = status;
+            await ref.update({ questions: d.questions });
+        }
+        
+        async function updateFinding(idx, val) {
+            const ref = db.collection('audit_plans').doc(currentAuditId);
+            const d = (await ref.get()).data();
+            d.questions[idx].finding = val;
+            await ref.update({ questions: d.questions });
+        }
+
+        function closeRoom() {
+            document.getElementById('audit-room').classList.add('hidden');
+            document.getElementById('audit-list').classList.remove('hidden');
+            loadAudits(); // Refresh progress bars
+        }
+    </script>
+</body>
+</html>
