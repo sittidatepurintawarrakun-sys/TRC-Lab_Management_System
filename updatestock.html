@@ -7,7 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        // 🟢 เพิ่ม Timestamp เข้ามาใน import
+        import { getFirestore, doc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
@@ -23,27 +24,18 @@
 
         // รายชื่อ Brand ที่มีในระบบ (ตรงกับใน Dropdown)
         const brands = [
-            // ARAUCO
             { id: "ARAUCO FSC Mix Credit", name: "ARAUCO FSC Mix Credit" },
             { id: "ARAUCO FSC Control Wood", name: "ARAUCO FSC Control Wood" },
             { id: "ARAUCO PEFC", name: "ARAUCO PEFC" },
-
-            // AVN
             { id: "AVN FSC Mix Credit", name: "AVN FSC Mix Credit" },
             { id: "AVN FSC Control Wood", name: "AVN FSC Control Wood" },
             { id: "AVN PEFC", name: "AVN PEFC" },
-
-            // AVC
             { id: "AVC FSC Mix Credit", name: "AVC FSC Mix Credit" },
             { id: "AVC FSC Control Wood", name: "AVC FSC Control Wood" },
             { id: "AVC PEFC", name: "AVC PEFC" },
-
-            // PHOENIX
             { id: "PHOENIX Mix Credit", name: "PHOENIX Mix Credit" },
             { id: "PHOENIX Control Wood", name: "PHOENIX Control Wood" },
             { id: "PHOENIX PEFC", name: "PHOENIX PEFC" },
-
-            // SAICCOR
             { id: "SAICCOR FSC Mix Credit 70%", name: "SAICCOR FSC Mix Credit 70%" }
         ];
 
@@ -53,7 +45,6 @@
             let html = "";
 
             brands.forEach(b => {
-                // สร้างช่องกรอกสำหรับ Normal Grade
                 html += `
                 <div class="grid grid-cols-12 gap-4 items-center mb-2 bg-gray-50 p-2 rounded border">
                     <div class="col-span-5 text-sm font-bold text-gray-700">${b.name}</div>
@@ -63,7 +54,6 @@
                     </div>
                 </div>`;
 
-                // สร้างช่องกรอกสำหรับ Off Grade
                 html += `
                 <div class="grid grid-cols-12 gap-4 items-center mb-4 p-2 border-b">
                     <div class="col-span-5 text-sm text-gray-500 pl-4">↳ (Off Grade)</div>
@@ -93,14 +83,20 @@
                         const docId = input.id; // ID คือ "BRAND__GRADE"
                         const docRef = doc(db, "store_inventory_balance", docId);
 
-                        // ใช้ setDoc เพื่อเขียนทับ Balance ไปเลย โดยไม่สร้าง Log Transaction
-                        promises.push(setDoc(docRef, { balance: val }, { merge: true }));
+                        // 🟢 เพิ่ม lastUpdated: Timestamp.now() ลงไปด้วย
+                        promises.push(setDoc(docRef, { 
+                            balance: val,
+                            lastUpdated: Timestamp.now()
+                        }, { merge: true }));
                         count++;
                     }
                 });
 
                 await Promise.all(promises);
                 alert(`✅ บันทึกยอดยกมาสำเร็จ ${count} รายการ!`);
+
+                // เคลียร์ค่าหน้าจอเผื่อป้องกันการกดซ้ำ
+                inputs.forEach(input => input.value = '');
 
             } catch (error) {
                 console.error(error);
