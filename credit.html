@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่ายอดยกมา (Initial Credit Setup)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // ⚠️ อย่าลืมใส่ Config ของคุณตรงนี้นะครับ
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // ฟังก์ชันช่วยหาปีงบประมาณ (อิงตาม index.js)
+        const getFiscalYear = (dateObj) => {
+            const month = dateObj.getMonth() + 1;
+            const year = dateObj.getFullYear();
+            if (month >= 4) {
+                return `FY${year.toString().slice(-2)}-${(year + 1).toString().slice(-2)}`;
+            } else {
+                return `FY${(year - 1).toString().slice(-2)}-${year.toString().slice(-2)}`;
+            }
+        };
+
+        window.saveInitialCredit = async () => {
+            const fscVal = parseFloat(document.getElementById('in_fsc').value) || 0;
+            const cwVal = parseFloat(document.getElementById('in_cw').value) || 0;
+            const pefcVal = parseFloat(document.getElementById('in_pefc').value) || 0;
+            const setupDateStr = document.getElementById('setup_date').value;
+
+            if (!setupDateStr) return alert("⚠️ กรุณาเลือกวันที่ยอดยกมา");
+            if (fscVal === 0 && cwVal === 0 && pefcVal === 0) return alert("⚠️ กรุณากรอกจำนวน Credit อย่างน้อย 1 รายการ");
+
+            const btn = document.getElementById('btnSaveCredit');
+            btn.disabled = true;
+            btn.innerText = "⏳ กำลังสร้าง Ledger...";
+
+            try {
+                const setupDate = new Date(setupDateStr);
+                const fiscalYear = getFiscalYear(setupDate);
+                const ledgerRef = collection(db, "Credit_Ledger");
+                const promises = [];
+
+                // ข้อมูลโครงสร้างนี้อิงตาม backend `calculateDailyCredits` เพื่อให้ Marketing หักยอดได้
+                const createLedgerEntry = (standard, volume, expiryMonths) => {
+                    if (volume <= 0) return;
+
+                    const expiryDate = new Date(setupDate);
+                    const expectedMonth = (expiryDate.getMonth() + expiryMonths) % 12;
+                    expiryDate.setMonth(expiryDate.getMonth() + expiryMonths);
+                    if (expiryDate.getMonth() !== expectedMonth) {
+                        expiryDate.setDate(0); 
+                    }
+
+                    promises.push(addDoc(ledgerRef, {
+                        sourceDocRef: "INITIAL-SETUP-" + setupDateStr,
+                        fiscalYear: fiscalYear,
+                        standard: standard, // 'FSC', 'FSC_CW', 'PEFC' ตรงตาม backend เป๊ะ
+                        originalVolume: volume,
+                        remainingVolume: volume,
+                        generatedDateStr: setupDateStr,
+                        generatedDate: Timestamp.fromDate(setupDate),
+                        expiryDate: Timestamp.fromDate(expiryDate),
+                        status: 'ACTIVE',
+                        lastUpdated: serverTimestamp()
+                    }));
+                };
+
+                // สร้างเอกสาร Ledger แยกตามประเภท
+                createLedgerEntry('FSC', fscVal, 24);    // FSC หมดอายุ 24 เดือน
+                createLedgerEntry('FSC_CW', cwVal, 24);  // FSC CW หมดอายุ 24 เดือน
+                createLedgerEntry('PEFC', pefcVal, 12);  // PEFC หมดอายุ 12 เดือน
+
+                await Promise.all(promises);
+                alert(`✅ สร้างยอดยกมาสำเร็จ! ระบบจะนำไปคำนวณในหน้า Marketing ทันที`);
+
+                // เคลียร์ค่า
+                document.getElementById('in_fsc').value = '';
+                document.getElementById('in_cw').value = '';
+                document.getElementById('in_pefc').value = '';
+
+            } catch (error) {
+                console.error(error);
+                alert("❌ Error: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "💾 บันทึก Credit ยกมา (Save Initial Credit)";
+            }
+        };
+    </script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-purple-600 p-4 text-white flex justify-between items-center">
+            <h1 class="text-xl font-bold">💳 ตั้งค่ายอดยกมาสำหรับ Credit (Initial Credit Setup)</h1>
+            <span class="text-xs bg-purple-500 px-2 py-1 rounded">Admin Tool</span>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 text-sm text-yellow-800">
+                <strong>คำแนะนำ:</strong> โค้ดนี้จะสร้าง "สมุดบัญชี (Ledger)" ก้อนแรกเข้าไปในระบบ <br>
+                ระบบ Marketing จะทำการตัดยอดจากก้อนนี้แบบ FIFO โดย <strong>FSC/CW มีอายุ 24 เดือน</strong> และ <strong>PEFC มีอายุ 12 เดือน</strong>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-1">วันที่ยกยอดมา (Initial Date)</label>
+                <input type="date" id="setup_date" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 outline-none" required>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="p-4 border rounded-lg bg-green-50 border-green-200">
+                    <label class="block text-sm font-bold text-green-700 mb-1">FSC Mix Credit (Ton)</label>
+                    <input type="number" id="in_fsc" placeholder="0.000" step="0.001" class="w-full p-2 border border-gray-300 rounded font-mono text-right outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+
+                <div class="p-4 border rounded-lg bg-gray-50 border-gray-200">
+                    <label class="block text-sm font-bold text-gray-600 mb-1">FSC Control Wood (Ton)</label>
+                    <input type="number" id="in_cw" placeholder="0.000" step="0.001" class="w-full p-2 border border-gray-300 rounded font-mono text-right outline-none focus:ring-2 focus:ring-gray-500">
+                </div>
+
+                <div class="p-4 border rounded-lg bg-blue-50 border-blue-200">
+                    <label class="block text-sm font-bold text-blue-700 mb-1">PEFC Certified (Ton)</label>
+                    <input type="number" id="in_pefc" placeholder="0.000" step="0.001" class="w-full p-2 border border-gray-300 rounded font-mono text-right outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <button id="btnSaveCredit" onclick="saveInitialCredit()" class="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-lg text-lg transition">
+                💾 บันทึก Credit ยกมา (Save Initial Credit)
+            </button>
+        </div>
+    </div>
+    <script>
+        // Set วันที่ปัจจุบันเป็นค่าเริ่มต้น
+        document.getElementById('setup_date').value = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>

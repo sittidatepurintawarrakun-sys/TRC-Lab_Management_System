@@ -33,7 +33,7 @@ appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const functions = getFunctions(app);
+const functions = getFunctions(app, "asia-southeast1");
 
 // --- HELPER: Create Icons ---
 const safeCreateIcons = () => {
@@ -536,6 +536,107 @@ try {
 // ==========================================
 // MODULE 3: SPINNING (Production Output)
 // ==========================================
+    window.loadSpinningMassBalance = async (searchDate = null) => {
+        const container = document.getElementById('spinningSummaryCards');
+        if (!container) return;
+
+        const targetDate = searchDate || window.getShiftProductionDate();
+        const dateInput = document.getElementById('spinningSummaryDate');
+        if(dateInput && !dateInput.value) dateInput.value = targetDate;
+
+        container.innerHTML = `<div class="col-span-full text-center text-slate-500 py-2"><span class="animate-spin inline-block">⌛</span> กำลังดึงข้อมูลมาคำนวณ...</div>`;
+
+        try {
+            // 1. ดึงข้อมูล Viscose (Input Pulp)
+            const viscoseDocRef = doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${targetDate}`);
+            const viscoseSnap = await getDoc(viscoseDocRef);
+
+            // แยกตัวแปร Mix กับ CW ออกจากกัน
+            let fscMixPulp = 0, fscCwPulp = 0, totalPefcPulp = 0;
+
+            if (viscoseSnap.exists()) {
+                const vData = viscoseSnap.data().transactions || [];
+                vData.forEach(tx => {
+                    if(tx.standard === 'FSC') fscMixPulp += Number(tx.weight);
+                    if(tx.standard === 'FSC_CW') fscCwPulp += Number(tx.weight);
+                    if(tx.standard === 'PEFC') totalPefcPulp += Number(tx.weight);
+                });
+            }
+
+            const totalFscInput = fscMixPulp + fscCwPulp;
+
+            // 2. ดึงข้อมูล Spinning (Actual Fibre Output)
+            const spinDocRef = doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${targetDate}`);
+            const spinSnap = await getDoc(spinDocRef);
+            let actualFscFibre = 0, actualPefcFibre = 0;
+
+            if (spinSnap.exists()) {
+                const sData = spinSnap.data().transactions || [];
+                sData.forEach(tx => {
+                    if(tx.claimType === 'FSC') actualFscFibre += Number(tx.weight);
+                    if(tx.claimType === 'PEFC') actualPefcFibre += Number(tx.weight);
+                });
+            }
+
+            // 3. คำนวณ Theoretical & Credit (แยกก้อน)
+            const fscFactor = 0.99;
+            const pefcFactor = 0.93;
+
+            const fscMixCredit = fscMixPulp * fscFactor;
+            const fscCwCredit = fscCwPulp * fscFactor;
+            const pefcTheoretical = totalPefcPulp * pefcFactor;
+
+            // 4. Render UI
+            container.innerHTML = `
+                <div class="p-3 rounded-xl border border-amber-200 bg-amber-50/50 shadow-sm flex flex-col">
+                    <div class="text-xs font-bold text-amber-800 mb-3 border-b border-amber-200 pb-2 flex items-center gap-1">🌲 FSC Mass Balance (Mix & CW)</div>
+                    <div class="grid grid-cols-3 gap-3 text-center flex-1 items-center">
+
+                        <div class="flex flex-col gap-1 text-left bg-white/50 p-2 rounded">
+                            <div class="text-[10px] text-slate-500 uppercase font-bold border-b border-amber-200/50 pb-1 mb-1 text-center">Pulp Input</div>
+                            <div class="text-xs font-bold text-amber-700 flex justify-between"><span>Mix:</span> <span>${fscMixPulp.toFixed(3)} T</span></div>
+                            <div class="text-xs font-bold text-slate-600 flex justify-between"><span>CW:</span> <span>${fscCwPulp.toFixed(3)} T</span></div>
+                            <div class="text-sm font-black text-slate-800 border-t border-amber-200/50 pt-1 mt-1 flex justify-between"><span>Total:</span> <span>${totalFscInput.toFixed(3)} T</span></div>
+                        </div>
+
+                        <div>
+                            <div class="text-[10px] text-slate-500 uppercase font-bold">Actual Fibre (หน้างาน)</div>
+                            <div class="text-sm font-bold text-amber-600 mt-2">${actualFscFibre.toFixed(3)} <span class="text-[10px] font-normal">T</span></div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-sm border border-amber-100 p-2 flex flex-col gap-1 text-left">
+                            <div class="text-[10px] text-amber-600 font-bold uppercase border-b border-amber-100 pb-1 mb-1 text-center">Credit Claimed (99%)</div>
+                            <div class="text-xs font-bold text-amber-700 flex justify-between"><span>Mix:</span> <span>${fscMixCredit.toFixed(3)}</span></div>
+                            <div class="text-xs font-bold text-slate-600 flex justify-between"><span>CW:</span> <span>${fscCwCredit.toFixed(3)}</span></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="p-3 rounded-xl border border-green-200 bg-green-50/50 shadow-sm flex flex-col">
+                    <div class="text-xs font-bold text-green-800 mb-3 border-b border-green-200 pb-2 flex items-center gap-1">🛡️ PEFC Mass Balance</div>
+                    <div class="grid grid-cols-3 gap-3 text-center flex-1 items-center">
+                        <div>
+                            <div class="text-[10px] text-slate-500 uppercase font-bold">Pulp Input (Viscose)</div>
+                            <div class="text-sm font-bold text-slate-700 mt-1">${totalPefcPulp.toFixed(3)} <span class="text-[10px] font-normal">T</span></div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] text-slate-500 uppercase font-bold">Actual Fibre (หน้างาน)</div>
+                            <div class="text-sm font-bold text-green-600 mt-1">${actualPefcFibre.toFixed(3)} <span class="text-[10px] font-normal">T</span></div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow-sm border border-green-100 p-2">
+                            <div class="text-[10px] text-green-600 font-bold uppercase">Credit Claimed (93%)</div>
+                            <div class="text-lg font-black text-green-700 mt-1">${pefcTheoretical.toFixed(3)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            safeCreateIcons();
+        } catch (error) {
+            console.error("Error loading mass balance:", error);
+            container.innerHTML = `<div class="col-span-full text-center text-red-500 py-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
+        }
+    };
 window.addSpinningRow = () => {
 const tbody = document.getElementById('spinningEntryTable');
 const row = document.createElement('tr');
@@ -607,18 +708,20 @@ safeCreateIcons();
         finally { btn.innerHTML = `<i data-lucide="save"></i> บันทึก Spinning`; btn.disabled = false; safeCreateIcons(); }
     };
 
-window.initSpinningListeners = (searchDate = null) => {
-const tbody = document.getElementById('spinningHistoryTable');
-if (!tbody) return;
-if (spinningUnsubscribe) spinningUnsubscribe();
+    window.initSpinningListeners = (searchDate = null) => {
+        const tbody = document.getElementById('spinningHistoryTable');
+        if (!tbody) return;
 
-let q = searchDate ? doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${searchDate}`) : query(collection(db, "FSC_PEFC_RAW_LOGS"), where("department", "==", "Spinning"), orderBy("date", "desc"), limit(5));
+        // NEW: สั่งโหลด Mass Balance
+        window.loadSpinningMassBalance(searchDate);
 
-spinningUnsubscribe = onSnapshot(q, (snapshot) => {
-const docs = searchDate ? [snapshot] : snapshot.docs;
-renderSpinningHistoryTable(docs, tbody, !!searchDate);
-});
-};
+        if (spinningUnsubscribe) spinningUnsubscribe();
+        let q = searchDate ? doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${searchDate}`) : query(collection(db, "FSC_PEFC_RAW_LOGS"), where("department", "==", "Spinning"), orderBy("date", "desc"), limit(5));
+        spinningUnsubscribe = onSnapshot(q, (snapshot) => {
+            const docs = searchDate ? [snapshot] : snapshot.docs;
+            renderSpinningHistoryTable(docs, tbody, !!searchDate);
+        });
+    };
 
 const renderSpinningHistoryTable = (docs, tbody, isSingleDateMode) => {
 let allTransactions = [];
@@ -666,60 +769,69 @@ tbody.appendChild(row);
 safeCreateIcons();
 };
 
-// ==========================================
-// MODULE 4: MARKETING (Bulk Import & Sales)
-// ==========================================
-    let currentCreditBalance = { FSC: 0, FSC_CW: 0, PEFC: 0 };
+/// ==========================================
+    // MODULE 4: MARKETING (Bulk Import & Sales)
+    // ==========================================
+        let currentCreditBalance = { FSC: 0, FSC_CW: 0, PEFC: 0 };
 
-    window.refreshCreditBalance = async () => {
-        const btn = document.getElementById('btnRefreshBal');
-        if(!btn) return;
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = `<span class="animate-spin inline-block"> ⌛ </span> Updating...`;
-        btn.disabled = true;
-        const alertBar = document.getElementById('pefcSuspensionAlert');
-        alertBar.classList.add('hidden');
+        window.refreshCreditBalance = async () => {
+            const btn = document.getElementById('btnRefreshBal');
+            if(!btn) return;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<span class="animate-spin inline-block"> ⌛ </span> Updating...`;
+            btn.disabled = true;
 
-        try {
-            const getBalance = httpsCallable(functions, 'getCreditBalance');
-            const result = await getBalance();
-            if (result.data.success) {
-                const bal = result.data.balance;
-                currentCreditBalance = bal;
+            // เช็คเผื่อกรณีไม่มี alertBar ให้ข้ามไป จะได้ไม่ Error แดงใน Console
+            const alertBar = document.getElementById('pefcSuspensionAlert');
+            if(alertBar) alertBar.classList.add('hidden');
 
-                // 1. Update FSC Mix Credit (Amber)
-                document.getElementById('bal_fsc').innerText = bal.FSC.toLocaleString(undefined, {minimumFractionDigits:3});
-                document.getElementById('bal_fsc_expiring').innerText = result.data.expiring.FSC.toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
-                document.getElementById('bal_fsc').className = `text-3xl lg:text-4xl font-black mt-2 ${bal.FSC <= 0 ? 'text-red-500' : 'text-amber-900'}`;
+            try {
+                const getBalance = httpsCallable(functions, 'getCreditBalance');
+                const result = await getBalance();
 
-                // 2. Update FSC Control Wood (Slate/Gray)
-                document.getElementById('bal_fsc_cw').innerText = bal.FSC_CW.toLocaleString(undefined, {minimumFractionDigits:3});
-                document.getElementById('bal_fsc_cw_expiring').innerText = result.data.expiring.FSC_CW.toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
-                document.getElementById('bal_fsc_cw').className = `text-3xl lg:text-4xl font-black mt-2 ${bal.FSC_CW <= 0 ? 'text-red-500' : 'text-slate-700'}`;
+                if (result.data.success) {
+                    const bal = result.data.balance || { FSC: 0, FSC_CW: 0, PEFC: 0 };
+                    const expiring = result.data.expiring || { FSC: 0, FSC_CW: 0, PEFC: 0 };
+                    currentCreditBalance = bal;
 
-                // 3. Update PEFC (Green)
-                document.getElementById('bal_pefc').innerText = bal.PEFC.toLocaleString(undefined, {minimumFractionDigits:3});
-                document.getElementById('bal_pefc_expiring').innerText = result.data.expiring.PEFC.toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
-                document.getElementById('bal_pefc').className = `text-3xl lg:text-4xl font-black mt-2 ${bal.PEFC <= 0 ? 'text-red-500' : 'text-green-900'}`;
+                    // 1. Update FSC Mix Credit
+                    const domFscBal = document.getElementById('bal_fsc');
+                    const domFscExp = document.getElementById('bal_fsc_expiring');
+                    if(domFscBal) domFscBal.innerText = (bal.FSC || 0).toLocaleString(undefined, {minimumFractionDigits:3});
+                    if(domFscExp) domFscExp.innerText = (expiring.FSC || 0).toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
 
-                // Handle PEFC 16-Hour Rule Suspension UI
-                if(result.data.pefcSuspended) {
-                    alertBar.classList.remove('hidden');
-                    document.getElementById('suspensionTimeStr').innerText = result.data.pefcResumeTime;
-                    document.getElementById('btnUploadMarketing').disabled = true; 
-                    document.getElementById('btnUploadMarketing').classList.add('opacity-50', 'cursor-not-allowed');
-                } else {
-                    document.getElementById('btnUploadMarketing').disabled = false;
-                    document.getElementById('btnUploadMarketing').classList.remove('opacity-50', 'cursor-not-allowed');
+                    // 2. Update FSC Control Wood
+                    const domCwBal = document.getElementById('bal_fsc_cw');
+                    const domCwExp = document.getElementById('bal_fsc_cw_expiring');
+                    if(domCwBal) domCwBal.innerText = (bal.FSC_CW || 0).toLocaleString(undefined, {minimumFractionDigits:3});
+                    if(domCwExp) domCwExp.innerText = (expiring.FSC_CW || 0).toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
+
+                    // 3. Update PEFC 
+                    const domPefcBal = document.getElementById('bal_pefc');
+                    const domPefcExp = document.getElementById('bal_pefc_expiring');
+                    if(domPefcBal) domPefcBal.innerText = (bal.PEFC || 0).toLocaleString(undefined, {minimumFractionDigits:3});
+                    if(domPefcExp) domPefcExp.innerText = (expiring.PEFC || 0).toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
+
+                    // Handle PEFC 16-Hour Rule Suspension UI
+                    const btnUpload = document.getElementById('btnUploadMarketing');
+                    if(result.data.pefcSuspended && alertBar && btnUpload) {
+                        alertBar.classList.remove('hidden');
+                        document.getElementById('suspensionTimeStr').innerText = result.data.pefcResumeTime;
+                        btnUpload.disabled = true; 
+                        btnUpload.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else if(btnUpload) {
+                        btnUpload.disabled = false;
+                        btnUpload.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
                 }
+            } catch (error) {
+                console.error("Error refreshing balance:", error);
+            } finally {
+                btn.innerHTML = originalContent; 
+                btn.disabled = false;
+                safeCreateIcons();
             }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            btn.innerHTML = originalContent; btn.disabled = false;
-            safeCreateIcons();
-        }
-    };
+        };
 
 // ฟังก์ชันช่วยตรวจสอบรูปแบบวันที่จากข้อมูลหลายๆ แถว (ป้องกันปัญหาวันที่สลับกับเดือน)
 function detectDateFormat(dataRows, dateColIndex, targetMonthIndex) {
@@ -845,20 +957,37 @@ tbody.appendChild(row);
 safeCreateIcons();
 };
 
-window.deleteEntry = async (docId, index) => {
-if(!currentUser) return;
-if(!confirm(` ⚠️  ยืนยันการลบรายการนี้?`)) return;
-try {
-const docRef = doc(db, "FSC_PEFC_RAW_LOGS", docId);
-await runTransaction(db, async (transaction) => {
-const docSnap = await transaction.get(docRef);
-if (!docSnap.exists()) throw "ไม่พบเอกสาร";
-const newTransactions = [...docSnap.data().transactions];
-if (index > -1 && index < newTransactions.length) newTransactions.splice(index, 1);
-transaction.update(docRef, { transactions: newTransactions, lastUpdated: Timestamp.now() });
-});
-} catch (e) { alert("Error: " + e.message); }
-};
+    window.deleteEntry = async (docId, index) => {
+        if(!currentUser) return;
+        if(!confirm(`  ⚠️   ยืนยันการลบรายการนี้? (ระบบจะปรับปรุงยอดเครดิตอัตโนมัติ)`)) return;
+        try {
+            const docRef = doc(db, "FSC_PEFC_RAW_LOGS", docId);
+            await runTransaction(db, async (transaction) => {
+                const docSnap = await transaction.get(docRef);
+                if (!docSnap.exists()) throw "ไม่พบเอกสาร";
+                const newTransactions = [...docSnap.data().transactions];
+                if (index > -1 && index < newTransactions.length) newTransactions.splice(index, 1);
+                transaction.update(docRef, { transactions: newTransactions, lastUpdated: Timestamp.now() });
+            });
+
+            // 🟢 สั่ง Backend ให้ซิงค์หัก Ledger คืน (ทำเฉพาะกรณีที่เป็น Viscose)
+            if (docId.startsWith("Viscose_")) {
+                const targetDate = docId.split('_')[1];
+                const calculateCreditsFunc = httpsCallable(functions, 'calculateDailyCredits');
+                await calculateCreditsFunc({ targetDate: targetDate });
+
+                // รีเฟรชยอดทั้งหมดในหน้าจอ
+                if (typeof window.refreshViscoseBalance === 'function') window.refreshViscoseBalance();
+                if (typeof window.refreshCreditBalance === 'function') window.refreshCreditBalance();
+                if (typeof window.loadSpinningMassBalance === 'function') window.loadSpinningMassBalance(targetDate);
+            }
+
+            // โหลดตารางใหม่
+            if (docId.startsWith("Viscose_")) window.initViscoseListeners();
+            if (docId.startsWith("Spinning_")) window.initSpinningListeners();
+
+        } catch (e) { alert("Error: " + e.message); }
+    };
 
 // Tab Navigation Override to trigger Balance check
 window.openTab = (tabName) => {
@@ -1047,6 +1176,20 @@ body.is-logged-in .auth-only { display: flex !important; }
 </div>
 
 <div id="Spinning" class="tab-content hidden h-full flex flex-col gap-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
+                <i data-lucide="scale" class="w-4 h-4 text-teal-500"></i> สรุป Mass Balance & Credit รายวัน
+            </h3>
+            <div class="flex items-center gap-2">
+                <input type="date" id="spinningSummaryDate" onchange="window.loadSpinningMassBalance(this.value)" class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm">
+                <button onclick="document.getElementById('spinningSummaryDate').value=''; window.loadSpinningMassBalance();" class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+            </div>
+        </div>
+        <div id="spinningSummaryCards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="col-span-full text-center text-gray-400 text-sm py-2">Loading balance...</div>
+        </div>
+    </div>
 <div class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0">
 <div class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm">
 <h2 class="text-lg font-bold text-teal-800 flex items-center gap-2"><i data-lucide="activity"></i> บันทึกรายการ Spinning Output (Fibre Yield)</h2>
@@ -1078,79 +1221,92 @@ body.is-logged-in .auth-only { display: flex !important; }
 </div>
 </div>
 
-<div id="Marketing" class="tab-content hidden h-full flex flex-col gap-4">
-<div id="pefcSuspensionAlert" class="hidden bg-red-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-between border-2 border-red-800 animate-pulse">
-    <div class="flex items-center gap-3"><i data-lucide="alert-octagon" class="w-6 h-6 text-white"></i><div><h4 class="font-bold text-lg">⚠️ PEFC Claim Suspended (16-Hour Rule)</h4><p class="text-sm opacity-90">ระบบถูกระงับการเบิกจ่าย PEFC เนื่องจากพบวัตถุดิบเสี่ยง จะกลับมาใช้งานได้ในเวลา: <strong id="suspensionTimeStr" class="text-yellow-300">--:--</strong></p></div></div>
-</div>
-
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-<div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold flex items-center gap-2 text-slate-700"><i data-lucide="wallet"></i> บัญชีเครดิตคงเหลือ (Dual-Standard Ledger)</h2><button onclick="refreshCreditBalance()" id="btnRefreshBal" class="px-4 py-1.5 bg-slate-800 text-white rounded-lg text-sm font-bold shadow hover:bg-slate-700 transition flex items-center gap-2"><i data-lucide="refresh-cw" class="w-4 h-4"></i> อัปเดตยอดจาก Ledger</button></div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-
-        <div class="border-2 border-amber-200 rounded-xl overflow-hidden shadow-sm bg-amber-50/30">
-            <div class="bg-amber-700 text-white p-3 flex justify-between items-center">
-                <h3 class="font-black text-sm lg:text-lg flex items-center gap-2"><i data-lucide="tree-deciduous"></i> FSC Mix Credit</h3>
-                <span class="text-[10px] lg:text-xs bg-amber-900 px-2 py-1 rounded">Conv: 99.00%</span>
+    <div id="Marketing" class="tab-content hidden h-full flex flex-col gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="wallet"></i> บัญชีเครดิตคงเหลือ (Dual-Standard Ledger)
+                </h2>
+                <button onclick="refreshCreditBalance()" id="btnRefreshBal" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition flex items-center gap-2 shadow-sm">
+                    อัปเดตยอดจาก Ledger
+                </button>
             </div>
-            <div class="p-4 lg:p-6 flex flex-col items-center">
-                <span class="text-xs font-bold text-amber-800 uppercase tracking-wider">Available (FIFO)</span>
-                <span id="bal_fsc" class="text-4xl font-black text-amber-900 mt-2">---</span>
-                <span class="text-[10px] text-amber-600 mt-1">(Expire in 24 Months)</span>
-                <div class="mt-4 w-full bg-white p-2 rounded border border-red-200 flex justify-between items-center">
-                    <span class="text-[10px] font-bold text-red-600">⚠️ < 30 days</span>
-                    <span id="bal_fsc_expiring" class="font-mono text-xs font-bold text-red-700">0.000 T</span>
+
+            <div id="pefcSuspensionAlert" class="hidden bg-red-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-between border-2 border-red-800 animate-pulse mb-6">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="alert-octagon" class="w-6 h-6 text-white"></i>
+                    <div>
+                        <h4 class="font-bold text-lg">⚠️ PEFC Claim Suspended (16-Hour Rule)</h4>
+                        <p class="text-sm opacity-90">ระบบถูกระงับการเบิกจ่าย PEFC เนื่องจากพบวัตถุดิบเสี่ยง จะกลับมาใช้งานได้ในเวลา: <strong id="suspensionTimeStr" class="text-yellow-300">--:--</strong></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="border-2 border-amber-200 rounded-xl overflow-hidden flex flex-col bg-amber-50/30">
+                    <div class="bg-amber-700 p-4 flex justify-between items-center">
+                        <h3 class="font-black text-white text-lg">FSC Mix<br>Credit</h3>
+                        <div class="bg-amber-900/50 px-2 py-1 rounded text-xs text-amber-100">Conv:<br>99.00%</div>
+                    </div>
+                    <div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
+                        <span class="text-sm font-bold text-amber-800 mb-2">AVAILABLE (FIFO)</span>
+                        <span id="bal_fsc" class="text-4xl font-black text-slate-800">---</span>
+                        <span class="text-xs text-amber-600/70 mt-2">(Expire in 24 Months)</span>
+                    </div>
+                    <div class="bg-white border-t border-amber-100 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm">
+                        <span>⚠️ < 30 days</span>
+                        <span id="bal_fsc_expiring">0.000 T</span>
+                    </div>
+                </div>
+
+                <div class="border-2 border-slate-200 rounded-xl overflow-hidden flex flex-col bg-slate-50/50">
+                    <div class="bg-slate-700 p-4 flex justify-between items-center">
+                        <h3 class="font-black text-white text-lg">FSC Control<br>Wood</h3>
+                        <div class="bg-slate-900/50 px-2 py-1 rounded text-xs text-slate-100">Conv:<br>99.00%</div>
+                    </div>
+                    <div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
+                        <span class="text-sm font-bold text-slate-600 mb-2">AVAILABLE (FIFO)</span>
+                        <span id="bal_fsc_cw" class="text-4xl font-black text-slate-800">---</span>
+                        <span class="text-xs text-slate-400 mt-2">(Expire in 24 Months)</span>
+                    </div>
+                    <div class="bg-white border-t border-slate-200 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm">
+                        <span>⚠️ < 30 days</span>
+                        <span id="bal_fsc_cw_expiring">0.000 T</span>
+                    </div>
+                </div>
+
+                <div class="border-2 border-green-200 rounded-xl overflow-hidden flex flex-col bg-green-50/30">
+                    <div class="bg-green-600 p-4 flex justify-between items-center">
+                        <h3 class="font-black text-white text-lg">PEFC<br>Certified</h3>
+                        <div class="bg-green-800/50 px-2 py-1 rounded text-xs text-green-100">Conv:<br>93.00%</div>
+                    </div>
+                    <div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
+                        <span class="text-sm font-bold text-green-700 mb-2">AVAILABLE (FIFO)</span>
+                        <span id="bal_pefc" class="text-4xl font-black text-slate-800">---</span>
+                        <span class="text-xs text-green-600/70 mt-2">(Expire in 12 Months)</span>
+                    </div>
+                    <div class="bg-white border-t border-green-100 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm">
+                        <span>⚠️ < 30 days</span>
+                        <span id="bal_pefc_expiring">0.000 T</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="border-2 border-slate-300 rounded-xl overflow-hidden shadow-sm bg-slate-50/50">
-            <div class="bg-slate-700 text-white p-3 flex justify-between items-center">
-                <h3 class="font-black text-sm lg:text-lg flex items-center gap-2"><i data-lucide="shield"></i> FSC Control Wood</h3>
-                <span class="text-[10px] lg:text-xs bg-slate-900 px-2 py-1 rounded">Conv: 99.00%</span>
+        <div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col mt-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2"><i data-lucide="file-spreadsheet" class="text-blue-600"></i> นำเข้าข้อมูลการขายเพื่อตัดยอด Ledger (Sales Deduction)</h3>
+                <div class="flex items-center gap-2"><label class="text-xs font-bold text-slate-500">เลือกเดือนที่จัดจำหน่าย:</label><input type="month" id="marketingDataMonth" class="text-sm border border-slate-300 rounded px-3 py-1.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"></div>
             </div>
-            <div class="p-4 lg:p-6 flex flex-col items-center">
-                <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">Available (FIFO)</span>
-                <span id="bal_fsc_cw" class="text-4xl font-black text-slate-700 mt-2">---</span>
-                <span class="text-[10px] text-slate-500 mt-1">(Expire in 24 Months)</span>
-                <div class="mt-4 w-full bg-white p-2 rounded border border-red-200 flex justify-between items-center">
-                    <span class="text-[10px] font-bold text-red-600">⚠️ < 30 days</span>
-                    <span id="bal_fsc_cw_expiring" class="font-mono text-xs font-bold text-red-700">0.000 T</span>
-                </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4"><p class="text-xs text-blue-800 leading-relaxed"><strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel <strong>(คลุมรวมหัวตารางมาด้วย)</strong> มาวางในช่องด้านล่าง<br>ระบบจะอ่านชนิดมาตรฐานจากคอลัมน์ "Claim" และทำการตัดบัญชีแบบ <strong>FIFO</strong> อัตโนมัติ (หักจากก้อนที่เก่าที่สุดที่ยังไม่หมดอายุ)</p></div>
+            <textarea id="excelPasteArea" rows="10" class="w-full flex-1 text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4" placeholder="วางข้อมูลจาก Excel ตรงนี้... (ต้องรวมหัวตาราง Date, Invoice, Claim, Weight มาด้วย)"></textarea>
+            <div class="flex gap-3">
+                <button id="btnUploadMarketing" onclick="uploadMarketingData()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2"><i data-lucide="upload-cloud" class="w-5 h-5"></i> บันทึกยอดขาย & หักลบเครดิต</button>
+                <button onclick="document.getElementById('excelPasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">Clear ข้อมูล</button>
             </div>
+            <div id="marketingStatusArea" class="mt-4 hidden"><div id="marketingStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div></div>
         </div>
-
-        <div class="border-2 border-green-200 rounded-xl overflow-hidden shadow-sm bg-green-50/30 relative">
-            <div class="bg-green-600 text-white p-3 flex justify-between items-center">
-                <h3 class="font-black text-sm lg:text-lg flex items-center gap-2"><i data-lucide="shield-check"></i> PEFC Certified</h3>
-                <span class="text-[10px] lg:text-xs bg-green-800 px-2 py-1 rounded">Conv: 93.00%</span>
-            </div>
-            <div class="p-4 lg:p-6 flex flex-col items-center">
-                <span class="text-xs font-bold text-green-700 uppercase tracking-wider">Available (FIFO)</span>
-                <span id="bal_pefc" class="text-4xl font-black text-green-900 mt-2">---</span>
-                <span class="text-[10px] text-green-600 mt-1">(Expire in 12 Months)</span>
-                <div class="mt-4 w-full bg-white p-2 rounded border border-red-200 flex justify-between items-center">
-                    <span class="text-[10px] font-bold text-red-600">⚠️ < 30 days</span>
-                    <span id="bal_pefc_expiring" class="font-mono text-xs font-bold text-red-700">0.000 T</span>
-                </div>
-            </div>
-        </div>
-
     </div>
-
-<div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col mt-4">
-<div class="flex justify-between items-center mb-4">
-<h3 class="text-sm font-bold text-slate-700 flex items-center gap-2"><i data-lucide="file-spreadsheet" class="text-blue-600"></i> นำเข้าข้อมูลการขายเพื่อตัดยอด Ledger (Sales Deduction)</h3>
-<div class="flex items-center gap-2"><label class="text-xs font-bold text-slate-500">เลือกเดือนที่จัดจำหน่าย:</label><input type="month" id="marketingDataMonth" class="text-sm border border-slate-300 rounded px-3 py-1.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"></div>
-</div>
-<div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4"><p class="text-xs text-blue-800 leading-relaxed"><strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel <strong>(คลุมรวมหัวตารางมาด้วย)</strong> มาวางในช่องด้านล่าง<br>ระบบจะอ่านชนิดมาตรฐานจากคอลัมน์ "Claim" และทำการตัดบัญชีแบบ <strong>FIFO</strong> อัตโนมัติ (หักจากก้อนที่เก่าที่สุดที่ยังไม่หมดอายุ)</p></div>
-<textarea id="excelPasteArea" rows="10" class="w-full flex-1 text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4" placeholder="วางข้อมูลจาก Excel ตรงนี้... (ต้องรวมหัวตาราง Date, Invoice, Claim, Weight มาด้วย)"></textarea>
-<div class="flex gap-3">
-<button id="btnUploadMarketing" onclick="uploadMarketingData()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2"><i data-lucide="upload-cloud" class="w-5 h-5"></i> บันทึกยอดขาย & หักลบเครดิต</button>
-<button onclick="document.getElementById('excelPasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">Clear ข้อมูล</button>
-</div>
-<div id="marketingStatusArea" class="mt-4 hidden"><div id="marketingStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div></div>
-</div>
-</div>
 
 </main>
 </div>
