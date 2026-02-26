@@ -70,6 +70,9 @@ const PULP_OPTIONS_STORE = `
 <option value="PHOENIX Control Wood">PHOENIX Control Wood</option>
 <option value="PHOENIX PEFC">PHOENIX PEFC</option>
 <option value="SAICCOR FSC Mix Credit 70%">SAICCOR FSC Mix Credit 70%</option>
+<option value="TEL Pellita FSC Mix Credit">TEL Pellita FSC Mix Credit</option>
+<option value="TEL Pellita FSC Control Wood">TEL Pellita FSC Control Wood</option>
+<option value="TEL Pellita PEFC">TEL Pellita PEFC</option>
 `;
 const VISCOSE_LINE_OPTIONS = `
 <option value="Line Modal">Line Modal</option>
@@ -914,6 +917,45 @@ btn.disabled = false;
 safeCreateIcons();
 }
 };
+    window.uploadWarehouseData = async () => {
+        const rawText = document.getElementById('warehousePasteArea').value;
+        const statusArea = document.getElementById('warehouseStatusArea');
+        const statusMsg = document.getElementById('warehouseStatusMsg');
+        const btn = document.getElementById('btnUploadWarehouse');
+
+        if (!rawText.trim()) return alert("กรุณาวางข้อมูลก่อนครับ");
+        if (!confirm("ยืนยันการนำเข้าข้อมูล Warehouse?")) return;
+
+        statusArea.classList.remove('hidden');
+        statusMsg.className = 'bg-blue-50 text-blue-800 border border-blue-200 p-3 rounded-lg flex items-center shadow-sm';
+        statusMsg.innerHTML = '<span class="animate-spin inline-block mr-2"> ⏳ </span> กำลังประมวลผลและจัดกลุ่มข้อมูล...';
+        btn.disabled = true;
+
+        try {
+            const rows = rawText.trim().split('\n').map(r => r.split('\t'));
+            const headers = rows[0].map(h => h.trim());
+            const dataRows = rows.slice(1);
+
+            if (dataRows.length === 0) throw new Error("ไม่พบข้อมูล (พบแต่หัวตาราง)");
+
+            const processFunc = httpsCallable(functions, 'processWarehouseBulkData');
+            const result = await processFunc({ headers, dataRows });
+
+            if (result.data.success) {
+                statusMsg.className = 'bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm';
+                statusMsg.innerHTML = ` ✅ <b>สำเร็จ!</b> อัปเดตข้อมูล Warehouse เรียบร้อยแล้ว (Delivery: ${result.data.deliveryCount} รายการ)`;
+                document.getElementById('warehousePasteArea').value = ''; 
+            } else {
+                throw new Error(result.data.message || "เกิดข้อผิดพลาด");
+            }
+        } catch (error) {
+            statusMsg.className = 'bg-red-50 text-red-800 border border-red-200 p-3 rounded-lg shadow-sm';
+            statusMsg.innerHTML = ` ❌ <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
+        } finally {
+            btn.disabled = false;
+            safeCreateIcons();
+        }
+    };
 
 // --- SHARED UI LOGIC ---
 const renderUnifiedTable = (docs, tbody, isSingleDateMode, dept) => {
@@ -1068,6 +1110,9 @@ body.is-logged-in .auth-only { display: flex !important; }
 <button id="btnMarketing" onclick="openTab('Marketing')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
 <i data-lucide="coins"></i> Marketing
 </button>
+    <button id="btnWarehouse" onclick="openTab('Warehouse')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
+      <i data-lucide="package-check"></i> Warehouse (Dispatch)
+    </button>
 </nav>
 <div class="p-4 border-t border-slate-700 bg-slate-900/50">
 <div id="userProfileSection" class="hidden">
@@ -1305,6 +1350,29 @@ body.is-logged-in .auth-only { display: flex !important; }
                 <button onclick="document.getElementById('excelPasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">Clear ข้อมูล</button>
             </div>
             <div id="marketingStatusArea" class="mt-4 hidden"><div id="marketingStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div></div>
+        </div>
+    </div>
+    <div id="Warehouse" class="tab-content hidden h-full flex flex-col gap-4">
+        <div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <i data-lucide="scan-line" class="text-indigo-600"></i> นำเข้าข้อมูล Warehouse (อัปเดต Delivery & Production Date)
+                </h3>
+            </div>
+            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4">
+                <p class="text-xs text-indigo-800 leading-relaxed">
+                    <strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel <strong>(คลุมรวมหัวตาราง Delivery No., Prod_Date ฯลฯ)</strong> มาวางในช่องด้านล่าง<br>
+                    ระบบจะจัดกลุ่มข้อมูลตาม Delivery No. และแปลงวันที่เพื่อเชื่อมโยงกับระบบ Marketing และแผนกผลิตโดยอัตโนมัติ
+                </p>
+            </div>
+            <textarea id="warehousePasteArea" rows="10" class="w-full flex-1 text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none mb-4" placeholder="วางข้อมูลจาก Excel ตรงนี้..."></textarea>
+            <div class="flex gap-3">
+                <button id="btnUploadWarehouse" onclick="uploadWarehouseData()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2">
+                    <i data-lucide="upload-cloud" class="w-5 h-5"></i> บันทึกข้อมูล Warehouse
+                </button>
+                <button onclick="document.getElementById('warehousePasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">Clear ข้อมูล</button>
+            </div>
+            <div id="warehouseStatusArea" class="mt-4 hidden"><div id="warehouseStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div></div>
         </div>
     </div>
 
