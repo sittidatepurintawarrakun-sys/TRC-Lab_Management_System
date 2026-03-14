@@ -7,7 +7,6 @@
 
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
     <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,20 +17,40 @@
         .sidebar-item.active { background-color: #e0e7ff; color: #4338ca; border-right: 4px solid #4338ca; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-in { animation: slideIn 0.4s ease-out forwards; }
-        .timeline-line { position: absolute; left: 24px; top: 40px; bottom: -20px; width: 2px; background-color: #e2e8f0; z-index: 0; }
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
     </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-functions.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+        const app = initializeApp(firebaseConfig);
+        const functions = getFunctions(app, "asia-southeast1");
+        
+        // ส่งต่อให้ React ใช้งานผ่าน window object
+        window.api = {
+            getTraceabilityReport: httpsCallable(functions, 'getTraceabilityReport'),
+            getCreditBalance: httpsCallable(functions, 'getCreditBalance')
+        };
+    </script>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } = Recharts;
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } = Recharts;
 
         // --- ICONS ---
         const Icon = ({ path, size = 20, className = "" }) => (
@@ -39,345 +58,220 @@
         );
         const Icons = {
             Home: (props) => <Icon path={<><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>} {...props} />,
-            Box: (props) => <Icon path={<><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>} {...props} />,
-            Beaker: (props) => <Icon path={<><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><line x1="6" y1="14" x2="18" y2="14"/></>} {...props} />,
-            Layers: (props) => <Icon path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} {...props} />,
             Search: (props) => <Icon path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} {...props} />,
-            Check: (props) => <Icon path={<polyline points="20 6 9 17 4 12"/>} {...props} />,
             Alert: (props) => <Icon path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} {...props} />,
-            FileText: (props) => <Icon path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>} {...props} />,
-            MapPin: (props) => <Icon path={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>} {...props} />
-        };
-
-        // --- MOCK DATA ---
-        const dashboardData = {
-            fscBalance: 1250.5,
-            pefcBalance: 320.1,
-            productionData: [
-                { name: 'Week 1', FSC: 400, PEFC: 240, NonCertified: 100 },
-                { name: 'Week 2', FSC: 300, PEFC: 139, NonCertified: 80 },
-                { name: 'Week 3', FSC: 200, PEFC: 980, NonCertified: 120 },
-                { name: 'Week 4', FSC: 278, PEFC: 390, NonCertified: 90 },
-            ],
-            sustainabilityMix: [
-                { name: 'FSC Mix Credit', value: 65, color: '#10b981' }, // Emerald 500
-                { name: 'PEFC Certified', value: 25, color: '#3b82f6' }, // Blue 500
-                { name: 'Controlled Wood', value: 10, color: '#f59e0b' }, // Amber 500
-            ]
+            Layers: (props) => <Icon path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} {...props} />,
+            Truck: (props) => <Icon path={<><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>} {...props} />,
+            Activity: (props) => <Icon path={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>} {...props} />,
+            Flask: (props) => <Icon path={<><path d="M9 3H15M10 9H14M3 21H21M5 21V10L10 3H14L19 10V21"/></>} {...props} />,
+            CheckCircle: (props) => <Icon path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} {...props} />
         };
 
         // --- COMPONENTS ---
 
-        // 1. DASHBOARD VIEW (Overview)
-        const DashboardView = () => (
-            <div className="p-8 space-y-8 animate-slide-in">
-                <div className="flex justify-between items-center">
+        // 🟢 MODULE 1: EXECUTIVE DASHBOARD
+        const DashboardView = () => {
+            const [data, setData] = useState({ FSC: 0, FSC_CW: 0, PEFC: 0 });
+            const [suspension, setSuspension] = useState({ active: false, time: null });
+
+            useEffect(() => {
+                const loadData = async () => {
+                    if(!window.api) return;
+                    try {
+                        const res = await window.api.getCreditBalance();
+                        if(res.data.success) {
+                            setData(res.data.balance || { FSC: 0, FSC_CW: 0, PEFC: 0 });
+                            setSuspension({ active: res.data.pefcSuspended, time: res.data.pefcResumeTime });
+                        }
+                    } catch (e) { console.error("Error loading balance", e); }
+                };
+                // รอ Firebase Load แป๊บนึง
+                setTimeout(loadData, 1000);
+            }, []);
+
+            return (
+                <div className="p-8 space-y-6 animate-slide-in">
                     <div>
                         <h2 className="text-3xl font-bold text-slate-800">Executive Dashboard</h2>
-                        <p className="text-slate-500">Real-time Mass Balance Monitoring</p>
+                        <p className="text-slate-500">Real-time Mass Balance & Certification Status</p>
                     </div>
-                    <div className="flex gap-2">
-                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold flex items-center gap-1"><div className="w-2 h-2 bg-green-500 rounded-full"></div> System Online</span>
-                    </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-600">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-sm font-medium text-slate-400">Total Production (YTD)</p>
-                                <h3 className="text-3xl font-bold text-slate-800 mt-1">24,500 <span className="text-sm font-normal text-slate-400">Tons</span></h3>
-                            </div>
-                            <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><Icons.Layers size={24}/></div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-500">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-sm font-medium text-slate-400">FSC Credit Available</p>
-                                <h3 className="text-3xl font-bold text-emerald-600 mt-1">{dashboardData.fscBalance.toLocaleString()} <span className="text-sm font-normal text-slate-400">Credits</span></h3>
-                            </div>
-                            <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><Icons.Check size={24}/></div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-sm font-medium text-slate-400">PEFC Credit Available</p>
-                                <h3 className="text-3xl font-bold text-blue-600 mt-1">{dashboardData.pefcBalance.toLocaleString()} <span className="text-sm font-normal text-slate-400">Credits</span></h3>
-                            </div>
-                            <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Icons.Check size={24}/></div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-400">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-sm font-medium text-slate-400">Pending Verification</p>
-                                <h3 className="text-3xl font-bold text-orange-500 mt-1">120 <span className="text-sm font-normal text-slate-400">Tons</span></h3>
-                            </div>
-                            <div className="p-2 bg-orange-50 rounded-lg text-orange-500"><Icons.Alert size={24}/></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
-                        <h3 className="font-bold text-lg text-slate-700 mb-4">Production Output by Certification</h3>
-                        <div className="h-80">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={dashboardData.productionData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0"/>
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                                    <YAxis axisLine={false} tickLine={false} />
-                                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}/>
-                                    <Legend />
-                                    <Bar dataKey="FSC" fill="#10b981" radius={[4,4,0,0]} stackId="a" />
-                                    <Bar dataKey="PEFC" fill="#3b82f6" radius={[4,4,0,0]} stackId="a" />
-                                    <Bar dataKey="NonCertified" fill="#cbd5e1" radius={[4,4,0,0]} stackId="a" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm">
-                        <h3 className="font-bold text-lg text-slate-700 mb-4">Sustainbility Mix</h3>
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={dashboardData.sustainabilityMix} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                        {dashboardData.sustainabilityMix.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend verticalAlign="bottom" height={36}/>
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="mt-4 space-y-3">
-                            {dashboardData.sustainabilityMix.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: item.color}}></div>
-                                        <span className="text-slate-600">{item.name}</span>
-                                    </div>
-                                    <span className="font-bold text-slate-800">{item.value}%</span>
+                    {/* 🚨 PEFC Suspension Alert */}
+                    {suspension.active && (
+                        <div className="bg-red-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse">
+                            <div className="flex items-center gap-3">
+                                <Icons.Alert size={28} />
+                                <div>
+                                    <h4 className="font-bold text-lg">⚠️ PEFC Claim Suspended (16-Hour Rule)</h4>
+                                    <p className="text-sm opacity-90">System blocked from PEFC claims due to High-Risk Material. Resumes at: {suspension.time}</p>
                                 </div>
-                            ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* KPI Cards (Split Standards) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* FSC Mix - Amber Theme */}
+                        <div className="bg-amber-50 p-6 rounded-xl shadow-sm border-2 border-amber-200">
+                            <p className="text-sm font-bold text-amber-700 uppercase">FSC Mix Credit (99%)</p>
+                            <h3 className="text-4xl font-black text-slate-800 mt-2">{data.FSC.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-sm font-normal text-slate-500">Tons</span></h3>
+                            <p className="text-xs text-amber-600 mt-2">Expiring Policy: 24 Months (FIFO)</p>
+                        </div>
+                        
+                        {/* FSC CW - Slate Theme */}
+                        <div className="bg-slate-50 p-6 rounded-xl shadow-sm border-2 border-slate-200">
+                            <p className="text-sm font-bold text-slate-600 uppercase">FSC Control Wood (99%)</p>
+                            <h3 className="text-4xl font-black text-slate-800 mt-2">{data.FSC_CW.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-sm font-normal text-slate-500">Tons</span></h3>
+                            <p className="text-xs text-slate-500 mt-2">Expiring Policy: 24 Months (FIFO)</p>
+                        </div>
+
+                        {/* PEFC - Emerald Theme */}
+                        <div className={`p-6 rounded-xl shadow-sm border-2 ${suspension.active ? 'bg-red-50 border-red-300 opacity-50' : 'bg-emerald-50 border-emerald-200'}`}>
+                            <p className="text-sm font-bold text-emerald-700 uppercase">PEFC Certified (93%)</p>
+                            <h3 className="text-4xl font-black text-slate-800 mt-2">{data.PEFC.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-sm font-normal text-slate-500">Tons</span></h3>
+                            <p className="text-xs text-emerald-600 mt-2">Expiring Policy: 12 Months (FIFO)</p>
                         </div>
                     </div>
                 </div>
-            </div>
-        );
+            );
+        };
 
-        // 2. TRACEABILITY VIEW (THE HERO FEATURE)
+        // 🟢 MODULE 3: END-TO-END TRACEABILITY
         const TraceabilityView = () => {
-            const [searchTerm, setSearchTerm] = useState('');
-            const [searchResult, setSearchResult] = useState(null);
+            const [searchType, setSearchType] = useState('INVOICE');
+            const [searchValue, setSearchValue] = useState('');
+            const [data, setData] = useState(null);
             const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
 
-            const handleSearch = (e) => {
+            const handleSearch = async (e) => {
                 e.preventDefault();
-                setLoading(true);
-                // Simulate API Call
-                setTimeout(() => {
-                    setSearchResult({
-                        invoice: "INV-2408-HM055",
-                        customer: "H&M Global Sourcing",
-                        destination: "Dhaka, Bangladesh",
-                        poDate: "15 Aug 2024",
-                        totalWeight: "50,000 kg",
-                        product: "Viscose Rayon Staple Fiber 1.2D x 38mm",
-                        claim: "FSC Mix Credit",
-                        claimStatus: "VALID",
-                        products: [
-                            {
-                                id: "Bale-001 to Bale-250",
-                                weight: "50.00 MT",
-                                productionDate: "10-12 Aug 2024",
-                                // --- CHANGE 1: Machine Name Updated ---
-                                line: "Line #3 (SFSDNW038015000N)",
-                                recipe: "Standard Viscose FSC",
-                                // --- CHANGE 3: Pulp Inputs Updated to match Recipe ---
-                                pulpInputs: [
-                                    { supplier: "Arauco", country: "Chile", grade: "Dissolving Pulp FSC Mix", percent: 75, lot: "ARA-24-M01" },
-                                    { supplier: "AVC", country: "Austria", grade: "Dissolving Pulp FSC Mix", percent: 20, lot: "AVC-24-X99" },
-                                    { supplier: "AVN", country: "China", grade: "Dissolving Pulp FSC CW", percent: 5, lot: "AVN-24-B12" }
-                                ]
-                            }
-                        ]
-                    });
-                    setLoading(false);
-                }, 1500);
+                if(!searchValue || !window.api) return;
+                setLoading(true); setError(''); setData(null);
+                try {
+                    const res = await window.api.getTraceabilityReport({ searchType, searchValue });
+                    if(res.data.success) {
+                        setData(res.data.data);
+                    } else {
+                        setError(res.data.message);
+                    }
+                } catch (err) {
+                    setError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้: ' + err.message);
+                }
+                setLoading(false);
             };
 
             return (
                 <div className="p-8 animate-slide-in pb-20">
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-10">
-                            <h2 className="text-3xl font-bold text-slate-800">Supply Chain Traceability</h2>
-                            <p className="text-slate-500 mt-2">End-to-End Tracking from Fiber to Forest Source</p>
+                            <h2 className="text-3xl font-bold text-slate-800">End-to-End Traceability</h2>
+                            <p className="text-slate-500 mt-2">Auditor's Trail: Trace from Finished Fibre back to Pulp Origin</p>
                         </div>
 
-                        {/* Search Box */}
-                        <div className="bg-white p-2 rounded-2xl shadow-lg border border-slate-100 flex items-center mb-10">
-                            <div className="p-3 bg-slate-100 rounded-xl text-slate-500 ml-1">
-                                <Icons.Search />
-                            </div>
+                        {/* Search Input */}
+                        <div className="bg-white p-3 rounded-2xl shadow-lg border border-slate-200 flex items-center mb-8 gap-2">
+                            <select className="bg-slate-100 border-none p-3 rounded-xl outline-none font-bold text-slate-600"
+                                value={searchType} onChange={(e) => setSearchType(e.target.value)}>
+                                <option value="INVOICE">Invoice No.</option>
+                                <option value="DO">DO No.</option>
+                            </select>
                             <form onSubmit={handleSearch} className="flex-1 flex">
-                                <input 
-                                    type="text" 
-                                    placeholder="Enter Invoice No., Bale ID, or QR Code (e.g. INV-2408-HM055)" 
-                                    className="w-full px-4 py-3 outline-none text-slate-700 bg-transparent font-medium"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                                <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
-                                    TRACE
+                                <input type="text" placeholder="ระบุเลขที่เอกสาร..." 
+                                    className="w-full px-4 py-3 outline-none text-slate-700 font-medium"
+                                    value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+                                <button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
+                                    {loading ? 'TRACING...' : 'TRACE'}
                                 </button>
                             </form>
                         </div>
 
-                        {loading && (
-                            <div className="text-center py-20">
-                                <div className="animate-spin w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"></div>
-                                <p className="text-slate-400 font-medium">Querying Blockchain Ledger...</p>
-                            </div>
-                        )}
+                        {error && <div className="p-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-center">{error}</div>}
 
-                        {searchResult && !loading && (
-                            <div className="space-y-8 animate-slide-in">
-                                {/* Header Card */}
-                                <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-8 opacity-10"><Icons.FileText size={120}/></div>
-                                    <div className="relative z-10">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <div className="text-indigo-300 text-sm font-bold uppercase tracking-wide mb-1">Tax Invoice</div>
-                                                <h1 className="text-3xl font-bold">{searchResult.invoice}</h1>
-                                            </div>
-                                            <div className="bg-green-500/20 border border-green-400/50 text-green-300 px-4 py-2 rounded-lg flex items-center gap-2">
-                                                <div className="bg-green-400 p-1 rounded-full"><Icons.Check size={12} className="text-indigo-900"/></div>
-                                                <span className="font-bold tracking-wide">{searchResult.claimStatus}</span>
-                                            </div>
-                                        </div>
-                                         
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
-                                            <div>
-                                                <p className="text-indigo-300 text-xs uppercase mb-1">Customer</p>
-                                                <p className="font-semibold text-lg truncate">{searchResult.customer}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-indigo-300 text-xs uppercase mb-1">Product</p>
-                                                <p className="font-semibold text-lg">Viscose Rayon</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-indigo-300 text-xs uppercase mb-1">Quantity</p>
-                                                <p className="font-semibold text-lg">{searchResult.totalWeight}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-indigo-300 text-xs uppercase mb-1">Certified Claim</p>
-                                                <p className="font-semibold text-lg text-emerald-300">{searchResult.claim}</p>
+                        {/* 🟢 Timeline Mapping (5 Steps) */}
+                        {data && !loading && (
+                            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+                                <h3 className="text-xl font-bold text-slate-800 mb-8 flex items-center gap-2 border-b pb-4">
+                                    <Icons.Layers className="text-indigo-600"/> Data Genealogy Flow
+                                </h3>
+
+                                {/* Step 1: Marketing */}
+                                {data.marketing && (
+                                    <div className="relative pl-10 pb-8">
+                                        <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                        <div className="absolute left-0 top-0 p-1.5 bg-blue-100 text-blue-600 rounded-full z-10 border-4 border-white"><Icons.CheckCircle size={16}/></div>
+                                        <h4 className="font-bold text-blue-800">1. Marketing (Sales & Claim)</h4>
+                                        <div className="mt-2 p-4 bg-blue-50/50 border border-blue-100 rounded-lg text-sm text-slate-600">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <p><strong>Invoice:</strong> {data.marketing.invoice}</p>
+                                                <p><strong>Customer:</strong> {data.marketing.customer}</p>
+                                                <p><strong>Claim Type:</strong> <span className="font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">{data.marketing.claim}</span></p>
+                                                <p><strong>Volume Deducted:</strong> {data.marketing.weightTon} Tons</p>
                                             </div>
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Step 2: Warehouse */}
+                                {data.warehouse && (
+                                    <div className="relative pl-10 pb-8">
+                                        <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                        <div className="absolute left-0 top-0 p-1.5 bg-indigo-100 text-indigo-600 rounded-full z-10 border-4 border-white"><Icons.Truck size={16}/></div>
+                                        <h4 className="font-bold text-indigo-800">2. Warehouse (Dispatch & DO)</h4>
+                                        <div className="mt-2 p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm text-slate-600">
+                                            <p><strong>DO No:</strong> {data.warehouse.deliveryNo}</p>
+                                            <p><strong>Production Dates Filtered:</strong> {data.warehouse.productionDates?.join(', ')}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step 3: Spinning */}
+                                <div className="relative pl-10 pb-8">
+                                    <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                    <div className="absolute left-0 top-0 p-1.5 bg-teal-100 text-teal-600 rounded-full z-10 border-4 border-white"><Icons.Activity size={16}/></div>
+                                    <h4 className="font-bold text-teal-800">3. Spinning (Actual Output)</h4>
+                                    <div className="mt-2 p-4 bg-teal-50/50 border border-teal-100 rounded-lg text-sm text-slate-600">
+                                        {data.spinning?.length > 0 ? data.spinning.map((s, i) => (
+                                            <div key={i} className="mb-2 border-b border-teal-100 pb-2">
+                                                <p className="font-bold text-teal-700">Prod Date: {s.date}</p>
+                                                <ul className="list-disc pl-5 mt-1">
+                                                    {s.data.map((tx, j) => <li key={j}>Machine: {tx.line} | Claim: {tx.claimType} | Output: {tx.weight} T</li>)}
+                                                </ul>
+                                            </div>
+                                        )) : <p className="text-slate-400">No matching production data found.</p>}
                                     </div>
                                 </div>
 
-                                {/* Timeline Flow */}
-                                <div className="relative pl-6">
-                                    <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                        <Icons.Layers className="text-indigo-600"/> Genealogy Map
-                                    </h3>
-
-                                    {/* Level 1: Finished Goods */}
-                                    <div className="relative pl-12 pb-10">
-                                        <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-300"></div>
-                                        <div className="absolute left-[-10px] top-0 p-1 bg-white border-2 border-indigo-600 rounded-full z-10">
-                                            <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
-                                        </div>
-                                         
-                                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                            <div className="flex justify-between mb-2">
-                                                <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded uppercase">Step 1: Outbound</span>
-                                                <span className="text-slate-400 text-sm">{searchResult.poDate}</span>
+                                {/* Step 4: Viscose */}
+                                <div className="relative pl-10 pb-8">
+                                    <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                    <div className="absolute left-0 top-0 p-1.5 bg-orange-100 text-orange-600 rounded-full z-10 border-4 border-white"><Icons.Flask size={16}/></div>
+                                    <h4 className="font-bold text-orange-800">4. Viscose (Pulp Consumption)</h4>
+                                    <div className="mt-2 p-4 bg-orange-50/50 border border-orange-100 rounded-lg text-sm text-slate-600">
+                                        {data.viscose?.length > 0 ? data.viscose.map((v, i) => (
+                                            <div key={i} className="mb-2 border-b border-orange-100 pb-2">
+                                                <p className="font-bold text-orange-700">Date: {v.date}</p>
+                                                <ul className="list-disc pl-5 mt-1">
+                                                    {v.data.map((tx, j) => <li key={j}>Brand: {tx.brand} | <strong>Lot: {tx.docRef}</strong> | Consumed: {tx.weight} T</li>)}
+                                                </ul>
                                             </div>
-                                            <h4 className="font-bold text-slate-800 text-lg">Finished Goods Dispatch</h4>
-                                            <p className="text-slate-600 text-sm mt-1">Lot No: {searchResult.products[0].id}</p>
-                                            <div className="mt-3 flex gap-4 text-sm text-slate-500">
-                                                <span className="flex items-center gap-1"><Icons.Box size={16}/> {searchResult.products[0].weight}</span>
-                                                <span className="flex items-center gap-1"><Icons.MapPin size={16}/> {searchResult.destination}</span>
-                                            </div>
-                                        </div>
+                                        )) : <p className="text-slate-400">No matching pulp consumption found.</p>}
                                     </div>
+                                </div>
 
-                                    {/* Level 2: Production */}
-                                    <div className="relative pl-12 pb-10">
-                                        <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-300"></div>
-                                        <div className="absolute left-[-10px] top-0 p-1 bg-white border-2 border-blue-500 rounded-full z-10">
-                                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                        </div>
-
-                                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                            <div className="flex justify-between mb-2">
-                                                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded uppercase">Step 2: Manufacturing</span>
-                                                <span className="text-slate-400 text-sm">{searchResult.products[0].productionDate}</span>
+                                {/* Step 5: RM QA */}
+                                <div className="relative pl-10">
+                                    <div className="absolute left-0 top-0 p-1.5 bg-emerald-100 text-emerald-600 rounded-full z-10 border-4 border-white"><Icons.CheckCircle size={16}/></div>
+                                    <h4 className="font-bold text-emerald-800">5. RM QA (Pulp Certification)</h4>
+                                    <div className="mt-2 p-4 bg-emerald-50/50 border border-emerald-100 rounded-lg text-sm text-slate-600">
+                                        {data.rmQa?.length > 0 ? data.rmQa.map((qa, i) => (
+                                            <div key={i} className="mb-2 bg-white p-3 border border-emerald-100 rounded shadow-sm">
+                                                <p><strong>Supplier:</strong> {qa.supplier}</p>
+                                                <p><strong>Matched Lot No:</strong> {qa.lotNo || qa.batchNo}</p>
+                                                <p><strong>Alpha Cellulose:</strong> {qa.parameters?.alphaCellulose?.lab || '-'}%</p>
                                             </div>
-                                            <h4 className="font-bold text-slate-800 text-lg">Viscose Spinning Process</h4>
-                                            <p className="text-slate-600 text-sm mt-1">Machine: {searchResult.products[0].line}</p>
-                                             
-                                            <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Icons.Beaker className="text-orange-500" size={18}/>
-                                                    <span className="font-bold text-slate-700 text-sm">Viscose Dope Recipe</span>
-                                                </div>
-                                                {/* --- CHANGE 2: Visual widths match percentages (75%, 20%, 5%) --- */}
-                                                <div className="w-full bg-slate-200 rounded-full h-2.5 mb-1 overflow-hidden flex">
-                                                    <div className="bg-emerald-500 h-2.5" style={{width: '75%'}}></div>
-                                                    <div className="bg-blue-500 h-2.5" style={{width: '20%'}}></div>
-                                                    <div className="bg-purple-500 h-2.5" style={{width: '5%'}}></div>
-                                                </div>
-                                                <div className="flex justify-between text-xs text-slate-500 mt-1">
-                                                    <span className="flex items-center gap-1"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> Arauco Mix Credit (75%)</span>
-                                                    <span className="flex items-center gap-1"><div className="w-2 h-2 bg-blue-500 rounded-full"></div> AVC Mix Credit (20%)</span>
-                                                    <span className="flex items-center gap-1"><div className="w-2 h-2 bg-purple-500 rounded-full"></div> AVN CW (5%)</span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        )) : <p className="text-slate-400">No matching COA records found for the used Lots.</p>}
                                     </div>
-
-                                    {/* Level 3: Raw Material Inputs */}
-                                    <div className="relative pl-12">
-                                        <div className="absolute left-[-10px] top-0 p-1 bg-white border-2 border-emerald-500 rounded-full z-10">
-                                            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                                        </div>
-
-                                        <div className="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm bg-gradient-to-b from-emerald-50/50 to-white">
-                                            <div className="flex justify-between mb-4">
-                                                <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded uppercase">Step 3: Raw Material Origin</span>
-                                                <span className="text-emerald-600 text-xs font-bold flex items-center gap-1"><Icons.Check size={14}/> Verified Sources</span>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {searchResult.products[0].pulpInputs.map((pulp, idx) => (
-                                                    <div key={idx} className="flex items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mr-4 font-bold text-xs">
-                                                            {pulp.supplier.substring(0,2).toUpperCase()}
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="flex justify-between">
-                                                                <h5 className="font-bold text-slate-700 text-sm">{pulp.supplier}</h5>
-                                                                <span className="text-xs font-mono text-slate-400">{pulp.lot}</span>
-                                                            </div>
-                                                            <div className="flex justify-between mt-1">
-                                                                <span className="text-xs text-slate-500">{pulp.country}</span>
-                                                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 rounded-full">{pulp.grade}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
                                 </div>
                             </div>
                         )}
@@ -386,66 +280,34 @@
             );
         };
 
-        // 3. MAIN APP LAYOUT
+        // 🟢 MAIN APP LAYOUT
         const App = () => {
-            const [activeTab, setActiveTab] = useState('traceability'); // Default to Traceability for Demo
-
-            const renderContent = () => {
-                switch(activeTab) {
-                    case 'dashboard': return <DashboardView />;
-                    case 'traceability': return <TraceabilityView />;
-                    default: return (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                            <Icons.Box size={48} className="mb-4 opacity-50"/>
-                            <p>Module under development</p>
-                        </div>
-                    );
-                }
-            };
-
-            const NavItem = ({ id, label, icon }) => (
-                <button 
-                    onClick={() => setActiveTab(id)}
-                    className={`w-full flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all ${activeTab === id ? 'sidebar-item active' : 'text-slate-500 hover:bg-slate-50 hover:text-indigo-600'}`}
-                >
-                    {icon} {label}
-                </button>
-            );
+            const [activeTab, setActiveTab] = useState('dashboard');
 
             return (
                 <div className="flex min-h-screen bg-slate-50">
                     {/* Sidebar */}
-                    <div className="w-64 bg-white fixed h-full shadow-lg z-20 hidden md:block">
-                        <div className="p-6 border-b border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-200">TRC</div>
-                                <div>
-                                    <h1 className="font-bold text-slate-800 leading-tight">Smart Chain</h1>
-                                    <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Mass Balance OS</p>
-                                </div>
-                            </div>
+                    <div className="w-64 bg-slate-900 text-slate-300 fixed h-full shadow-lg z-20 hidden md:flex flex-col">
+                        <div className="p-6 border-b border-slate-800">
+                            <h1 className="font-bold text-white text-xl flex items-center gap-2">
+                                <Icons.Layers className="text-indigo-400"/> TRC Smart Chain
+                            </h1>
+                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-1">Mass Balance OS</p>
                         </div>
-                        <nav className="mt-6 space-y-1">
-                            <NavItem id="dashboard" label="Overview" icon={<Icons.Home size={18}/>} />
-                            <NavItem id="store" label="Pulp Store" icon={<Icons.Box size={18}/>} />
-                            <NavItem id="viscose" label="Viscose Process" icon={<Icons.Beaker size={18}/>} />
-                            <NavItem id="traceability" label="Traceability" icon={<Icons.Search size={18}/>} />
+                        <nav className="mt-4 space-y-1 flex-1 px-3">
+                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}><Icons.Home size={18}/> Executive Overview</button>
+                            <button onClick={() => setActiveTab('traceability')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'traceability' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}><Icons.Search size={18}/> Traceability Tracker</button>
                         </nav>
-                         
-                        <div className="absolute bottom-0 w-full p-6 border-t border-slate-100">
-                            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                <p className="text-xs font-semibold text-slate-500 mb-2">System Status</p>
-                                <div className="flex items-center gap-2 text-xs text-green-600 font-bold">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                    FSC API Connected
-                                </div>
+                        <div className="p-4 border-t border-slate-800">
+                            <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> DB Connected
                             </div>
                         </div>
                     </div>
 
                     {/* Main Content */}
-                    <main className="flex-1 md:ml-64 relative">
-                        {renderContent()}
+                    <main className="flex-1 md:ml-64 relative min-h-screen">
+                        {activeTab === 'dashboard' ? <DashboardView /> : <TraceabilityView />}
                     </main>
                 </div>
             );
