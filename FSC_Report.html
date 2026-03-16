@@ -1,116 +1,152 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRC Smart CoC Platform (Enterprise)</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>TRC Smart CoC Platform (Enterprise)</title>
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+        <script
+            src="https://unpkg.com/react@18/umd/react.development.js"
+            crossorigin
+        ></script>
+        <script
+            src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+            crossorigin
+        ></script>
+        <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+        <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap"
+            rel="stylesheet"
+        />
 
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-in { animation: slideIn 0.4s ease-out forwards; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
-    </style>
+        <style>
+            body {
+                font-family: "Sarabun", sans-serif;
+                background-color: #f8fafc;
+            }
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .animate-slide-in {
+                animation: slideIn 0.4s ease-out forwards;
+            }
+            ::-webkit-scrollbar {
+                width: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #f1f1f1;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #c7c7c7;
+                border-radius: 4px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #a0a0a0;
+            }
+        </style>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-functions.js";
-        import { getFirestore, collection, doc, getDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+            import {
+                getFunctions,
+                httpsCallable,
+            } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-functions.js";
+            import {
+                getFirestore,
+                collection,
+                doc,
+                getDoc,
+                getDocs,
+                query,
+                orderBy,
+                limit,
+            } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-            authDomain: "lab-trc-management-system.firebaseapp.com",
-            projectId: "lab-trc-management-system",
-            storageBucket: "lab-trc-management-system.appspot.com",
-            messagingSenderId: "43919979160",
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const functions = getFunctions(app, "asia-southeast1");
-        
-        // ส่งต่อ Module ให้ React เรียกใช้แบบ Native
-        window.api = {
-            getCreditBalance: httpsCallable(functions, 'getCreditBalance'),
-            db: db,
-            doc: doc,
-            getDoc: getDoc,
-            collection: collection,
-            getDocs: getDocs,
-            query: query,
-            orderBy: orderBy,
-            limit: limit
-        };
-    </script>
-</head>
-<body>
-    <div id="root"></div>
+            const firebaseConfig = {
+                apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+                authDomain: "lab-trc-management-system.firebaseapp.com",
+                projectId: "lab-trc-management-system",
+                storageBucket: "lab-trc-management-system.appspot.com",
+                messagingSenderId: "43919979160",
+                appId: "1:43919979160:web:779cb9de75cd4b9fce56ed",
+            };
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const functions = getFunctions(app, "asia-southeast1");
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } = Recharts;
+            // ส่งต่อ Module ให้ React เรียกใช้แบบ Native
+            window.api = {
+                getCreditBalance: httpsCallable(functions, "getCreditBalance"),
+                getEnterpriseMassBalance: httpsCallable(
+                    functions,
+                    "getEnterpriseMassBalance",
+                ),
+                getEnterpriseTraceability: httpsCallable(
+                    functions,
+                    "getEnterpriseTraceability",
+                ),
+            };
+        </script>
+    </head>
+    <body>
+        <div id="root"></div>
 
-        // --- ICONS ---
-        const Icon = ({ path, size = 20, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
-        );
-        const Icons = {
-            Home: (props) => <Icon path={<><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>} {...props} />,
-            Search: (props) => <Icon path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} {...props} />,
-            Alert: (props) => <Icon path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} {...props} />,
-            Layers: (props) => <Icon path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} {...props} />,
-            Truck: (props) => <Icon path={<><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>} {...props} />,
-            Activity: (props) => <Icon path={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>} {...props} />,
-            Flask: (props) => <Icon path={<><path d="M9 3H15M10 9H14M3 21H21M5 21V10L10 3H14L19 10V21"/></>} {...props} />,
-            CheckCircle: (props) => <Icon path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} {...props} />,
-            Clock: (props) => <Icon path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} {...props} />,
-            TrendingUp: (props) => <Icon path={<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>} {...props} />,
-            ShieldAlert: (props) => <Icon path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></>} {...props} />
-        };
+        <script type="text/babel">
+            const { useState, useEffect } = React;
+            const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } = Recharts;
 
-        // =========================================================================
-        // 🟢 MODULE 1 & 2: OPERATIONAL DASHBOARD & PERIOD ANALYSIS
-        // =========================================================================
-        const DashboardView = () => {
-            const [balanceData, setBalanceData] = useState({ FSC: 0, FSC_CW: 0, PEFC: 0 });
-            const [suspension, setSuspension] = useState({ active: false, time: null });
-            const [massBalanceData, setMassBalanceData] = useState([]);
-            const [loading, setLoading] = useState(true);
+            // --- ICONS ---
+            const Icon = ({ path, size = 20, className = "" }) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
+            );
+            const Icons = {
+                Home: (props) => <Icon path={<><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>} {...props} />,
+                Search: (props) => <Icon path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} {...props} />,
+                Alert: (props) => <Icon path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} {...props} />,
+                Layers: (props) => <Icon path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} {...props} />,
+                Truck: (props) => <Icon path={<><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>} {...props} />,
+                Activity: (props) => <Icon path={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>} {...props} />,
+                Flask: (props) => <Icon path={<><path d="M9 3H15M10 9H14M3 21H21M5 21V10L10 3H14L19 10V21"/></>} {...props} />,
+                CheckCircle: (props) => <Icon path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} {...props} />,
+                Clock: (props) => <Icon path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} {...props} />,
+                TrendingUp: (props) => <Icon path={<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>} {...props} />,
+                ShieldAlert: (props) => <Icon path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></>} {...props} />
+            };
 
-            useEffect(() => {
-                const loadEnterpriseData = async () => {
-                    if(!window.api) return;
-                    try {
-                        // 1. โหลดข้อมูลเครดิตปัจจุบัน
-                        const res = await window.api.getCreditBalance();
-                        if(res.data.success) {
-                            setBalanceData(res.data.balance || { FSC: 0, FSC_CW: 0, PEFC: 0 });
-                            setSuspension({ active: res.data.pefcSuspended, time: res.data.pefcResumeTime });
-                        }
+            // =========================================================================
+            // 🟢 MODULE 1 & 2: OPERATIONAL DASHBOARD & PERIOD ANALYSIS
+            // =========================================================================
+            const DashboardView = () => {
+                const [balanceData, setBalanceData] = useState({ FSC: 0, FSC_CW: 0, PEFC: 0 });
+                const [suspension, setSuspension] = useState({ active: false, time: null });
+                const [massBalanceData, setMassBalanceData] = useState([]);
+                const [loading, setLoading] = useState(true);
 
-                        // 2. โหลดข้อมูล Period Analysis จาก Enterprise Schema (Aggregated_MassBalance)
-                        const mbQuery = window.api.query(
-                            window.api.collection(window.api.db, "Aggregated_MassBalance"),
-                            window.api.orderBy("period", "desc"),
-                            window.api.limit(6) // ดึงย้อนหลัง 6 เดือน
-                        );
-                        const mbSnaps = await window.api.getDocs(mbQuery);
-                        const chartData = [];
-                        
-                        mbSnaps.forEach(doc => {
-                            const d = doc.data();
-                            chartData.push({
+                useEffect(() => {
+                    const loadEnterpriseData = async () => {
+                        if(!window.api) return;
+                        try {
+                            // 1. โหลดข้อมูลเครดิตปัจจุบัน
+                            const res = await window.api.getCreditBalance();
+                            if(res.data.success) {
+                                setBalanceData(res.data.balance || { FSC: 0, FSC_CW: 0, PEFC: 0 });
+                                setSuspension({ active: res.data.pefcSuspended, time: res.data.pefcResumeTime });
+                            }
+
+                            // 2. โหลดข้อมูล Period Analysis ผ่าน Secure Cloud Function
+                        const mbRes = await window.api.getEnterpriseMassBalance();
+                        if (mbRes.data.success) {
+                            const chartData = mbRes.data.data.map(d => ({
                                 name: d.period,
                                 Pulp_FSC_Input: (d.inputs_Pulp?.FSC_Mix || 0) + (d.inputs_Pulp?.FSC_CW || 0),
                                 Pulp_PEFC_Input: (d.inputs_Pulp?.PEFC || 0),
@@ -119,376 +155,375 @@
                                 Theoretical_FSC: d.theoreticalCredits?.FSC || 0,
                                 Theoretical_PEFC: d.theoreticalCredits?.PEFC || 0,
                                 Warning: d.varianceWarning || false
-                            });
-                        });
-                        setMassBalanceData(chartData.reverse()); // เรียงเก่าไปใหม่สำหรับกราฟ
-                    } catch (e) { 
-                        console.error("Error loading enterprise data", e); 
-                    } finally {
-                        setLoading(false);
-                    }
-                };
-                setTimeout(loadEnterpriseData, 1000);
-            }, []);
+                            }));
+                            setMassBalanceData(chartData.reverse()); // เรียงเก่าไปใหม่สำหรับกราฟ
+                        }
+                        } catch (e) {
+                            console.error("Error loading enterprise data", e);
+                        } finally {
+                            setLoading(false);
+                        }
+                    };
+                    setTimeout(loadEnterpriseData, 1000);
+                }, []);
 
-            return (
-                <div className="p-8 space-y-6 animate-slide-in pb-20">
-                    <div>
-                        <h2 className="text-3xl font-bold text-slate-800">Operational Dashboard</h2>
-                        <p className="text-slate-500">Real-time Enterprise Mass Balance & Certification Engine</p>
-                    </div>
-
-                    {/* 🚨 16-Hour Rule PEFC Suspension Alert */}
-                    {suspension.active && (
-                        <div className="bg-red-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse border-2 border-red-800">
-                            <div className="flex items-center gap-3">
-                                <Icons.ShieldAlert size={28} />
-                                <div>
-                                    <h4 className="font-bold text-lg">CRITICAL: PEFC Claim Suspended (16-Hour Rule Active)</h4>
-                                    <p className="text-sm opacity-90">ระบบตรวจพบวัตถุดิบเสี่ยง (High-Risk Material) ระงับการออกบิล PEFC อัตโนมัติ จะกลับมาใช้งานได้เวลา: {suspension.time}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 🟢 KPI Cards: Dual-Standard Ledger */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* FSC Mix */}
-                        <div className="bg-gradient-to-br from-amber-50 to-white p-6 rounded-xl shadow-sm border border-amber-200 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10"><Icons.CheckCircle size={80}/></div>
-                            <div className="flex justify-between items-start relative z-10">
-                                <div>
-                                    <p className="text-sm font-bold text-amber-700 uppercase tracking-wider">FSC Mix Credit</p>
-                                    <p className="text-xs text-slate-400 mt-1">Conversion Factor: 99.00%</p>
-                                    <h3 className="text-4xl font-black text-slate-800 mt-3">{balanceData.FSC.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-base font-normal text-slate-500">Tons</span></h3>
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-amber-100 flex justify-between items-center text-xs">
-                                <span className="text-amber-600 font-bold flex items-center gap-1"><Icons.Clock size={14}/> 24-Month Expiry (FIFO)</span>
-                                <button className="text-amber-700 hover:underline">Forecast Report &rarr;</button>
-                            </div>
+                return (
+                    <div className="p-8 space-y-6 animate-slide-in pb-20">
+                        <div>
+                            <h2 className="text-3xl font-bold text-slate-800">Operational Dashboard</h2>
+                            <p className="text-slate-500">Real-time Enterprise Mass Balance & Certification Engine</p>
                         </div>
 
-                        {/* FSC Control Wood */}
-                        <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10"><Icons.Layers size={80}/></div>
-                            <div className="flex justify-between items-start relative z-10">
-                                <div>
-                                    <p className="text-sm font-bold text-slate-600 uppercase tracking-wider">FSC Control Wood</p>
-                                    <p className="text-xs text-slate-400 mt-1">Conversion Factor: 99.00%</p>
-                                    <h3 className="text-4xl font-black text-slate-800 mt-3">{balanceData.FSC_CW.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-base font-normal text-slate-500">Tons</span></h3>
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold flex items-center gap-1"><Icons.Clock size={14}/> 24-Month Expiry (FIFO)</span>
-                            </div>
-                        </div>
-
-                        {/* PEFC Certified */}
-                        <div className={`p-6 rounded-xl shadow-sm border relative overflow-hidden bg-gradient-to-br ${suspension.active ? 'from-red-50 to-white border-red-300' : 'from-emerald-50 to-white border-emerald-200'}`}>
-                            <div className="absolute top-0 right-0 p-4 opacity-10"><Icons.ShieldAlert size={80}/></div>
-                            <div className="flex justify-between items-start relative z-10">
-                                <div>
-                                    <p className={`text-sm font-bold uppercase tracking-wider ${suspension.active ? 'text-red-700' : 'text-emerald-700'}`}>PEFC Certified</p>
-                                    <p className="text-xs text-slate-400 mt-1">Conversion Factor: 93.00%</p>
-                                    <h3 className="text-4xl font-black text-slate-800 mt-3">{balanceData.PEFC.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-base font-normal text-slate-500">Tons</span></h3>
-                                </div>
-                            </div>
-                            <div className={`mt-4 pt-4 border-t flex justify-between items-center text-xs ${suspension.active ? 'border-red-200' : 'border-emerald-100'}`}>
-                                <span className={`${suspension.active ? 'text-red-600' : 'text-emerald-600'} font-bold flex items-center gap-1`}><Icons.Clock size={14}/> 12-Month Expiry (FIFO)</span>
-                                <button className={`${suspension.active ? 'text-red-700' : 'text-emerald-700'} hover:underline`}>Forecast Report &rarr;</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 🟢 Mass Balance Analysis Engine (Period Data) */}
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <div className="flex justify-between items-end mb-6 border-b pb-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Icons.TrendingUp className="text-indigo-600"/> Mass Balance Analysis (6-Month Trend)</h3>
-                                <p className="text-sm text-slate-500 mt-1">Comparison: Actual Fibre Output vs Theoretical Credit Allowed (Major NC Detection)</p>
-                            </div>
-                            <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-lg transition">Export Audit Report (.xlsx)</button>
-                        </div>
-                        
-                        {loading ? (
-                            <div className="h-80 flex items-center justify-center text-slate-400"><span className="animate-spin mr-2">⌛</span> Processing Enterprise Data...</div>
-                        ) : (
-                            <div className="space-y-8">
-                                {/* FSC Chart */}
-                                <div>
-                                    <h4 className="font-bold text-amber-800 mb-2">🌲 FSC Mass Balance Monitoring (Factor: 99%)</h4>
-                                    <div className="h-64 w-full">
-                                        <ResponsiveContainer>
-                                            <ComposedChart data={massBalanceData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                                                <CartesianGrid stroke="#f1f5f9" vertical={false} />
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                                                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                                <Legend />
-                                                <Bar dataKey="Pulp_FSC_Input" name="Pulp Consumed (Ton)" fill="#fcd34d" radius={[4, 4, 0, 0]} barSize={40} />
-                                                <Bar dataKey="Fibre_FSC_Actual" name="Actual Fibre Produced (Ton)" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={40} />
-                                                <Line type="monotone" dataKey="Theoretical_FSC" name="Max Allowed Credit (99%)" stroke="#b45309" strokeWidth={3} dot={{r: 4}} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
+                        {/* 🚨 16-Hour Rule PEFC Suspension Alert */}
+                        {suspension.active && (
+                            <div className="bg-red-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-pulse border-2 border-red-800">
+                                <div className="flex items-center gap-3">
+                                    <Icons.ShieldAlert size={28} />
+                                    <div>
+                                        <h4 className="font-bold text-lg">CRITICAL: PEFC Claim Suspended (16-Hour Rule Active)</h4>
+                                        <p className="text-sm opacity-90">ระบบตรวจพบวัตถุดิบเสี่ยง (High-Risk Material) ระงับการออกบิล PEFC อัตโนมัติ จะกลับมาใช้งานได้เวลา: {suspension.time}</p>
                                     </div>
                                 </div>
-
-                                {/* PEFC Chart */}
-                                <div>
-                                    <h4 className="font-bold text-emerald-800 mb-2">🛡️ PEFC Mass Balance Monitoring (Factor: 93%)</h4>
-                                    <div className="h-64 w-full">
-                                        <ResponsiveContainer>
-                                            <ComposedChart data={massBalanceData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                                                <CartesianGrid stroke="#f1f5f9" vertical={false} />
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                                                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                                <Legend />
-                                                <Bar dataKey="Pulp_PEFC_Input" name="Pulp Consumed (Ton)" fill="#6ee7b7" radius={[4, 4, 0, 0]} barSize={40} />
-                                                <Bar dataKey="Fibre_PEFC_Actual" name="Actual Fibre Produced (Ton)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
-                                                <Line type="monotone" dataKey="Theoretical_PEFC" name="Max Allowed Credit (93%)" stroke="#047857" strokeWidth={3} dot={{r: 4}} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-
-                                {/* Over-Claim Alert */}
-                                {massBalanceData.some(d => d.Warning) && (
-                                    <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-3">
-                                        <Icons.ShieldAlert />
-                                        <div>
-                                            <strong className="block">Auditor Warning: Potential Over-Claim Detected!</strong>
-                                            <span className="text-sm">ตรวจพบเดือนที่มี Actual Fibre Output มากกว่า Theoretical Credit กรุณาตรวจสอบข้อมูลดิบโดยด่วน</span>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
+
+                        {/* 🟢 KPI Cards: Dual-Standard Ledger */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* FSC Mix */}
+                            <div className="bg-gradient-to-br from-amber-50 to-white p-6 rounded-xl shadow-sm border border-amber-200 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10"><Icons.CheckCircle size={80}/></div>
+                                <div className="flex justify-between items-start relative z-10">
+                                    <div>
+                                        <p className="text-sm font-bold text-amber-700 uppercase tracking-wider">FSC Mix Credit</p>
+                                        <p className="text-xs text-slate-400 mt-1">Conversion Factor: 99.00%</p>
+                                        <h3 className="text-4xl font-black text-slate-800 mt-3">{balanceData.FSC.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-base font-normal text-slate-500">Tons</span></h3>
+                                    </div>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-amber-100 flex justify-between items-center text-xs">
+                                    <span className="text-amber-600 font-bold flex items-center gap-1"><Icons.Clock size={14}/> 24-Month Expiry (FIFO)</span>
+                                    <button className="text-amber-700 hover:underline">Forecast Report &rarr;</button>
+                                </div>
+                            </div>
+
+                            {/* FSC Control Wood */}
+                            <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10"><Icons.Layers size={80}/></div>
+                                <div className="flex justify-between items-start relative z-10">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-600 uppercase tracking-wider">FSC Control Wood</p>
+                                        <p className="text-xs text-slate-400 mt-1">Conversion Factor: 99.00%</p>
+                                        <h3 className="text-4xl font-black text-slate-800 mt-3">{balanceData.FSC_CW.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-base font-normal text-slate-500">Tons</span></h3>
+                                    </div>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+                                    <span className="text-slate-500 font-bold flex items-center gap-1"><Icons.Clock size={14}/> 24-Month Expiry (FIFO)</span>
+                                </div>
+                            </div>
+
+                            {/* PEFC Certified */}
+                            <div className={`p-6 rounded-xl shadow-sm border relative overflow-hidden bg-gradient-to-br ${suspension.active ? 'from-red-50 to-white border-red-300' : 'from-emerald-50 to-white border-emerald-200'}`}>
+                                <div className="absolute top-0 right-0 p-4 opacity-10"><Icons.ShieldAlert size={80}/></div>
+                                <div className="flex justify-between items-start relative z-10">
+                                    <div>
+                                        <p className={`text-sm font-bold uppercase tracking-wider ${suspension.active ? 'text-red-700' : 'text-emerald-700'}`}>PEFC Certified</p>
+                                        <p className="text-xs text-slate-400 mt-1">Conversion Factor: 93.00%</p>
+                                        <h3 className="text-4xl font-black text-slate-800 mt-3">{balanceData.PEFC.toLocaleString(undefined, {maximumFractionDigits:2})} <span className="text-base font-normal text-slate-500">Tons</span></h3>
+                                    </div>
+                                </div>
+                                <div className={`mt-4 pt-4 border-t flex justify-between items-center text-xs ${suspension.active ? 'border-red-200' : 'border-emerald-100'}`}>
+                                    <span className={`${suspension.active ? 'text-red-600' : 'text-emerald-600'} font-bold flex items-center gap-1`}><Icons.Clock size={14}/> 12-Month Expiry (FIFO)</span>
+                                    <button className={`${suspension.active ? 'text-red-700' : 'text-emerald-700'} hover:underline`}>Forecast Report &rarr;</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 🟢 Mass Balance Analysis Engine (Period Data) */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div className="flex justify-between items-end mb-6 border-b pb-4">
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Icons.TrendingUp className="text-indigo-600"/> Mass Balance Analysis (6-Month Trend)</h3>
+                                    <p className="text-sm text-slate-500 mt-1">Comparison: Actual Fibre Output vs Theoretical Credit Allowed (Major NC Detection)</p>
+                                </div>
+                                <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-lg transition">Export Audit Report (.xlsx)</button>
+                            </div>
+
+                            {loading ? (
+                                <div className="h-80 flex items-center justify-center text-slate-400"><span className="animate-spin mr-2">⌛</span> Processing Enterprise Data...</div>
+                            ) : (
+                                <div className="space-y-8">
+                                    {/* FSC Chart */}
+                                    <div>
+                                        <h4 className="font-bold text-amber-800 mb-2">🌲 FSC Mass Balance Monitoring (Factor: 99%)</h4>
+                                        <div className="h-64 w-full">
+                                            <ResponsiveContainer>
+                                                <ComposedChart data={massBalanceData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                                                    <CartesianGrid stroke="#f1f5f9" vertical={false} />
+                                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                                                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                                    <Legend />
+                                                    <Bar dataKey="Pulp_FSC_Input" name="Pulp Consumed (Ton)" fill="#fcd34d" radius={[4, 4, 0, 0]} barSize={40} />
+                                                    <Bar dataKey="Fibre_FSC_Actual" name="Actual Fibre Produced (Ton)" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={40} />
+                                                    <Line type="monotone" dataKey="Theoretical_FSC" name="Max Allowed Credit (99%)" stroke="#b45309" strokeWidth={3} dot={{r: 4}} />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+
+                                    {/* PEFC Chart */}
+                                    <div>
+                                        <h4 className="font-bold text-emerald-800 mb-2">🛡️ PEFC Mass Balance Monitoring (Factor: 93%)</h4>
+                                        <div className="h-64 w-full">
+                                            <ResponsiveContainer>
+                                                <ComposedChart data={massBalanceData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                                                    <CartesianGrid stroke="#f1f5f9" vertical={false} />
+                                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                                                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                                    <Legend />
+                                                    <Bar dataKey="Pulp_PEFC_Input" name="Pulp Consumed (Ton)" fill="#6ee7b7" radius={[4, 4, 0, 0]} barSize={40} />
+                                                    <Bar dataKey="Fibre_PEFC_Actual" name="Actual Fibre Produced (Ton)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                                                    <Line type="monotone" dataKey="Theoretical_PEFC" name="Max Allowed Credit (93%)" stroke="#047857" strokeWidth={3} dot={{r: 4}} />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+
+                                    {/* Over-Claim Alert */}
+                                    {massBalanceData.some(d => d.Warning) && (
+                                        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-3">
+                                            <Icons.ShieldAlert />
+                                            <div>
+                                                <strong className="block">Auditor Warning: Potential Over-Claim Detected!</strong>
+                                                <span className="text-sm">ตรวจพบเดือนที่มี Actual Fibre Output มากกว่า Theoretical Credit กรุณาตรวจสอบข้อมูลดิบโดยด่วน</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            );
-        };
-
-        // =========================================================================
-        // 🟢 MODULE 3: ENTERPRISE TRACEABILITY TRACKER (Reading Pre-built Graph)
-        // =========================================================================
-        const TraceabilityView = () => {
-            const [searchValue, setSearchValue] = useState('');
-            const [data, setData] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
-
-            const handleSearch = async (e) => {
-                e.preventDefault();
-                if(!searchValue || !window.api) return;
-                setLoading(true); setError(''); setData(null);
-                
-                try {
-                    // 🚀 ENTERPRISE LEVEL: ค้นหาจาก Traceability_Genealogy (ใช้แค่ 1 Read เท่านั้น!)
-                    const docRef = window.api.doc(window.api.db, 'Traceability_Genealogy', searchValue.trim());
-                    const docSnap = await window.api.getDoc(docRef);
-
-                    if(docSnap.exists()) {
-                        setData(docSnap.data());
-                    } else {
-                        setError(`❌ ไม่พบข้อมูล Traceability สำหรับ Invoice: ${searchValue} (ตรวจสอบว่าออก Invoice แล้วหรือยัง)`);
-                    }
-                } catch (err) {
-                    setError('❌ การเชื่อมต่อ Database ขัดข้อง: ' + err.message);
-                }
-                setLoading(false);
+                );
             };
 
-            return (
-                <div className="p-8 animate-slide-in pb-20">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="text-center mb-10">
-                            <h2 className="text-3xl font-bold text-slate-800">Smart CoC Traceability Tracker</h2>
-                            <p className="text-slate-500 mt-2">End-to-End Auditor's Trail (Marketing ➔ Warehouse ➔ Spinning ➔ Viscose ➔ RM QA)</p>
-                        </div>
+            // =========================================================================
+            // 🟢 MODULE 3: ENTERPRISE TRACEABILITY TRACKER (Reading Pre-built Graph)
+            // =========================================================================
+            const TraceabilityView = () => {
+                const [searchValue, setSearchValue] = useState('');
+                const [data, setData] = useState(null);
+                const [loading, setLoading] = useState(false);
+                const [error, setError] = useState('');
 
-                        {/* Search Input */}
-                        <div className="bg-white p-3 rounded-2xl shadow-lg border border-slate-200 flex items-center mb-8 gap-2">
-                            <div className="bg-slate-100 border-none p-3 rounded-xl font-bold text-slate-600 flex items-center gap-2">
-                                <Icons.Search size={18}/> INVOICE NO.
+                const handleSearch = async (e) => {
+                    e.preventDefault();
+                    if(!searchValue || !window.api) return;
+                    setLoading(true); setError(''); setData(null);
+
+                    try {
+                        // 🚀 ENTERPRISE LEVEL: ค้นหาผ่าน Cloud Function API
+                        const res = await window.api.getEnterpriseTraceability({ invoice: searchValue });
+
+                        if (res.data.success) {
+                            setData(res.data.data);
+                        } else {
+                            setError('❌ ' + res.data.message);
+                        }
+                    } catch (err) {
+                        setError('❌ การเชื่อมต่อ Database ขัดข้อง: ' + err.message);
+                    }
+                    setLoading(false);
+                };
+
+                return (
+                    <div className="p-8 animate-slide-in pb-20">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="text-center mb-10">
+                                <h2 className="text-3xl font-bold text-slate-800">Smart CoC Traceability Tracker</h2>
+                                <p className="text-slate-500 mt-2">End-to-End Auditor's Trail (Marketing ➔ Warehouse ➔ Spinning ➔ Viscose ➔ RM QA)</p>
                             </div>
-                            <form onSubmit={handleSearch} className="flex-1 flex">
-                                <input type="text" placeholder="ระบุเลขที่ Invoice ที่ต้องการตรวจสอบ..." 
-                                    className="w-full px-4 py-3 outline-none text-slate-700 font-medium"
-                                    value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
-                                <button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
-                                    {loading ? 'TRACING...' : 'TRACE LEDGER'}
+
+                            {/* Search Input */}
+                            <div className="bg-white p-3 rounded-2xl shadow-lg border border-slate-200 flex items-center mb-8 gap-2">
+                                <div className="bg-slate-100 border-none p-3 rounded-xl font-bold text-slate-600 flex items-center gap-2">
+                                    <Icons.Search size={18}/> INVOICE NO.
+                                </div>
+                                <form onSubmit={handleSearch} className="flex-1 flex">
+                                    <input type="text" placeholder="ระบุเลขที่ Invoice ที่ต้องการตรวจสอบ..."
+                                        className="w-full px-4 py-3 outline-none text-slate-700 font-medium"
+                                        value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+                                    <button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
+                                        {loading ? 'TRACING...' : 'TRACE LEDGER'}
+                                    </button>
+                                </form>
+                            </div>
+
+                            {error && <div className="p-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-center">{error}</div>}
+
+                            {/* 🟢 Enterprise Timeline (5 Steps Pre-packaged) */}
+                            {data && !loading && (
+                                <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+                                    <div className="flex justify-between items-center border-b pb-4 mb-8">
+                                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                            <Icons.Layers className="text-indigo-600"/> Data Genealogy Flow
+                                        </h3>
+                                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                                            <Icons.CheckCircle size={14} className="text-emerald-500"/> Verified by Enterprise Automation
+                                        </span>
+                                    </div>
+
+                                    {/* Step 1: Marketing */}
+                                    <div className="relative pl-10 pb-8">
+                                        <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                        <div className="absolute left-0 top-0 p-1.5 bg-blue-100 text-blue-600 rounded-full z-10 border-4 border-white"><Icons.CheckCircle size={16}/></div>
+                                        <h4 className="font-bold text-blue-800">1. Marketing & Sales Deduction (ปลายน้ำ)</h4>
+                                        <div className="mt-2 p-4 bg-blue-50/50 border border-blue-100 rounded-lg text-sm text-slate-600">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <p><strong>Invoice No:</strong> {data.salesInfo.invoice}</p>
+                                                <p><strong>Customer:</strong> {data.salesInfo.customer}</p>
+                                                <p><strong>Claim Type:</strong> <span className="font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">{data.salesInfo.claimType}</span></p>
+                                                <p><strong>Volume Deducted:</strong> {data.salesInfo.volume} Tons</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Step 2: Warehouse */}
+                                    <div className="relative pl-10 pb-8">
+                                        <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                        <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.dispatchInfo ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                                            <Icons.Truck size={16}/>
+                                        </div>
+                                        <h4 className={`font-bold ${data.dispatchInfo ? 'text-indigo-800' : 'text-slate-400'}`}>2. Warehouse Dispatch</h4>
+                                        {data.dispatchInfo ? (
+                                            <div className="mt-2 p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm text-slate-600">
+                                                <p><strong>Linked DO No:</strong> {data.dispatchInfo.doNo}</p>
+                                                <p className="text-xs text-slate-400 mt-1">✓ ระบบจัดกลุ่ม Production Dates เพื่อสืบค้นข้อมูลการผลิตให้เรียบร้อยแล้ว</p>
+                                            </div>
+                                        ) : (
+                                            <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 flex items-center gap-2">
+                                                <span className="animate-spin">⏳</span> รอข้อมูลจากแผนกโกดัง (Pending Warehouse Upload)
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Step 3: Spinning */}
+                                    <div className="relative pl-10 pb-8">
+                                        <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                        <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.productionInfo?.length > 0 ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'}`}>
+                                            <Icons.Activity size={16}/>
+                                        </div>
+                                        <h4 className={`font-bold ${data.productionInfo?.length > 0 ? 'text-teal-800' : 'text-slate-400'}`}>3. Spinning (Actual Fibre Yield)</h4>
+                                        {data.productionInfo?.length > 0 ? (
+                                            <div className="mt-2 p-4 bg-teal-50/50 border border-teal-100 rounded-lg text-sm text-slate-600">
+                                                {data.productionInfo.map((s, i) => (
+                                                    <div key={i} className="mb-2 border-b border-teal-100 pb-2 last:border-0 last:mb-0 last:pb-0">
+                                                        <p className="font-bold text-teal-700">Production Date: {s.date}</p>
+                                                        <ul className="list-disc pl-5 mt-1">
+                                                            {s.data.map((tx, j) => <li key={j}>Machine: {tx.line} | Claim: {tx.claimType} | Output: {tx.weight} T</li>)}
+                                                        </ul>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="mt-2 text-sm text-slate-400 italic">No production data matched yet.</div>
+                                        )}
+                                    </div>
+
+                                    {/* Step 4: Viscose */}
+                                    <div className="relative pl-10 pb-8">
+                                        <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
+                                        <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.pulpConsumption?.length > 0 ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-400'}`}>
+                                            <Icons.Flask size={16}/>
+                                        </div>
+                                        <h4 className={`font-bold ${data.pulpConsumption?.length > 0 ? 'text-orange-800' : 'text-slate-400'}`}>4. Viscose (Pulp Consumption)</h4>
+                                        {data.pulpConsumption?.length > 0 ? (
+                                            <div className="mt-2 p-4 bg-orange-50/50 border border-orange-100 rounded-lg text-sm text-slate-600">
+                                                {data.pulpConsumption.map((v, i) => (
+                                                    <div key={i} className="mb-2 border-b border-orange-100 pb-2 last:border-0 last:mb-0 last:pb-0">
+                                                        <p className="font-bold text-orange-700">Dissolving Date: {v.date}</p>
+                                                        <ul className="list-disc pl-5 mt-1">
+                                                            {v.data.map((tx, j) => <li key={j}>Brand: {tx.brand} | <strong className="text-orange-600">Lot: {tx.docRef}</strong> | Consumed: {tx.weight} T</li>)}
+                                                        </ul>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="mt-2 text-sm text-slate-400 italic">No pulp consumption matched yet.</div>
+                                        )}
+                                    </div>
+
+                                    {/* Step 5: RM QA */}
+                                    <div className="relative pl-10">
+                                        <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.coaData?.length > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                            <Icons.CheckCircle size={16}/>
+                                        </div>
+                                        <h4 className={`font-bold ${data.coaData?.length > 0 ? 'text-emerald-800' : 'text-slate-400'}`}>5. RM QA (Pulp Source & COA)</h4>
+                                        {data.coaData?.length > 0 ? (
+                                            <div className="mt-2 p-4 bg-emerald-50/50 border border-emerald-100 rounded-lg text-sm text-slate-600">
+                                                {data.coaData.map((qa, i) => (
+                                                    <div key={i} className="mb-2 bg-white p-3 border border-emerald-100 rounded shadow-sm">
+                                                        <p><strong>Supplier:</strong> {qa.supplier}</p>
+                                                        <p><strong>Verified Lot No:</strong> <span className="font-mono bg-slate-100 px-1 rounded">{qa.lotNo || qa.batchNo}</span></p>
+                                                        <p className="mt-1 text-xs text-slate-500">Alpha Cellulose: {qa.parameters?.alphaCellulose?.lab || '-'}% | Viscosity: {qa.parameters?.viscosity?.lab || '-'}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="mt-2 text-sm text-slate-400 italic">Waiting for COA matching with Pulp Lots.</div>
+                                        )}
+                                    </div>
+
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            // =========================================================================
+            // 🟢 MAIN APP LAYOUT (Sidebar & Navigation)
+            // =========================================================================
+            const App = () => {
+                const [activeTab, setActiveTab] = useState('dashboard');
+
+                return (
+                    <div className="flex min-h-screen bg-slate-50">
+                        {/* Sidebar */}
+                        <div className="w-64 bg-slate-900 text-slate-300 fixed h-full shadow-lg z-20 hidden md:flex flex-col">
+                            <div className="p-6 border-b border-slate-800">
+                                <h1 className="font-bold text-white text-xl flex items-center gap-2">
+                                    <Icons.Layers className="text-indigo-400"/> TRC Smart CoC
+                                </h1>
+                                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-1">Enterprise Mass Balance OS</p>
+                            </div>
+                            <nav className="mt-4 space-y-1 flex-1 px-3">
+                                <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'}`}>
+                                    <Icons.Home size={18}/> Operational Dashboard
                                 </button>
-                            </form>
-                        </div>
-
-                        {error && <div className="p-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-center">{error}</div>}
-
-                        {/* 🟢 Enterprise Timeline (5 Steps Pre-packaged) */}
-                        {data && !loading && (
-                            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-                                <div className="flex justify-between items-center border-b pb-4 mb-8">
-                                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                        <Icons.Layers className="text-indigo-600"/> Data Genealogy Flow
-                                    </h3>
-                                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                                        <Icons.CheckCircle size={14} className="text-emerald-500"/> Verified by Enterprise Automation
-                                    </span>
-                                </div>
-
-                                {/* Step 1: Marketing */}
-                                <div className="relative pl-10 pb-8">
-                                    <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
-                                    <div className="absolute left-0 top-0 p-1.5 bg-blue-100 text-blue-600 rounded-full z-10 border-4 border-white"><Icons.CheckCircle size={16}/></div>
-                                    <h4 className="font-bold text-blue-800">1. Marketing & Sales Deduction (ปลายน้ำ)</h4>
-                                    <div className="mt-2 p-4 bg-blue-50/50 border border-blue-100 rounded-lg text-sm text-slate-600">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <p><strong>Invoice No:</strong> {data.salesInfo.invoice}</p>
-                                            <p><strong>Customer:</strong> {data.salesInfo.customer}</p>
-                                            <p><strong>Claim Type:</strong> <span className="font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">{data.salesInfo.claimType}</span></p>
-                                            <p><strong>Volume Deducted:</strong> {data.salesInfo.volume} Tons</p>
-                                        </div>
+                                <button onClick={() => setActiveTab('traceability')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'traceability' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'}`}>
+                                    <Icons.Search size={18}/> Traceability Tracker
+                                </button>
+                            </nav>
+                            <div className="p-4 border-t border-slate-800 bg-slate-950">
+                                <div className="flex flex-col gap-1 text-xs text-slate-400">
+                                    <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> Enterprise DB Online
                                     </div>
+                                    <span>v2.0.0 (Event-Driven)</span>
                                 </div>
-
-                                {/* Step 2: Warehouse */}
-                                <div className="relative pl-10 pb-8">
-                                    <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
-                                    <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.dispatchInfo ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Icons.Truck size={16}/>
-                                    </div>
-                                    <h4 className={`font-bold ${data.dispatchInfo ? 'text-indigo-800' : 'text-slate-400'}`}>2. Warehouse Dispatch</h4>
-                                    {data.dispatchInfo ? (
-                                        <div className="mt-2 p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm text-slate-600">
-                                            <p><strong>Linked DO No:</strong> {data.dispatchInfo.doNo}</p>
-                                            <p className="text-xs text-slate-400 mt-1">✓ ระบบจัดกลุ่ม Production Dates เพื่อสืบค้นข้อมูลการผลิตให้เรียบร้อยแล้ว</p>
-                                        </div>
-                                    ) : (
-                                        <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 flex items-center gap-2">
-                                            <span className="animate-spin">⏳</span> รอข้อมูลจากแผนกโกดัง (Pending Warehouse Upload)
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Step 3: Spinning */}
-                                <div className="relative pl-10 pb-8">
-                                    <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
-                                    <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.productionInfo?.length > 0 ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Icons.Activity size={16}/>
-                                    </div>
-                                    <h4 className={`font-bold ${data.productionInfo?.length > 0 ? 'text-teal-800' : 'text-slate-400'}`}>3. Spinning (Actual Fibre Yield)</h4>
-                                    {data.productionInfo?.length > 0 ? (
-                                        <div className="mt-2 p-4 bg-teal-50/50 border border-teal-100 rounded-lg text-sm text-slate-600">
-                                            {data.productionInfo.map((s, i) => (
-                                                <div key={i} className="mb-2 border-b border-teal-100 pb-2 last:border-0 last:mb-0 last:pb-0">
-                                                    <p className="font-bold text-teal-700">Production Date: {s.date}</p>
-                                                    <ul className="list-disc pl-5 mt-1">
-                                                        {s.data.map((tx, j) => <li key={j}>Machine: {tx.line} | Claim: {tx.claimType} | Output: {tx.weight} T</li>)}
-                                                    </ul>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="mt-2 text-sm text-slate-400 italic">No production data matched yet.</div>
-                                    )}
-                                </div>
-
-                                {/* Step 4: Viscose */}
-                                <div className="relative pl-10 pb-8">
-                                    <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
-                                    <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.pulpConsumption?.length > 0 ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Icons.Flask size={16}/>
-                                    </div>
-                                    <h4 className={`font-bold ${data.pulpConsumption?.length > 0 ? 'text-orange-800' : 'text-slate-400'}`}>4. Viscose (Pulp Consumption)</h4>
-                                    {data.pulpConsumption?.length > 0 ? (
-                                        <div className="mt-2 p-4 bg-orange-50/50 border border-orange-100 rounded-lg text-sm text-slate-600">
-                                            {data.pulpConsumption.map((v, i) => (
-                                                <div key={i} className="mb-2 border-b border-orange-100 pb-2 last:border-0 last:mb-0 last:pb-0">
-                                                    <p className="font-bold text-orange-700">Dissolving Date: {v.date}</p>
-                                                    <ul className="list-disc pl-5 mt-1">
-                                                        {v.data.map((tx, j) => <li key={j}>Brand: {tx.brand} | <strong className="text-orange-600">Lot: {tx.docRef}</strong> | Consumed: {tx.weight} T</li>)}
-                                                    </ul>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="mt-2 text-sm text-slate-400 italic">No pulp consumption matched yet.</div>
-                                    )}
-                                </div>
-
-                                {/* Step 5: RM QA */}
-                                <div className="relative pl-10">
-                                    <div className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.coaData?.length > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Icons.CheckCircle size={16}/>
-                                    </div>
-                                    <h4 className={`font-bold ${data.coaData?.length > 0 ? 'text-emerald-800' : 'text-slate-400'}`}>5. RM QA (Pulp Source & COA)</h4>
-                                    {data.coaData?.length > 0 ? (
-                                        <div className="mt-2 p-4 bg-emerald-50/50 border border-emerald-100 rounded-lg text-sm text-slate-600">
-                                            {data.coaData.map((qa, i) => (
-                                                <div key={i} className="mb-2 bg-white p-3 border border-emerald-100 rounded shadow-sm">
-                                                    <p><strong>Supplier:</strong> {qa.supplier}</p>
-                                                    <p><strong>Verified Lot No:</strong> <span className="font-mono bg-slate-100 px-1 rounded">{qa.lotNo || qa.batchNo}</span></p>
-                                                    <p className="mt-1 text-xs text-slate-500">Alpha Cellulose: {qa.parameters?.alphaCellulose?.lab || '-'}% | Viscosity: {qa.parameters?.viscosity?.lab || '-'}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="mt-2 text-sm text-slate-400 italic">Waiting for COA matching with Pulp Lots.</div>
-                                    )}
-                                </div>
-
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        // =========================================================================
-        // 🟢 MAIN APP LAYOUT (Sidebar & Navigation)
-        // =========================================================================
-        const App = () => {
-            const [activeTab, setActiveTab] = useState('dashboard');
-
-            return (
-                <div className="flex min-h-screen bg-slate-50">
-                    {/* Sidebar */}
-                    <div className="w-64 bg-slate-900 text-slate-300 fixed h-full shadow-lg z-20 hidden md:flex flex-col">
-                        <div className="p-6 border-b border-slate-800">
-                            <h1 className="font-bold text-white text-xl flex items-center gap-2">
-                                <Icons.Layers className="text-indigo-400"/> TRC Smart CoC
-                            </h1>
-                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-1">Enterprise Mass Balance OS</p>
-                        </div>
-                        <nav className="mt-4 space-y-1 flex-1 px-3">
-                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'}`}>
-                                <Icons.Home size={18}/> Operational Dashboard
-                            </button>
-                            <button onClick={() => setActiveTab('traceability')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'traceability' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'}`}>
-                                <Icons.Search size={18}/> Traceability Tracker
-                            </button>
-                        </nav>
-                        <div className="p-4 border-t border-slate-800 bg-slate-950">
-                            <div className="flex flex-col gap-1 text-xs text-slate-400">
-                                <div className="flex items-center gap-2 text-emerald-400 font-bold">
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> Enterprise DB Online
-                                </div>
-                                <span>v2.0.0 (Event-Driven)</span>
                             </div>
                         </div>
+
+                        {/* Main Content */}
+                        <main className="flex-1 md:ml-64 relative min-h-screen">
+                            {activeTab === 'dashboard' ? <DashboardView /> : <TraceabilityView />}
+                        </main>
                     </div>
+                );
+            };
 
-                    {/* Main Content */}
-                    <main className="flex-1 md:ml-64 relative min-h-screen">
-                        {activeTab === 'dashboard' ? <DashboardView /> : <TraceabilityView />}
-                    </main>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        </script>
+    </body>
 </html>

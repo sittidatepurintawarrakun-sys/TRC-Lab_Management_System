@@ -1,64 +1,84 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TRC Department Portal (Smart Store & Production)</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRC Department Portal (Smart Store & Production)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.js"></script>
 
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+      import {
+        getFirestore,
+        doc,
+        setDoc,
+        getDoc,
+        addDoc,
+        deleteDoc,
+        updateDoc,
+        arrayUnion,
+        collection,
+        Timestamp,
+        runTransaction,
+        query,
+        orderBy,
+        limit,
+        onSnapshot,
+        where,
+        getDocs, // <-- เพิ่ม getDocs ตรงนี้
+      } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+      import {
+        getAuth,
+        signInWithEmailAndPassword,
+        signOut,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import {
-getFirestore, doc, setDoc, getDoc, addDoc, deleteDoc, updateDoc,
-arrayUnion, collection, Timestamp, runTransaction, query, orderBy, limit, onSnapshot, where, getDocs // <-- เพิ่ม getDocs ตรงนี้
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-import {
-getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+      import {
+        getFunctions,
+        httpsCallable,
+      } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-functions.js";
 
-import {
-getFunctions, httpsCallable
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-functions.js";
+      // --- 1. CONFIGURATION ---
+      const firebaseConfig = {
+        apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+        authDomain: "lab-trc-management-system.firebaseapp.com",
+        projectId: "lab-trc-management-system",
+        storageBucket: "lab-trc-management-system.appspot.com",
+        messagingSenderId: "43919979160",
+        appId: "1:43919979160:web:779cb9de75cd4b9fce56ed",
+      };
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const auth = getAuth(app);
+      const functions = getFunctions(app, "asia-southeast1");
 
-// --- 1. CONFIGURATION ---
-const firebaseConfig = {
-apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-authDomain: "lab-trc-management-system.firebaseapp.com",
-projectId: "lab-trc-management-system",
-storageBucket: "lab-trc-management-system.appspot.com",
-messagingSenderId: "43919979160",
-appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const functions = getFunctions(app, "asia-southeast1");
+      // --- HELPER: Create Icons ---
+      const safeCreateIcons = () => {
+        if (typeof lucide !== "undefined" && lucide.createIcons) {
+          lucide.createIcons();
+        }
+      };
 
-// --- HELPER: Create Icons ---
-const safeCreateIcons = () => {
-if (typeof lucide !== 'undefined' && lucide.createIcons) {
-lucide.createIcons();
-}
-};
+      // --- LOGIC: ระบบกะการผลิต (07:00 น. - 07:00 น. ของอีกวัน) ---
+      // ถ้าเวลาปัจจุบันยังไม่ถึง 07:00 น. ถือว่าเป็น Production Date ของเมื่อวาน
+      window.getShiftProductionDate = () => {
+        const now = new Date();
+        if (now.getHours() < 7) {
+          now.setDate(now.getDate() - 1);
+        }
+        // ปรับ Timezone เป็น Local (ไทย) ก่อนดึง YYYY-MM-DD
+        const offset = now.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(now.getTime() - offset)
+          .toISOString()
+          .split("T")[0];
+        return localISOTime;
+      };
 
-// --- LOGIC: ระบบกะการผลิต (07:00 น. - 07:00 น. ของอีกวัน) ---
-// ถ้าเวลาปัจจุบันยังไม่ถึง 07:00 น. ถือว่าเป็น Production Date ของเมื่อวาน
-window.getShiftProductionDate = () => {
-const now = new Date();
-if (now.getHours() < 7) {
-now.setDate(now.getDate() - 1);
-}
-// ปรับ Timezone เป็น Local (ไทย) ก่อนดึง YYYY-MM-DD
-const offset = now.getTimezoneOffset() * 60000;
-const localISOTime = (new Date(now.getTime() - offset)).toISOString().split('T')[0];
-return localISOTime;
-};
-
-// --- 2. CONSTANTS ---
-const PULP_OPTIONS_STORE = `
+      // --- 2. CONSTANTS ---
+      const PULP_OPTIONS_STORE = `
 <option value="ARAUCO FSC Mix Credit">ARAUCO FSC Mix Credit</option>
 <option value="ARAUCO FSC Control Wood">ARAUCO FSC Control Wood</option>
 <option value="ARAUCO PEFC">ARAUCO PEFC</option>
@@ -76,124 +96,152 @@ const PULP_OPTIONS_STORE = `
 <option value="TEL Pellita FSC Control Wood">TEL Pellita FSC Control Wood</option>
 <option value="TEL Pellita PEFC">TEL Pellita PEFC</option>
 `;
-const VISCOSE_LINE_OPTIONS = `
+      const VISCOSE_LINE_OPTIONS = `
 <option value="Line Modal">Line Modal</option>
 <option value="Line Grey">Line Grey</option>
 <option value="Line NonWoven">Line NonWoven</option>
 `;
-const SPINNING_LINE_OPTIONS = `
+      const SPINNING_LINE_OPTIONS = `
 <option value="Line MC2">Line MC2 (Modal)</option>
 <option value="Line MC3">Line MC3 (Grey/NW)</option>
 <option value="Line MC5">Line MC5 (Grey/NW)</option>
 <option value="Line MC6">Line MC6 (Grey/NW)</option>
 `;
 
-// --- 3. AUTHENTICATION LOGIC ---
-let currentUser = null;
-let historyUnsubscribe = null;
-let viscoseUnsubscribe = null;
-let spinningUnsubscribe = null;
-let dashboardListening = false;
+      // --- 3. AUTHENTICATION LOGIC ---
+      let currentUser = null;
+      let historyUnsubscribe = null;
+      let viscoseUnsubscribe = null;
+      let spinningUnsubscribe = null;
+      let dashboardListening = false;
 
-window.handleLogin = async () => {
-const email = document.getElementById('loginEmail').value;
-const password = document.getElementById('loginPassword').value;
-const errorMsg = document.getElementById('loginError');
-const btn = document.getElementById('btnLoginAction');
-errorMsg.classList.add('hidden');
-if (!email || !password) {
-errorMsg.textContent = "กรุณากรอก Email และ Password";
-errorMsg.classList.remove('hidden');
-return;
-}
-try {
-btn.disabled = true;
-btn.innerHTML = `<span class="animate-spin"> ⌛ </span> Processing...`;
-await signInWithEmailAndPassword(auth, email, password);
-} catch (error) {
-errorMsg.textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง (" + error.code + ")";
-errorMsg.classList.remove('hidden');
-btn.disabled = false;
-btn.innerHTML = `เข้าสู่ระบบ (Login)`;
-}
-};
+      window.handleLogin = async () => {
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPassword").value;
+        const errorMsg = document.getElementById("loginError");
+        const btn = document.getElementById("btnLoginAction");
+        errorMsg.classList.add("hidden");
+        if (!email || !password) {
+          errorMsg.textContent = "กรุณากรอก Email และ Password";
+          errorMsg.classList.remove("hidden");
+          return;
+        }
+        try {
+          btn.disabled = true;
+          btn.innerHTML = `<span class="animate-spin"> ⌛ </span> Processing...`;
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+          errorMsg.textContent =
+            "อีเมลหรือรหัสผ่านไม่ถูกต้อง (" + error.code + ")";
+          errorMsg.classList.remove("hidden");
+          btn.disabled = false;
+          btn.innerHTML = `เข้าสู่ระบบ (Login)`;
+        }
+      };
 
-window.handleLogout = async () => {
-try { await signOut(auth); window.location.reload(); } catch (error) {}
-};
+      window.handleLogout = async () => {
+        try {
+          await signOut(auth);
+          window.location.reload();
+        } catch (error) {}
+      };
 
-onAuthStateChanged(auth, (user) => {
-currentUser = user;
-const loginContainer = document.getElementById('loginContainer');
-const userProfile = document.getElementById('userProfileSection');
-document.body.classList.toggle('is-logged-in', !!user);
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        const loginContainer = document.getElementById("loginContainer");
+        const userProfile = document.getElementById("userProfileSection");
+        document.body.classList.toggle("is-logged-in", !!user);
 
-if (user) {
-loginContainer.classList.add('hidden');
-userProfile.classList.remove('hidden');
-document.getElementById('userNameDisplay').innerText = user.email.split('@')[0];
-document.getElementById('userEmailDisplay').innerText = user.email;
-if(user.photoURL) document.getElementById('userAvatar').src = user.photoURL;
+        if (user) {
+          loginContainer.classList.add("hidden");
+          userProfile.classList.remove("hidden");
+          document.getElementById("userNameDisplay").innerText =
+            user.email.split("@")[0];
+          document.getElementById("userEmailDisplay").innerText = user.email;
+          if (user.photoURL)
+            document.getElementById("userAvatar").src = user.photoURL;
 
-window.initStoreListeners();
-window.initViscoseListeners();
-window.initSpinningListeners();
-} else {
-loginContainer.classList.remove('hidden');
-userProfile.classList.add('hidden');
-const btn = document.getElementById('btnLoginAction');
-if(btn) { btn.disabled = false; btn.innerHTML = `เข้าสู่ระบบ (Login)`; }
-}
-});
+          window.initStoreListeners();
+          window.initViscoseListeners();
+          window.initSpinningListeners();
+        } else {
+          loginContainer.classList.remove("hidden");
+          userProfile.classList.add("hidden");
+          const btn = document.getElementById("btnLoginAction");
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `เข้าสู่ระบบ (Login)`;
+          }
+        }
+      });
 
-// ==========================================
-// MODULE 1: STORE (Pulp Inventory)
-// ==========================================
-window.initStoreListeners = (searchDate = null) => {
-if(!dashboardListening) {
-const balanceRef = collection(db, "store_inventory_balance");
-onSnapshot(balanceRef, (snapshot) => {
-const container = document.getElementById('inventoryDashboard');
-if(!container) return;
-let cardsHTML = '';
-if(snapshot.empty) { container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">ยังไม่มีข้อมูลสต็อก</div>'; return; }
-snapshot.forEach(doc => {
-const data = doc.data();
-const [brand, grade] = doc.id.split('__');
-const balance = data.balance || 0;
-const isLow = balance < 50;
-const bgClass = isLow ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200';
-const textClass = isLow ? 'text-red-700' : 'text-slate-700';
-cardsHTML += `
+      // ==========================================
+      // MODULE 1: STORE (Pulp Inventory)
+      // ==========================================
+      window.initStoreListeners = (searchDate = null) => {
+        if (!dashboardListening) {
+          const balanceRef = collection(db, "store_inventory_balance");
+          onSnapshot(balanceRef, (snapshot) => {
+            const container = document.getElementById("inventoryDashboard");
+            if (!container) return;
+            let cardsHTML = "";
+            if (snapshot.empty) {
+              container.innerHTML =
+                '<div class="col-span-full text-center text-gray-400 py-4">ยังไม่มีข้อมูลสต็อก</div>';
+              return;
+            }
+            snapshot.forEach((doc) => {
+              const data = doc.data();
+              const [brand, grade] = doc.id.split("__");
+              const balance = data.balance || 0;
+              const isLow = balance < 50;
+              const bgClass = isLow
+                ? "bg-red-50 border-red-200"
+                : "bg-white border-slate-200";
+              const textClass = isLow ? "text-red-700" : "text-slate-700";
+              cardsHTML += `
 <div class="p-3 rounded-lg border shadow-sm flex flex-col justify-between ${bgClass}">
 <div><div class="text-[10px] uppercase text-slate-500 font-bold">${grade}</div><div class="text-xs font-semibold text-slate-800 truncate" title="${brand}">${brand}</div></div>
-<div class="text-right mt-2"><span class="text-xl font-bold ${textClass}">${balance.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3})}</span><span class="text-[10px] text-slate-400">Tons</span></div>
+<div class="text-right mt-2"><span class="text-xl font-bold ${textClass}">${balance.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span><span class="text-[10px] text-slate-400">Tons</span></div>
 </div>`;
-});
-container.innerHTML = cardsHTML;
-});
-dashboardListening = true;
-}
-if (historyUnsubscribe) historyUnsubscribe();
-const tbody = document.getElementById('storeHistoryTable');
-let q = searchDate ? query(collection(db, "store_transaction_logs"), where("date", "==", searchDate), orderBy("recordedAt", "desc")) : query(collection(db, "store_transaction_logs"), orderBy("recordedAt", "desc"), limit(20));
+            });
+            container.innerHTML = cardsHTML;
+          });
+          dashboardListening = true;
+        }
+        if (historyUnsubscribe) historyUnsubscribe();
+        const tbody = document.getElementById("storeHistoryTable");
+        let q = searchDate
+          ? query(
+              collection(db, "store_transaction_logs"),
+              where("date", "==", searchDate),
+              orderBy("recordedAt", "desc"),
+            )
+          : query(
+              collection(db, "store_transaction_logs"),
+              orderBy("recordedAt", "desc"),
+              limit(20),
+            );
 
-historyUnsubscribe = onSnapshot(q, (snapshot) => {
-tbody.innerHTML = '';
-if(snapshot.empty) return tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-400">ไม่พบข้อมูล</td></tr>`;
-snapshot.forEach(docSnap => {
-const data = docSnap.data();
-const isIN = data.type === 'IN';
-const typeBadge = isIN ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700"> 📥 Buy</span>` : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700"> 📤 Issue</span>`;
-const row = document.createElement('tr');
-row.className = "border-b hover:bg-gray-50 transition";
-row.innerHTML = `
+        historyUnsubscribe = onSnapshot(q, (snapshot) => {
+          tbody.innerHTML = "";
+          if (snapshot.empty)
+            return (tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-400">ไม่พบข้อมูล</td></tr>`);
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const isIN = data.type === "IN";
+            const typeBadge = isIN
+              ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700"> 📥 Buy</span>`
+              : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700"> 📤 Issue</span>`;
+            const row = document.createElement("tr");
+            row.className = "border-b hover:bg-gray-50 transition";
+            row.innerHTML = `
 <td class="p-2 text-gray-500">${data.date}</td>
 <td class="p-2">${typeBadge}</td>
 <td class="p-2 font-medium">${data.brand}</td>
 <td class="p-2 text-xs">${data.grade}</td>
-<td class="p-2 text-xs text-gray-500">${data.docRef || '-'}</td>
-<td class="p-2 text-right font-mono font-bold ${isIN ? 'text-green-600' : 'text-red-600'}">${isIN ? '+' : '-'}${data.weight.toFixed(3)}</td>
+<td class="p-2 text-xs text-gray-500">${data.docRef || "-"}</td>
+<td class="p-2 text-right font-mono font-bold ${isIN ? "text-green-600" : "text-red-600"}">${isIN ? "+" : "-"}${data.weight.toFixed(3)}</td>
 <td class="p-2 text-right">
 <div class="auth-only hidden flex justify-end">
 <button onclick="deleteTransaction('${docSnap.id}')" class="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200 text-xs font-bold flex items-center gap-1 transition shadow-sm">
@@ -201,17 +249,17 @@ row.innerHTML = `
 </button>
 </div>
 </td>`;
-tbody.appendChild(row);
-});
-safeCreateIcons();
-});
-};
+            tbody.appendChild(row);
+          });
+          safeCreateIcons();
+        });
+      };
 
-window.addStoreRow = () => {
-const tbody = document.getElementById('storeEntryTable');
-const row = document.createElement('tr');
-row.className = "border-b bg-green-50/50";
-row.innerHTML = `
+      window.addStoreRow = () => {
+        const tbody = document.getElementById("storeEntryTable");
+        const row = document.createElement("tr");
+        row.className = "border-b bg-green-50/50";
+        row.innerHTML = `
 <td class="p-2"><input type="date" name="s_date" value="${window.getShiftProductionDate()}" class="w-full text-xs border border-gray-300 rounded p-2 font-bold outline-none"></td>
 <td class="p-2"><select name="s_type" onchange="changeRowColor(this)" class="w-full text-xs border border-gray-300 rounded p-2 font-bold outline-none"><option value="IN" class="text-green-700"> 📥 รับเข้า</option><option value="OUT" class="text-red-700"> 📤 จ่ายออก</option></select></td>
 <td class="p-2"><select name="s_brand" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">${PULP_OPTIONS_STORE}</select></td>
@@ -220,101 +268,151 @@ row.innerHTML = `
 <td class="p-2"><input type="number" name="s_weight" step="0.001" placeholder="0.000" class="w-full text-sm font-mono text-right font-bold border border-gray-300 rounded p-2 outline-none"></td>
 <td class="p-2 text-center"><button onclick="removeRow(this)" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
 `;
-tbody.appendChild(row);
-safeCreateIcons();
-};
+        tbody.appendChild(row);
+        safeCreateIcons();
+      };
 
-window.removeRow = (btn) => { btn.closest('tr').remove(); };
+      window.removeRow = (btn) => {
+        btn.closest("tr").remove();
+      };
 
-window.changeRowColor = (selectEl) => {
-const row = selectEl.closest('tr');
-row.className = selectEl.value === 'IN' ? "border-b bg-green-50/50" : "border-b bg-red-50/50";
-};
+      window.changeRowColor = (selectEl) => {
+        const row = selectEl.closest("tr");
+        row.className =
+          selectEl.value === "IN"
+            ? "border-b bg-green-50/50"
+            : "border-b bg-red-50/50";
+      };
 
-window.saveStoreBatch = async () => {
-const rows = document.querySelectorAll('#storeEntryTable tr');
-if(rows.length === 0) return alert(" ⚠️ กรุณาเพิ่มรายการ");
-const btn = document.getElementById('btnSaveBatch');
-const originalBtnText = btn.innerHTML;
-btn.disabled = true; btn.innerHTML = ` ⏳ Processing...`;
+      window.saveStoreBatch = async () => {
+        const rows = document.querySelectorAll("#storeEntryTable tr");
+        if (rows.length === 0) return alert(" ⚠️ กรุณาเพิ่มรายการ");
+        const btn = document.getElementById("btnSaveBatch");
+        const originalBtnText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = ` ⏳ Processing...`;
 
-try {
-let successCount = 0;
-for (const row of rows) {
-const date = row.querySelector('[name="s_date"]').value;
-const type = row.querySelector('[name="s_type"]').value;
-const brand = row.querySelector('[name="s_brand"]').value;
-const grade = row.querySelector('[name="s_grade"]').value;
-const docVal = row.querySelector('[name="s_doc"]').value;
-const weight = parseFloat(row.querySelector('[name="s_weight"]').value);
-if(!date || !weight || weight <= 0) continue;
+        try {
+          let successCount = 0;
+          for (const row of rows) {
+            const date = row.querySelector('[name="s_date"]').value;
+            const type = row.querySelector('[name="s_type"]').value;
+            const brand = row.querySelector('[name="s_brand"]').value;
+            const grade = row.querySelector('[name="s_grade"]').value;
+            const docVal = row.querySelector('[name="s_doc"]').value;
+            const weight = parseFloat(
+              row.querySelector('[name="s_weight"]').value,
+            );
+            if (!date || !weight || weight <= 0) continue;
 
-// 🟢 เตรียมข้อมูลสำหรับทำ Dashboard
-const dateObj = new Date(date);
-const year = dateObj.getFullYear().toString();
-const month = date.substring(0, 7);
-const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`;
+            // 🟢 เตรียมข้อมูลสำหรับทำ Dashboard
+            const dateObj = new Date(date);
+            const year = dateObj.getFullYear().toString();
+            const month = date.substring(0, 7);
+            const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`;
 
-let standard = 'None';
-if (brand.includes("PEFC")) standard = 'PEFC';
-else if (brand.includes("Mix Credit") || brand.includes("FSC Mix")) standard = 'FSC';
-else if (brand.includes("Control Wood") || brand.includes("CW")) standard = 'FSC_CW';
+            let standard = "None";
+            if (brand.includes("PEFC")) standard = "PEFC";
+            else if (brand.includes("Mix Credit") || brand.includes("FSC Mix"))
+              standard = "FSC";
+            else if (brand.includes("Control Wood") || brand.includes("CW"))
+              standard = "FSC_CW";
 
-await runTransaction(db, async (transaction) => {
-const logRef = doc(collection(db, "store_transaction_logs"));
-const invRef = doc(db, "store_inventory_balance", `${brand}__${grade}`);
-const invDoc = await transaction.get(invRef);
-const currentBal = invDoc.exists() ? (invDoc.data().balance || 0) : 0;
-const newBal = type === 'IN' ? currentBal + weight : currentBal - weight;
+            await runTransaction(db, async (transaction) => {
+              const logRef = doc(collection(db, "store_transaction_logs"));
+              const invRef = doc(
+                db,
+                "store_inventory_balance",
+                `${brand}__${grade}`,
+              );
+              const invDoc = await transaction.get(invRef);
+              const currentBal = invDoc.exists()
+                ? invDoc.data().balance || 0
+                : 0;
+              const newBal =
+                type === "IN" ? currentBal + weight : currentBal - weight;
 
-// 🟢 บันทึก Year, Quarter, Standard ลงไปด้วย
-transaction.set(logRef, { 
-type, brand, grade, weight, docRef: docVal, date, 
-year, month, quarter, standard, // <--- เพิ่มตรงนี้
-recordedBy: currentUser ? currentUser.email : 'Guest', 
-recordedAt: Timestamp.now() 
-});
-transaction.set(invRef, { balance: newBal, lastUpdated: Timestamp.now() }, { merge: true });
-});
-successCount++; row.remove();
-}
-if(successCount > 0 && document.querySelectorAll('#storeEntryTable tr').length === 0) window.addStoreRow();
-} catch (err) { alert(" ❌ Error: " + err.message); }
-finally { btn.disabled = false; btn.innerHTML = originalBtnText; safeCreateIcons(); }
-};
+              // 🟢 บันทึก Year, Quarter, Standard ลงไปด้วย
+              transaction.set(logRef, {
+                type,
+                brand,
+                grade,
+                weight,
+                docRef: docVal,
+                date,
+                year,
+                month,
+                quarter,
+                standard, // <--- เพิ่มตรงนี้
+                recordedBy: currentUser ? currentUser.email : "Guest",
+                recordedAt: Timestamp.now(),
+              });
+              transaction.set(
+                invRef,
+                { balance: newBal, lastUpdated: Timestamp.now() },
+                { merge: true },
+              );
+            });
+            successCount++;
+            row.remove();
+          }
+          if (
+            successCount > 0 &&
+            document.querySelectorAll("#storeEntryTable tr").length === 0
+          )
+            window.addStoreRow();
+        } catch (err) {
+          alert(" ❌ Error: " + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalBtnText;
+          safeCreateIcons();
+        }
+      };
 
-window.deleteTransaction = async (logId) => {
-if(!currentUser) return;
-if(!confirm(" ⚠️ ยืนยันการลบ? \nระบบจะคำนวณคืนค่าสต็อกให้อัตโนมัติ")) return;
-try {
-await runTransaction(db, async (transaction) => {
-const logRef = doc(db, "store_transaction_logs", logId);
-const logDoc = await transaction.get(logRef);
-if(!logDoc.exists()) throw "Document does not exist!";
-const data = logDoc.data();
-const invRef = doc(db, "store_inventory_balance", `${data.brand}__${data.grade}`);
-const invDoc = await transaction.get(invRef);
-const currentBal = invDoc.exists() ? (invDoc.data().balance || 0) : 0;
-const reverseBal = data.type === 'IN' ? currentBal - data.weight : currentBal + data.weight;
-transaction.delete(logRef);
-transaction.set(invRef, { balance: reverseBal }, { merge: true });
-});
-} catch (e) { alert("Error deleting: " + e.message); }
-};
+      window.deleteTransaction = async (logId) => {
+        if (!currentUser) return;
+        if (!confirm(" ⚠️ ยืนยันการลบ? \nระบบจะคำนวณคืนค่าสต็อกให้อัตโนมัติ"))
+          return;
+        try {
+          await runTransaction(db, async (transaction) => {
+            const logRef = doc(db, "store_transaction_logs", logId);
+            const logDoc = await transaction.get(logRef);
+            if (!logDoc.exists()) throw "Document does not exist!";
+            const data = logDoc.data();
+            const invRef = doc(
+              db,
+              "store_inventory_balance",
+              `${data.brand}__${data.grade}`,
+            );
+            const invDoc = await transaction.get(invRef);
+            const currentBal = invDoc.exists() ? invDoc.data().balance || 0 : 0;
+            const reverseBal =
+              data.type === "IN"
+                ? currentBal - data.weight
+                : currentBal + data.weight;
+            transaction.delete(logRef);
+            transaction.set(invRef, { balance: reverseBal }, { merge: true });
+          });
+        } catch (e) {
+          alert("Error deleting: " + e.message);
+        }
+      };
 
-// ==========================================
-// MODULE 2: VISCOSE (Consumption & Ledger Generation)
-// ==========================================
-window.addViscoseRow = () => {
-  const tbody = document.getElementById('tableViscose');
-  const row = document.createElement('tr');
-  row.className = "border-b hover:bg-gray-50 transition";
+      // ==========================================
+      // MODULE 2: VISCOSE (Consumption & Ledger Generation)
+      // ==========================================
+      window.addViscoseRow = () => {
+        const tbody = document.getElementById("tableViscose");
+        const row = document.createElement("tr");
+        row.className = "border-b hover:bg-gray-50 transition";
 
-  // สร้าง ID แบบสุ่มเพื่อให้ datalist ของแต่ละแถวไม่ซ้ำกัน
-  const uniqueListId = 'lot_list_' + Date.now() + Math.floor(Math.random() * 1000);
+        // สร้าง ID แบบสุ่มเพื่อให้ datalist ของแต่ละแถวไม่ซ้ำกัน
+        const uniqueListId =
+          "lot_list_" + Date.now() + Math.floor(Math.random() * 1000);
 
-  // เพิ่มช่อง Grade และให้ onchange ของทั้ง Brand และ Grade ไปเรียก loadLotsForViscose
-  row.innerHTML = `
+        // เพิ่มช่อง Grade และให้ onchange ของทั้ง Brand และ Grade ไปเรียก loadLotsForViscose
+        row.innerHTML = `
     <td class="p-2"><input type="date" name="v_date" value="${window.getShiftProductionDate()}" class="w-full text-xs border border-gray-300 rounded p-2 outline-none"></td>
     <td class="p-2"><select name="v_line" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">${VISCOSE_LINE_OPTIONS}</select></td>
     <td class="p-2"><select name="v_brand" onchange="loadLotsForViscose(this)" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">${PULP_OPTIONS_STORE}</select></td>
@@ -331,279 +429,347 @@ window.addViscoseRow = () => {
     <td class="p-2"><input type="number" name="v_weight" step="0.001" class="w-full text-sm font-mono text-right font-bold border border-gray-300 rounded p-2 text-orange-600 outline-none"></td>
     <td class="p-2 text-center"><button onclick="removeRow(this)" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
   `;
-  tbody.appendChild(row);
-// โหลด Lot เริ่มต้นทันที
-  const newBrandSelect = row.querySelector('[name="v_brand"]');
-  loadLotsForViscose(newBrandSelect);
+        tbody.appendChild(row);
+        // โหลด Lot เริ่มต้นทันที
+        const newBrandSelect = row.querySelector('[name="v_brand"]');
+        loadLotsForViscose(newBrandSelect);
 
-  safeCreateIcons();
-};
+        safeCreateIcons();
+      };
 
-// --- NEW: ฟังก์ชันดึง Lot No. ที่ Store จ่ายออก (OUT) ของ Brand นั้นๆ มาทำ Dropdown ---
-window.loadLotsForViscose = async (el) => {
-  const row = el.closest('tr');
-  const brand = row.querySelector('[name="v_brand"]').value;
-  const grade = row.querySelector('[name="v_grade"]').value; 
-  
-  // อ้างอิง input และดึง id ของ datalist ที่คู่กัน
-  const lotInput = row.querySelector('[name="v_doc"]');
-  const listId = lotInput.getAttribute('list');
-  const dataList = document.getElementById(listId);
+      // --- NEW: ฟังก์ชันดึง Lot No. ที่ Store จ่ายออก (OUT) ของ Brand นั้นๆ มาทำ Dropdown ---
+      window.loadLotsForViscose = async (el) => {
+        const row = el.closest("tr");
+        const brand = row.querySelector('[name="v_brand"]').value;
+        const grade = row.querySelector('[name="v_grade"]').value;
 
-  lotInput.placeholder = '⏳ กำลังโหลด...';
+        // อ้างอิง input และดึง id ของ datalist ที่คู่กัน
+        const lotInput = row.querySelector('[name="v_doc"]');
+        const listId = lotInput.getAttribute("list");
+        const dataList = document.getElementById(listId);
 
-  try {
-    // Query ระบุทั้ง Brand และ Grade
-    const q = query(collection(db, "store_transaction_logs"),
-      where("type", "==", "OUT"),
-      where("brand", "==", brand),
-      where("grade", "==", grade),
-      orderBy("recordedAt", "desc"),
-      limit(50) // ขยายโควตาให้แสดงได้เยอะขึ้นจาก 20 เป็น 50 รายการ
-    );
-    const snapshot = await getDocs(q);
-    const lots = new Set();
+        lotInput.placeholder = "⏳ กำลังโหลด...";
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if(data.docRef && data.docRef.trim() !== '') lots.add(data.docRef);
-    });
+        try {
+          // Query ระบุทั้ง Brand และ Grade
+          const q = query(
+            collection(db, "store_transaction_logs"),
+            where("type", "==", "OUT"),
+            where("brand", "==", brand),
+            where("grade", "==", grade),
+            orderBy("recordedAt", "desc"),
+            limit(50), // ขยายโควตาให้แสดงได้เยอะขึ้นจาก 20 เป็น 50 รายการ
+          );
+          const snapshot = await getDocs(q);
+          const lots = new Set();
 
-    // เคลียร์ค่าตัวเลือกเก่าออกก่อน
-    dataList.innerHTML = '';
-    
-    if(lots.size === 0) {
-      lotInput.placeholder = 'ไม่มีประวัติ (กรอกเองได้)';
-    } else {
-      lotInput.placeholder = 'พิมพ์หรือเลือก Lot No.';
-      Array.from(lots).sort().forEach(lot => {
-        // ใส่ค่าลงใน datalist 
-        dataList.innerHTML += `<option value="${lot}">`;
-      });
-    }
-  } catch (error) {
-    console.error("Error loading lots:", error);
-    lotInput.placeholder = '❌ โหลดไม่สำเร็จ (กรอกเองได้)';
-  }
-};
-window.saveViscoseData = async () => {
-const rows = document.querySelectorAll('#tableViscose tr');
-const btn = document.getElementById('btnSaveViscose');
-const payloadByDate = {};
-let count = 0;
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.docRef && data.docRef.trim() !== "") lots.add(data.docRef);
+          });
 
-rows.forEach(row => {
-const date = row.querySelector('[name="v_date"]').value;
-if (!date) return;
-const weight = parseFloat(row.querySelector('[name="v_weight"]').value) || 0;
+          // เคลียร์ค่าตัวเลือกเก่าออกก่อน
+          dataList.innerHTML = "";
 
-if (weight > 0) {
-if (!payloadByDate[date]) payloadByDate[date] = [];
+          if (lots.size === 0) {
+            lotInput.placeholder = "ไม่มีประวัติ (กรอกเองได้)";
+          } else {
+            lotInput.placeholder = "พิมพ์หรือเลือก Lot No.";
+            Array.from(lots)
+              .sort()
+              .forEach((lot) => {
+                // ใส่ค่าลงใน datalist
+                dataList.innerHTML += `<option value="${lot}">`;
+              });
+          }
+        } catch (error) {
+          console.error("Error loading lots:", error);
+          lotInput.placeholder = "❌ โหลดไม่สำเร็จ (กรอกเองได้)";
+        }
+      };
+      window.saveViscoseData = async () => {
+        const rows = document.querySelectorAll("#tableViscose tr");
+        const btn = document.getElementById("btnSaveViscose");
+        const payloadByDate = {};
+        let count = 0;
 
-const brandVal = row.querySelector('[name="v_brand"]').value;
-const gradeVal = row.querySelector('[name="v_grade"]').value;
+        rows.forEach((row) => {
+          const date = row.querySelector('[name="v_date"]').value;
+          if (!date) return;
+          const weight =
+            parseFloat(row.querySelector('[name="v_weight"]').value) || 0;
 
-// Logic สกัด Standard อัตโนมัติ (ไว้ให้ Dashboard แยกสี/ผลรวมง่ายๆ)
-let standard = 'None';
-if (brandVal.includes("PEFC")) standard = 'PEFC';
-else if (brandVal.includes("Mix Credit") || brandVal.includes("FSC Mix")) standard = 'FSC';
-else if (brandVal.includes("Control Wood") || brandVal.includes("CW")) standard = 'FSC_CW';
+          if (weight > 0) {
+            if (!payloadByDate[date]) payloadByDate[date] = [];
 
-payloadByDate[date].push({
-recordedAt: Timestamp.now(),
-recordedBy: currentUser ? currentUser.email : 'Guest',
-line: row.querySelector('[name="v_line"]').value,
-brand: brandVal,
-grade: gradeVal, // บันทึก Grade
-standard: standard, // บันทึก Standard (สำคัญมากสำหรับ Dashboard)
-docRef: row.querySelector('[name="v_doc"]').value,
-weight: weight
-});
-count++;
-}
-});
+            const brandVal = row.querySelector('[name="v_brand"]').value;
+            const gradeVal = row.querySelector('[name="v_grade"]').value;
 
-if (count === 0) return alert("กรุณากรอกข้อมูลน้ำหนักอย่างน้อย 1 รายการ");
-btn.innerHTML = "Saving..."; btn.disabled = true;
+            // --- ส่วนที่ปรับปรุง: จัดระเบียบ Lot No. ให้สะอาดขึ้น ---
+            let docVal = row.querySelector('[name="v_doc"]').value || "";
+            docVal = docVal.trim(); // ตัดช่องว่างซ้ายขวาทิ้ง
+            if (docVal === "") docVal = "-"; // ถ้าเป็นค่าว่าง ให้ใส่ขีด '-' ไว้
 
-try {
-const promises = Object.entries(payloadByDate).map(([dateKey, transactions]) => {
-const dateObj = new Date(dateKey);
-const year = dateObj.getFullYear().toString();
-const month = dateKey.substring(0, 7); // YYYY-MM
-const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`; // หาไตรมาส
+            // Logic สกัด Standard อัตโนมัติ (ไว้ให้ Dashboard แยกสี/ผลรวมง่ายๆ)
+            let standard = "None";
+            if (brandVal.includes("PEFC")) standard = "PEFC";
+            else if (
+              brandVal.includes("Mix Credit") ||
+              brandVal.includes("FSC Mix")
+            )
+              standard = "FSC";
+            else if (
+              brandVal.includes("Control Wood") ||
+              brandVal.includes("CW")
+            )
+              standard = "FSC_CW";
 
-// โครงสร้างเอกสารนี้ จะทำให้คุณเขียนกราฟ/Dashboard ได้ง่ายแบบ 100%
-return setDoc(doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${dateKey}`), { 
-department: 'Viscose', 
-date: dateKey, 
-month: month,
-year: year,
-quarter: quarter,
-lastUpdated: Timestamp.now(), 
-transactions: arrayUnion(...transactions) 
-}, { merge: true });
-});
+            payloadByDate[date].push({
+              recordedAt: Timestamp.now(),
+              recordedBy: currentUser ? currentUser.email : "Guest",
+              line: row.querySelector('[name="v_line"]').value,
+              brand: brandVal,
+              grade: gradeVal,
+              standard: standard,
+              docRef: docVal, // ใช้ตัวแปร docVal ที่คลีนแล้ว
+              weight: weight,
+            });
+            count++;
+          }
+        });
 
-await Promise.all(promises);
+        if (count === 0)
+          return alert("กรุณากรอกข้อมูลน้ำหนักอย่างน้อย 1 รายการ");
+        btn.innerHTML = "Saving...";
+        btn.disabled = true;
 
-// ... เรียก Backend calculateDailyCredits เหมือนเดิม ...
-const calculateCreditsFunc = httpsCallable(functions, 'calculateDailyCredits');
-const calcRes = await calculateCreditsFunc({ targetDate: Object.keys(payloadByDate)[0] });
+        try {
+          const promises = Object.entries(payloadByDate).map(
+            ([dateKey, transactions]) => {
+              const dateObj = new Date(dateKey);
+              const year = dateObj.getFullYear().toString();
+              const month = dateKey.substring(0, 7); // YYYY-MM
+              const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`; // หาไตรมาส
 
-if(calcRes.data.suspensionActive) {
-alert(`บันทึกสำเร็จ แต่ PEFC ไม่เกิดเครดิตใหม่เนื่องจากติด Suspension (16-Hour Rule)`);
-} else {
-alert(`บันทึกและสร้าง Credit Ledger เรียบร้อย (${count} รายการ)`);
-}
+              return setDoc(
+                doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${dateKey}`),
+                {
+                  department: "Viscose",
+                  date: dateKey,
+                  month: month,
+                  year: year,
+                  quarter: quarter,
+                  lastUpdated: Timestamp.now(),
+                  transactions: arrayUnion(...transactions),
+                },
+                { merge: true },
+              );
+            },
+          );
 
-document.getElementById('tableViscose').innerHTML = "";
-window.addViscoseRow();
-window.refreshViscoseBalance();
-} catch (err) { alert("Error: " + err.message); }
-finally { btn.innerHTML = `<i data-lucide="save"></i> บันทึก Viscose`; btn.disabled = false; safeCreateIcons(); }
-};
+          await Promise.all(promises);
 
-window.initViscoseListeners = (searchDate = null) => {
-const tbody = document.getElementById('viscoseHistoryTable');
-if (!tbody) return;
-if (viscoseUnsubscribe) viscoseUnsubscribe();
+          // เรียก Backend calculateDailyCredits เหมือนเดิม
+          const calculateCreditsFunc = httpsCallable(
+            functions,
+            "calculateDailyCredits",
+          );
+          const calcRes = await calculateCreditsFunc({
+            targetDate: Object.keys(payloadByDate)[0],
+          });
 
-let q = searchDate ? doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${searchDate}`) : query(collection(db, "FSC_PEFC_RAW_LOGS"), where("department", "==", "Viscose"), orderBy("date", "desc"), limit(5));
+          if (calcRes.data.suspensionActive) {
+            alert(
+              `บันทึกสำเร็จ แต่ PEFC ไม่เกิดเครดิตใหม่เนื่องจากติด Suspension (16-Hour Rule)`,
+            );
+          } else {
+            alert(`บันทึกและสร้าง Credit Ledger เรียบร้อย (${count} รายการ)`);
+          }
 
-viscoseUnsubscribe = onSnapshot(q, (snapshot) => {
-const docs = searchDate ? [snapshot] : snapshot.docs;
-renderUnifiedTable(docs, tbody, !!searchDate, 'Viscose');
-});
-};
+          document.getElementById("tableViscose").innerHTML = "";
+          window.addViscoseRow();
+          window.refreshViscoseBalance();
+        } catch (err) {
+          alert("Error: " + err.message);
+        } finally {
+          btn.innerHTML = `<i data-lucide="save"></i> บันทึก Viscose`;
+          btn.disabled = false;
+          safeCreateIcons();
+        }
+      };
 
-window.refreshViscoseBalance = async () => {
-const btn = document.getElementById('btnRefreshViscoseBal');
-const container = document.getElementById('viscoseDashboardCards');
-if(!btn || !container) return;
-const originalText = btn.innerHTML;
-btn.innerHTML = `<span class="animate-spin inline-block"> ⌛ </span> Updating...`;
-btn.disabled = true;
-try {
-const getBal = httpsCallable(functions, 'getViscoseBalance');
-const result = await getBal();
-if (result.data.success) {
-const balances = result.data.balances;
-container.innerHTML = '';
-let cardsHTML = '';
-const keys = Object.keys(balances);
-if(keys.length === 0) {
-container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">ยังไม่มียอดเบิก/ใช้ Pulp</div>';
-} else {
-keys.forEach(key => {
-const [brand, grade] = key.split('__');
-const bal = balances[key];
-const isLow = bal < 10;
-const bgClass = isLow ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200';
-const textClass = isLow ? 'text-red-700' : 'text-slate-800';
-cardsHTML += `
+      window.initViscoseListeners = (searchDate = null) => {
+        const tbody = document.getElementById("viscoseHistoryTable");
+        if (!tbody) return;
+        if (viscoseUnsubscribe) viscoseUnsubscribe();
+
+        let q = searchDate
+          ? doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${searchDate}`)
+          : query(
+              collection(db, "FSC_PEFC_RAW_LOGS"),
+              where("department", "==", "Viscose"),
+              orderBy("date", "desc"),
+              limit(5),
+            );
+
+        viscoseUnsubscribe = onSnapshot(q, (snapshot) => {
+          const docs = searchDate ? [snapshot] : snapshot.docs;
+          renderUnifiedTable(docs, tbody, !!searchDate, "Viscose");
+        });
+      };
+
+      window.refreshViscoseBalance = async () => {
+        const btn = document.getElementById("btnRefreshViscoseBal");
+        const container = document.getElementById("viscoseDashboardCards");
+        if (!btn || !container) return;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span class="animate-spin inline-block"> ⌛ </span> Updating...`;
+        btn.disabled = true;
+        try {
+          const getBal = httpsCallable(functions, "getViscoseBalance");
+          const result = await getBal();
+          if (result.data.success) {
+            const balances = result.data.balances;
+            container.innerHTML = "";
+            let cardsHTML = "";
+            const keys = Object.keys(balances);
+            if (keys.length === 0) {
+              container.innerHTML =
+                '<div class="col-span-full text-center text-gray-400 py-4">ยังไม่มียอดเบิก/ใช้ Pulp</div>';
+            } else {
+              keys.forEach((key) => {
+                const [brand, grade] = key.split("__");
+                const bal = balances[key];
+                const isLow = bal < 10;
+                const bgClass = isLow
+                  ? "bg-red-50 border-red-200"
+                  : "bg-orange-50 border-orange-200";
+                const textClass = isLow ? "text-red-700" : "text-slate-800";
+                cardsHTML += `
 <div class="p-3 rounded-lg border shadow-sm flex flex-col justify-between ${bgClass}">
 <div>
 <div class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">${grade}</div>
 <div class="text-xs font-semibold text-slate-800 truncate" title="${brand}">${brand}</div>
 </div>
 <div class="text-right mt-2">
-<span class="text-xl font-bold ${textClass}">${bal.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3})}</span>
+<span class="text-xl font-bold ${textClass}">${bal.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
 <span class="text-[10px] text-slate-400">Tons</span>
 </div>
 </div>
 `;
-});
-container.innerHTML = cardsHTML;
-}
-}
-} catch (error) {
-console.error(error);
-container.innerHTML = `<div class="col-span-full text-center text-red-500 py-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
-} finally {
-btn.innerHTML = originalText;
-btn.disabled = false;
-safeCreateIcons();
-}
-};
+              });
+              container.innerHTML = cardsHTML;
+            }
+          }
+        } catch (error) {
+          console.error(error);
+          container.innerHTML = `<div class="col-span-full text-center text-red-500 py-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
+        } finally {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          safeCreateIcons();
+        }
+      };
 
-window.reportHighRiskMaterial = async () => {
-if(!confirm("⚠️ ยืนยันการแจ้งเหตุ High Risk Material? ระบบจะทำการระงับการออกใบรับรอง PEFC เป็นเวลา 16 ชั่วโมงนับจากตอนนี้ทันที")) return;
-try {
-const reportBtn = document.getElementById('btnReportHighRisk');
-reportBtn.disabled = true;
-reportBtn.innerHTML = "Processing...";
-const reportFunc = httpsCallable(functions, 'reportHighRiskMaterial');
-await reportFunc({});
-alert("✅ แจ้งเหตุสำเร็จ ระบบได้ระงับ PEFC 16-Hour Rule เรียบร้อยแล้ว");
-if(document.getElementById('Marketing').classList.contains('hidden') === false) {
-window.refreshCreditBalance();
-}
-} catch (e) {
-alert("Error: " + e.message);
-} finally {
-const reportBtn = document.getElementById('btnReportHighRisk');
-reportBtn.disabled = false;
-reportBtn.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4"></i> แจ้งเหตุวัตถุดิบเสี่ยง (High Risk)`;
-safeCreateIcons();
-}
-};
+      window.reportHighRiskMaterial = async () => {
+        if (
+          !confirm(
+            "⚠️ ยืนยันการแจ้งเหตุ High Risk Material? ระบบจะทำการระงับการออกใบรับรอง PEFC เป็นเวลา 16 ชั่วโมงนับจากตอนนี้ทันที",
+          )
+        )
+          return;
+        try {
+          const reportBtn = document.getElementById("btnReportHighRisk");
+          reportBtn.disabled = true;
+          reportBtn.innerHTML = "Processing...";
+          const reportFunc = httpsCallable(functions, "reportHighRiskMaterial");
+          await reportFunc({});
+          alert(
+            "✅ แจ้งเหตุสำเร็จ ระบบได้ระงับ PEFC 16-Hour Rule เรียบร้อยแล้ว",
+          );
+          if (
+            document
+              .getElementById("Marketing")
+              .classList.contains("hidden") === false
+          ) {
+            window.refreshCreditBalance();
+          }
+        } catch (e) {
+          alert("Error: " + e.message);
+        } finally {
+          const reportBtn = document.getElementById("btnReportHighRisk");
+          reportBtn.disabled = false;
+          reportBtn.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4"></i> แจ้งเหตุวัตถุดิบเสี่ยง (High Risk)`;
+          safeCreateIcons();
+        }
+      };
 
-// ==========================================
-// MODULE 3: SPINNING (Production Output)
-// ==========================================
-window.loadSpinningMassBalance = async (searchDate = null) => {
-const container = document.getElementById('spinningSummaryCards');
-if (!container) return;
+      // ==========================================
+      // MODULE 3: SPINNING (Production Output)
+      // ==========================================
+      window.loadSpinningMassBalance = async (searchDate = null) => {
+        const container = document.getElementById("spinningSummaryCards");
+        if (!container) return;
 
-const targetDate = searchDate || window.getShiftProductionDate();
-const dateInput = document.getElementById('spinningSummaryDate');
-if(dateInput && !dateInput.value) dateInput.value = targetDate;
+        const targetDate = searchDate || window.getShiftProductionDate();
+        const dateInput = document.getElementById("spinningSummaryDate");
+        if (dateInput && !dateInput.value) dateInput.value = targetDate;
 
-container.innerHTML = `<div class="col-span-full text-center text-slate-500 py-2"><span class="animate-spin inline-block">⌛</span> กำลังดึงข้อมูลมาคำนวณ...</div>`;
+        container.innerHTML = `<div class="col-span-full text-center text-slate-500 py-2"><span class="animate-spin inline-block">⌛</span> กำลังดึงข้อมูลมาคำนวณ...</div>`;
 
-try {
-// 1. ดึงข้อมูล Viscose (Input Pulp)
-const viscoseDocRef = doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${targetDate}`);
-const viscoseSnap = await getDoc(viscoseDocRef);
+        try {
+          // 1. ดึงข้อมูล Viscose (Input Pulp)
+          const viscoseDocRef = doc(
+            db,
+            "FSC_PEFC_RAW_LOGS",
+            `Viscose_${targetDate}`,
+          );
+          const viscoseSnap = await getDoc(viscoseDocRef);
 
-// แยกตัวแปร Mix กับ CW ออกจากกัน
-let fscMixPulp = 0, fscCwPulp = 0, totalPefcPulp = 0;
+          // แยกตัวแปร Mix กับ CW ออกจากกัน
+          let fscMixPulp = 0,
+            fscCwPulp = 0,
+            totalPefcPulp = 0;
 
-if (viscoseSnap.exists()) {
-const vData = viscoseSnap.data().transactions || [];
-vData.forEach(tx => {
-if(tx.standard === 'FSC') fscMixPulp += Number(tx.weight);
-if(tx.standard === 'FSC_CW') fscCwPulp += Number(tx.weight);
-if(tx.standard === 'PEFC') totalPefcPulp += Number(tx.weight);
-});
-}
+          if (viscoseSnap.exists()) {
+            const vData = viscoseSnap.data().transactions || [];
+            vData.forEach((tx) => {
+              if (tx.standard === "FSC") fscMixPulp += Number(tx.weight);
+              if (tx.standard === "FSC_CW") fscCwPulp += Number(tx.weight);
+              if (tx.standard === "PEFC") totalPefcPulp += Number(tx.weight);
+            });
+          }
 
-const totalFscInput = fscMixPulp + fscCwPulp;
+          const totalFscInput = fscMixPulp + fscCwPulp;
 
-// 2. ดึงข้อมูล Spinning (Actual Fibre Output)
-const spinDocRef = doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${targetDate}`);
-const spinSnap = await getDoc(spinDocRef);
-let actualFscFibre = 0, actualPefcFibre = 0;
+          // 2. ดึงข้อมูล Spinning (Actual Fibre Output)
+          const spinDocRef = doc(
+            db,
+            "FSC_PEFC_RAW_LOGS",
+            `Spinning_${targetDate}`,
+          );
+          const spinSnap = await getDoc(spinDocRef);
+          let actualFscFibre = 0,
+            actualPefcFibre = 0;
 
-if (spinSnap.exists()) {
-const sData = spinSnap.data().transactions || [];
-sData.forEach(tx => {
-if(tx.claimType === 'FSC') actualFscFibre += Number(tx.weight);
-if(tx.claimType === 'PEFC') actualPefcFibre += Number(tx.weight);
-});
-}
+          if (spinSnap.exists()) {
+            const sData = spinSnap.data().transactions || [];
+            sData.forEach((tx) => {
+              if (tx.claimType === "FSC") actualFscFibre += Number(tx.weight);
+              if (tx.claimType === "PEFC") actualPefcFibre += Number(tx.weight);
+            });
+          }
 
-// 3. คำนวณ Theoretical & Credit (แยกก้อน)
-const fscFactor = 0.99;
-const pefcFactor = 0.93;
+          // 3. คำนวณ Theoretical & Credit (แยกก้อน)
+          const fscFactor = 0.99;
+          const pefcFactor = 0.93;
 
-const fscMixCredit = fscMixPulp * fscFactor;
-const fscCwCredit = fscCwPulp * fscFactor;
-const pefcTheoretical = totalPefcPulp * pefcFactor;
+          const fscMixCredit = fscMixPulp * fscFactor;
+          const fscCwCredit = fscCwPulp * fscFactor;
+          const pefcTheoretical = totalPefcPulp * pefcFactor;
 
-// 4. Render UI
-container.innerHTML = `
+          // 4. Render UI
+          container.innerHTML = `
 <div class="p-3 rounded-xl border border-amber-200 bg-amber-50/50 shadow-sm flex flex-col">
 <div class="text-xs font-bold text-amber-800 mb-3 border-b border-amber-200 pb-2 flex items-center gap-1">🌲 FSC Mass Balance (Mix & CW)</div>
 <div class="grid grid-cols-3 gap-3 text-center flex-1 items-center">
@@ -647,17 +813,17 @@ container.innerHTML = `
 </div>
 </div>
 `;
-safeCreateIcons();
-} catch (error) {
-console.error("Error loading mass balance:", error);
-container.innerHTML = `<div class="col-span-full text-center text-red-500 py-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
-}
-};
-window.addSpinningRow = () => {
-const tbody = document.getElementById('spinningEntryTable');
-const row = document.createElement('tr');
-row.className = "border-b hover:bg-gray-50 transition";
-row.innerHTML = `
+          safeCreateIcons();
+        } catch (error) {
+          console.error("Error loading mass balance:", error);
+          container.innerHTML = `<div class="col-span-full text-center text-red-500 py-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
+        }
+      };
+      window.addSpinningRow = () => {
+        const tbody = document.getElementById("spinningEntryTable");
+        const row = document.createElement("tr");
+        row.className = "border-b hover:bg-gray-50 transition";
+        row.innerHTML = `
 <td class="p-2"><input type="date" name="sp_date" value="${window.getShiftProductionDate()}" class="w-full text-xs border border-gray-300 rounded p-2 outline-none"></td>
 <td class="p-2"><select name="sp_line" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">${SPINNING_LINE_OPTIONS}</select></td>
 <td class="p-2">
@@ -670,104 +836,135 @@ row.innerHTML = `
 <td class="p-2"><input type="number" name="sp_weight" step="0.001" placeholder="Fibre (Ton)" class="w-full text-sm font-mono text-right font-bold border border-gray-300 rounded p-2 text-teal-600 outline-none"></td>
 <td class="p-2 text-center"><button onclick="removeRow(this)" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
 `;
-tbody.appendChild(row);
-safeCreateIcons();
-};
+        tbody.appendChild(row);
+        safeCreateIcons();
+      };
 
-window.saveSpinningData = async () => {
-const rows = document.querySelectorAll('#spinningEntryTable tr');
-const btn = document.getElementById('btnSaveSpinning');
-const payloadByDate = {};
-let count = 0;
+      window.saveSpinningData = async () => {
+        const rows = document.querySelectorAll("#spinningEntryTable tr");
+        const btn = document.getElementById("btnSaveSpinning");
+        const payloadByDate = {};
+        let count = 0;
 
-rows.forEach(row => {
-const date = row.querySelector('[name="sp_date"]').value;
-if (!date) return;
-const weight = parseFloat(row.querySelector('[name="sp_weight"]').value) || 0;
-if (weight > 0) {
-if (!payloadByDate[date]) payloadByDate[date] = [];
-payloadByDate[date].push({
-recordedAt: Timestamp.now(),
-recordedBy: currentUser ? currentUser.email : 'Guest',
-line: row.querySelector('[name="sp_line"]').value,
-claimType: row.querySelector('[name="sp_claim"]').value, 
-weight
-});
-count++;
-}
-});
-if (count === 0) return alert("กรุณากรอกข้อมูลน้ำหนัก Fibre อย่างน้อย 1 รายการ");
-btn.innerHTML = "Saving..."; btn.disabled = true;
+        rows.forEach((row) => {
+          const date = row.querySelector('[name="sp_date"]').value;
+          if (!date) return;
+          const weight =
+            parseFloat(row.querySelector('[name="sp_weight"]').value) || 0;
+          if (weight > 0) {
+            if (!payloadByDate[date]) payloadByDate[date] = [];
+            payloadByDate[date].push({
+              recordedAt: Timestamp.now(),
+              recordedBy: currentUser ? currentUser.email : "Guest",
+              line: row.querySelector('[name="sp_line"]').value,
+              claimType: row.querySelector('[name="sp_claim"]').value,
+              weight,
+            });
+            count++;
+          }
+        });
+        if (count === 0)
+          return alert("กรุณากรอกข้อมูลน้ำหนัก Fibre อย่างน้อย 1 รายการ");
+        btn.innerHTML = "Saving...";
+        btn.disabled = true;
 
-try {
-const promises = Object.entries(payloadByDate).map(([dateKey, transactions]) => {
-// 🟢 เตรียมข้อมูล Dashboard
-const dateObj = new Date(dateKey);
-const year = dateObj.getFullYear().toString();
-const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`;
+        try {
+          const promises = Object.entries(payloadByDate).map(
+            ([dateKey, transactions]) => {
+              // 🟢 เตรียมข้อมูล Dashboard
+              const dateObj = new Date(dateKey);
+              const year = dateObj.getFullYear().toString();
+              const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`;
 
-return setDoc(doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${dateKey}`), { 
-department: 'Spinning', 
-date: dateKey, 
-month: dateKey.substring(0, 7),
-year: year, // <--- เพิ่มตรงนี้
-quarter: quarter, // <--- เพิ่มตรงนี้ 
-lastUpdated: Timestamp.now(), 
-transactions: arrayUnion(...transactions) 
-}, { merge: true });
-});
-await Promise.all(promises);
-alert(`บันทึกยอดผลิตเรียบร้อย (${count} รายการ)`);
-document.getElementById('spinningEntryTable').innerHTML = "";
-window.addSpinningRow();
-} catch (err) { alert("Error: " + err.message); }
-finally { btn.innerHTML = `<i data-lucide="save"></i> บันทึก Spinning`; btn.disabled = false; safeCreateIcons(); }
-};
+              return setDoc(
+                doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${dateKey}`),
+                {
+                  department: "Spinning",
+                  date: dateKey,
+                  month: dateKey.substring(0, 7),
+                  year: year, // <--- เพิ่มตรงนี้
+                  quarter: quarter, // <--- เพิ่มตรงนี้
+                  lastUpdated: Timestamp.now(),
+                  transactions: arrayUnion(...transactions),
+                },
+                { merge: true },
+              );
+            },
+          );
+          await Promise.all(promises);
+          alert(`บันทึกยอดผลิตเรียบร้อย (${count} รายการ)`);
+          document.getElementById("spinningEntryTable").innerHTML = "";
+          window.addSpinningRow();
+        } catch (err) {
+          alert("Error: " + err.message);
+        } finally {
+          btn.innerHTML = `<i data-lucide="save"></i> บันทึก Spinning`;
+          btn.disabled = false;
+          safeCreateIcons();
+        }
+      };
 
-window.initSpinningListeners = (searchDate = null) => {
-const tbody = document.getElementById('spinningHistoryTable');
-if (!tbody) return;
+      window.initSpinningListeners = (searchDate = null) => {
+        const tbody = document.getElementById("spinningHistoryTable");
+        if (!tbody) return;
 
-// NEW: สั่งโหลด Mass Balance
-window.loadSpinningMassBalance(searchDate);
+        // NEW: สั่งโหลด Mass Balance
+        window.loadSpinningMassBalance(searchDate);
 
-if (spinningUnsubscribe) spinningUnsubscribe();
-let q = searchDate ? doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${searchDate}`) : query(collection(db, "FSC_PEFC_RAW_LOGS"), where("department", "==", "Spinning"), orderBy("date", "desc"), limit(5));
-spinningUnsubscribe = onSnapshot(q, (snapshot) => {
-const docs = searchDate ? [snapshot] : snapshot.docs;
-renderSpinningHistoryTable(docs, tbody, !!searchDate);
-});
-};
+        if (spinningUnsubscribe) spinningUnsubscribe();
+        let q = searchDate
+          ? doc(db, "FSC_PEFC_RAW_LOGS", `Spinning_${searchDate}`)
+          : query(
+              collection(db, "FSC_PEFC_RAW_LOGS"),
+              where("department", "==", "Spinning"),
+              orderBy("date", "desc"),
+              limit(5),
+            );
+        spinningUnsubscribe = onSnapshot(q, (snapshot) => {
+          const docs = searchDate ? [snapshot] : snapshot.docs;
+          renderSpinningHistoryTable(docs, tbody, !!searchDate);
+        });
+      };
 
-const renderSpinningHistoryTable = (docs, tbody, isSingleDateMode) => {
-let allTransactions = [];
-docs.forEach(docSnap => {
-if (docSnap.exists()) {
-const data = docSnap.data();
-(data.transactions || []).forEach((tx, idx) => {
-allTransactions.push({ ...tx, _realDate: data.date, _realIndex: idx, _docId: docSnap.id });
-});
-}
-});
-if (allTransactions.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">ยังไม่มีข้อมูล</td></tr>`; return; }
+      const renderSpinningHistoryTable = (docs, tbody, isSingleDateMode) => {
+        let allTransactions = [];
+        docs.forEach((docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            (data.transactions || []).forEach((tx, idx) => {
+              allTransactions.push({
+                ...tx,
+                _realDate: data.date,
+                _realIndex: idx,
+                _docId: docSnap.id,
+              });
+            });
+          }
+        });
+        if (allTransactions.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">ยังไม่มีข้อมูล</td></tr>`;
+          return;
+        }
 
-allTransactions.sort((a, b) => {
-const timeA = a.recordedAt ? a.recordedAt.seconds : 0;
-const timeB = b.recordedAt ? b.recordedAt.seconds : 0;
-return timeA !== timeB ? timeB - timeA : b._realIndex - a._realIndex;
-});
-if (!isSingleDateMode) allTransactions = allTransactions.slice(0, 20);
-tbody.innerHTML = '';
+        allTransactions.sort((a, b) => {
+          const timeA = a.recordedAt ? a.recordedAt.seconds : 0;
+          const timeB = b.recordedAt ? b.recordedAt.seconds : 0;
+          return timeA !== timeB ? timeB - timeA : b._realIndex - a._realIndex;
+        });
+        if (!isSingleDateMode) allTransactions = allTransactions.slice(0, 20);
+        tbody.innerHTML = "";
 
-allTransactions.forEach((tx) => {
-// สร้าง Badge สีตามประเภท Claim
-let claimBadge = `<span class="text-xs text-slate-400">Normal</span>`;
-if (tx.claimType === 'PEFC') claimBadge = `<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded">PEFC</span>`;
-if (tx.claimType === 'FSC') claimBadge = `<span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">FSC</span>`;
+        allTransactions.forEach((tx) => {
+          // สร้าง Badge สีตามประเภท Claim
+          let claimBadge = `<span class="text-xs text-slate-400">Normal</span>`;
+          if (tx.claimType === "PEFC")
+            claimBadge = `<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded">PEFC</span>`;
+          if (tx.claimType === "FSC")
+            claimBadge = `<span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">FSC</span>`;
 
-const row = document.createElement('tr');
-row.className = "border-b hover:bg-gray-50 transition";
-row.innerHTML = `
+          const row = document.createElement("tr");
+          row.className = "border-b hover:bg-gray-50 transition";
+          row.innerHTML = `
 <td class="p-2 text-gray-500">${tx._realDate}</td>
 <td class="p-2 font-bold text-slate-700">${tx.line}</td>
 <td class="p-2">${claimBadge}</td>
@@ -780,225 +977,299 @@ row.innerHTML = `
 </div>
 </td>
 `;
-tbody.appendChild(row);
-});
-safeCreateIcons();
-};
+          tbody.appendChild(row);
+        });
+        safeCreateIcons();
+      };
 
-/// ==========================================
-// MODULE 4: MARKETING (Bulk Import & Sales)
-// ==========================================
-let currentCreditBalance = { FSC: 0, FSC_CW: 0, PEFC: 0 };
+      /// ==========================================
+      // MODULE 4: MARKETING (Bulk Import & Sales)
+      // ==========================================
+      let currentCreditBalance = { FSC: 0, FSC_CW: 0, PEFC: 0 };
 
-window.refreshCreditBalance = async () => {
-const btn = document.getElementById('btnRefreshBal');
-if(!btn) return;
-const originalContent = btn.innerHTML;
-btn.innerHTML = `<span class="animate-spin inline-block"> ⌛ </span> Updating...`;
-btn.disabled = true;
+      window.refreshCreditBalance = async () => {
+        const btn = document.getElementById("btnRefreshBal");
+        if (!btn) return;
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = `<span class="animate-spin inline-block"> ⌛ </span> Updating...`;
+        btn.disabled = true;
 
-// เช็คเผื่อกรณีไม่มี alertBar ให้ข้ามไป จะได้ไม่ Error แดงใน Console
-const alertBar = document.getElementById('pefcSuspensionAlert');
-if(alertBar) alertBar.classList.add('hidden');
+        // เช็คเผื่อกรณีไม่มี alertBar ให้ข้ามไป จะได้ไม่ Error แดงใน Console
+        const alertBar = document.getElementById("pefcSuspensionAlert");
+        if (alertBar) alertBar.classList.add("hidden");
 
-try {
-const getBalance = httpsCallable(functions, 'getCreditBalance');
-const result = await getBalance();
+        try {
+          const getBalance = httpsCallable(functions, "getCreditBalance");
+          const result = await getBalance();
 
-if (result.data.success) {
-const bal = result.data.balance || { FSC: 0, FSC_CW: 0, PEFC: 0 };
-const expiring = result.data.expiring || { FSC: 0, FSC_CW: 0, PEFC: 0 };
-currentCreditBalance = bal;
+          if (result.data.success) {
+            const bal = result.data.balance || { FSC: 0, FSC_CW: 0, PEFC: 0 };
+            const expiring = result.data.expiring || {
+              FSC: 0,
+              FSC_CW: 0,
+              PEFC: 0,
+            };
+            currentCreditBalance = bal;
 
-// 1. Update FSC Mix Credit
-const domFscBal = document.getElementById('bal_fsc');
-const domFscExp = document.getElementById('bal_fsc_expiring');
-if(domFscBal) domFscBal.innerText = (bal.FSC || 0).toLocaleString(undefined, {minimumFractionDigits:3});
-if(domFscExp) domFscExp.innerText = (expiring.FSC || 0).toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
+            // 1. Update FSC Mix Credit
+            const domFscBal = document.getElementById("bal_fsc");
+            const domFscExp = document.getElementById("bal_fsc_expiring");
+            if (domFscBal)
+              domFscBal.innerText = (bal.FSC || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 3,
+              });
+            if (domFscExp)
+              domFscExp.innerText =
+                (expiring.FSC || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 3,
+                }) + " T";
 
-// 2. Update FSC Control Wood
-const domCwBal = document.getElementById('bal_fsc_cw');
-const domCwExp = document.getElementById('bal_fsc_cw_expiring');
-if(domCwBal) domCwBal.innerText = (bal.FSC_CW || 0).toLocaleString(undefined, {minimumFractionDigits:3});
-if(domCwExp) domCwExp.innerText = (expiring.FSC_CW || 0).toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
+            // 2. Update FSC Control Wood
+            const domCwBal = document.getElementById("bal_fsc_cw");
+            const domCwExp = document.getElementById("bal_fsc_cw_expiring");
+            if (domCwBal)
+              domCwBal.innerText = (bal.FSC_CW || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 3,
+              });
+            if (domCwExp)
+              domCwExp.innerText =
+                (expiring.FSC_CW || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 3,
+                }) + " T";
 
-// 3. Update PEFC 
-const domPefcBal = document.getElementById('bal_pefc');
-const domPefcExp = document.getElementById('bal_pefc_expiring');
-if(domPefcBal) domPefcBal.innerText = (bal.PEFC || 0).toLocaleString(undefined, {minimumFractionDigits:3});
-if(domPefcExp) domPefcExp.innerText = (expiring.PEFC || 0).toLocaleString(undefined, {minimumFractionDigits:3}) + " T";
+            // 3. Update PEFC
+            const domPefcBal = document.getElementById("bal_pefc");
+            const domPefcExp = document.getElementById("bal_pefc_expiring");
+            if (domPefcBal)
+              domPefcBal.innerText = (bal.PEFC || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 3,
+              });
+            if (domPefcExp)
+              domPefcExp.innerText =
+                (expiring.PEFC || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 3,
+                }) + " T";
 
-// Handle PEFC 16-Hour Rule Suspension UI
-const btnUpload = document.getElementById('btnUploadMarketing');
-if(result.data.pefcSuspended && alertBar && btnUpload) {
-alertBar.classList.remove('hidden');
-document.getElementById('suspensionTimeStr').innerText = result.data.pefcResumeTime;
-btnUpload.disabled = true; 
-btnUpload.classList.add('opacity-50', 'cursor-not-allowed');
-} else if(btnUpload) {
-btnUpload.disabled = false;
-btnUpload.classList.remove('opacity-50', 'cursor-not-allowed');
-}
-}
-} catch (error) {
-console.error("Error refreshing balance:", error);
-} finally {
-btn.innerHTML = originalContent; 
-btn.disabled = false;
-safeCreateIcons();
-}
-};
+            // Handle PEFC 16-Hour Rule Suspension UI
+            const btnUpload = document.getElementById("btnUploadMarketing");
+            if (result.data.pefcSuspended && alertBar && btnUpload) {
+              alertBar.classList.remove("hidden");
+              document.getElementById("suspensionTimeStr").innerText =
+                result.data.pefcResumeTime;
+              btnUpload.disabled = true;
+              btnUpload.classList.add("opacity-50", "cursor-not-allowed");
+            } else if (btnUpload) {
+              btnUpload.disabled = false;
+              btnUpload.classList.remove("opacity-50", "cursor-not-allowed");
+            }
+          }
+        } catch (error) {
+          console.error("Error refreshing balance:", error);
+        } finally {
+          btn.innerHTML = originalContent;
+          btn.disabled = false;
+          safeCreateIcons();
+        }
+      };
 
-// ฟังก์ชันช่วยตรวจสอบรูปแบบวันที่จากข้อมูลหลายๆ แถว (ป้องกันปัญหาวันที่สลับกับเดือน)
-function detectDateFormat(dataRows, dateColIndex, targetMonthIndex) {
-let scoreDMY = 0;
-let scoreMDY = 0;
-for (let i = 0; i < Math.min(dataRows.length, 10); i++) {
-const row = dataRows[i];
-if (!row[dateColIndex]) continue;
-const datePart = row[dateColIndex].trim().split(/\s+/)[0];
-let separator = datePart.includes('/') ? '/' : '-';
-const parts = datePart.split(separator);
-if (parts.length >= 2) {
-const val1 = parseInt(parts[0], 10);
-const val2 = parseInt(parts[1], 10);
-if (val2 === targetMonthIndex + 1) scoreDMY++;
-if (val1 === targetMonthIndex + 1) scoreMDY++;
-}
-}
-return scoreMDY > scoreDMY ? 'MDY' : 'DMY';
-}
+      // ฟังก์ชันช่วยตรวจสอบรูปแบบวันที่จากข้อมูลหลายๆ แถว (ป้องกันปัญหาวันที่สลับกับเดือน)
+      function detectDateFormat(dataRows, dateColIndex, targetMonthIndex) {
+        let scoreDMY = 0;
+        let scoreMDY = 0;
+        for (let i = 0; i < Math.min(dataRows.length, 10); i++) {
+          const row = dataRows[i];
+          if (!row[dateColIndex]) continue;
+          const datePart = row[dateColIndex].trim().split(/\s+/)[0];
+          let separator = datePart.includes("/") ? "/" : "-";
+          const parts = datePart.split(separator);
+          if (parts.length >= 2) {
+            const val1 = parseInt(parts[0], 10);
+            const val2 = parseInt(parts[1], 10);
+            if (val2 === targetMonthIndex + 1) scoreDMY++;
+            if (val1 === targetMonthIndex + 1) scoreMDY++;
+          }
+        }
+        return scoreMDY > scoreDMY ? "MDY" : "DMY";
+      }
 
-// ฟังก์ชันหลักสำหรับอัปโหลดข้อมูลจาก Excel ขึ้น Firebase
-window.uploadMarketingData = async () => {
-const rawText = document.getElementById('excelPasteArea').value;
-const targetMonthStr = document.getElementById('marketingDataMonth').value;
-const statusArea = document.getElementById('marketingStatusArea');
-const statusMsg = document.getElementById('marketingStatusMsg');
-const btn = document.getElementById('btnUploadMarketing');
+      // ฟังก์ชันหลักสำหรับอัปโหลดข้อมูลจาก Excel ขึ้น Firebase
+      window.uploadMarketingData = async () => {
+        const rawText = document.getElementById("excelPasteArea").value;
+        const targetMonthStr =
+          document.getElementById("marketingDataMonth").value;
+        const statusArea = document.getElementById("marketingStatusArea");
+        const statusMsg = document.getElementById("marketingStatusMsg");
+        const btn = document.getElementById("btnUploadMarketing");
 
-if (!targetMonthStr) return alert("กรุณาเลือก 'เดือนของข้อมูล' ก่อนครับ");
-if (!rawText.trim()) return alert("กรุณาวางข้อมูลก่อนครับ");
-if (!confirm("คุณแน่ใจหรือไม่ว่าจะนำเข้าข้อมูลนี้? ระบบจะทำการตัดยอดเครดิตด้วยระบบ FIFO ตามมาตรฐานทันที")) return;
+        if (!targetMonthStr)
+          return alert("กรุณาเลือก 'เดือนของข้อมูล' ก่อนครับ");
+        if (!rawText.trim()) return alert("กรุณาวางข้อมูลก่อนครับ");
+        if (
+          !confirm(
+            "คุณแน่ใจหรือไม่ว่าจะนำเข้าข้อมูลนี้? ระบบจะทำการตัดยอดเครดิตด้วยระบบ FIFO ตามมาตรฐานทันที",
+          )
+        )
+          return;
 
-statusArea.classList.remove('hidden');
-statusMsg.className = 'bg-blue-50 text-blue-800 border border-blue-200 p-3 rounded-lg flex items-center shadow-sm';
-statusMsg.innerHTML = '<span class="animate-spin inline-block mr-2"> ⏳ </span> กำลังตรวจสอบและหักลบเครดิตใน Ledger (FIFO)...';
-btn.disabled = true;
+        statusArea.classList.remove("hidden");
+        statusMsg.className =
+          "bg-blue-50 text-blue-800 border border-blue-200 p-3 rounded-lg flex items-center shadow-sm";
+        statusMsg.innerHTML =
+          '<span class="animate-spin inline-block mr-2"> ⏳ </span> กำลังตรวจสอบและหักลบเครดิตใน Ledger (FIFO)...';
+        btn.disabled = true;
 
-try {
-const rows = rawText.trim().split('\n').map(r => r.split('\t'));
-const headers = rows[0].map(h => h.trim());
-const dataRows = rows.slice(1);
-if (dataRows.length === 0) throw new Error("ไม่พบข้อมูล (พบแต่หัวตาราง)");
+        try {
+          const rows = rawText
+            .trim()
+            .split("\n")
+            .map((r) => r.split("\t"));
+          const headers = rows[0].map((h) => h.trim());
+          const dataRows = rows.slice(1);
+          if (dataRows.length === 0)
+            throw new Error("ไม่พบข้อมูล (พบแต่หัวตาราง)");
 
-// หาคอลัมน์วันที่
-let dateIdx = headers.findIndex(h => h.toLowerCase().includes('date') || h.toLowerCase() === 'วันที่');
-if (dateIdx === -1) throw new Error("ไม่พบคอลัมน์ 'Date' หรือ 'วันที่' ในหัวตาราง Excel ที่ก๊อปปี้มา");
+          // หาคอลัมน์วันที่
+          let dateIdx = headers.findIndex(
+            (h) =>
+              h.toLowerCase().includes("date") || h.toLowerCase() === "วันที่",
+          );
+          if (dateIdx === -1)
+            throw new Error(
+              "ไม่พบคอลัมน์ 'Date' หรือ 'วันที่' ในหัวตาราง Excel ที่ก๊อปปี้มา",
+            );
 
-const targetDateObj = new Date(targetMonthStr);
-const targetMonthIndex = targetDateObj.getMonth();
-const detectedFormat = detectDateFormat(dataRows, dateIdx, targetMonthIndex);
+          const targetDateObj = new Date(targetMonthStr);
+          const targetMonthIndex = targetDateObj.getMonth();
+          const detectedFormat = detectDateFormat(
+            dataRows,
+            dateIdx,
+            targetMonthIndex,
+          );
 
-// จัดเตรียม Payload ส่งให้ Backend จัดการทั้งหมด
-const payload = {
-headers: headers,
-dataRows: dataRows,
-detectedFormat: detectedFormat,
-targetMonthStr: targetMonthStr,
-dateColIndex: dateIdx
-};
+          // จัดเตรียม Payload ส่งให้ Backend จัดการทั้งหมด
+          const payload = {
+            headers: headers,
+            dataRows: dataRows,
+            detectedFormat: detectedFormat,
+            targetMonthStr: targetMonthStr,
+            dateColIndex: dateIdx,
+          };
 
-const processMarketingFunc = httpsCallable(functions, 'processMarketingBulkData');
-const result = await processMarketingFunc(payload);
+          const processMarketingFunc = httpsCallable(
+            functions,
+            "processMarketingBulkData",
+          );
+          const result = await processMarketingFunc(payload);
 
-if (result.data.success) {
-statusMsg.className = 'bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm';
-statusMsg.innerHTML = ` ✅ <b>สำเร็จ!</b> ตัดยอดและผูก Batch (Traceability) เรียบร้อยแล้ว ${result.data.processedCount} รายการ`;
-document.getElementById('excelPasteArea').value = ''; // เคลียร์ข้อมูลช่องวาง
-window.refreshCreditBalance(); // สั่งให้อัปเดตยอดคงเหลือทันที
-} else {
-throw new Error(result.data.message || "เกิดข้อผิดพลาดไม่ทราบสาเหตุ");
-}
+          if (result.data.success) {
+            statusMsg.className =
+              "bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm";
+            statusMsg.innerHTML = ` ✅ <b>สำเร็จ!</b> ตัดยอดและผูก Batch (Traceability) เรียบร้อยแล้ว ${result.data.processedCount} รายการ`;
+            document.getElementById("excelPasteArea").value = ""; // เคลียร์ข้อมูลช่องวาง
+            window.refreshCreditBalance(); // สั่งให้อัปเดตยอดคงเหลือทันที
+          } else {
+            throw new Error(
+              result.data.message || "เกิดข้อผิดพลาดไม่ทราบสาเหตุ",
+            );
+          }
+        } catch (error) {
+          console.error(error);
+          statusMsg.className =
+            "bg-red-50 text-red-800 border border-red-200 p-3 rounded-lg shadow-sm";
+          statusMsg.innerHTML = ` ❌ <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
+        } finally {
+          btn.disabled = false;
+          safeCreateIcons();
+        }
+      };
+      window.uploadWarehouseData = async () => {
+        const rawText = document.getElementById("warehousePasteArea").value;
+        const statusArea = document.getElementById("warehouseStatusArea");
+        const statusMsg = document.getElementById("warehouseStatusMsg");
+        const btn = document.getElementById("btnUploadWarehouse");
 
-} catch (error) {
-console.error(error);
-statusMsg.className = 'bg-red-50 text-red-800 border border-red-200 p-3 rounded-lg shadow-sm';
-statusMsg.innerHTML = ` ❌ <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
-} finally {
-btn.disabled = false;
-safeCreateIcons();
-}
-};
-window.uploadWarehouseData = async () => {
-const rawText = document.getElementById('warehousePasteArea').value;
-const statusArea = document.getElementById('warehouseStatusArea');
-const statusMsg = document.getElementById('warehouseStatusMsg');
-const btn = document.getElementById('btnUploadWarehouse');
+        if (!rawText.trim()) return alert("กรุณาวางข้อมูลก่อนครับ");
+        if (!confirm("ยืนยันการนำเข้าข้อมูล Warehouse?")) return;
 
-if (!rawText.trim()) return alert("กรุณาวางข้อมูลก่อนครับ");
-if (!confirm("ยืนยันการนำเข้าข้อมูล Warehouse?")) return;
+        statusArea.classList.remove("hidden");
+        statusMsg.className =
+          "bg-blue-50 text-blue-800 border border-blue-200 p-3 rounded-lg flex items-center shadow-sm";
+        statusMsg.innerHTML =
+          '<span class="animate-spin inline-block mr-2"> ⏳ </span> กำลังประมวลผลและจัดกลุ่มข้อมูล...';
+        btn.disabled = true;
 
-statusArea.classList.remove('hidden');
-statusMsg.className = 'bg-blue-50 text-blue-800 border border-blue-200 p-3 rounded-lg flex items-center shadow-sm';
-statusMsg.innerHTML = '<span class="animate-spin inline-block mr-2"> ⏳ </span> กำลังประมวลผลและจัดกลุ่มข้อมูล...';
-btn.disabled = true;
+        try {
+          const rows = rawText
+            .trim()
+            .split("\n")
+            .map((r) => r.split("\t"));
+          const headers = rows[0].map((h) => h.trim());
+          const dataRows = rows.slice(1);
 
-try {
-const rows = rawText.trim().split('\n').map(r => r.split('\t'));
-const headers = rows[0].map(h => h.trim());
-const dataRows = rows.slice(1);
+          if (dataRows.length === 0)
+            throw new Error("ไม่พบข้อมูล (พบแต่หัวตาราง)");
 
-if (dataRows.length === 0) throw new Error("ไม่พบข้อมูล (พบแต่หัวตาราง)");
+          const processFunc = httpsCallable(
+            functions,
+            "processWarehouseBulkData",
+          );
+          const result = await processFunc({ headers, dataRows });
 
-const processFunc = httpsCallable(functions, 'processWarehouseBulkData');
-const result = await processFunc({ headers, dataRows });
+          if (result.data.success) {
+            statusMsg.className =
+              "bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm";
+            statusMsg.innerHTML = ` ✅ <b>สำเร็จ!</b> อัปเดตข้อมูล Warehouse เรียบร้อยแล้ว (Delivery: ${result.data.deliveryCount} รายการ)`;
+            document.getElementById("warehousePasteArea").value = "";
+          } else {
+            throw new Error(result.data.message || "เกิดข้อผิดพลาด");
+          }
+        } catch (error) {
+          statusMsg.className =
+            "bg-red-50 text-red-800 border border-red-200 p-3 rounded-lg shadow-sm";
+          statusMsg.innerHTML = ` ❌ <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
+        } finally {
+          btn.disabled = false;
+          safeCreateIcons();
+        }
+      };
 
-if (result.data.success) {
-statusMsg.className = 'bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm';
-statusMsg.innerHTML = ` ✅ <b>สำเร็จ!</b> อัปเดตข้อมูล Warehouse เรียบร้อยแล้ว (Delivery: ${result.data.deliveryCount} รายการ)`;
-document.getElementById('warehousePasteArea').value = ''; 
-} else {
-throw new Error(result.data.message || "เกิดข้อผิดพลาด");
-}
-} catch (error) {
-statusMsg.className = 'bg-red-50 text-red-800 border border-red-200 p-3 rounded-lg shadow-sm';
-statusMsg.innerHTML = ` ❌ <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
-} finally {
-btn.disabled = false;
-safeCreateIcons();
-}
-};
+      // --- SHARED UI LOGIC ---
+      const renderUnifiedTable = (docs, tbody, isSingleDateMode, dept) => {
+        let allTransactions = [];
+        docs.forEach((docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            (data.transactions || []).forEach((tx, idx) => {
+              allTransactions.push({
+                ...tx,
+                _realDate: data.date,
+                _realIndex: idx,
+                _docId: docSnap.id,
+              });
+            });
+          }
+        });
+        if (allTransactions.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">ไม่พบข้อมูล</td></tr>`;
+          return;
+        }
 
-// --- SHARED UI LOGIC ---
-const renderUnifiedTable = (docs, tbody, isSingleDateMode, dept) => {
-let allTransactions = [];
-docs.forEach(docSnap => {
-if (docSnap.exists()) {
-const data = docSnap.data();
-(data.transactions || []).forEach((tx, idx) => {
-allTransactions.push({ ...tx, _realDate: data.date, _realIndex: idx, _docId: docSnap.id });
-});
-}
-});
-if (allTransactions.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">ไม่พบข้อมูล</td></tr>`; return; }
+        allTransactions.sort((a, b) => {
+          const timeA = a.recordedAt ? a.recordedAt.seconds : 0;
+          const timeB = b.recordedAt ? b.recordedAt.seconds : 0;
+          return timeA !== timeB ? timeB - timeA : b._realIndex - a._realIndex;
+        });
+        if (!isSingleDateMode) allTransactions = allTransactions.slice(0, 20);
+        tbody.innerHTML = "";
 
-allTransactions.sort((a, b) => {
-const timeA = a.recordedAt ? a.recordedAt.seconds : 0;
-const timeB = b.recordedAt ? b.recordedAt.seconds : 0;
-return timeA !== timeB ? timeB - timeA : b._realIndex - a._realIndex;
-});
-if (!isSingleDateMode) allTransactions = allTransactions.slice(0, 20);
-tbody.innerHTML = '';
-
-allTransactions.forEach((tx) => {
-const row = document.createElement('tr');
-row.className = "border-b hover:bg-gray-50 transition";
-row.innerHTML = `
+        allTransactions.forEach((tx) => {
+          const row = document.createElement("tr");
+          row.className = "border-b hover:bg-gray-50 transition";
+          row.innerHTML = `
 <td class="p-2 text-gray-500">${tx._realDate}</td>
 <td class="p-2 font-bold">${tx.line}</td>
 <td class="p-2">${tx.brand}</td>
-<td class="p-2 text-xs text-gray-500">${tx.docRef || '-'}</td>
+<td class="p-2 text-xs text-gray-500">${tx.docRef || "-"}</td>
 <td class="p-2 text-right font-mono font-bold text-orange-600">${parseFloat(tx.weight).toFixed(3)}</td>
 <td class="p-2 text-right">
 <div class="auth-only hidden flex justify-end">
@@ -1007,390 +1278,870 @@ row.innerHTML = `
 </button>
 </div>
 </td>`;
-tbody.appendChild(row);
-});
-safeCreateIcons();
-};
+          tbody.appendChild(row);
+        });
+        safeCreateIcons();
+      };
 
-window.deleteEntry = async (docId, index) => {
-if(!currentUser) return;
-if(!confirm(` ⚠️ ยืนยันการลบรายการนี้? (ระบบจะปรับปรุงยอดเครดิตอัตโนมัติ)`)) return;
-try {
-const docRef = doc(db, "FSC_PEFC_RAW_LOGS", docId);
-await runTransaction(db, async (transaction) => {
-const docSnap = await transaction.get(docRef);
-if (!docSnap.exists()) throw "ไม่พบเอกสาร";
-const newTransactions = [...docSnap.data().transactions];
-if (index > -1 && index < newTransactions.length) newTransactions.splice(index, 1);
-transaction.update(docRef, { transactions: newTransactions, lastUpdated: Timestamp.now() });
-});
+      window.deleteEntry = async (docId, index) => {
+        if (!currentUser) return;
+        if (
+          !confirm(
+            ` ⚠️ ยืนยันการลบรายการนี้? (ระบบจะปรับปรุงยอดเครดิตอัตโนมัติ)`,
+          )
+        )
+          return;
+        try {
+          const docRef = doc(db, "FSC_PEFC_RAW_LOGS", docId);
+          await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(docRef);
+            if (!docSnap.exists()) throw "ไม่พบเอกสาร";
+            const newTransactions = [...docSnap.data().transactions];
+            if (index > -1 && index < newTransactions.length)
+              newTransactions.splice(index, 1);
+            transaction.update(docRef, {
+              transactions: newTransactions,
+              lastUpdated: Timestamp.now(),
+            });
+          });
 
-// 🟢 สั่ง Backend ให้ซิงค์หัก Ledger คืน (ทำเฉพาะกรณีที่เป็น Viscose)
-if (docId.startsWith("Viscose_")) {
-const targetDate = docId.split('_')[1];
-const calculateCreditsFunc = httpsCallable(functions, 'calculateDailyCredits');
-await calculateCreditsFunc({ targetDate: targetDate });
+          // 🟢 สั่ง Backend ให้ซิงค์หัก Ledger คืน (ทำเฉพาะกรณีที่เป็น Viscose)
+          if (docId.startsWith("Viscose_")) {
+            const targetDate = docId.split("_")[1];
+            const calculateCreditsFunc = httpsCallable(
+              functions,
+              "calculateDailyCredits",
+            );
+            await calculateCreditsFunc({ targetDate: targetDate });
 
-// รีเฟรชยอดทั้งหมดในหน้าจอ
-if (typeof window.refreshViscoseBalance === 'function') window.refreshViscoseBalance();
-if (typeof window.refreshCreditBalance === 'function') window.refreshCreditBalance();
-if (typeof window.loadSpinningMassBalance === 'function') window.loadSpinningMassBalance(targetDate);
-}
+            // รีเฟรชยอดทั้งหมดในหน้าจอ
+            if (typeof window.refreshViscoseBalance === "function")
+              window.refreshViscoseBalance();
+            if (typeof window.refreshCreditBalance === "function")
+              window.refreshCreditBalance();
+            if (typeof window.loadSpinningMassBalance === "function")
+              window.loadSpinningMassBalance(targetDate);
+          }
 
-// โหลดตารางใหม่
-if (docId.startsWith("Viscose_")) window.initViscoseListeners();
-if (docId.startsWith("Spinning_")) window.initSpinningListeners();
+          // โหลดตารางใหม่
+          if (docId.startsWith("Viscose_")) window.initViscoseListeners();
+          if (docId.startsWith("Spinning_")) window.initSpinningListeners();
+        } catch (e) {
+          alert("Error: " + e.message);
+        }
+      };
 
-} catch (e) { alert("Error: " + e.message); }
-};
+      // Tab Navigation Override to trigger Balance check
+      window.openTab = (tabName) => {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((el) => el.classList.add("hidden"));
+        document.getElementById(tabName).classList.remove("hidden");
+        document.querySelectorAll(".tab-btn").forEach((el) => {
+          el.classList.remove("bg-slate-700", "text-white", "shadow-inner");
+          el.classList.add("text-slate-300", "hover:bg-slate-700/50");
+        });
+        const activeBtn = document.getElementById(`btn${tabName}`);
+        activeBtn.classList.remove("text-slate-300", "hover:bg-slate-700/50");
+        activeBtn.classList.add("bg-slate-700", "text-white", "shadow-inner");
+        if (tabName === "Marketing") window.refreshCreditBalance();
+        if (tabName === "Viscose") window.refreshViscoseBalance();
+      };
 
-// Tab Navigation Override to trigger Balance check
-window.openTab = (tabName) => {
-document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-document.getElementById(tabName).classList.remove('hidden');
-document.querySelectorAll('.tab-btn').forEach(el => {
-el.classList.remove('bg-slate-700', 'text-white', 'shadow-inner');
-el.classList.add('text-slate-300', 'hover:bg-slate-700/50');
-});
-const activeBtn = document.getElementById(`btn${tabName}`);
-activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-700/50');
-activeBtn.classList.add('bg-slate-700', 'text-white', 'shadow-inner');
-if(tabName === 'Marketing') window.refreshCreditBalance();
-if(tabName === 'Viscose') window.refreshViscoseBalance();
-}
+      document.addEventListener("DOMContentLoaded", () => {
+        window.addStoreRow();
+        window.addViscoseRow();
+        window.addSpinningRow();
+        window.initStoreListeners();
 
-document.addEventListener('DOMContentLoaded', () => {
-window.addStoreRow();
-window.addViscoseRow();
-window.addSpinningRow();
-window.initStoreListeners();
+        const pwField = document.getElementById("loginPassword");
+        if (pwField)
+          pwField.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") window.handleLogin();
+          });
+      });
+    </script>
+    <style>
+      body:not(.is-logged-in) .auth-only {
+        display: none !important;
+      }
+      body.is-logged-in .auth-only {
+        display: flex !important;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-100 font-sans text-slate-800">
+    <div
+      id="loginContainer"
+      class="fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 bg-cover bg-center"
+      style="
+        background-image: url(&quot;https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&q=80&quot;);
+      "
+    >
+      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+      <div
+        class="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20 relative z-10 m-4"
+      >
+        <div class="text-center mb-8">
+          <div
+            class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4 border-4 border-green-50 shadow-inner"
+          >
+            <i data-lucide="tree-pine" class="w-10 h-10 text-green-700"></i>
+          </div>
+          <h1 class="text-2xl font-bold text-slate-800">TRC Portal</h1>
+          <p class="text-green-700 font-semibold text-sm mt-1">
+            FSC & PEFC Smart System
+          </p>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1"
+              >Email</label
+            >
+            <input
+              type="email"
+              id="loginEmail"
+              class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition"
+              placeholder="user@adityabirla.com"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1"
+              >Password</label
+            >
+            <input
+              type="password"
+              id="loginPassword"
+              class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition"
+              placeholder="••••••••"
+            />
+          </div>
+          <button
+            id="btnLoginAction"
+            onclick="handleLogin()"
+            class="w-full py-3 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold shadow-lg transition-all duration-200"
+          >
+            เข้าสู่ระบบ (Login)
+          </button>
+        </div>
+        <p
+          id="loginError"
+          class="mt-4 text-center text-red-500 text-sm hidden bg-red-50 p-2 rounded border border-red-100"
+        ></p>
+      </div>
+    </div>
 
-const pwField = document.getElementById('loginPassword');
-if(pwField) pwField.addEventListener('keypress', (e) => { if (e.key === 'Enter') window.handleLogin(); });
-});
-</script>
-<style>
-body:not(.is-logged-in) .auth-only { display: none !important; }
-body.is-logged-in .auth-only { display: flex !important; }
-</style>
-</head>
-<body class="bg-slate-100 font-sans text-slate-800">
-<div id="loginContainer" class="fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&q=80');">
-<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
-<div class="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20 relative z-10 m-4">
-<div class="text-center mb-8">
-<div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4 border-4 border-green-50 shadow-inner">
-<i data-lucide="tree-pine" class="w-10 h-10 text-green-700"></i>
-</div>
-<h1 class="text-2xl font-bold text-slate-800">TRC Portal</h1>
-<p class="text-green-700 font-semibold text-sm mt-1">FSC & PEFC Smart System</p>
-</div>
-<div class="space-y-4">
-<div>
-<label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-<input type="email" id="loginEmail" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition" placeholder="user@adityabirla.com">
-</div>
-<div>
-<label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
-<input type="password" id="loginPassword" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition" placeholder="••••••••">
-</div>
-<button id="btnLoginAction" onclick="handleLogin()" class="w-full py-3 bg-green-700 hover:bg-green-800 text-white rounded-lg font-bold shadow-lg transition-all duration-200">
-เข้าสู่ระบบ (Login)
-</button>
-</div>
-<p id="loginError" class="mt-4 text-center text-red-500 text-sm hidden bg-red-50 p-2 rounded border border-red-100"></p>
-</div>
-</div>
+    <div class="flex h-screen overflow-hidden">
+      <aside class="w-64 bg-slate-800 text-white flex flex-col shadow-xl z-20">
+        <div class="p-6 border-b border-slate-700">
+          <h1 class="text-xl font-bold flex items-center gap-2 text-green-400">
+            <i data-lucide="trees"></i> TRC Portal
+          </h1>
+          <p class="text-xs text-slate-400 mt-1 ml-7">
+            FSC/PEFC Control System
+          </p>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+          <button
+            id="btnStore"
+            onclick="openTab('Store')"
+            class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 bg-slate-700 text-white shadow-inner transition"
+          >
+            <i data-lucide="package"></i> Store (Pulp)
+          </button>
+          <button
+            id="btnViscose"
+            onclick="openTab('Viscose')"
+            class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition"
+          >
+            <i data-lucide="flask-conical"></i> Viscose
+          </button>
+          <button
+            id="btnSpinning"
+            onclick="openTab('Spinning')"
+            class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition"
+          >
+            <i data-lucide="activity"></i> Spinning
+          </button>
+          <button
+            id="btnMarketing"
+            onclick="openTab('Marketing')"
+            class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition"
+          >
+            <i data-lucide="coins"></i> Marketing
+          </button>
+          <button
+            id="btnWarehouse"
+            onclick="openTab('Warehouse')"
+            class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition"
+          >
+            <i data-lucide="package-check"></i> Warehouse (Dispatch)
+          </button>
+        </nav>
+        <div class="p-4 border-t border-slate-700 bg-slate-900/50">
+          <div id="userProfileSection" class="hidden">
+            <div class="flex items-center gap-3 mb-3">
+              <img
+                id="userAvatar"
+                src="https://ui-avatars.com/api/?name=User&background=random"
+                class="w-8 h-8 rounded-full border border-slate-500"
+              />
+              <div class="overflow-hidden">
+                <div id="userNameDisplay" class="text-sm font-bold truncate">
+                  User
+                </div>
+                <div
+                  id="userEmailDisplay"
+                  class="text-[10px] text-slate-400 truncate"
+                >
+                  user@email.com
+                </div>
+              </div>
+            </div>
+            <button
+              onclick="handleLogout()"
+              class="w-full py-1.5 px-3 bg-slate-700 hover:bg-red-600/80 rounded text-xs text-slate-300 hover:text-white flex items-center justify-center gap-2 transition"
+            >
+              <i data-lucide="log-out" class="w-3 h-3"></i> Logout
+            </button>
+          </div>
+        </div>
+      </aside>
 
-<div class="flex h-screen overflow-hidden">
-<aside class="w-64 bg-slate-800 text-white flex flex-col shadow-xl z-20">
-<div class="p-6 border-b border-slate-700">
-<h1 class="text-xl font-bold flex items-center gap-2 text-green-400">
-<i data-lucide="trees"></i> TRC Portal
-</h1>
-<p class="text-xs text-slate-400 mt-1 ml-7">FSC/PEFC Control System</p>
-</div>
-<nav class="flex-1 p-4 space-y-2">
-<button id="btnStore" onclick="openTab('Store')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 bg-slate-700 text-white shadow-inner transition">
-<i data-lucide="package"></i> Store (Pulp)
-</button>
-<button id="btnViscose" onclick="openTab('Viscose')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
-<i data-lucide="flask-conical"></i> Viscose
-</button>
-<button id="btnSpinning" onclick="openTab('Spinning')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
-<i data-lucide="activity"></i> Spinning
-</button>
-<button id="btnMarketing" onclick="openTab('Marketing')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
-<i data-lucide="coins"></i> Marketing
-</button>
-<button id="btnWarehouse" onclick="openTab('Warehouse')" class="tab-btn w-full text-left p-3 rounded flex items-center gap-3 text-slate-300 hover:bg-slate-700/50 transition">
-<i data-lucide="package-check"></i> Warehouse (Dispatch)
-</button>
-</nav>
-<div class="p-4 border-t border-slate-700 bg-slate-900/50">
-<div id="userProfileSection" class="hidden">
-<div class="flex items-center gap-3 mb-3">
-<img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=random" class="w-8 h-8 rounded-full border border-slate-500">
-<div class="overflow-hidden">
-<div id="userNameDisplay" class="text-sm font-bold truncate">User</div>
-<div id="userEmailDisplay" class="text-[10px] text-slate-400 truncate">user@email.com</div>
-</div>
-</div>
-<button onclick="handleLogout()" class="w-full py-1.5 px-3 bg-slate-700 hover:bg-red-600/80 rounded text-xs text-slate-300 hover:text-white flex items-center justify-center gap-2 transition">
-<i data-lucide="log-out" class="w-3 h-3"></i> Logout
-</button>
-</div>
-</div>
-</aside>
+      <main class="flex-1 overflow-y-auto bg-slate-50 p-6">
+        <div id="Store" class="tab-content h-full flex flex-col gap-4">
+          <div
+            class="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
+          >
+            <h3
+              class="text-sm font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"
+            >
+              <i data-lucide="box" class="w-4 h-4 text-blue-500"></i>
+              สถานะสต็อกปัจจุบัน
+            </h3>
+            <div
+              id="inventoryDashboard"
+              class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"
+            ></div>
+          </div>
+          <div
+            class="flex flex-col bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0"
+          >
+            <div
+              class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm"
+            >
+              <h2
+                class="text-lg font-bold text-slate-700 flex items-center gap-2"
+              >
+                <i data-lucide="clipboard-list" class="text-blue-600"></i>
+                บันทึกรายการ Store
+              </h2>
+              <div class="flex gap-2">
+                <button
+                  onclick="addStoreRow()"
+                  class="flex items-center gap-1 px-4 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-bold text-sm border border-blue-200"
+                >
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว
+                </button>
+                <button
+                  id="btnSaveBatch"
+                  onclick="saveStoreBatch()"
+                  class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow flex items-center gap-2"
+                >
+                  <i data-lucide="save"></i> บันทึกข้อมูล
+                </button>
+              </div>
+            </div>
+            <div class="overflow-y-auto max-h-[300px]" id="storeEntryContainer">
+              <table class="w-full text-left border-collapse">
+                <thead
+                  class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b"
+                >
+                  <tr>
+                    <th class="p-3 w-32">Production Date</th>
+                    <th class="p-3 w-32">Type</th>
+                    <th class="p-3">Brand</th>
+                    <th class="p-3 w-28">Grade</th>
+                    <th class="p-3 w-32">Lot No.</th>
+                    <th class="p-3 w-28 text-right">Weight (T)</th>
+                    <th class="p-3 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody id="storeEntryTable" class="text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+          <div
+            class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 overflow-hidden flex flex-col"
+          >
+            <div class="flex justify-between items-center mb-3">
+              <h3
+                class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"
+              >
+                <i data-lucide="history" class="w-4 h-4 text-orange-500"></i>
+                ประวัติรายการ Store
+              </h3>
+              <div class="flex items-center gap-2">
+                <input
+                  type="date"
+                  id="historySearchDate"
+                  onchange="window.initStoreListeners(this.value)"
+                  class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm"
+                />
+                <button
+                  onclick="document.getElementById('historySearchDate').value=''; window.initStoreListeners();"
+                  class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"
+                >
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+            <div class="overflow-y-auto flex-1 border rounded">
+              <table class="w-full text-left text-sm">
+                <thead
+                  class="bg-slate-50 text-slate-500 text-xs uppercase sticky top-0"
+                >
+                  <tr>
+                    <th class="p-2 w-24">Date</th>
+                    <th class="p-2 w-24">Type</th>
+                    <th class="p-2">Brand</th>
+                    <th class="p-2 w-20">Grade</th>
+                    <th class="p-2 w-32">Lot No.</th>
+                    <th class="p-2 w-24 text-right">Weight</th>
+                    <th class="p-2 w-20 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="storeHistoryTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-<main class="flex-1 overflow-y-auto bg-slate-50 p-6">
-<div id="Store" class="tab-content h-full flex flex-col gap-4">
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-<h3 class="text-sm font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><i data-lucide="box" class="w-4 h-4 text-blue-500"></i> สถานะสต็อกปัจจุบัน</h3>
-<div id="inventoryDashboard" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"></div>
-</div>
-<div class="flex flex-col bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0">
-<div class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm">
-<h2 class="text-lg font-bold text-slate-700 flex items-center gap-2"><i data-lucide="clipboard-list" class="text-blue-600"></i> บันทึกรายการ Store</h2>
-<div class="flex gap-2">
-<button onclick="addStoreRow()" class="flex items-center gap-1 px-4 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-bold text-sm border border-blue-200"><i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว</button>
-<button id="btnSaveBatch" onclick="saveStoreBatch()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow flex items-center gap-2"><i data-lucide="save"></i> บันทึกข้อมูล</button>
-</div>
-</div>
-<div class="overflow-y-auto max-h-[300px]" id="storeEntryContainer">
-<table class="w-full text-left border-collapse">
-<thead class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b">
-<tr><th class="p-3 w-32">Production Date</th><th class="p-3 w-32">Type</th><th class="p-3">Brand</th><th class="p-3 w-28">Grade</th><th class="p-3 w-32">Lot No.</th><th class="p-3 w-28 text-right">Weight (T)</th><th class="p-3 w-10"></th></tr>
-</thead>
-<tbody id="storeEntryTable" class="text-sm"></tbody>
-</table>
-</div>
-</div>
-<div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 overflow-hidden flex flex-col">
-<div class="flex justify-between items-center mb-3">
-<h3 class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-orange-500"></i> ประวัติรายการ Store</h3>
-<div class="flex items-center gap-2">
-<input type="date" id="historySearchDate" onchange="window.initStoreListeners(this.value)" class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm">
-<button onclick="document.getElementById('historySearchDate').value=''; window.initStoreListeners();" class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
-</div>
-</div>
-<div class="overflow-y-auto flex-1 border rounded">
-<table class="w-full text-left text-sm">
-<thead class="bg-slate-50 text-slate-500 text-xs uppercase sticky top-0">
-<tr><th class="p-2 w-24">Date</th><th class="p-2 w-24">Type</th><th class="p-2">Brand</th><th class="p-2 w-20">Grade</th><th class="p-2 w-32">Lot No.</th><th class="p-2 w-24 text-right">Weight</th><th class="p-2 w-20 text-right">Action</th></tr>
-</thead>
-<tbody id="storeHistoryTable"></tbody>
-</table>
-</div>
-</div>
-</div>
+        <div id="Viscose" class="tab-content hidden h-full flex flex-col gap-4">
+          <div
+            class="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
+          >
+            <div class="flex justify-between items-center mb-4">
+              <h3
+                class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"
+              >
+                <i data-lucide="boxes" class="w-4 h-4 text-orange-500"></i>
+                ยอดคงเหลือ Pulp ที่หน้างาน Viscose (เบิกมา - ใช้ไป)
+              </h3>
+              <button
+                onclick="refreshViscoseBalance()"
+                id="btnRefreshViscoseBal"
+                class="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold hover:bg-orange-100 transition flex items-center gap-1 border border-orange-200"
+              >
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i> อัปเดตยอด
+              </button>
+            </div>
+            <div
+              id="viscoseDashboardCards"
+              class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"
+            >
+              <div class="col-span-full text-center text-gray-400 text-sm py-2">
+                Loading balance...
+              </div>
+            </div>
+          </div>
+          <div
+            class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0"
+          >
+            <div
+              class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm"
+            >
+              <h2
+                class="text-lg font-bold text-orange-800 flex items-center gap-2"
+              >
+                <i data-lucide="flask-conical"></i> บันทึกรายการ Viscose
+                Consumption (Pulp Feed)
+              </h2>
+              <div class="flex gap-2">
+                <button
+                  id="btnReportHighRisk"
+                  onclick="reportHighRiskMaterial()"
+                  class="flex items-center gap-1 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 font-bold text-sm border border-red-300 transition shadow-sm mr-4"
+                >
+                  <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                  แจ้งเหตุวัตถุดิบเสี่ยง (High Risk)
+                </button>
+                <button
+                  onclick="addViscoseRow()"
+                  class="flex items-center gap-1 px-4 py-2 bg-orange-50 text-orange-600 rounded hover:bg-orange-100 font-bold text-sm border border-orange-200"
+                >
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว
+                </button>
+                <button
+                  id="btnSaveViscose"
+                  onclick="saveViscoseData()"
+                  class="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold shadow flex items-center gap-2"
+                >
+                  <i data-lucide="save"></i> บันทึก Viscose
+                </button>
+              </div>
+            </div>
+            <div class="overflow-y-auto max-h-[300px]">
+              <table class="w-full text-left border-collapse">
+                <thead
+                  class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b"
+                >
+                  <tr>
+                    <th class="p-3 w-32">Production Date</th>
+                    <th class="p-3 w-32">Line</th>
+                    <th class="p-3">Brand (Pulp)</th>
+                    <th class="p-3 w-28">Grade</th>
+                    <th class="p-3 w-32">Lot No.</th>
+                    <th class="p-3 w-28 text-right">Used (T)</th>
+                    <th class="p-3 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody id="tableViscose" class="text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+          <div
+            class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 overflow-hidden flex flex-col"
+          >
+            <div class="flex justify-between items-center mb-3">
+              <h3
+                class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"
+              >
+                <i data-lucide="history" class="w-4 h-4 text-orange-500"></i>
+                ประวัติการป้อนเยื่อเข้า Viscose
+              </h3>
+              <div class="flex items-center gap-2">
+                <input
+                  type="date"
+                  id="viscoseHistorySearchDate"
+                  onchange="window.initViscoseListeners(this.value)"
+                  class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm"
+                /><button
+                  onclick="document.getElementById('viscoseHistorySearchDate').value=''; window.initViscoseListeners();"
+                  class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"
+                >
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+            <div class="overflow-y-auto flex-1 border rounded">
+              <table class="w-full text-left text-sm">
+                <thead
+                  class="bg-slate-50 text-slate-500 text-xs uppercase sticky top-0"
+                >
+                  <tr>
+                    <th class="p-2 w-24">Date</th>
+                    <th class="p-2">Line</th>
+                    <th class="p-2">Brand</th>
+                    <th class="p-2 w-32">Lot No.</th>
+                    <th class="p-2 w-24 text-right">Used</th>
+                    <th class="p-2 w-20 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="viscoseHistoryTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-<div id="Viscose" class="tab-content hidden h-full flex flex-col gap-4">
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-<div class="flex justify-between items-center mb-4">
-<h3 class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"><i data-lucide="boxes" class="w-4 h-4 text-orange-500"></i> ยอดคงเหลือ Pulp ที่หน้างาน Viscose (เบิกมา - ใช้ไป)</h3>
-<button onclick="refreshViscoseBalance()" id="btnRefreshViscoseBal" class="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold hover:bg-orange-100 transition flex items-center gap-1 border border-orange-200"><i data-lucide="refresh-cw" class="w-3 h-3"></i> อัปเดตยอด</button>
-</div>
-<div id="viscoseDashboardCards" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"><div class="col-span-full text-center text-gray-400 text-sm py-2">Loading balance...</div></div>
-</div>
-<div class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0">
-<div class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm">
-<h2 class="text-lg font-bold text-orange-800 flex items-center gap-2"><i data-lucide="flask-conical"></i> บันทึกรายการ Viscose Consumption (Pulp Feed)</h2>
-<div class="flex gap-2">
-<button id="btnReportHighRisk" onclick="reportHighRiskMaterial()" class="flex items-center gap-1 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 font-bold text-sm border border-red-300 transition shadow-sm mr-4"><i data-lucide="alert-triangle" class="w-4 h-4"></i> แจ้งเหตุวัตถุดิบเสี่ยง (High Risk)</button>
-<button onclick="addViscoseRow()" class="flex items-center gap-1 px-4 py-2 bg-orange-50 text-orange-600 rounded hover:bg-orange-100 font-bold text-sm border border-orange-200"><i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว</button>
-<button id="btnSaveViscose" onclick="saveViscoseData()" class="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold shadow flex items-center gap-2"><i data-lucide="save"></i> บันทึก Viscose</button>
-</div>
-</div>
-<div class="overflow-y-auto max-h-[300px]">
-<table class="w-full text-left border-collapse">
-<thead class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b">
-<tr>
-<th class="p-3 w-32">Production Date</th>
-<th class="p-3 w-32">Line</th>
-<th class="p-3">Brand (Pulp)</th>
-<th class="p-3 w-28">Grade</th>
-<th class="p-3 w-32">Lot No.</th>
-<th class="p-3 w-28 text-right">Used (T)</th>
-<th class="p-3 w-10"></th>
-</tr>
-</thead>
-<tbody id="tableViscose" class="text-sm"></tbody>
-</table>
-</div>
-</div>
-<div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 overflow-hidden flex flex-col">
-<div class="flex justify-between items-center mb-3">
-<h3 class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-orange-500"></i> ประวัติการป้อนเยื่อเข้า Viscose</h3>
-<div class="flex items-center gap-2"><input type="date" id="viscoseHistorySearchDate" onchange="window.initViscoseListeners(this.value)" class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm"><button onclick="document.getElementById('viscoseHistorySearchDate').value=''; window.initViscoseListeners();" class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button></div>
-</div>
-<div class="overflow-y-auto flex-1 border rounded">
-<table class="w-full text-left text-sm">
-<thead class="bg-slate-50 text-slate-500 text-xs uppercase sticky top-0"><tr><th class="p-2 w-24">Date</th><th class="p-2">Line</th><th class="p-2">Brand</th><th class="p-2 w-32">Lot No.</th><th class="p-2 w-24 text-right">Used</th><th class="p-2 w-20 text-right">Action</th></tr></thead>
-<tbody id="viscoseHistoryTable"></tbody>
-</table>
-</div>
-</div>
-</div>
+        <div
+          id="Spinning"
+          class="tab-content hidden h-full flex flex-col gap-4"
+        >
+          <div
+            class="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
+          >
+            <div class="flex justify-between items-center mb-4">
+              <h3
+                class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"
+              >
+                <i data-lucide="scale" class="w-4 h-4 text-teal-500"></i> สรุป
+                Mass Balance & Credit รายวัน
+              </h3>
+              <div class="flex items-center gap-2">
+                <input
+                  type="date"
+                  id="spinningSummaryDate"
+                  onchange="window.loadSpinningMassBalance(this.value)"
+                  class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm"
+                />
+                <button
+                  onclick="document.getElementById('spinningSummaryDate').value=''; window.loadSpinningMassBalance();"
+                  class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"
+                >
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+            <div
+              id="spinningSummaryCards"
+              class="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              <div class="col-span-full text-center text-gray-400 text-sm py-2">
+                Loading balance...
+              </div>
+            </div>
+          </div>
+          <div
+            class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0"
+          >
+            <div
+              class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm"
+            >
+              <h2
+                class="text-lg font-bold text-teal-800 flex items-center gap-2"
+              >
+                <i data-lucide="activity"></i> บันทึกรายการ Spinning Output
+                (Fibre Yield)
+              </h2>
+              <div class="flex gap-2">
+                <button
+                  onclick="addSpinningRow()"
+                  class="flex items-center gap-1 px-4 py-2 bg-teal-50 text-teal-600 rounded hover:bg-teal-100 font-bold text-sm border border-teal-200"
+                >
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว
+                </button>
+                <button
+                  id="btnSaveSpinning"
+                  onclick="saveSpinningData()"
+                  class="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold shadow flex items-center gap-2"
+                >
+                  <i data-lucide="save"></i> บันทึก Spinning
+                </button>
+              </div>
+            </div>
+            <div class="overflow-y-auto max-h-[300px]">
+              <table class="w-full text-left border-collapse">
+                <thead
+                  class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b"
+                >
+                  <tr>
+                    <th class="p-3 w-32">Production Date</th>
+                    <th class="p-3 w-32">Machine Line</th>
+                    <th class="p-3 w-40">Claim Tag (Traceability)</th>
+                    <th class="p-3 text-right">Fibre Output (Ton)</th>
+                    <th class="p-3 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody id="spinningEntryTable" class="text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+          <div
+            class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 overflow-hidden flex flex-col"
+          >
+            <div class="flex justify-between items-center mb-3">
+              <h3
+                class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"
+              >
+                <i data-lucide="history" class="w-4 h-4 text-teal-500"></i>
+                ประวัติการผลิต Spinning Output
+              </h3>
+              <div class="flex items-center gap-2">
+                <input
+                  type="date"
+                  id="spinningHistorySearchDate"
+                  onchange="window.initSpinningListeners(this.value)"
+                  class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm"
+                /><button
+                  onclick="document.getElementById('spinningHistorySearchDate').value=''; window.initSpinningListeners();"
+                  class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"
+                >
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+            <div class="overflow-y-auto flex-1 border rounded">
+              <table class="w-full text-left text-sm">
+                <thead
+                  class="bg-slate-50 text-slate-500 text-xs uppercase sticky top-0"
+                >
+                  <tr>
+                    <th class="p-2 w-24">Date</th>
+                    <th class="p-2 w-24">Line</th>
+                    <th class="p-2 w-24">Claim</th>
+                    <th
+                      class="p-2 w-24 text-right bg-teal-50 text-teal-800 font-bold border-l border-r"
+                    >
+                      Fibre (T)
+                    </th>
+                    <th class="p-2 w-16 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="spinningHistoryTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-<div id="Spinning" class="tab-content hidden h-full flex flex-col gap-4">
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-<div class="flex justify-between items-center mb-4">
-<h3 class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
-<i data-lucide="scale" class="w-4 h-4 text-teal-500"></i> สรุป Mass Balance & Credit รายวัน
-</h3>
-<div class="flex items-center gap-2">
-<input type="date" id="spinningSummaryDate" onchange="window.loadSpinningMassBalance(this.value)" class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm">
-<button onclick="document.getElementById('spinningSummaryDate').value=''; window.loadSpinningMassBalance();" class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
-</div>
-</div>
-<div id="spinningSummaryCards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-<div class="col-span-full text-center text-gray-400 text-sm py-2">Loading balance...</div>
-</div>
-</div>
-<div class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0">
-<div class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm">
-<h2 class="text-lg font-bold text-teal-800 flex items-center gap-2"><i data-lucide="activity"></i> บันทึกรายการ Spinning Output (Fibre Yield)</h2>
-<div class="flex gap-2">
-<button onclick="addSpinningRow()" class="flex items-center gap-1 px-4 py-2 bg-teal-50 text-teal-600 rounded hover:bg-teal-100 font-bold text-sm border border-teal-200"><i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว</button>
-<button id="btnSaveSpinning" onclick="saveSpinningData()" class="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold shadow flex items-center gap-2"><i data-lucide="save"></i> บันทึก Spinning</button>
-</div>
-</div>
-<div class="overflow-y-auto max-h-[300px]">
-<table class="w-full text-left border-collapse">
-<thead class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b">
-<tr><th class="p-3 w-32">Production Date</th><th class="p-3 w-32">Machine Line</th><th class="p-3 w-40">Claim Tag (Traceability)</th><th class="p-3 text-right">Fibre Output (Ton)</th><th class="p-3 w-10"></th></tr>
-</thead>
-<tbody id="spinningEntryTable" class="text-sm"></tbody>
-</table>
-</div>
-</div>
-<div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 overflow-hidden flex flex-col">
-<div class="flex justify-between items-center mb-3">
-<h3 class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-teal-500"></i> ประวัติการผลิต Spinning Output</h3>
-<div class="flex items-center gap-2"><input type="date" id="spinningHistorySearchDate" onchange="window.initSpinningListeners(this.value)" class="text-xs border border-slate-300 rounded px-2 py-1 shadow-sm"><button onclick="document.getElementById('spinningHistorySearchDate').value=''; window.initSpinningListeners();" class="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button></div>
-</div>
-<div class="overflow-y-auto flex-1 border rounded">
-<table class="w-full text-left text-sm">
-<thead class="bg-slate-50 text-slate-500 text-xs uppercase sticky top-0"><tr><th class="p-2 w-24">Date</th><th class="p-2 w-24">Line</th><th class="p-2 w-24">Claim</th><th class="p-2 w-24 text-right bg-teal-50 text-teal-800 font-bold border-l border-r">Fibre (T)</th><th class="p-2 w-16 text-right">Action</th></tr></thead>
-<tbody id="spinningHistoryTable"></tbody>
-</table>
-</div>
-</div>
-</div>
+        <div
+          id="Marketing"
+          class="tab-content hidden h-full flex flex-col gap-4"
+        >
+          <div
+            class="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
+          >
+            <div class="flex justify-between items-center mb-4">
+              <h2
+                class="text-lg font-bold text-slate-800 flex items-center gap-2"
+              >
+                <i data-lucide="wallet"></i> บัญชีเครดิตคงเหลือ (Dual-Standard
+                Ledger)
+              </h2>
+              <button
+                onclick="refreshCreditBalance()"
+                id="btnRefreshBal"
+                class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition flex items-center gap-2 shadow-sm"
+              >
+                อัปเดตยอดจาก Ledger
+              </button>
+            </div>
 
-<div id="Marketing" class="tab-content hidden h-full flex flex-col gap-4">
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-<div class="flex justify-between items-center mb-4">
-<h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-<i data-lucide="wallet"></i> บัญชีเครดิตคงเหลือ (Dual-Standard Ledger)
-</h2>
-<button onclick="refreshCreditBalance()" id="btnRefreshBal" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition flex items-center gap-2 shadow-sm">
-อัปเดตยอดจาก Ledger
-</button>
-</div>
+            <div
+              id="pefcSuspensionAlert"
+              class="hidden bg-red-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-between border-2 border-red-800 animate-pulse mb-6"
+            >
+              <div class="flex items-center gap-3">
+                <i data-lucide="alert-octagon" class="w-6 h-6 text-white"></i>
+                <div>
+                  <h4 class="font-bold text-lg">
+                    ⚠️ PEFC Claim Suspended (16-Hour Rule)
+                  </h4>
+                  <p class="text-sm opacity-90">
+                    ระบบถูกระงับการเบิกจ่าย PEFC เนื่องจากพบวัตถุดิบเสี่ยง
+                    จะกลับมาใช้งานได้ในเวลา:
+                    <strong id="suspensionTimeStr" class="text-yellow-300"
+                      >--:--</strong
+                    >
+                  </p>
+                </div>
+              </div>
+            </div>
 
-<div id="pefcSuspensionAlert" class="hidden bg-red-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-between border-2 border-red-800 animate-pulse mb-6">
-<div class="flex items-center gap-3">
-<i data-lucide="alert-octagon" class="w-6 h-6 text-white"></i>
-<div>
-<h4 class="font-bold text-lg">⚠️ PEFC Claim Suspended (16-Hour Rule)</h4>
-<p class="text-sm opacity-90">ระบบถูกระงับการเบิกจ่าย PEFC เนื่องจากพบวัตถุดิบเสี่ยง จะกลับมาใช้งานได้ในเวลา: <strong id="suspensionTimeStr" class="text-yellow-300">--:--</strong></p>
-</div>
-</div>
-</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div
+                class="border-2 border-amber-200 rounded-xl overflow-hidden flex flex-col bg-amber-50/30"
+              >
+                <div class="bg-amber-700 p-4 flex justify-between items-center">
+                  <h3 class="font-black text-white text-lg">
+                    FSC Mix<br />Credit
+                  </h3>
+                  <div
+                    class="bg-amber-900/50 px-2 py-1 rounded text-xs text-amber-100"
+                  >
+                    Conv:<br />99.00%
+                  </div>
+                </div>
+                <div
+                  class="p-6 flex-1 flex flex-col items-center justify-center text-center"
+                >
+                  <span class="text-sm font-bold text-amber-800 mb-2"
+                    >AVAILABLE (FIFO)</span
+                  >
+                  <span id="bal_fsc" class="text-4xl font-black text-slate-800"
+                    >---</span
+                  >
+                  <span class="text-xs text-amber-600/70 mt-2"
+                    >(Expire in 24 Months)</span
+                  >
+                </div>
+                <div
+                  class="bg-white border-t border-amber-100 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm"
+                >
+                  <span>⚠️ < 30 days</span>
+                  <span id="bal_fsc_expiring">0.000 T</span>
+                </div>
+              </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div class="border-2 border-amber-200 rounded-xl overflow-hidden flex flex-col bg-amber-50/30">
-<div class="bg-amber-700 p-4 flex justify-between items-center">
-<h3 class="font-black text-white text-lg">FSC Mix<br>Credit</h3>
-<div class="bg-amber-900/50 px-2 py-1 rounded text-xs text-amber-100">Conv:<br>99.00%</div>
-</div>
-<div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
-<span class="text-sm font-bold text-amber-800 mb-2">AVAILABLE (FIFO)</span>
-<span id="bal_fsc" class="text-4xl font-black text-slate-800">---</span>
-<span class="text-xs text-amber-600/70 mt-2">(Expire in 24 Months)</span>
-</div>
-<div class="bg-white border-t border-amber-100 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm">
-<span>⚠️ < 30 days</span>
-<span id="bal_fsc_expiring">0.000 T</span>
-</div>
-</div>
+              <div
+                class="border-2 border-slate-200 rounded-xl overflow-hidden flex flex-col bg-slate-50/50"
+              >
+                <div class="bg-slate-700 p-4 flex justify-between items-center">
+                  <h3 class="font-black text-white text-lg">
+                    FSC Control<br />Wood
+                  </h3>
+                  <div
+                    class="bg-slate-900/50 px-2 py-1 rounded text-xs text-slate-100"
+                  >
+                    Conv:<br />99.00%
+                  </div>
+                </div>
+                <div
+                  class="p-6 flex-1 flex flex-col items-center justify-center text-center"
+                >
+                  <span class="text-sm font-bold text-slate-600 mb-2"
+                    >AVAILABLE (FIFO)</span
+                  >
+                  <span
+                    id="bal_fsc_cw"
+                    class="text-4xl font-black text-slate-800"
+                    >---</span
+                  >
+                  <span class="text-xs text-slate-400 mt-2"
+                    >(Expire in 24 Months)</span
+                  >
+                </div>
+                <div
+                  class="bg-white border-t border-slate-200 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm"
+                >
+                  <span>⚠️ < 30 days</span>
+                  <span id="bal_fsc_cw_expiring">0.000 T</span>
+                </div>
+              </div>
 
-<div class="border-2 border-slate-200 rounded-xl overflow-hidden flex flex-col bg-slate-50/50">
-<div class="bg-slate-700 p-4 flex justify-between items-center">
-<h3 class="font-black text-white text-lg">FSC Control<br>Wood</h3>
-<div class="bg-slate-900/50 px-2 py-1 rounded text-xs text-slate-100">Conv:<br>99.00%</div>
-</div>
-<div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
-<span class="text-sm font-bold text-slate-600 mb-2">AVAILABLE (FIFO)</span>
-<span id="bal_fsc_cw" class="text-4xl font-black text-slate-800">---</span>
-<span class="text-xs text-slate-400 mt-2">(Expire in 24 Months)</span>
-</div>
-<div class="bg-white border-t border-slate-200 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm">
-<span>⚠️ < 30 days</span>
-<span id="bal_fsc_cw_expiring">0.000 T</span>
-</div>
-</div>
+              <div
+                class="border-2 border-green-200 rounded-xl overflow-hidden flex flex-col bg-green-50/30"
+              >
+                <div class="bg-green-600 p-4 flex justify-between items-center">
+                  <h3 class="font-black text-white text-lg">
+                    PEFC<br />Certified
+                  </h3>
+                  <div
+                    class="bg-green-800/50 px-2 py-1 rounded text-xs text-green-100"
+                  >
+                    Conv:<br />93.00%
+                  </div>
+                </div>
+                <div
+                  class="p-6 flex-1 flex flex-col items-center justify-center text-center"
+                >
+                  <span class="text-sm font-bold text-green-700 mb-2"
+                    >AVAILABLE (FIFO)</span
+                  >
+                  <span id="bal_pefc" class="text-4xl font-black text-slate-800"
+                    >---</span
+                  >
+                  <span class="text-xs text-green-600/70 mt-2"
+                    >(Expire in 12 Months)</span
+                  >
+                </div>
+                <div
+                  class="bg-white border-t border-green-100 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm"
+                >
+                  <span>⚠️ < 30 days</span>
+                  <span id="bal_pefc_expiring">0.000 T</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-<div class="border-2 border-green-200 rounded-xl overflow-hidden flex flex-col bg-green-50/30">
-<div class="bg-green-600 p-4 flex justify-between items-center">
-<h3 class="font-black text-white text-lg">PEFC<br>Certified</h3>
-<div class="bg-green-800/50 px-2 py-1 rounded text-xs text-green-100">Conv:<br>93.00%</div>
-</div>
-<div class="p-6 flex-1 flex flex-col items-center justify-center text-center">
-<span class="text-sm font-bold text-green-700 mb-2">AVAILABLE (FIFO)</span>
-<span id="bal_pefc" class="text-4xl font-black text-slate-800">---</span>
-<span class="text-xs text-green-600/70 mt-2">(Expire in 12 Months)</span>
-</div>
-<div class="bg-white border-t border-green-100 p-3 mx-4 mb-4 rounded text-sm flex justify-between text-red-600 font-bold shadow-sm">
-<span>⚠️ < 30 days</span>
-<span id="bal_pefc_expiring">0.000 T</span>
-</div>
-</div>
-</div>
-</div>
-
-<div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col mt-4">
-<div class="flex justify-between items-center mb-4">
-<h3 class="text-sm font-bold text-slate-700 flex items-center gap-2"><i data-lucide="file-spreadsheet" class="text-blue-600"></i> นำเข้าข้อมูลการขายเพื่อตัดยอด Ledger (Sales Deduction)</h3>
-<div class="flex items-center gap-2"><label class="text-xs font-bold text-slate-500">เลือกเดือนที่จัดจำหน่าย:</label><input type="month" id="marketingDataMonth" class="text-sm border border-slate-300 rounded px-3 py-1.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"></div>
-</div>
-<div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4"><p class="text-xs text-blue-800 leading-relaxed"><strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel <strong>(คลุมรวมหัวตารางมาด้วย)</strong> มาวางในช่องด้านล่าง<br>ระบบจะอ่านชนิดมาตรฐานจากคอลัมน์ "Claim" และทำการตัดบัญชีแบบ <strong>FIFO</strong> อัตโนมัติ (หักจากก้อนที่เก่าที่สุดที่ยังไม่หมดอายุ)</p></div>
-<textarea id="excelPasteArea" rows="10" class="w-full flex-1 text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4" placeholder="วางข้อมูลจาก Excel ตรงนี้... (ต้องรวมหัวตาราง Date, Invoice, Claim, Weight มาด้วย)"></textarea>
-<div class="flex gap-3">
-<button id="btnUploadMarketing" onclick="uploadMarketingData()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2"><i data-lucide="upload-cloud" class="w-5 h-5"></i> บันทึกยอดขาย & หักลบเครดิต</button>
-<button onclick="document.getElementById('excelPasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">Clear ข้อมูล</button>
-</div>
-<div id="marketingStatusArea" class="mt-4 hidden"><div id="marketingStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div></div>
-</div>
-</div>
-<div id="Warehouse" class="tab-content hidden h-full flex flex-col gap-4">
-<div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col">
-<div class="flex justify-between items-center mb-4">
-<h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
-<i data-lucide="scan-line" class="text-indigo-600"></i> นำเข้าข้อมูล Warehouse (อัปเดต Delivery & Production Date)
-</h3>
-</div>
-<div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4">
-<p class="text-xs text-indigo-800 leading-relaxed">
-<strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel <strong>(คลุมรวมหัวตาราง Delivery No., Prod_Date ฯลฯ)</strong> มาวางในช่องด้านล่าง<br>
-ระบบจะจัดกลุ่มข้อมูลตาม Delivery No. และแปลงวันที่เพื่อเชื่อมโยงกับระบบ Marketing และแผนกผลิตโดยอัตโนมัติ
-</p>
-</div>
-<textarea id="warehousePasteArea" rows="10" class="w-full flex-1 text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none mb-4" placeholder="วางข้อมูลจาก Excel ตรงนี้..."></textarea>
-<div class="flex gap-3">
-<button id="btnUploadWarehouse" onclick="uploadWarehouseData()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2">
-<i data-lucide="upload-cloud" class="w-5 h-5"></i> บันทึกข้อมูล Warehouse
-</button>
-<button onclick="document.getElementById('warehousePasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">Clear ข้อมูล</button>
-</div>
-<div id="warehouseStatusArea" class="mt-4 hidden"><div id="warehouseStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div></div>
-</div>
-</div>
-
-</main>
-</div>
-</body>
+          <div
+            class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col mt-4"
+          >
+            <div class="flex justify-between items-center mb-4">
+              <h3
+                class="text-sm font-bold text-slate-700 flex items-center gap-2"
+              >
+                <i data-lucide="file-spreadsheet" class="text-blue-600"></i>
+                นำเข้าข้อมูลการขายเพื่อตัดยอด Ledger (Sales Deduction)
+              </h3>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-500"
+                  >เลือกเดือนที่จัดจำหน่าย:</label
+                ><input
+                  type="month"
+                  id="marketingDataMonth"
+                  class="text-sm border border-slate-300 rounded px-3 py-1.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p class="text-xs text-blue-800 leading-relaxed">
+                <strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel
+                <strong>(คลุมรวมหัวตารางมาด้วย)</strong>
+                มาวางในช่องด้านล่าง<br />ระบบจะอ่านชนิดมาตรฐานจากคอลัมน์ "Claim"
+                และทำการตัดบัญชีแบบ <strong>FIFO</strong> อัตโนมัติ
+                (หักจากก้อนที่เก่าที่สุดที่ยังไม่หมดอายุ)
+              </p>
+            </div>
+            <textarea
+              id="excelPasteArea"
+              rows="10"
+              class="w-full flex-1 text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4"
+              placeholder="วางข้อมูลจาก Excel ตรงนี้... (ต้องรวมหัวตาราง Date, Invoice, Claim, Weight มาด้วย)"
+            ></textarea>
+            <div class="flex gap-3">
+              <button
+                id="btnUploadMarketing"
+                onclick="uploadMarketingData()"
+                class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2"
+              >
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i> บันทึกยอดขาย
+                & หักลบเครดิต
+              </button>
+              <button
+                onclick="document.getElementById('excelPasteArea').value=''"
+                class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition"
+              >
+                Clear ข้อมูล
+              </button>
+            </div>
+            <div id="marketingStatusArea" class="mt-4 hidden">
+              <div
+                id="marketingStatusMsg"
+                class="p-3 rounded-lg text-sm mb-2 font-bold"
+              ></div>
+            </div>
+          </div>
+        </div>
+        <div
+          id="Warehouse"
+          class="tab-content hidden h-full flex flex-col gap-4"
+        >
+          <div
+            class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col"
+          >
+            <div class="flex justify-between items-center mb-4">
+              <h3
+                class="text-sm font-bold text-slate-700 flex items-center gap-2"
+              >
+                <i data-lucide="scan-line" class="text-indigo-600"></i>
+                นำเข้าข้อมูล Warehouse (อัปเดต Delivery & Production Date)
+              </h3>
+            </div>
+            <div
+              class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4"
+            >
+              <p class="text-xs text-indigo-800 leading-relaxed">
+                <strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel
+                <strong>(คลุมรวมหัวตาราง Delivery No., Prod_Date ฯลฯ)</strong>
+                มาวางในช่องด้านล่าง<br />
+                ระบบจะจัดกลุ่มข้อมูลตาม Delivery No.
+                และแปลงวันที่เพื่อเชื่อมโยงกับระบบ Marketing
+                และแผนกผลิตโดยอัตโนมัติ
+              </p>
+            </div>
+            <textarea
+              id="warehousePasteArea"
+              rows="10"
+              class="w-full flex-1 text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none mb-4"
+              placeholder="วางข้อมูลจาก Excel ตรงนี้..."
+            ></textarea>
+            <div class="flex gap-3">
+              <button
+                id="btnUploadWarehouse"
+                onclick="uploadWarehouseData()"
+                class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2"
+              >
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i> บันทึกข้อมูล
+                Warehouse
+              </button>
+              <button
+                onclick="document.getElementById('warehousePasteArea').value=''"
+                class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition"
+              >
+                Clear ข้อมูล
+              </button>
+            </div>
+            <div id="warehouseStatusArea" class="mt-4 hidden">
+              <div
+                id="warehouseStatusMsg"
+                class="p-3 rounded-lg text-sm mb-2 font-bold"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
 </html>
-
