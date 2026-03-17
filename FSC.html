@@ -1161,13 +1161,13 @@
           );
           const result = await processMarketingFunc(payload);
 
-          if (result.data.success) {
-            statusMsg.className =
-              "bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm";
-            statusMsg.innerHTML = ` ✅ <b>สำเร็จ!</b> ตัดยอดและผูก Batch (Traceability) เรียบร้อยแล้ว ${result.data.processedCount} รายการ`;
-            document.getElementById("excelPasteArea").value = ""; // เคลียร์ข้อมูลช่องวาง
-            window.refreshCreditBalance(); // สั่งให้อัปเดตยอดคงเหลือทันที
-          } else {
+            if (result.data.success) {
+                statusMsg.className = "bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm";
+                // ✅ ใช้ result.data.message จาก Backend เลย
+                statusMsg.innerHTML = `✅ <b>สรุปการทำงาน:</b><br/> ${result.data.message}`; 
+                document.getElementById("excelPasteArea").value = ""; 
+                window.refreshCreditBalance(); 
+            } else {
             throw new Error(
               result.data.message || "เกิดข้อผิดพลาดไม่ทราบสาเหตุ",
             );
