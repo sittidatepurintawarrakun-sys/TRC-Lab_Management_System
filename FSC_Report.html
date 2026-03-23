@@ -87,15 +87,11 @@
 
             // ส่งต่อ Module ให้ React เรียกใช้แบบ Native
             window.api = {
-                getCreditBalance: httpsCallable(functions, "getCreditBalance"),
-                getEnterpriseMassBalance: httpsCallable(
-                    functions,
-                    "getEnterpriseMassBalance",
-                ),
-                getEnterpriseTraceability: httpsCallable(
-                    functions,
-                    "getEnterpriseTraceability",
-                ),
+              getCreditBalance: httpsCallable(functions, "getCreditBalance"),
+              getEnterpriseMassBalance: httpsCallable(functions, "getEnterpriseMassBalance"),
+              getEnterpriseTraceability: httpsCallable(functions, "getEnterpriseTraceability"),
+              // เพิ่มบรรทัดนี้เข้าไปครับ
+              getTraceabilityReport: httpsCallable(functions, "getTraceabilityReport"), 
             };
         </script>
     </head>
@@ -613,37 +609,50 @@
             // =========================================================================
             // 🟢 MODULE 3: ENTERPRISE TRACEABILITY TRACKER (Reading Pre-built Graph)
             // =========================================================================
-            const TraceabilityView = () => {
-                const [searchValue, setSearchValue] = useState("");
-                const [data, setData] = useState(null);
-                const [loading, setLoading] = useState(false);
-                const [error, setError] = useState("");
+                const TraceabilityView = () => {
+                  const [searchValue, setSearchValue] = useState('');
+                  // 1. เพิ่ม State สำหรับเก็บประเภทการค้นหา
+                  const [searchType, setSearchType] = useState('INVOICE'); 
+                  const [data, setData] = useState(null);
+                  const [loading, setLoading] = useState(false);
+                  const [error, setError] = useState('');
 
-                const handleSearch = async (e) => {
+                  const handleSearch = async (e) => {
                     e.preventDefault();
-                    if (!searchValue || !window.api) return;
-                    setLoading(true);
-                    setError("");
-                    setData(null);
+                    if(!searchValue || !window.api) return;
+                    setLoading(true); setError(''); setData(null);
 
                     try {
-                        // 🚀 ENTERPRISE LEVEL: ค้นหาผ่าน Cloud Function API
-                        const res = await window.api.getEnterpriseTraceability({
-                            invoice: searchValue,
-                        });
+                      // 2. เปลี่ยนมาเรียกใช้ API ตัวที่รองรับ DO
+                      const res = await window.api.getTraceabilityReport({ 
+                          searchValue: searchValue,
+                          searchType: searchType 
+                      });
 
-                        if (res.data.success) {
-                            setData(res.data.data);
-                        } else {
-                            setError("❌ " + res.data.message);
-                        }
+                      if (res.data.success) {
+                        // 3. Map ข้อมูลจาก Backend รูปแบบใหม่ ให้เข้ากับโครงสร้าง UI เดิมที่คุณทำไว้สวยงามแล้ว
+                        const raw = res.data.data;
+                        const mappedData = {
+                            salesInfo: {
+                                invoice: raw.marketing?.invoice || '-',
+                                customer: raw.marketing?.customer || '-',
+                                claimType: raw.marketing?.claim || '-',
+                                volume: raw.marketing?.weightTon || 0
+                            },
+                            dispatchInfo: raw.warehouse ? { doNo: raw.warehouse.deliveryNo } : null,
+                            productionInfo: raw.spinning || [],
+                            pulpConsumption: raw.viscose || [],
+                            coaData: raw.rmQa || []
+                        };
+                        setData(mappedData);
+                      } else {
+                        setError(' ❌  ' + res.data.message);
+                      }
                     } catch (err) {
-                        setError(
-                            "❌ การเชื่อมต่อ Database ขัดข้อง: " + err.message,
-                        );
+                      setError(' ❌  การเชื่อมต่อ Database ขัดข้อง: ' + err.message);
                     }
                     setLoading(false);
-                };
+                  };
 
                 return (
                     <div className="p-8 animate-slide-in pb-20">
@@ -660,32 +669,26 @@
 
                             {/* Search Input */}
                             <div className="bg-white p-3 rounded-2xl shadow-lg border border-slate-200 flex items-center mb-8 gap-2">
-                                <div className="bg-slate-100 border-none p-3 rounded-xl font-bold text-slate-600 flex items-center gap-2">
-                                    <Icons.Search size={18} /> INVOICE NO.
-                                </div>
-                                <form
-                                    onSubmit={handleSearch}
-                                    className="flex-1 flex"
+                              <div className="bg-slate-100 border-none p-3 rounded-xl font-bold text-slate-600 flex items-center gap-2">
+                                <Icons.Search size={18}/>
+                                {/* เปลี่ยนจาก Text ธรรมดา เป็น Dropdown ให้เลือกได้ */}
+                                <select 
+                                  value={searchType} 
+                                  onChange={(e) => setSearchType(e.target.value)}
+                                  className="bg-transparent outline-none cursor-pointer"
                                 >
-                                    <input
-                                        type="text"
-                                        placeholder="ระบุเลขที่ Invoice ที่ต้องการตรวจสอบ..."
-                                        className="w-full px-4 py-3 outline-none text-slate-700 font-medium"
-                                        value={searchValue}
-                                        onChange={(e) =>
-                                            setSearchValue(e.target.value)
-                                        }
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md"
-                                    >
-                                        {loading
-                                            ? "TRACING..."
-                                            : "TRACE LEDGER"}
-                                    </button>
-                                </form>
+                                  <option value="INVOICE">INVOICE NO.</option>
+                                  <option value="DO">DELIVERY NO. (DO)</option>
+                                </select>
+                              </div>
+                              <form onSubmit={handleSearch} className="flex-1 flex">
+                                <input type="text" placeholder={`ระบุเลขที่ ${searchType === 'INVOICE' ? 'Invoice' : 'Delivery No.'} ที่ต้องการตรวจสอบ...`}
+                                  className="w-full px-4 py-3 outline-none text-slate-700 font-medium"
+                                  value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+                                <button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md">
+                                  {loading ? 'TRACING...' : 'TRACE LEDGER'}
+                                </button>
+                              </form>
                             </div>
 
                             {error && (
