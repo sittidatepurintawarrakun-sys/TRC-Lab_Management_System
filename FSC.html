@@ -1593,6 +1593,45 @@
     if (tabName === "Marketing") window.refreshCreditBalance();
     if (tabName === "Viscose") window.refreshViscoseBalance();
   };
+  window.triggerYearlyAggregation = async () => {
+      if (!confirm("📊 ยืนยันการรวบรวมข้อมูลเพื่อ 'ปิดยอดรายปี' ใช่หรือไม่?\n\n*ระบบจะดึงข้อมูลของ Financial Year ที่เพิ่งจบไปล่าสุดมารวมกัน*")) return;
+
+      try {
+          if (!window.apiAggregateYearly) {
+              window.apiAggregateYearly = httpsCallable(functions, "manualAggregateYearly");
+          }
+
+          alert("⏳ ระบบกำลังประมวลผลสรุปยอด โปรดรอสักครู่...");
+          const result = await window.apiAggregateYearly();
+
+          if (result.data.success) {
+              alert(`✅ สำเร็จ: ${result.data.message}`);
+          } else {
+              alert(`⚠️ แจ้งเตือน: ${result.data.message}`);
+          }
+      } catch (error) {
+          alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+      }
+  };
+
+  window.triggerCleanupOldLogs = async () => {
+      if (!confirm("⚠️ คำเตือน: คุณต้องการลบข้อมูล Raw Logs ที่เก่าเกิน 5 Financial Years ใช่หรือไม่?\n(ระบบจะทยอยลบทีละ 500 รายการ)")) return;
+
+      try {
+          if (!window.apiCleanupFsc) {
+              window.apiCleanupFsc = httpsCallable(functions, "manualCleanupFscRawLogs");
+          }
+
+          alert("⏳ กำลังสั่งการระบบฐานข้อมูล โปรดรอสักครู่...");
+          const result = await window.apiCleanupFsc();
+
+          if (result.data.success) {
+              alert(`✅ ${result.data.message}`);
+          }
+      } catch (error) {
+          alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+      }
+  };
 
   document.addEventListener("DOMContentLoaded", () => {
     window.addStoreRow();
@@ -1721,6 +1760,23 @@
       >
         <i data-lucide="package-check"></i> Warehouse (Dispatch)
       </button>
+      <div class="mt-8 px-4 flex flex-col gap-2">
+          <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">System Admin</p>
+
+          <button
+              onclick="triggerYearlyAggregation()"
+              class="w-full text-left p-3 rounded flex items-center gap-3 text-indigo-600 hover:bg-indigo-50 transition border border-indigo-200"
+          >
+              <i data-lucide="database" class="w-4 h-4"></i> Run Year-End Closing (FY)
+          </button>
+
+          <button
+              onclick="triggerCleanupOldLogs()"
+              class="w-full text-left p-3 rounded flex items-center gap-3 text-red-500 hover:bg-red-50 transition border border-red-200"
+          >
+              <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Historical Data (> 5 Years)
+          </button>
+      </div>
     </nav>
     <div class="p-4 border-t border-slate-700 bg-slate-900/50">
       <div id="userProfileSection" class="hidden">
@@ -2308,7 +2364,7 @@
             <i data-lucide="file-spreadsheet" class="text-blue-600"></i>
             นำเข้าข้อมูลการขายเพื่อตัดยอด Ledger (Sales Deduction)
           </h3>
-          <div class="flex items-center gap-2">
+          
             <label class="text-xs font-bold text-slate-500"
               >เลือกเดือนที่จัดจำหน่าย:</label
             ><input
@@ -2316,7 +2372,6 @@
               id="marketingDataMonth"
               class="text-sm border border-slate-300 rounded px-3 py-1.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
         </div>
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <p class="text-xs text-blue-800 leading-relaxed">
