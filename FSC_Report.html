@@ -97,12 +97,16 @@
                     functions,
                     "getEnterpriseTraceability",
                 ),
-                // เพิ่มบรรทัดนี้เข้าไปครับ
                 getTraceabilityReport: httpsCallable(
                     functions,
                     "getTraceabilityReport",
                 ),
             };
+
+            // 🟢 เพิ่มการ Expose Firestore Method ให้ React เอาไปใช้เปิด Modal ได้
+            window.db = db;
+            window.doc = doc;
+            window.getDoc = getDoc;
         </script>
     </head>
     <body>
@@ -914,7 +918,7 @@
                 const [loading, setLoading] = useState(false);
                 const [error, setError] = useState("");
 
-                // --- ส่วนที่เพิ่มใหม่: State สำหรับจัดการ In-Process Stats Modal ---
+                // --- State สำหรับ In-Process (ของเดิม) ---
                 const [processModal, setProcessModal] = useState({
                     isOpen: false,
                     date: "",
@@ -925,8 +929,104 @@
                     activeTab: "stats",
                 });
 
+                // --- ส่วนที่เพิ่มใหม่: State สำหรับจัดการ Fibre Quality Modal ---
+                const [fibreModal, setFibreModal] = useState({
+                    isOpen: false,
+                    date: "",
+                    machine: "",
+                    productType: "",
+                    data: null,
+                    rawData: null,
+                    loading: false,
+                    activeTab: "stats",
+                });
+
+                const openFibreStats = async (date, machineFull, matCode) => {
+                    let machineId = machineFull.replace("Line ", "").trim();
+                    if (machineId.includes("Machine-0"))
+                        machineId = machineId.replace("Machine-0", "MC");
+                    else if (machineId.includes("Machine-"))
+                        machineId = machineId.replace("Machine-", "MC");
+
+                    // 🎯 Logic แยกประเภท Fibre ตาม index.js
+                    let productType = "Grey";
+                    if (machineId === "MC2") {
+                        productType = "Modal";
+                    } else if (matCode && matCode.toUpperCase().endsWith("N")) {
+                        productType = "NonWoven";
+                    }
+
+                    setFibreModal({
+                        isOpen: true,
+                        date,
+                        machine: machineId,
+                        productType,
+                        data: null,
+                        rawData: null,
+                        loading: true,
+                        activeTab: "stats",
+                    });
+
+                    try {
+                        const db = window.db;
+                        const doc = window.doc;
+                        const getDoc = window.getDoc;
+
+                        const statsRef = doc(
+                            db,
+                            `stats_Product_${productType}`,
+                            `${machineId}_${date}`,
+                        );
+                        const rawRef = doc(
+                            db,
+                            "product_raw_logs",
+                            `${machineId}_${date}`,
+                        );
+
+                        const [statsSnap, rawSnap] = await Promise.all([
+                            getDoc(statsRef),
+                            getDoc(rawRef),
+                        ]);
+
+                        setFibreModal((prev) => ({
+                            ...prev,
+                            loading: false,
+                            data: statsSnap.exists() ? statsSnap.data() : null,
+                            rawData: rawSnap.exists()
+                                ? rawSnap.data().data
+                                : null,
+                        }));
+                    } catch (err) {
+                        console.error("Error fetching fibre stats:", err);
+                        setFibreModal((prev) => ({
+                            ...prev,
+                            loading: false,
+                            data: "ERROR",
+                        }));
+                    }
+                };
+
+                const closeFibreStats = () =>
+                    setFibreModal({
+                        isOpen: false,
+                        date: "",
+                        machine: "",
+                        productType: "",
+                        data: null,
+                        rawData: null,
+                        loading: false,
+                        activeTab: "stats",
+                    });
+
                 const openProcessStats = async (date, machineFull) => {
-                    const machineId = machineFull.replace("Line ", "").trim();
+                    // 1. แปลงชื่อ "Machine-06" หรือ "Line MC6" ให้กลายเป็น "MC6" เสมอ เพื่อให้ดึง DB ได้ถูกต้อง
+                    let machineId = machineFull.replace("Line ", "").trim();
+                    if (machineId.includes("Machine-0")) {
+                        machineId = machineId.replace("Machine-0", "MC");
+                    } else if (machineId.includes("Machine-")) {
+                        machineId = machineId.replace("Machine-", "MC");
+                    }
+
                     setProcessModal({
                         isOpen: true,
                         date,
@@ -938,6 +1038,11 @@
                     });
 
                     try {
+                        // 2. เรียกใช้คำสั่ง Firestore ที่เราโยนมาไว้ที่ window แล้วจากจุดที่ 1
+                        const db = window.db;
+                        const doc = window.doc;
+                        const getDoc = window.getDoc;
+
                         const visRef = doc(
                             db,
                             "stats_Viscose",
@@ -953,7 +1058,6 @@
                             "stats_Spinning",
                             `${machineId}_${date}`,
                         );
-                        // เพิ่มการดึง Raw Logs ด้วย (ใช้แค่ 1 Read!)
                         const rawRef = doc(
                             db,
                             "process_raw_logs",
@@ -1143,7 +1247,6 @@
                                         </div>
                                         <h4 className="font-bold text-blue-800">
                                             1. Marketing & Sales Deduction
-                                            (ปลายน้ำ)
                                         </h4>
                                         <div className="mt-2 p-4 bg-blue-50/50 border border-blue-100 rounded-lg text-sm text-slate-600">
                                             <div className="grid grid-cols-2 gap-2">
@@ -1188,40 +1291,69 @@
                                         </div>
                                     </div>
 
-                                    {/* Step 2: Warehouse */}
+                                    {/* Step 2: Fibre Quality (Lab Data) */}
                                     <div className="relative pl-10 pb-8">
                                         <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
                                         <div
-                                            className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.dispatchInfo ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"}`}
+                                            className={`absolute left-0 top-0 p-1.5 rounded-full z-10 border-4 border-white ${data.productionInfo?.length > 0 ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"}`}
                                         >
-                                            <Icons.Truck size={16} />
+                                            <Icons.CheckCircle size={16} />
                                         </div>
                                         <h4
-                                            className={`font-bold ${data.dispatchInfo ? "text-indigo-800" : "text-slate-400"}`}
+                                            className={`font-bold ${data.productionInfo?.length > 0 ? "text-indigo-800" : "text-slate-400"}`}
                                         >
-                                            2. Warehouse Dispatch
+                                            2. Finished Fibre Quality (Lab
+                                            Report)
                                         </h4>
-                                        {data.dispatchInfo ? (
-                                            <div className="mt-2 p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm text-slate-600">
-                                                <p>
-                                                    <strong>
-                                                        Linked DO No:
-                                                    </strong>{" "}
-                                                    {data.dispatchInfo.doNo}
-                                                </p>
-                                                <p className="text-xs text-slate-400 mt-1">
-                                                    ✓ ระบบจัดกล ��่ม Production
-                                                    Dates
-                                                    เพื่อสืบค้นข้อมูลการผลิตให้เรียบร้อยแล้ว
-                                                </p>
+                                        {data.productionInfo?.length > 0 ? (
+                                            <div className="mt-2 p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg text-sm text-slate-600 shadow-sm">
+                                                {data.productionInfo.map(
+                                                    (s, i) => {
+                                                        const machineName =
+                                                            data.salesInfo
+                                                                .machine;
+                                                        const matCode =
+                                                            data.salesInfo
+                                                                .matCode;
+                                                        return (
+                                                            <div
+                                                                key={`fibre-${i}`}
+                                                                className="mb-4 border-b border-indigo-200 pb-4 last:border-0 last:mb-0 last:pb-0"
+                                                            >
+                                                                <div className="flex flex-col md:flex-row justify-between md:items-center gap-3">
+                                                                    <p className="font-bold text-indigo-800 text-base bg-white border border-indigo-200 px-3 py-1.5 rounded-lg shadow-sm w-fit">
+                                                                        🧪 Lab
+                                                                        Date:{" "}
+                                                                        {s.date}
+                                                                    </p>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            openFibreStats(
+                                                                                s.date,
+                                                                                machineName,
+                                                                                matCode,
+                                                                            )
+                                                                        }
+                                                                        className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-md transition transform active:scale-95 flex items-center justify-center gap-2"
+                                                                    >
+                                                                        <Icons.Layers
+                                                                            size={
+                                                                                18
+                                                                            }
+                                                                        />{" "}
+                                                                        ดูผลเทสต์คุณภาพ
+                                                                        (Fibre
+                                                                        Lab)
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    },
+                                                )}
                                             </div>
                                         ) : (
-                                            <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 flex items-center gap-2">
-                                                <span className="animate-spin">
-                                                    ⏳
-                                                </span>{" "}
-                                                รอข้อมูลจากแผนกโกดัง (Pending
-                                                Warehouse Upload)
+                                            <div className="mt-2 text-sm text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                Waiting for Production linkage.
                                             </div>
                                         )}
                                     </div>
@@ -1237,78 +1369,101 @@
                                         <h4
                                             className={`font-bold ${data.productionInfo?.length > 0 ? "text-teal-800" : "text-slate-400"}`}
                                         >
-                                            3. Spinning (Actual Fibre Yield)
+                                            3. In_Process Data
                                         </h4>
                                         {data.productionInfo?.length > 0 ? (
-                                            <div className="mt-2 p-4 bg-teal-50/50 border border-teal-100 rounded-lg text-sm text-slate-600">
+                                            <div className="mt-2 p-4 bg-teal-50/50 border border-teal-100 rounded-lg text-sm text-slate-600 shadow-sm">
                                                 {data.productionInfo.map(
-                                                    (s, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className="mb-2 border-b border-teal-100 pb-2 last:border-0 last:mb-0 last:pb-0"
-                                                        >
-                                                            <div className="flex justify-between items-center mb-1">
-                                                                <p className="font-bold text-teal-700">
-                                                                    Production
-                                                                    Date:{" "}
-                                                                    {s.date}
-                                                                </p>
-                                                                {s.data.length >
-                                                                    0 && (
+                                                    (s, i) => {
+                                                        // ดึงชื่อเครื่องจักรแบบชัวร์ๆ (ถ้าในสถิติย่อยไม่มี ให้ดึงจากข้อมูล Marketing ทันที)
+                                                        const machineName =
+                                                            s.data &&
+                                                            s.data.length > 0 &&
+                                                            s.data[0].line
+                                                                ? s.data[0].line
+                                                                : data.salesInfo
+                                                                      .machine;
+
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                className="mb-4 border-b border-teal-200 pb-4 last:border-0 last:mb-0 last:pb-0"
+                                                            >
+                                                                <div className="flex flex-col md:flex-row justify-between md:items-center mb-3 gap-3">
+                                                                    <p className="font-bold text-teal-800 text-base bg-white border border-teal-200 px-3 py-1.5 rounded-lg inline-block w-fit shadow-sm">
+                                                                        📅
+                                                                        Production
+                                                                        Date:{" "}
+                                                                        {s.date}
+                                                                    </p>
                                                                     <button
                                                                         onClick={() =>
                                                                             openProcessStats(
                                                                                 s.date,
-                                                                                s
-                                                                                    .data[0]
-                                                                                    .line,
+                                                                                machineName,
                                                                             )
                                                                         }
-                                                                        className="text-xs bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition transform active:scale-95 flex items-center gap-1"
+                                                                        className="text-sm bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md transition transform active:scale-95 flex items-center justify-center gap-2 w-full md:w-auto"
                                                                     >
                                                                         <Icons.Activity
                                                                             size={
-                                                                                14
+                                                                                18
                                                                             }
                                                                         />{" "}
-                                                                        ดูสถิติการผลิต
-                                                                        (In-Process)
+                                                                        ดูสถิติ
+                                                                        In-Process
+                                                                        สถิติการผลิต
                                                                     </button>
-                                                                )}
+                                                                </div>
+                                                                <ul className="list-disc pl-5 mt-1 space-y-1">
+                                                                    {s.data &&
+                                                                        s.data.map(
+                                                                            (
+                                                                                tx,
+                                                                                j,
+                                                                            ) => (
+                                                                                <li
+                                                                                    key={
+                                                                                        j
+                                                                                    }
+                                                                                    className="text-slate-700"
+                                                                                >
+                                                                                    <span className="font-semibold text-teal-800">
+                                                                                        Machine:
+                                                                                    </span>{" "}
+                                                                                    {
+                                                                                        tx.line
+                                                                                    }{" "}
+                                                                                    <span className="mx-1 text-teal-300">
+                                                                                        |
+                                                                                    </span>{" "}
+                                                                                    <span className="font-semibold text-teal-800">
+                                                                                        Claim:
+                                                                                    </span>{" "}
+                                                                                    {
+                                                                                        tx.claimType
+                                                                                    }{" "}
+                                                                                    <span className="mx-1 text-teal-300">
+                                                                                        |
+                                                                                    </span>{" "}
+                                                                                    <span className="font-semibold text-teal-800">
+                                                                                        Output:
+                                                                                    </span>{" "}
+                                                                                    {
+                                                                                        tx.weight
+                                                                                    }{" "}
+                                                                                    T
+                                                                                </li>
+                                                                            ),
+                                                                        )}
+                                                                </ul>
                                                             </div>
-                                                            <ul className="list-disc pl-5 mt-1">
-                                                                {s.data.map(
-                                                                    (tx, j) => (
-                                                                        <li
-                                                                            key={
-                                                                                j
-                                                                            }
-                                                                        >
-                                                                            Machine:{" "}
-                                                                            {
-                                                                                tx.line
-                                                                            }{" "}
-                                                                            |
-                                                                            Claim:{" "}
-                                                                            {
-                                                                                tx.claimType
-                                                                            }{" "}
-                                                                            |
-                                                                            Output:{" "}
-                                                                            {
-                                                                                tx.weight
-                                                                            }{" "}
-                                                                            T
-                                                                        </li>
-                                                                    ),
-                                                                )}
-                                                            </ul>
-                                                        </div>
-                                                    ),
+                                                        );
+                                                    },
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="mt-2 text-sm text-slate-400 italic">
+                                            <div className="mt-2 text-sm text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100">
                                                 No production data matched yet.
                                             </div>
                                         )}
@@ -1625,6 +1780,7 @@
                                                                                                             2,
                                                                                                         ) ??
                                                                                                             "-"}
+
                                                                                                         %
                                                                                                     </span>
                                                                                                 </td>
@@ -1790,6 +1946,163 @@
                                                                     },
                                                                 )
                                                             )}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {/* --- 🟢 Fibre Quality Stats & Raw Logs Modal --- */}
+                            {fibreModal.isOpen && (
+                                <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-slide-in overflow-y-auto">
+                                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col">
+                                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-indigo-50 rounded-t-2xl">
+                                            <div>
+                                                <h3 className="text-xl font-bold text-indigo-900 flex items-center gap-2">
+                                                    <Icons.CheckCircle className="text-indigo-600" /> Finished Fibre Quality Report
+                                                </h3>
+                                                <p className="text-sm text-indigo-700 mt-1">
+                                                    Machine: <span className="font-bold">{fibreModal.machine}</span> | 
+                                                    Type: <span className="font-bold">{fibreModal.productType}</span> | 
+                                                    Date: <span className="font-bold">{fibreModal.date}</span>
+                                                </p>
+                                            </div>
+                                            <button onClick={closeFibreStats} className="text-slate-400 hover:text-red-500 transition bg-white p-2 rounded-full shadow-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+
+                                        <div className="flex border-b border-slate-200 px-6 pt-2 bg-slate-50">
+                                            <button onClick={() => setFibreModal(p => ({...p, activeTab: 'stats'}))} className={`px-4 py-3 font-bold text-sm border-b-2 transition-colors ${fibreModal.activeTab === 'stats' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>📊 Daily Quality Summary</button>
+                                            <button onClick={() => setFibreModal(p => ({...p, activeTab: 'hourly'}))} className={`px-4 py-3 font-bold text-sm border-b-2 transition-colors ${fibreModal.activeTab === 'hourly' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>⏱️ Detailed Lab Logs</button>
+                                        </div>
+
+                                        <div className="p-6 overflow-y-auto flex-1 bg-slate-100">
+                                            {fibreModal.loading ? (
+                                                <div className="flex flex-col items-center justify-center py-20 text-slate-400"><span className="animate-spin text-4xl mb-4">⌛</span><p>Loading Fibre Quality Lab Data...</p></div>
+                                            ) : fibreModal.data === "ERROR" ? (
+                                                <div className="text-center text-red-500 py-10 font-bold bg-white rounded-xl shadow-sm">❌ Error loading lab data.</div>
+                                            ) : (
+                                                <>
+                                                    {/* TAB 1: STATS */}
+                                                    {fibreModal.activeTab === 'stats' && (
+                                                        <div className="space-y-6">
+                                                            {!fibreModal.data || !fibreModal.data.stats ? (
+                                                                 <div className="text-center text-slate-500 py-10 italic bg-white rounded-xl shadow-sm">No quality summary available.</div>
+                                                            ) : (() => {
+                                                                // 🎯 Q2: เรียงลำดับ Column ที่อยากให้อยู่บนๆ (แก้เพิ่ม/ลดได้ที่นี่เลย)
+                                                                const preferredOrder = [
+                                                                    "Denier Cond", "Tenacity Cond.", "Elongation Cond",
+                                                                    "Wet Denier", "Tenacity Wet", "Elongation Wet",
+                                                                    "Brightness", "Whiteness", "Yellow Index", "OPU"
+                                                                ];
+
+                                                                // 🎯 Q1: ซ่อน Batch และ Material Code และ จัดเรียง
+                                                                const sortedStats = Object.entries(fibreModal.data.stats)
+                                                                    .filter(([param]) => param !== 'Batch' && param !== 'Material Code')
+                                                                    .sort(([paramA], [paramB]) => {
+                                                                        let idxA = preferredOrder.findIndex(p => paramA.includes(p));
+                                                                        let idxB = preferredOrder.findIndex(p => paramB.includes(p));
+                                                                        if (idxA === -1) idxA = 999;
+                                                                        if (idxB === -1) idxB = 999;
+                                                                        if (idxA === idxB) return paramA.localeCompare(paramB);
+                                                                        return idxA - idxB;
+                                                                    });
+
+                                                                return (
+                                                                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                                                        <div className="bg-indigo-800 text-white px-4 py-2 text-sm font-bold uppercase tracking-wider">Quality Parameters ({fibreModal.productType})</div>
+                                                                        <div className="overflow-x-auto">
+                                                                            <table className="w-full text-left border-collapse text-sm">
+                                                                                <thead>
+                                                                                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                                                                        <th className="p-3 font-semibold">Parameter</th>
+                                                                                        <th className="p-3 font-semibold text-right">Average / Status</th>
+                                                                                        <th className="p-3 font-semibold text-right">Min</th>
+                                                                                        <th className="p-3 font-semibold text-right">Max</th>
+                                                                                        <th className="p-3 font-semibold text-right">%CV</th>
+                                                                                        <th className="p-3 font-semibold text-right">Samples</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody className="divide-y divide-slate-100">
+                                                                                    {sortedStats.map(([param, stat]) => (
+                                                                                        <tr key={param} className="hover:bg-slate-50 transition">
+                                                                                            <td className="p-3 font-medium text-slate-700">{param}</td>
+                                                                                            {stat.type === 'numeric' ? (
+                                                                                                <>
+                                                                                                    <td className="p-3 text-right text-indigo-700 font-bold">{stat.avg?.toFixed(2) ?? '-'}</td>
+                                                                                                    <td className="p-3 text-right text-slate-500">{stat.min?.toFixed(2) ?? '-'}</td>
+                                                                                                    <td className="p-3 text-right text-slate-500">{stat.max?.toFixed(2) ?? '-'}</td>
+                                                                                                    <td className="p-3 text-right"><span className={`px-2 py-1 rounded text-xs font-bold ${stat.cv > 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{stat.cv?.toFixed(2) ?? '-'}%</span></td>
+                                                                                                    <td className="p-3 text-right text-slate-400 text-xs">{stat.count ?? 0}</td>
+                                                                                                </>
+                                                                                            ) : (
+                                                                                                 <>
+                                                                                                    <td colSpan="4" className="p-3 text-right text-slate-600 text-xs">
+                                                                                                        {Object.entries(stat.percentages || {}).map(([k, v]) => `${k} (${v}%)`).join(" | ")}
+                                                                                                    </td>
+                                                                                                    <td className="p-3 text-right text-slate-400 text-xs">{stat.totalCount ?? 0}</td>
+                                                                                                 </>
+                                                                                            )}
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    )}
+
+                                                    {/* TAB 2: HOURLY RAW LOGS */}
+                                                    {fibreModal.activeTab === 'hourly' && (
+                                                        <div className="space-y-6">
+                                                            {!fibreModal.rawData || !fibreModal.rawData[fibreModal.productType] ? (
+                                                                <div className="text-center text-slate-500 py-10 italic bg-white rounded-xl shadow-sm">No raw lab logs available.</div>
+                                                            ) : (() => {
+                                                                const deptRaw = fibreModal.rawData[fibreModal.productType];
+
+                                                                // 🎯 Q4: ซ่อน Batch ออกจาก Header ข้างบน เพราะเราจะเอาไปไว้ในคอลัมน์แรกแทน
+                                                                const params = Object.keys(deptRaw).filter(p => p !== 'Batch' && p !== 'Material Code');
+                                                                const maxRows = Math.max(...Object.keys(deptRaw).map(p => deptRaw[p].length));
+
+                                                                return (
+                                                                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                                                        <div className="bg-indigo-900 text-white px-4 py-2 text-sm font-bold uppercase tracking-wider">Raw Test Results</div>
+                                                                        <div className="overflow-x-auto max-h-[60vh]">
+                                                                            <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                                                                                <thead>
+                                                                                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-700">
+                                                                                        <th className="p-2 font-bold border-r bg-slate-100 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">Batch No.</th>
+                                                                                        {params.map(p => <th key={p} className="p-2 font-semibold border-r border-slate-200">{p}</th>)}
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody className="divide-y divide-slate-100">
+                                                                                    {Array.from({ length: maxRows }).map((_, rowIndex) => {
+                                                                                        // 🎯 Q4: ดึงเลข Batch มาแสดง ถ้าไม่มีให้ fallback ไปหา #1, #2...
+                                                                                        const batchDisplay = (deptRaw['Batch'] && deptRaw['Batch'][rowIndex]) ? deptRaw['Batch'][rowIndex] : `#${rowIndex + 1}`;
+
+                                                                                        return (
+                                                                                            <tr key={rowIndex} className="hover:bg-indigo-50 transition">
+                                                                                                <td className="p-2 text-center text-indigo-700 font-bold border-r bg-slate-50 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">
+                                                                                                    {batchDisplay}
+                                                                                                </td>
+                                                                                                {params.map(p => {
+                                                                                                    const val = deptRaw[p][rowIndex];
+                                                                                                    return <td key={`${p}-${rowIndex}`} className="p-2 border-r border-slate-100 text-slate-600">{val !== undefined && val !== null ? val : '-'}</td>;
+                                                                                                })}
+                                                                                            </tr>
+                                                                                        );
+                                                                                    })}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     )}
                                                 </>
