@@ -97,8 +97,8 @@
 <option value="AVC FSC Mix Credit">AVC FSC Mix Credit</option>
 <option value="AVC FSC Control Wood">AVC FSC Control Wood</option>
 <option value="AVC PEFC">AVC PEFC</option>
-<option value="PHOENIX Mix Credit">PHOENIX Mix Credit</option>
-<option value="PHOENIX Control Wood">PHOENIX Control Wood</option>
+<option value="PHOENIX FSC Mix Credit">PHOENIX FSC Mix Credit</option>
+<option value="PHOENIX FSC Control Wood">PHOENIX FSC Control Wood</option>
 <option value="PHOENIX PEFC">PHOENIX PEFC</option>
 <option value="SAICCOR FSC Mix Credit 70%">SAICCOR FSC Mix Credit 70%</option>
 <option value="TEL Pellita FSC Mix Credit">TEL Pellita FSC Mix Credit</option>
@@ -355,113 +355,149 @@
       window.exportToCSV(`Store_Report_${start}_to_${end}`, rows);
   };
 
-  window.addStoreRow = () => {
-    const tbody = document.getElementById("storeEntryTable");
-    const row = document.createElement("tr");
-    row.className = "border-b bg-green-50/50";
-    row.innerHTML = `
-<td class="p-2"><input type="date" name="s_date" value="${window.getShiftProductionDate()}" class="w-full text-xs border border-gray-300 rounded p-2 font-bold outline-none"></td>
-<td class="p-2"><select name="s_type" onchange="changeRowColor(this)" class="w-full text-xs border border-gray-300 rounded p-2 font-bold outline-none"><option value="IN" class="text-green-700"> 📥 รับเข้า</option><option value="OUT" class="text-red-700"> 📤 จ่ายออก</option></select></td>
-<td class="p-2"><select name="s_brand" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">${PULP_OPTIONS_STORE}</select></td>
-<td class="p-2"><select name="s_grade" class="w-full text-xs border border-gray-300 rounded p-2 outline-none"><option value="NORMAL"> ✅ Normal</option><option value="OFF"> ❌ Off Grade</option></select></td>
-<td class="p-2"><input type="text" name="s_doc" placeholder="Lot No." class="w-full text-xs border border-gray-300 rounded p-2 outline-none"></td>
-<td class="p-2"><input type="number" name="s_weight" step="0.001" placeholder="0.000" class="w-full text-sm font-mono text-right font-bold border border-gray-300 rounded p-2 outline-none"></td>
-<td class="p-2 text-center"><button onclick="removeRow(this)" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-`;
-    tbody.appendChild(row);
-    safeCreateIcons();
-  };
+  window.uploadStoreData = async () => {
+    const rawText = document.getElementById("storePasteArea").value;
+    const targetMonthStr = document.getElementById("storeDataMonth").value;
+    const actionType = document.getElementById("storeActionType").value;
+    const btn = document.getElementById("btnUploadStore");
+    const statusArea = document.getElementById("storeStatusArea");
+    const statusMsg = document.getElementById("storeStatusMsg");
 
-  window.removeRow = (btn) => {
-    btn.closest("tr").remove();
-  };
+    if (!targetMonthStr) return alert("กรุณาเลือก 'เดือนของข้อมูล' ก่อนครับ เพื่อป้องกันการอ่านวันที่ผิดพลาด");
+    if (!rawText.trim()) return alert("กรุณาวางข้อมูลจาก SAP ก่อนครับ");
+    if (!confirm(`ยืนยันการนำเข้าข้อมูลแบบ ${actionType === 'IN' ? 'รับเข้า (Received)' : 'จ่ายออก (Issued)'}?\nระบบจะอัปเดตยอดคงเหลืออัตโนมัติ`)) return;
 
-  window.changeRowColor = (selectEl) => {
-    const row = selectEl.closest("tr");
-    row.className =
-      selectEl.value === "IN"
-        ? "border-b bg-green-50/50"
-        : "border-b bg-red-50/50";
-  };
-
-  window.saveStoreBatch = async () => {
-    const rows = document.querySelectorAll("#storeEntryTable tr");
-    if (rows.length === 0) return alert(" ⚠️ กรุณาเพิ่มรายการ");
-    const btn = document.getElementById("btnSaveBatch");
-    const originalBtnText = btn.innerHTML;
+    statusArea.classList.remove("hidden");
+    statusMsg.className = "bg-blue-50 text-blue-800 border border-blue-200 p-3 rounded-lg flex items-center shadow-sm";
+    statusMsg.innerHTML = '<span class="animate-spin inline-block mr-2">  ⏳  </span> กำลังตรวจสอบ ขจัดข้อมูลขยะ และอัปเดตสต็อก...';
     btn.disabled = true;
-    btn.innerHTML = ` ⏳ Processing...`;
-    try {
-      let successCount = 0;
-      for (const row of rows) {
-        const date = row.querySelector('[name="s_date"]').value;
-        const type = row.querySelector('[name="s_type"]').value;
-        const brand = row.querySelector('[name="s_brand"]').value;
-        const grade = row.querySelector('[name="s_grade"]').value;
-        const docVal = row.querySelector('[name="s_doc"]').value;
-        const weight = parseFloat(
-          row.querySelector('[name="s_weight"]').value,
-        );
-        if (!date || !weight || weight <= 0) continue;
 
-        const dateObj = new Date(date);
+    try {
+      const rows = rawText.trim().split("\n").map(r => r.split("\t"));
+      const headers = rows[0].map(h => h.trim().toLowerCase());
+      const dataRows = rows.slice(1);
+
+      const dateIdx = headers.findIndex(h => h.includes("posting date"));
+      const descIdx = headers.findIndex(h => h.includes("material description"));
+      const batchIdx = headers.findIndex(h => h === "batch" || h === "lot no." || h.includes("batch"));
+      const qtyIdx = headers.findIndex(h => h.includes("quantity") || h.includes("qty"));
+      const poIdx = headers.findIndex(h => h.includes("purchase order"));
+
+      if (dateIdx === -1 || descIdx === -1 || batchIdx === -1 || qtyIdx === -1) {
+        throw new Error("หัวตาราง SAP ไม่ครบถ้วน (ต้องการอย่างน้อย: Posting Date, Material Description, Batch, Quantity)");
+      }
+
+      const targetDateObj = new Date(targetMonthStr);
+      const targetMonthIndex = targetDateObj.getMonth();
+
+      let scoreDMY = 0; let scoreMDY = 0;
+      for (let i = 0; i < Math.min(dataRows.length, 10); i++) {
+        if (!dataRows[i][dateIdx]) continue;
+        const dp = dataRows[i][dateIdx].trim().split(/\s+/)[0];
+        let sep = dp.includes("/") ? "/" : (dp.includes(".") ? "." : "-");
+        const parts = dp.split(sep);
+        if (parts.length >= 2) {
+          if (parseInt(parts[1], 10) === targetMonthIndex + 1) scoreDMY++;
+          if (parseInt(parts[0], 10) === targetMonthIndex + 1) scoreMDY++;
+        }
+      }
+      const detectedFormat = scoreMDY > scoreDMY ? "MDY" : "DMY";
+
+      let successCount = 0;
+      let skippedCount = 0;
+
+      for (const row of dataRows) {
+        if (!row[dateIdx] || row[dateIdx].trim() === "" || row[dateIdx].includes("*")) {
+          skippedCount++; continue; 
+        }
+
+        const datePart = row[dateIdx].trim().split(/\s+/)[0];
+        let separator = datePart.includes("/") ? "/" : (datePart.includes(".") ? "." : "-");
+        const parts = datePart.split(separator);
+        let dayStr = "01";
+        if (parts.length >= 2) {
+            if (detectedFormat === "DMY") dayStr = parts[0].padStart(2, "0");
+            else dayStr = parts[1].padStart(2, "0");
+        }
+        const formattedDate = `${targetMonthStr}-${dayStr}`;
+
+        const desc = row[descIdx].toUpperCase().trim();
+        let base = "";
+        if (desc.includes("AV NACKAWIC")) base = "AVN";
+        else if (desc.includes("AV CELL")) base = "AVC";
+        else if (desc.includes("ARAUCO")) base = "ARAUCO";
+        else if (desc.includes("PHOENIX")) base = "PHOENIX";
+        else if (desc.includes("TEL PLT")) base = "TEL Pellita";
+        else if (desc.includes("SAICCOR")) base = "SAICCOR";
+        else { skippedCount++; continue; } 
+
+        const grade = desc.includes("OFF GRADE") ? "OFF" : "NORMAL";
+
+        const batchVal = row[batchIdx].trim();
+        let cert = "";
+        const certMatch = batchVal.toUpperCase().match(/([A-Z]+)\d{2,3}$/);
+        if (certMatch) {
+            const letters = certMatch[1];
+            if (letters.includes("P")) cert = "PEFC";
+            else if (letters.includes("F")) cert = "FSC Mix Credit";
+            else if (letters.includes("C")) cert = "FSC Control Wood";
+        }
+        if (!cert) { skippedCount++; continue; }
+
+        let finalBrand = `${base} ${cert}`;
+        if (base === "SAICCOR" && cert === "FSC Mix Credit") finalBrand = "SAICCOR FSC Mix Credit 70%";
+
+        let weightStr = (row[qtyIdx] || "0").replace(/,/g, '').trim();
+        if (weightStr.endsWith("-")) weightStr = "-" + weightStr.slice(0, -1);
+        let weight = Math.abs(parseFloat(weightStr)); 
+        if (isNaN(weight) || weight <= 0) { skippedCount++; continue; }
+
+        let poNum = "";
+        if (actionType === "IN" && poIdx !== -1 && row[poIdx]) poNum = row[poIdx].trim();
+
+        const dateObj = new Date(formattedDate);
         const year = dateObj.getFullYear().toString();
-        const month = date.substring(0, 7);
+        const month = formattedDate.substring(0, 7);
         const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`;
+
         let standard = "None";
-        if (brand.includes("PEFC")) standard = "PEFC";
-        else if (brand.includes("Mix Credit") || brand.includes("FSC Mix"))
-          standard = "FSC";
-        else if (brand.includes("Control Wood") || brand.includes("CW"))
-          standard = "FSC_CW";
+        if (finalBrand.includes("PEFC")) standard = "PEFC";
+        else if (finalBrand.includes("Mix Credit") || finalBrand.includes("FSC Mix")) standard = "FSC";
+        else if (finalBrand.includes("Control Wood") || finalBrand.includes("CW")) standard = "FSC_CW";
 
         await runTransaction(db, async (transaction) => {
-          const logRef = doc(collection(db, "store_transaction_logs"));
-          const invRef = doc(
-            db,
-            "store_inventory_balance",
-            `${brand}__${grade}`,
-          );
-          const invDoc = await transaction.get(invRef);
-          const currentBal = invDoc.exists()
-            ? invDoc.data().balance || 0
-            : 0;
-          const newBal =
-            type === "IN" ? currentBal + weight : currentBal - weight;
+            const logRef = doc(collection(db, "store_transaction_logs"));
+            const invRef = doc(db, "store_inventory_balance", `${finalBrand}__${grade}`);
 
-          transaction.set(logRef, {
-            type,
-            brand,
-            grade,
-            weight,
-            docRef: docVal,
-            date,
-            year,
-            month,
-            quarter,
-            standard,
-            recordedBy: currentUser ? currentUser.email : "Guest",
-            recordedAt: Timestamp.now(),
-          });
-          transaction.set(
-            invRef,
-            { balance: newBal, lastUpdated: Timestamp.now() },
-            { merge: true },
-          );
+            const invDoc = await transaction.get(invRef);
+            const currentBal = invDoc.exists() ? invDoc.data().balance || 0 : 0;
+            const newBal = actionType === "IN" ? currentBal + weight : currentBal - weight;
+
+            const payload = {
+                type: actionType, brand: finalBrand, grade: grade, weight: weight, docRef: batchVal,
+                date: formattedDate, year: year, month: month, quarter: quarter, standard: standard,
+                recordedBy: currentUser ? currentUser.email : "Guest", recordedAt: Timestamp.now()
+            };
+
+            if (actionType === "IN" && poNum) payload.purchaseOrder = poNum;
+
+            transaction.set(logRef, payload);
+            transaction.set(invRef, { balance: newBal, lastUpdated: Timestamp.now() }, { merge: true });
         });
+
         successCount++;
-        row.remove();
       }
-      if (
-        successCount > 0 &&
-        document.querySelectorAll("#storeEntryTable tr").length === 0
-      )
-        window.addStoreRow();
-    } catch (err) {
-      alert(" ❌ Error: " + err.message);
+
+      statusMsg.className = "bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm";
+      statusMsg.innerHTML = `  ✅  <b>สำเร็จ!</b> บันทึกและตัดยอดสต็อก ${successCount} รายการ (ข้ามแถวสรุปยอด/ขยะไป ${skippedCount} แถว)`;
+      document.getElementById("storePasteArea").value = "";
+
+    } catch (error) {
+      console.error("Store Upload Error:", error);
+      statusMsg.className = "bg-red-50 text-red-800 border border-red-200 p-3 rounded-lg shadow-sm";
+      statusMsg.innerHTML = `  ❌  <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
     } finally {
       btn.disabled = false;
-      btn.innerHTML = originalBtnText;
       safeCreateIcons();
     }
   };
@@ -500,169 +536,174 @@
   // ==========================================
   let currentViscoseSnapshot = [];
 
-  window.addViscoseRow = () => {
-    const tbody = document.getElementById("tableViscose");
-    const row = document.createElement("tr");
-    row.className = "border-b hover:bg-gray-50 transition";
-    const uniqueListId =
-      "lot_list_" + Date.now() + Math.floor(Math.random() * 1000);
+  window.uploadViscoseData = async () => {
+    const rawText = document.getElementById("viscosePasteArea").value;
+    const targetMonthStr = document.getElementById("viscoseDataMonth").value;
+    const productionLine = document.getElementById("viscoseProductionLine").value;
+    const btn = document.getElementById("btnUploadViscose");
+    const statusArea = document.getElementById("viscoseStatusArea");
+    const statusMsg = document.getElementById("viscoseStatusMsg");
 
-    row.innerHTML = `
-<td class="p-2"><input type="date" name="v_date" value="${window.getShiftProductionDate()}" class="w-full text-xs border border-gray-300 rounded p-2 outline-none"></td>
-<td class="p-2"><select name="v_line" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">${VISCOSE_LINE_OPTIONS}</select></td>
-<td class="p-2"><select name="v_brand" onchange="loadLotsForViscose(this)" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">${PULP_OPTIONS_STORE}</select></td>
-<td class="p-2">
-  <select name="v_grade" onchange="loadLotsForViscose(this)" class="w-full text-xs border border-gray-300 rounded p-2 outline-none">
-    <option value="NORMAL"> ✅  Normal</option>
-    <option value="OFF"> ❌  Off Grade</option>
-  </select>
-</td>
-<td class="p-2">
-  <input type="text" name="v_doc" list="${uniqueListId}" placeholder="พิมพ์หรือเลือก Lot No." class="w-full text-xs border border-gray-300 rounded p-2 outline-none bg-slate-50 focus:bg-white">
-  <datalist id="${uniqueListId}"></datalist>
-</td>
-<td class="p-2"><input type="number" name="v_weight" step="0.001" class="w-full text-sm font-mono text-right font-bold border border-gray-300 rounded p-2 text-orange-600 outline-none"></td>
-<td class="p-2 text-center"><button onclick="removeRow(this)" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-`;
-    tbody.appendChild(row);
-    const newBrandSelect = row.querySelector('[name="v_brand"]');
-    loadLotsForViscose(newBrandSelect);
-    safeCreateIcons();
-  };
+    if (!targetMonthStr) return alert("กรุณาเลือก 'เดือนของข้อมูล' ก่อนครับ");
+    if (!rawText.trim()) return alert("กรุณาวางข้อมูลจาก SAP ก่อนครับ");
+    if (!confirm(`ยืนยันการนำเข้าข้อมูล Viscose สำหรับ [${productionLine}] ?\nระบบจะทำการอัปเดตและคำนวณเครดิตอัตโนมัติ`)) return;
 
-  window.loadLotsForViscose = async (el) => {
-    const row = el.closest("tr");
-    const brand = row.querySelector('[name="v_brand"]').value;
-    const grade = row.querySelector('[name="v_grade"]').value;
-    const lotInput = row.querySelector('[name="v_doc"]');
-    const listId = lotInput.getAttribute("list");
-    const dataList = document.getElementById(listId);
-    lotInput.placeholder = " ⏳ กำลังโหลด...";
+    statusArea.classList.remove("hidden");
+    statusMsg.className = "bg-orange-50 text-orange-800 border border-orange-200 p-3 rounded-lg flex items-center shadow-sm";
+    statusMsg.innerHTML = '<span class="animate-spin inline-block mr-2"> ⏳ </span> กำลังประมวลผลและบันทึกข้อมูล Viscose...';
+    btn.disabled = true;
+
     try {
-      const q = query(
-        collection(db, "store_transaction_logs"),
-        where("type", "==", "OUT"),
-        where("brand", "==", brand),
-        where("grade", "==", grade),
-        orderBy("recordedAt", "desc"),
-        limit(50), 
-      );
-      const snapshot = await getDocs(q);
-      const lots = new Set();
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.docRef && data.docRef.trim() !== "") lots.add(data.docRef);
-      });
-      dataList.innerHTML = "";
-      if (lots.size === 0) {
-        lotInput.placeholder = "ไม่มีประวัติ (กรอกเองได้)";
-      } else {
-        lotInput.placeholder = "พิมพ์หรือเลือก Lot No.";
-        Array.from(lots)
-          .sort()
-          .forEach((lot) => {
-            dataList.innerHTML += `<option value="${lot}">`;
-          });
-      }
-    } catch (error) {
-      console.error("Error loading lots:", error);
-      lotInput.placeholder = " ❌ โหลดไม่สำเร็จ (กรอกเองได้)";
-    }
-  };
+      const rows = rawText.trim().split("\n").map(r => r.split("\t"));
+      const headers = rows[0].map(h => h.trim().toLowerCase());
+      const dataRows = rows.slice(1);
 
-  window.saveViscoseData = async () => {
-    const rows = document.querySelectorAll("#tableViscose tr");
-    const btn = document.getElementById("btnSaveViscose");
-    const payloadByDate = {};
-    let count = 0;
-    rows.forEach((row) => {
-      const date = row.querySelector('[name="v_date"]').value;
-      if (!date) return;
-      const weight =
-        parseFloat(row.querySelector('[name="v_weight"]').value) || 0;
-      if (weight > 0) {
-        if (!payloadByDate[date]) payloadByDate[date] = [];
-        const brandVal = row.querySelector('[name="v_brand"]').value;
-        const gradeVal = row.querySelector('[name="v_grade"]').value;
-        let docVal = row.querySelector('[name="v_doc"]').value || "";
-        docVal = docVal.trim();
-        if (docVal === "") docVal = "-"; 
+      // หาคอลัมน์จาก SAP
+      const dateIdx = headers.findIndex(h => h.includes("posting date"));
+      const descIdx = headers.findIndex(h => h.includes("material description"));
+      const batchIdx = headers.findIndex(h => h === "batch" || h === "lot no." || h.includes("batch"));
+      const qtyIdx = headers.findIndex(h => h.includes("qty in base un.") || h.includes("quantity") || h.includes("qty"));
+
+      if (dateIdx === -1 || descIdx === -1 || batchIdx === -1 || qtyIdx === -1) {
+        throw new Error("หัวตาราง SAP ไม่ครบถ้วน (ต้องการอย่างน้อย: Posting Date, Material Description, Batch, Qty in base un.)");
+      }
+
+      const targetDateObj = new Date(targetMonthStr);
+      const targetMonthIndex = targetDateObj.getMonth();
+
+      // เช็ค Format วันที่แบบเดียวกันกับหน้า Store
+      let scoreDMY = 0; let scoreMDY = 0;
+      for (let i = 0; i < Math.min(dataRows.length, 10); i++) {
+        if (!dataRows[i][dateIdx]) continue;
+        const dp = dataRows[i][dateIdx].trim().split(/\s+/)[0];
+        let sep = dp.includes("/") ? "/" : (dp.includes(".") ? "." : "-");
+        const parts = dp.split(sep);
+        if (parts.length >= 2) {
+          if (parseInt(parts[1], 10) === targetMonthIndex + 1) scoreDMY++;
+          if (parseInt(parts[0], 10) === targetMonthIndex + 1) scoreMDY++;
+        }
+      }
+      const detectedFormat = scoreMDY > scoreDMY ? "MDY" : "DMY";
+
+      const payloadByDate = {};
+      let successCount = 0;
+      let skippedCount = 0;
+
+      for (const row of dataRows) {
+        // ข้ามแถวที่ว่างหรือแถว Summary
+        if (!row[dateIdx] || row[dateIdx].trim() === "" || row[dateIdx].includes("*")) {
+          skippedCount++; continue;
+        }
+
+        // จัดการวันที่
+        const datePart = row[dateIdx].trim().split(/\s+/)[0];
+        let separator = datePart.includes("/") ? "/" : (datePart.includes(".") ? "." : "-");
+        const parts = datePart.split(separator);
+        let dayStr = "01";
+        if (parts.length >= 2) {
+            if (detectedFormat === "DMY") dayStr = parts[0].padStart(2, "0");
+            else dayStr = parts[1].padStart(2, "0");
+        }
+        const formattedDate = `${targetMonthStr}-${dayStr}`;
+
+        // จัดการ Brand
+        const desc = row[descIdx].toUpperCase().trim();
+        let base = "";
+        if (desc.includes("AV NACKAWIC")) base = "AVN";
+        else if (desc.includes("AV CELL")) base = "AVC";
+        else if (desc.includes("ARAUCO")) base = "ARAUCO";
+        else if (desc.includes("PHOENIX")) base = "PHOENIX";
+        else if (desc.includes("TEL PLT")) base = "TEL Pellita";
+        else if (desc.includes("SAICCOR")) base = "SAICCOR";
+        else { skippedCount++; continue; }
+
+        const grade = desc.includes("OFF GRADE") ? "OFF" : "NORMAL";
+
+        // จัดการ Certificate จาก Batch (Lot)
+        const batchVal = row[batchIdx].trim();
+        let cert = "";
+        const certMatch = batchVal.toUpperCase().match(/([A-Z]+)\d{2,3}$/);
+        if (certMatch) {
+            const letters = certMatch[1];
+            if (letters.includes("P")) cert = "PEFC";
+            else if (letters.includes("F")) cert = "FSC Mix Credit";
+            else if (letters.includes("C")) cert = "FSC Control Wood";
+        }
+        if (!cert) { skippedCount++; continue; }
+
+        // ผสมชื่อให้ตรงกับระบบ
+        let finalBrand = `${base} ${cert}`;
+        if (base === "SAICCOR" && cert === "FSC Mix Credit") finalBrand = "SAICCOR FSC Mix Credit 70%";
+
+        // จัดการน้ำหนัก (บังคับค่าบวกเสมอ เพื่อเข้าสู่ฟังก์ชันลดสต็อกของ Viscose)
+        let weightStr = (row[qtyIdx] || "0").replace(/,/g, '').trim();
+        if (weightStr.endsWith("-")) weightStr = "-" + weightStr.slice(0, -1);
+        let weight = Math.abs(parseFloat(weightStr)); 
+        if (isNaN(weight) || weight <= 0) { skippedCount++; continue; }
 
         let standard = "None";
-        if (brandVal.includes("PEFC")) standard = "PEFC";
-        else if (
-          brandVal.includes("Mix Credit") ||
-          brandVal.includes("FSC Mix")
-        )
-          standard = "FSC";
-        else if (
-          brandVal.includes("Control Wood") ||
-          brandVal.includes("CW")
-        )
-          standard = "FSC_CW";
+        if (finalBrand.includes("PEFC")) standard = "PEFC";
+        else if (finalBrand.includes("Mix Credit") || finalBrand.includes("FSC Mix")) standard = "FSC";
+        else if (finalBrand.includes("Control Wood") || finalBrand.includes("CW")) standard = "FSC_CW";
 
-        payloadByDate[date].push({
+        if (!payloadByDate[formattedDate]) payloadByDate[formattedDate] = [];
+        payloadByDate[formattedDate].push({
           recordedAt: Timestamp.now(),
           recordedBy: currentUser ? currentUser.email : "Guest",
-          line: row.querySelector('[name="v_line"]').value,
-          brand: brandVal,
-          grade: gradeVal,
+          line: productionLine,
+          brand: finalBrand,
+          grade: grade,
           standard: standard,
-          docRef: docVal,
-          weight: weight,
+          docRef: batchVal,
+          weight: weight
         });
-        count++;
+        successCount++;
       }
-    });
-    if (count === 0)
-      return alert("กรุณากรอกข้อมูลน้ำหนักอย่างน้อย 1 รายการ");
-    btn.innerHTML = "Saving...";
-    btn.disabled = true;
-    try {
-      const promises = Object.entries(payloadByDate).map(
-        ([dateKey, transactions]) => {
-          const dateObj = new Date(dateKey);
-          const year = dateObj.getFullYear().toString();
-          const month = dateKey.substring(0, 7); 
-          const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`; 
-          return setDoc(
-            doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${dateKey}`),
-            {
-              department: "Viscose",
-              date: dateKey,
-              month: month,
-              year: year,
-              quarter: quarter,
-              lastUpdated: Timestamp.now(),
-              transactions: arrayUnion(...transactions),
-            },
-            { merge: true },
-          );
-        },
-      );
+
+      if (successCount === 0) {
+          throw new Error("ไม่พบข้อมูลที่สามารถบันทึกได้ (กรุณาเช็คความถูกต้องของชื่อ Brand, วันที่, และจำนวน)");
+      }
+
+      // ทำการ Save ลง Firebase ตามวันที่
+      const promises = Object.entries(payloadByDate).map(([dateKey, transactions]) => {
+        const dateObj = new Date(dateKey);
+        const year = dateObj.getFullYear().toString();
+        const month = dateKey.substring(0, 7);
+        const quarter = `Q${Math.floor(dateObj.getMonth() / 3) + 1}`;
+        return setDoc(doc(db, "FSC_PEFC_RAW_LOGS", `Viscose_${dateKey}`), {
+          department: "Viscose",
+          date: dateKey,
+          month: month,
+          year: year,
+          quarter: quarter,
+          lastUpdated: Timestamp.now(),
+          transactions: arrayUnion(...transactions)
+        }, { merge: true });
+      });
+
       await Promise.all(promises);
 
-      const calculateCreditsFunc = httpsCallable(
-        functions,
-        "calculateDailyCredits",
-      );
+      // กระตุ้นให้ Cloud Function สร้างเครดิตแบบเดิม
+      const calculateCreditsFunc = httpsCallable(functions, "calculateDailyCredits");
       const calcRes = await calculateCreditsFunc({
-        targetDate: Object.keys(payloadByDate)[0],
+        targetDate: Object.keys(payloadByDate)[0], 
       });
+
       if (calcRes.data.suspensionActive) {
-        alert(
-          `บันทึกสำเร็จ แต่ PEFC ไม่เกิดเครดิตใหม่เนื่องจากติด Suspension (16-Hour Rule)`,
-        );
+        statusMsg.className = "bg-yellow-50 text-yellow-800 border border-yellow-200 p-3 rounded-lg shadow-sm";
+        statusMsg.innerHTML = `  ⚠️  <b>บันทึกสำเร็จ (${successCount} รายการ)!</b> แต่ PEFC ไม่เกิดเครดิตใหม่เนื่องจากติด Suspension (16-Hour Rule)`;
       } else {
-        alert(`บันทึกและสร้าง Credit Ledger เรียบร้อย (${count} รายการ)`);
+        statusMsg.className = "bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm";
+        statusMsg.innerHTML = `  ✅  <b>สำเร็จ!</b> บันทึกและคำนวณเครดิตเรียบร้อย (${successCount} รายการ) ข้ามข้อมูลขยะ ${skippedCount} แถว`;
       }
-      document.getElementById("tableViscose").innerHTML = "";
-      window.addViscoseRow();
-      window.refreshViscoseBalance();
-    } catch (err) {
-      alert("Error: " + err.message);
+
+      document.getElementById("viscosePasteArea").value = "";
+
+    } catch (error) {
+      console.error("Viscose Upload Error:", error);
+      statusMsg.className = "bg-red-50 text-red-800 border border-red-200 p-3 rounded-lg shadow-sm";
+      statusMsg.innerHTML = `  ❌  <b>เกิดข้อผิดพลาด:</b> ${error.message}`;
     } finally {
-      btn.innerHTML = `<i data-lucide="save"></i> บันทึก Viscose`;
       btn.disabled = false;
       safeCreateIcons();
     }
@@ -1634,8 +1675,6 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
-    window.addStoreRow();
-    window.addViscoseRow();
     window.addSpinningRow();
     window.initStoreListeners();
     const pwField = document.getElementById("loginPassword");
@@ -1808,7 +1847,7 @@
     </div>
   </aside>
   <main class="flex-1 overflow-y-auto bg-slate-50 p-6">
-    <div id="Store" class="tab-content h-full flex flex-col gap-4">
+      <div id="Store" class="tab-content min-h-full flex flex-col gap-4">
       <div
         class="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
       >
@@ -1823,51 +1862,48 @@
           class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"
         ></div>
       </div>
-      <div
-        class="flex flex-col bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0"
-      >
-        <div
-          class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm"
-        >
-          <h2
-            class="text-lg font-bold text-slate-700 flex items-center gap-2"
-          >
-            <i data-lucide="clipboard-list" class="text-blue-600"></i>
-            บันทึกรายการ Store
-          </h2>
-          <div class="flex gap-2">
-            <button
-              onclick="addStoreRow()"
-              class="flex items-center gap-1 px-4 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-bold text-sm border border-blue-200"
-            >
-              <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว
-            </button>
-            <button
-              id="btnSaveBatch"
-              onclick="saveStoreBatch()"
-              class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow flex items-center gap-2"
-            >
-              <i data-lucide="save"></i> บันทึกข้อมูล
-            </button>
+        <div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-none mb-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+            <i data-lucide="clipboard-paste" class="text-blue-600"></i>
+            นำเข้าข้อมูล รับ/จ่าย Store (Pulp) อัตโนมัติจาก SAP
+          </h3>
+        </div>
+
+        <div class="flex gap-4 mb-4">
+          <div class="flex-1">
+            <label class="text-xs font-bold text-slate-500 block mb-1">ประเภทรายการ:</label>
+            <select id="storeActionType" class="text-sm border border-slate-300 rounded px-3 py-2 w-full outline-none font-bold text-slate-700 focus:ring-2 focus:ring-blue-500">
+              <option value="IN" class="text-green-700">📥 รับเข้าวัตถุดิบ (Received)</option>
+              <option value="OUT" class="text-red-700">📤 จ่ายออกวัตถุดิบ (Issued)</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="text-xs font-bold text-slate-500 block mb-1">เดือนของข้อมูล (ป้องกันวันที่เพี้ยน):</label>
+            <input type="month" id="storeDataMonth" class="text-sm border border-slate-300 rounded px-3 py-2 w-full outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
-        <div class="overflow-y-auto max-h-[300px]" id="storeEntryContainer">
-          <table class="w-full text-left border-collapse">
-            <thead
-              class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b"
-            >
-              <tr>
-                <th class="p-3 w-32">Production Date</th>
-                <th class="p-3 w-32">Type</th>
-                <th class="p-3">Brand</th>
-                <th class="p-3 w-28">Grade</th>
-                <th class="p-3 w-32">Lot No.</th>
-                <th class="p-3 w-28 text-right">Weight (T)</th>
-                <th class="p-3 w-10"></th>
-              </tr>
-            </thead>
-            <tbody id="storeEntryTable" class="text-sm"></tbody>
-          </table>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-800 leading-relaxed">
+          <strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel ที่โหลดจาก SAP <strong>(คลุมหัวตารางมาด้วย)</strong> มาวางด้านล่าง<br/>
+          - <strong>รับเข้า:</strong> ระบบหาคอลัมน์ Posting Date, Material Description, Batch, Quantity, Purchase order<br/>
+          - <strong>จ่ายออก:</strong> ระบบหาคอลัมน์ Posting Date, Material Description, Batch, Quantity<br/>
+          <span class="text-red-600">* ข้าม Row ที่เป็นยอดรวม (Sum) ให้เอง</span>
+        </div>
+
+        <textarea id="storePasteArea" rows="6" class="w-full text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4" placeholder="วางข้อมูลจาก Excel (SAP) ตรงนี้..."></textarea>
+
+        <div class="flex gap-3">
+          <button id="btnUploadStore" onclick="uploadStoreData()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i> ประมวลผลและอัปเดตสต็อก
+          </button>
+          <button onclick="document.getElementById('storePasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">
+            Clear ข้อมูล
+          </button>
+        </div>
+
+        <div id="storeStatusArea" class="mt-4 hidden">
+          <div id="storeStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div>
         </div>
       </div>
       <div
@@ -1915,87 +1951,52 @@
         </div>
       </div>
     </div>
-    <div id="Viscose" class="tab-content hidden h-full flex flex-col gap-4">
-      <div
-        class="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
-      >
+      <div id="Viscose" class="tab-content hidden min-h-full flex flex-col gap-4">
+      
+      <div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-none mb-4">
         <div class="flex justify-between items-center mb-4">
-          <h3
-            class="text-sm font-bold text-slate-500 uppercase flex items-center gap-2"
-          >
-            <i data-lucide="boxes" class="w-4 h-4 text-orange-500"></i>
-            ยอดคงเหลือ Pulp ที่หน้างาน Viscose (เบิกมา - ใช้ไป)
-          </h3>
-          <button
-            onclick="refreshViscoseBalance()"
-            id="btnRefreshViscoseBal"
-            class="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold hover:bg-orange-100 transition flex items-center gap-1 border border-orange-200"
-          >
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i> อัปเดตยอด
+          <h2 class="text-lg font-bold text-orange-800 flex items-center gap-2">
+            <i data-lucide="clipboard-paste"></i> นำเข้าข้อมูล Viscose Consumption จาก SAP
+          </h2>
+          <button id="btnReportHighRisk" onclick="reportHighRiskMaterial()" class="flex items-center gap-1 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 font-bold text-sm border border-red-300 transition shadow-sm">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i> แจ้งเหตุวัตถุดิบเสี่ยง (High Risk)
           </button>
         </div>
-        <div
-          id="viscoseDashboardCards"
-          class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"
-        >
-          <div class="col-span-full text-center text-gray-400 text-sm py-2">
-            Loading balance...
+
+        <div class="flex gap-4 mb-4">
+          <div class="flex-1">
+            <label class="text-xs font-bold text-slate-500 block mb-1">เลือก Line การผลิต:</label>
+            <select id="viscoseProductionLine" class="text-sm border border-slate-300 rounded px-3 py-2 w-full outline-none font-bold text-slate-700 focus:ring-2 focus:ring-orange-500">
+              <option value="Line Modal">Line Modal</option>
+              <option value="Line Grey">Line Grey</option>
+              <option value="Line NonWoven">Line NonWoven</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="text-xs font-bold text-slate-500 block mb-1">เดือนของข้อมูล (ป้องกันวันที่เพี้ยน):</label>
+            <input type="month" id="viscoseDataMonth" class="text-sm border border-slate-300 rounded px-3 py-2 w-full outline-none focus:ring-2 focus:ring-orange-500" />
           </div>
         </div>
-      </div>
-      <div
-        class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex-shrink-0"
-      >
-        <div
-          class="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm"
-        >
-          <h2
-            class="text-lg font-bold text-orange-800 flex items-center gap-2"
-          >
-            <i data-lucide="flask-conical"></i> บันทึกรายการ Viscose
-            Consumption (Pulp Feed)
-          </h2>
-          <div class="flex gap-2">
-            <button
-              id="btnReportHighRisk"
-              onclick="reportHighRiskMaterial()"
-              class="flex items-center gap-1 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 font-bold text-sm border border-red-300 transition shadow-sm mr-4"
-            >
-              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-              แจ้งเหตุวัตถุดิบเสี่ยง (High Risk)
-            </button>
-            <button
-              onclick="addViscoseRow()"
-              class="flex items-center gap-1 px-4 py-2 bg-orange-50 text-orange-600 rounded hover:bg-orange-100 font-bold text-sm border border-orange-200"
-            >
-              <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มแถว
-            </button>
-            <button
-              id="btnSaveViscose"
-              onclick="saveViscoseData()"
-              class="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold shadow flex items-center gap-2"
-            >
-              <i data-lucide="save"></i> บันทึก Viscose
-            </button>
-          </div>
+
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4 text-xs text-orange-800 leading-relaxed">
+          <strong>วิธีใช้งาน:</strong> Copy ข้อมูลจาก Excel ที่โหลดจาก SAP <strong>(คลุมหัวตารางมาด้วย)</strong> มาวางด้านล่าง<br/>
+          - ระบบจะหาคอลัมน์ Posting Date, Material Description, Batch, และ Qty in base un.<br/>
+          <span class="text-red-600">* ระบบจะข้าม Row ที่ไม่มีวันที่ หรือยอดรวม (Sum) ให้เองอัตโนมัติ</span>
         </div>
-        <div class="overflow-y-auto max-h-[300px]">
-          <table class="w-full text-left border-collapse">
-            <thead
-              class="sticky top-0 bg-slate-100 text-slate-600 text-xs uppercase font-bold shadow-sm z-10 border-b"
-            >
-              <tr>
-                <th class="p-3 w-32">Production Date</th>
-                <th class="p-3 w-32">Line</th>
-                <th class="p-3">Brand (Pulp)</th>
-                <th class="p-3 w-28">Grade</th>
-                <th class="p-3 w-32">Lot No.</th>
-                <th class="p-3 w-28 text-right">Used (T)</th>
-                <th class="p-3 w-10"></th>
-              </tr>
-            </thead>
-            <tbody id="tableViscose" class="text-sm"></tbody>
-          </table>
+
+        <textarea id="viscosePasteArea" rows="6" class="w-full text-xs font-mono p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-none mb-4" placeholder="วางข้อมูลจาก Excel (SAP) ตรงนี้..."></textarea>
+
+        <div class="flex gap-3">
+          <button id="btnUploadViscose" onclick="uploadViscoseData()" class="flex-1 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i> ประมวลผลและหักยอดผลิต (Create Ledger)
+          </button>
+          <button onclick="document.getElementById('viscosePasteArea').value=''" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition">
+            Clear ข้อมูล
+          </button>
+        </div>
+
+        <div id="viscoseStatusArea" class="mt-4 hidden">
+          <div id="viscoseStatusMsg" class="p-3 rounded-lg text-sm mb-2 font-bold"></div>
         </div>
       </div>
       <div
@@ -2044,7 +2045,7 @@
     </div>
     <div
       id="Spinning"
-      class="tab-content hidden h-full flex flex-col gap-4"
+      class="tab-content hidden min-h-full flex flex-col gap-4"
     >
       <div
         class="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
@@ -2174,7 +2175,7 @@
     </div>
     <div
       id="Marketing"
-      class="tab-content hidden h-full flex flex-col gap-4"
+      class="tab-content hidden min-h-full flex flex-col gap-4"
     >
       <div class="bg-white rounded-xl shadow border border-slate-200 p-4 mb-4">
         <div class="flex justify-between items-center mb-4">
@@ -2414,7 +2415,7 @@
     </div>
     <div
       id="Warehouse"
-      class="tab-content hidden h-full flex flex-col gap-4"
+      class="tab-content hidden min-h-full flex flex-col gap-4"
     >
       <div
         class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-1 flex flex-col"
