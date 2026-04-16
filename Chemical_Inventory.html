@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Lab Chemical Control - TRC</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --secondary: #00d2ff;
+            --danger: #ff4757;
+            --warning: #ffa502;
+            --success: #2ed573;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #2f3542;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid #eccc68; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: var(--primary); font-size: 24px; }
+        .status-badge { background-color: var(--success); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;}
+
+        /* Grid Layout for Modules */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border-top: 4px solid var(--primary); }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        .card h3 { margin: 10px 0; color: var(--primary); }
+        .card p { font-size: 14px; color: #747d8c; }
+        .card.scan { border-top-color: var(--secondary); background: linear-gradient(135deg, #ffffff 0%, #e0f7fa 100%); }
+        .card.alert { border-top-color: var(--danger); }
+
+        /* Quick Alerts Section */
+        .alerts-section { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid var(--warning); }
+        .alerts-section h3 { margin-top: 0; }
+        .alert-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .alert-item:last-child { border-bottom: none; }
+        .text-danger { color: var(--danger); font-weight: bold; }
+
+        /* Floating Action Button (FAB) */
+        .fab { position: fixed; bottom: 30px; right: 30px; background-color: var(--primary); color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1>🔬 Smart Lab Inventory & Chemical Control</h1>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: #747d8c;">Cellulose Quality Control Lab (GMP & ISO 17025 Compliant)</p>
+        </div>
+        <div class="status-badge">System Online: Cloud Active</div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card scan" onclick="openModule('scanModule')">
+            <h2>📷</h2>
+            <h3>สแกน QR Code / บาร์โค้ด</h3>
+            <p>อัปเดตสถานะขวดสาร หรือสั่งพิมพ์ป้ายสติ๊กเกอร์ (Auto-Label) ทันที</p>
+        </div>
+
+        <div class="card" onclick="openModule('storeStockModule')">
+            <h2>📦</h2>
+            <h3>คลังสารเคมีหลัก (Store)</h3>
+            <p>รับเข้า, เบิกจ่าย, ตรวจสอบสต๊อกสารเคมีดิบ (Raw Chemicals)</p>
+        </div>
+
+        <div class="card" onclick="openModule('workingSolutionModule')">
+            <h2>🧪</h2>
+            <h3>สารเคมีเตรียมเอง (Working Sol.)</h3>
+            <p>จัดการสารที่เตรียมในแล็บ เช่น NaOH, H2SO4, CS2 (มาตรฐาน 45 วัน)</p>
+        </div>
+
+        <div class="card" onclick="openModule('auditDashboardModule')">
+            <h2>📊</h2>
+            <h3>Audit Dashboard & Reports</h3>
+            <p>ดูประวัติย้อนหลัง, สรุปการใช้งาน, เชื่อมต่อ Looker Studio สำหรับ Auditor</p>
+        </div>
+    </div>
+
+    <div class="alerts-section">
+        <h3>⚠️ การแจ้งเตือน (Smart Alerts - Action Required)</h3>
+        <div id="alertsContainer">
+            <div class="alert-item">
+                <span>Working Sol: 0.1N NaOH (ขวดเบอร์ 3)</span>
+                <span class="text-danger">หมดอายุพรุ่งนี้! (เตรียมเมื่อ 44 วันที่แล้ว)</span>
+            </div>
+            <div class="alert-item">
+                <span>Standard: 0.05N Iodine</span>
+                <span class="text-danger">หมดอายุแล้ว (โปรด Discard & ทำการ Renew)</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="fab" title="เชื่อมต่อเครื่องพิมพ์สติ๊กเกอร์" onclick="connectPrinter()">🖨️</button>
+
+    <script>
+        // Mockup Navigation Function
+        function openModule(moduleName) {
+            console.log("Navigating to: " + moduleName);
+            alert("กำลังเปิดหน้าต่าง: " + moduleName + "\n(จะทำการพัฒนาในเฟสถัดไป)");
+        }
+
+        function connectPrinter() {
+            alert("กำลังค้นหาเครื่องพิมพ์ Bluetooth สำหรับ Auto-Labeling...");
+            // โค้ดเชื่อมต่อ Web Bluetooth API จะอยู่ตรงนี้
+        }
+
+        // Fetch Alerts from Backend (Mockup)
+        // fetch('https://[YOUR_REGION]-[YOUR_PROJECT].cloudfunctions.net/getAlerts')...
+    </script>
+</body>
+</html>

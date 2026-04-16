@@ -1191,11 +1191,20 @@
                                 isOpen: false, lotNo: "", brand: "", coaData: null
                             });
                             const openCoaStats = (lotNo, brand, allCoaData) => {
-                                // ค้นหาข้อมูล COA จาก data.coaData ที่ Backend ดึงมาให้แล้ว
-                                const matchedCoa = allCoaData.find(qa => 
-                                    (qa.lotNo && qa.lotNo.trim().toUpperCase() === lotNo.trim().toUpperCase()) || 
-                                    (qa.batchNo && qa.batchNo.trim().toUpperCase() === lotNo.trim().toUpperCase())
-                                );
+                                if (!allCoaData || allCoaData.length === 0) {
+                                    setCoaModal({ isOpen: true, lotNo: lotNo, brand: brand, coaData: null });
+                                    return;
+                                }
+
+                                // 🟢 แปลงเป็น String เสมอ เพื่อแก้ปัญหา Data Type Mismatch
+                                const cleanTargetLot = String(lotNo).trim().toUpperCase();
+
+                                const matchedCoa = allCoaData.find(qa => {
+                                    const qaLot = qa.lotNo ? String(qa.lotNo).trim().toUpperCase() : "";
+                                    const qaBatch = qa.batchNo ? String(qa.batchNo).trim().toUpperCase() : "";
+                                    return qaLot === cleanTargetLot || qaBatch === cleanTargetLot;
+                                });
+
                                 setCoaModal({ isOpen: true, lotNo: lotNo, brand: brand, coaData: matchedCoa || null });
                             };
 
@@ -1283,6 +1292,10 @@
                                             },
                                             dispatchInfo: raw.warehouse ? { doNo: raw.warehouse.deliveryNo, deliveredBatches: raw.warehouse.deliveredBatches || [] } : null,
                                             productionInfo: raw.spinning || [],
+                                            fibreLab: raw.fibreLab || [],
+                                            fibreLabRaw: raw.fibreLabRaw || [], // 🟢 เพิ่มบรรทัดนี้
+                                            processStats: raw.processStats || [], // 🟢 เพิ่มบรรทัดนี้
+                                            processRaw: raw.processRaw || [],     // 🟢 เพิ่มบรรทัดนี้
                                             pulpConsumption: raw.viscose || [],
                                             coaData: raw.rmQa || [],
                                         });
@@ -1293,6 +1306,215 @@
                                     setError(" ❌  การเชื่อมต่อ Database ขัดข้อง: " + err.message);
                                 }
                                 setLoading(false);
+                            };
+                            const handleExportTraceabilityExcel = () => {
+                                if (!data) {
+                                    alert("ไม่มีข้อมูลสำหรับ Export กรุณากด Trace Ledger เพื่อค้นหาข้อมูลก่อนครับ");
+                                    return;
+                                }
+
+                                const targetMachine = data.salesInfo?.machine || "-";
+
+                                // ==========================================
+                                // Sheet 1: Marketing & Sales 
+                                // ==========================================
+                                const salesSheetData = [{
+                                    "Search Type": searchType,
+                                    "Search Reference": searchValue,
+                                    "Invoice No": data.salesInfo?.invoice || "-",
+                                    "Customer": data.salesInfo?.customer || "-",
+                                    "Claim Type": data.salesInfo?.claimType || "-",
+                                    "Volume Deducted (Tons)": data.salesInfo?.volume || 0,
+                                    "Machine": targetMachine,
+                                    "Material Code": data.salesInfo?.matCode || "-",
+                                    "Delivery No (DO)": data.dispatchInfo?.doNo || "-",
+                                    "Delivered Batches": data.dispatchInfo?.deliveredBatches?.join(", ") || "-"
+                                }];
+
+                                // ==========================================
+                                // Sheet 2A: Fibre Lab Summary
+                                // ==========================================
+                                let fibreLabSumData = [];
+                                if (data.fibreLab && data.fibreLab.length > 0) {
+                                     data.fibreLab.forEach(lab => {
+                                         if (lab.stats) {
+                                             const validParams = Object.entries(lab.stats).filter(([p]) => p !== 'Batch' && p !== 'Material Code');
+                                             validParams.forEach(([param, val]) => {
+                                                 fibreLabSumData.push({
+                                                     "Lab Date": lab.date || "-",
+                                                     "Machine": targetMachine,
+                                                     "Parameter": param,
+                                                     "Average": val.avg !== undefined ? val.avg.toFixed(2) : "-",
+                                                     "Min": val.min !== undefined && val.min !== Infinity ? val.min.toFixed(2) : "-",
+                                                     "Max": val.max !== undefined && val.max !== -Infinity ? val.max.toFixed(2) : "-",
+                                                     "%CV": val.cv !== undefined ? val.cv.toFixed(2) + "%" : "-"
+                                                 });
+                                             });
+                                         }
+                                     });
+                                }
+                                if (fibreLabSumData.length === 0) fibreLabSumData.push({ "Note": "No Finished Fibre Lab Summary Found" });
+
+                                // ==========================================
+                                // Sheet 2B: Fibre Lab Logs (Raw Hourly/Batch)
+                                // ==========================================
+                                let fibreLabLogsData = [];
+                                if (data.fibreLabRaw && data.fibreLabRaw.length > 0) {
+                                    data.fibreLabRaw.forEach(logObj => {
+                                        const rawDict = logObj.data[logObj.type]; // เช่น logObj.data["Modal"]
+                                        if (rawDict) {
+                                            const params = Object.keys(rawDict).filter(p => p !== 'Batch' && p !== 'Material Code');
+                                            const batches = rawDict['Batch'] || [];
+                                            const maxRows = Math.max(...Object.values(rawDict).map(arr => arr.length));
+
+                                            // Transpose: แปลงจาก Object of Arrays เป็น Array of Objects
+                                            for (let i = 0; i < maxRows; i++) {
+                                                let row = {
+                                                    "Lab Date": logObj.date,
+                                                    "Batch No.": batches[i] || `#${i+1}`
+                                                };
+                                                params.forEach(p => {
+                                                    row[p] = rawDict[p][i] ?? "-";
+                                                });
+                                                fibreLabLogsData.push(row);
+                                            }
+                                        }
+                                    });
+                                }
+                                if (fibreLabLogsData.length === 0) fibreLabLogsData.push({ "Note": "No Lab Raw Logs Found" });
+
+                                // ==========================================
+                                // Sheet 3A: Process Summary (Viscose, Aux, Spin)
+                                // ==========================================
+                                let processSumData = [];
+                                if (data.processStats && data.processStats.length > 0) {
+                                    data.processStats.forEach(statObj => {
+                                        ['viscose', 'auxiliary', 'spinning'].forEach(dept => {
+                                            const deptData = statObj[dept];
+                                            if (deptData) {
+                                                Object.entries(deptData).forEach(([param, val]) => {
+                                                    processSumData.push({
+                                                        "Production Date": statObj.date,
+                                                        "Department": dept.toUpperCase(),
+                                                        "Parameter": param,
+                                                        "Average": val.avg !== undefined ? val.avg.toFixed(2) : "-",
+                                                        "Min": val.min !== undefined && val.min !== Infinity ? val.min.toFixed(2) : "-",
+                                                        "Max": val.max !== undefined && val.max !== -Infinity ? val.max.toFixed(2) : "-",
+                                                        "%CV": val.cv !== undefined ? val.cv.toFixed(2) + "%" : "-"
+                                                    });
+                                                });
+                                            }
+                                        });
+                                    });
+                                }
+                                if (processSumData.length === 0) processSumData.push({ "Note": "No In-Process Summary Data Found" });
+
+                                // ==========================================
+                                // Sheet 3B: Process Hourly Logs
+                                // ==========================================
+                                let processLogsData = [];
+                                if (data.processRaw && data.processRaw.length > 0) {
+                                    data.processRaw.forEach(rawObj => {
+                                        ['viscose', 'auxiliary', 'spinning'].forEach(dept => {
+                                            const deptRaw = rawObj.data[dept];
+                                            if (deptRaw) {
+                                                const params = Object.keys(deptRaw);
+                                                const maxRows = Math.max(...Object.values(deptRaw).map(arr => arr.length));
+
+                                                for (let i = 0; i < maxRows; i++) {
+                                                    const startHour = (i + 7) % 24; // คำนวณเวลาเริ่มกะ
+                                                    const endHour = (startHour + 1) % 24;
+                                                    const timeStr = `${String(startHour).padStart(2, '0')}:00-${String(endHour).padStart(2, '0')}:00`;
+
+                                                    let row = {
+                                                        "Production Date": rawObj.date,
+                                                        "Department": dept.toUpperCase(),
+                                                        "Time Slot": timeStr
+                                                    };
+                                                    params.forEach(p => {
+                                                        row[p] = deptRaw[p][i] ?? "-";
+                                                    });
+                                                    processLogsData.push(row);
+                                                }
+                                            }
+                                        });
+                                    });
+                                }
+                                if (processLogsData.length === 0) processLogsData.push({ "Note": "No Process Hourly Logs Found" });
+
+                                // ==========================================
+                                // Sheet 4: Viscose Consumption & Sheet 5: COA (จากโค้ดเดิม)
+                                // ==========================================
+                                let viscoseSheetData = [];
+                                const usedLots = new Set(); 
+                                if (data.pulpConsumption && data.pulpConsumption.length > 0) {
+                                    data.pulpConsumption.forEach(visc => {
+                                        if (visc.data && visc.data.length > 0) {
+                                            visc.data.forEach(tx => {
+                                                viscoseSheetData.push({
+                                                    "Dissolving Date": visc.date || "-",
+                                                    "Brand": tx.brand || "-",
+                                                    "Lot / DocRef": tx.docRef || "-",
+                                                    "Standard / Claim": tx.claimType || tx.standard || "NORMAL",
+                                                    "Consumed Weight (Tons)": tx.weight || 0
+                                                });
+                                                if (tx.docRef) usedLots.add(String(tx.docRef).trim().toUpperCase());
+                                            });
+                                        }
+                                    });
+                                }
+                                if (viscoseSheetData.length === 0) viscoseSheetData.push({ "Note": "No Pulp Consumption Data Found" });
+
+                                let coaSheetData = [];
+                                const findMatchedCoa = (targetLot, allCoaData) => {
+                                    if (!allCoaData || allCoaData.length === 0) return null;
+                                    const cleanTargetLot = String(targetLot).trim().toUpperCase();
+                                    return allCoaData.find(qa => {
+                                        const qaLot = qa.lotNo ? String(qa.lotNo).trim().toUpperCase() : "";
+                                        const qaBatch = qa.batchNo ? String(qa.batchNo).trim().toUpperCase() : "";
+                                        return qaLot === cleanTargetLot || qaBatch === cleanTargetLot;
+                                    });
+                                };
+
+                                usedLots.forEach(lot => {
+                                    const matchedCoa = findMatchedCoa(lot, data.coaData);
+                                    if (matchedCoa && matchedCoa.parameters) {
+                                        const brandItem = viscoseSheetData.find(v => String(v["Lot / DocRef"]).trim().toUpperCase() === lot);
+                                        const brandName = brandItem ? brandItem["Brand"] : "-";
+
+                                        Object.entries(matchedCoa.parameters).forEach(([paramName, vals]) => {
+                                            const labels = { alphaCellulose: 'Alpha Cellulose (%)', viscosity: 'Viscosity (ISO)', whiteness: 'Whiteness', moisture: 'Moisture (%)', r18: 'Alkali Res. (R18) (%)' };
+                                            const displayParamName = labels[paramName] || paramName;
+
+                                            coaSheetData.push({
+                                                "Lot No": lot,
+                                                "Brand": brandName,
+                                                "Supplier": matchedCoa.supplier || "-",
+                                                "Received Date": matchedCoa.receivedDate ? new Date(matchedCoa.receivedDate).toLocaleDateString('th-TH') : "-",
+                                                "Parameter": displayParamName,
+                                                "COA Value": vals.coa || "-",
+                                                "Lab Value": vals.lab || "-"
+                                            });
+                                        });
+                                    }
+                                });
+                                if (coaSheetData.length === 0) coaSheetData.push({ "Note": "No matching COA Data Found for used lots" });
+
+                                // ==========================================
+                                // ประกอบร่าง Excel Workbook
+                                // ==========================================
+                                const wb = XLSX.utils.book_new();
+
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesSheetData), "1_Marketing_Sales");
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fibreLabSumData), "2A_FibreLab_Summary");
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fibreLabLogsData), "2B_FibreLab_Logs");
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(processSumData), "3A_Process_Summary");
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(processLogsData), "3B_Process_Logs");
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(viscoseSheetData), "4_Viscose_Consumption");
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(coaSheetData), "5_Pulp_COA");
+
+                                const fileName = `Genealogy_Flow_${searchType}_${searchValue}.xlsx`;
+                                XLSX.writeFile(wb, fileName);
                             };
 
                             return (
@@ -1322,16 +1544,27 @@
                                         {error && <div className="p-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-center mb-8">{error}</div>}
 
                                         {data && !loading && (
-                                            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-                                                <div className="flex justify-between items-center border-b pb-4 mb-8">
+                                        <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+
+                                            {/* 🟢 เริ่มส่วน Header ที่แก้ไขเพื่อใส่ปุ่ม */}
+                                            <div className="flex flex-col md:flex-row justify-between md:items-center border-b pb-4 mb-8 gap-4">
+                                                <div>
                                                     <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                                         <Icons.Layers className="text-indigo-600" /> Data Genealogy Flow
                                                     </h3>
-                                                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                    <span className="text-xs text-slate-400 flex items-center gap-1 mt-1">
                                                         <Icons.CheckCircle size={14} className="text-emerald-500" /> Verified by Enterprise Automation
                                                     </span>
                                                 </div>
 
+                                                <button
+                                                    onClick={handleExportTraceabilityExcel}
+                                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 shadow-md w-full md:w-auto"
+                                                >
+                                                    <Icons.Layers size={16} /> Export Excel
+                                                </button>
+                                            </div>
+                                            {/* 🟢 จบส่วน Header ที่แก้ไข */}
                                                 {/* Step 1: Marketing */}
                                                 <div className="relative pl-10 pb-8">
                                                     <div className="absolute left-3 top-2 bottom-0 w-0.5 bg-slate-200"></div>
@@ -1842,7 +2075,7 @@
                                         <div className="p-4 border-t border-slate-800 bg-slate-950">
                                             <div className="flex flex-col gap-1 text-xs text-slate-400">
                                                 <div className="flex items-center gap-2 text-emerald-400 font-bold"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> Enterprise DB Online</div>
-                                                <span>v2.0.0 (Event-Driven)</span>
+                                                <span>Develop by Sittidate Purintawarrakun</span>
                                             </div>
                                         </div>
                                     </div>
