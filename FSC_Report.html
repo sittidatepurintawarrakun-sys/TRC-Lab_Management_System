@@ -387,6 +387,7 @@
                             });
                             const [massBalanceData, setMassBalanceData] = useState([]);
                             const [loading, setLoading] = useState(true);
+                            const [lastUpdate, setLastUpdate] = useState(null);
 
                             // 🟢 1. เพิ่ม State สำหรับเก็บค่าชั่วคราวก่อนกด Confirm
                             const [tempStartDate, setTempStartDate] = useState("");
@@ -402,17 +403,17 @@
                                 try {
                                     const res = await window.api.getCreditBalance();
                                     if (res.data.success) {
-                                        setBalanceData(
-                                            res.data.balance || {
-                                                FSC: 0,
-                                                FSC_CW: 0,
-                                                PEFC: 0,
-                                            },
-                                        );
-                                        setSuspension({
-                                            active: res.data.pefcSuspended,
-                                            time: res.data.pefcResumeTime,
-                                        });
+                                        setBalanceData(res.data.balance || { FSC: 0, FSC_CW: 0, PEFC: 0 });
+                                        setSuspension({ active: res.data.pefcSuspended, time: res.data.pefcResumeTime });
+
+                                        // 🟢 นำเวลาจาก Backend มาแปลง Format แบบสวยๆ (DD/MM/YYYY HH:MM)
+                                        if (res.data.lastUpdated) {
+                                            const dateObj = new Date(res.data.lastUpdated);
+                                            setLastUpdate(dateObj.toLocaleString('en-GB', { 
+                                                day: '2-digit', month: '2-digit', year: 'numeric', 
+                                                hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                                            }));
+                                        }
                                     }
 
                                     // 🌟 ส่งค่า startDate, endDate ไปให้ Backend ประมวลผล
@@ -732,9 +733,14 @@
                                         <h2 className="text-3xl font-bold text-slate-800">
                                             Operational Dashboard
                                         </h2>
-                                        <p className="text-slate-500 mt-1">
-                                            Real-time Enterprise Mass Balance &
-                                            Certification Engine
+                                        <p className="text-slate-500 mt-1 flex items-center flex-wrap gap-2">
+                                            Real-time Enterprise Mass Balance & Certification Engine
+                                            {/* 🟢 Badge แสดงเวลาอัปเดตล่าสุด */}
+                                            {lastUpdate && (
+                                                <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
+                                                    <Icons.Clock size={14} /> Updated: {lastUpdate}
+                                                </span>
+                                            )}
                                         </p>
                                     </div>
 
@@ -1188,24 +1194,41 @@
                                 isOpen: false, date: "", machine: "", productType: "", data: null, rawData: null, loading: false, activeTab: "stats", deliveredBatches: [],
                             });
                             const [coaModal, setCoaModal] = useState({
-                                isOpen: false, lotNo: "", brand: "", coaData: null
+                                isOpen: false, lotNo: "", brand: "", coaData: null, targetDate: ""
                             });
-                            const openCoaStats = (lotNo, brand, allCoaData) => {
+                            const openCoaStats = (lotNo, brand, allCoaData, targetDate) => {
                                 if (!allCoaData || allCoaData.length === 0) {
                                     setCoaModal({ isOpen: true, lotNo: lotNo, brand: brand, coaData: null });
                                     return;
                                 }
 
-                                // 🟢 แปลงเป็น String เสมอ เพื่อแก้ปัญหา Data Type Mismatch
                                 const cleanTargetLot = String(lotNo).trim().toUpperCase();
 
-                                const matchedCoa = allCoaData.find(qa => {
+                                // 1. กรองหา Lot ที่ตรงกันทั้งหมดมาก่อน
+                                const matchedLots = allCoaData.filter(qa => {
                                     const qaLot = qa.lotNo ? String(qa.lotNo).trim().toUpperCase() : "";
                                     const qaBatch = qa.batchNo ? String(qa.batchNo).trim().toUpperCase() : "";
                                     return qaLot === cleanTargetLot || qaBatch === cleanTargetLot;
                                 });
 
-                                setCoaModal({ isOpen: true, lotNo: lotNo, brand: brand, coaData: matchedCoa || null });
+                                if (matchedLots.length === 0) {
+                                    setCoaModal({ isOpen: true, lotNo: lotNo, brand: brand, coaData: null });
+                                    return;
+                                }
+
+                                // 2. พยายามหาวันที่ให้ตรงกับ Dissolving Date (เป๊ะๆ)
+                                let finalCoa = matchedLots.find(qa => {
+                                    if (!qa.receivedDate) return false;
+                                    // แปลง ISO Date ให้เหลือแค่ YYYY-MM-DD แล้วมาเทียบกัน
+                                    const recDate = new Date(qa.receivedDate).toISOString().split('T')[0];
+                                    return recDate === targetDate;
+                                });
+
+                                // 3. ถ้าหาวันที่ตรงเป๊ะไม่เจอ (อาจจะลืมบันทึกของวันนั้น) ให้เอาตัวล่าสุดมาแสดงแทน (ดีกว่าไม่ขึ้นอะไรเลย)
+                            if (!finalCoa) {
+                                    finalCoa = matchedLots[0];
+                                }
+                                setCoaModal({ isOpen: true, lotNo: lotNo, brand: brand, coaData: finalCoa, targetDate: targetDate });
                             };
 
                             const closeCoaStats = () => setCoaModal({ isOpen: false, lotNo: "", brand: "", coaData: null });
@@ -1465,41 +1488,71 @@
                                 }
                                 if (viscoseSheetData.length === 0) viscoseSheetData.push({ "Note": "No Pulp Consumption Data Found" });
 
+                                // ==========================================
+                                // Sheet 5: Pulp Inspection Report (COA)
+                                // ==========================================
                                 let coaSheetData = [];
-                                const findMatchedCoa = (targetLot, allCoaData) => {
+
+                                // 🟢 เพิ่ม targetDate เข้าไปเป็นเงื่อนไข
+                                const findMatchedCoa = (targetLot, targetDate, allCoaData) => {
                                     if (!allCoaData || allCoaData.length === 0) return null;
                                     const cleanTargetLot = String(targetLot).trim().toUpperCase();
-                                    return allCoaData.find(qa => {
+
+                                    const matchedLots = allCoaData.filter(qa => {
                                         const qaLot = qa.lotNo ? String(qa.lotNo).trim().toUpperCase() : "";
                                         const qaBatch = qa.batchNo ? String(qa.batchNo).trim().toUpperCase() : "";
                                         return qaLot === cleanTargetLot || qaBatch === cleanTargetLot;
                                     });
+
+                                    if (matchedLots.length === 0) return null;
+
+                                    const exactMatch = matchedLots.find(qa => {
+                                        if (!qa.receivedDate) return false;
+                                        const recDate = new Date(qa.receivedDate).toISOString().split('T')[0];
+                                        return recDate === targetDate;
+                                    });
+
+                                    return exactMatch || matchedLots[0]; // หาตรงวันไม่เจอ ให้เอาตัวแรก
                                 };
 
-                                usedLots.forEach(lot => {
-                                    const matchedCoa = findMatchedCoa(lot, data.coaData);
-                                    if (matchedCoa && matchedCoa.parameters) {
-                                        const brandItem = viscoseSheetData.find(v => String(v["Lot / DocRef"]).trim().toUpperCase() === lot);
-                                        const brandName = brandItem ? brandItem["Brand"] : "-";
+                                // วนลูปตามข้อมูลที่เบิกใช้จริงใน Viscose
+                                viscoseSheetData.forEach(vData => {
+                                    const lot = vData["Lot / DocRef"];
+                                    const dDate = vData["Dissolving Date"]; // ดึงวันที่ใช้งานมา
 
-                                        Object.entries(matchedCoa.parameters).forEach(([paramName, vals]) => {
-                                            const labels = { alphaCellulose: 'Alpha Cellulose (%)', viscosity: 'Viscosity (ISO)', whiteness: 'Whiteness', moisture: 'Moisture (%)', r18: 'Alkali Res. (R18) (%)' };
-                                            const displayParamName = labels[paramName] || paramName;
+                                    if (lot && lot !== "-") {
+                                        const matchedCoa = findMatchedCoa(lot, dDate, data.coaData);
+                                        if (matchedCoa && matchedCoa.parameters) {
 
-                                            coaSheetData.push({
-                                                "Lot No": lot,
-                                                "Brand": brandName,
-                                                "Supplier": matchedCoa.supplier || "-",
-                                                "Received Date": matchedCoa.receivedDate ? new Date(matchedCoa.receivedDate).toLocaleDateString('th-TH') : "-",
-                                                "Parameter": displayParamName,
-                                                "COA Value": vals.coa || "-",
-                                                "Lab Value": vals.lab || "-"
+                                            Object.entries(matchedCoa.parameters).forEach(([paramName, vals]) => {
+                                                const labels = { alphaCellulose: 'Alpha Cellulose (%)', viscosity: 'Viscosity (ISO)', whiteness: 'Whiteness', moisture: 'Moisture (%)', r18: 'Alkali Res. (R18) (%)' };
+                                                const displayParamName = labels[paramName] || paramName;
+
+                                                // เช็คก่อนว่ามีข้อมูลถูก push เข้าไปหรือยัง เพื่อไม่ให้ซ้ำซ้อนใน Excel
+                                                const isDuplicate = coaSheetData.some(row => 
+                                                    row["Lot No"] === lot && 
+                                                    row["Target Dissolving Date"] === dDate && 
+                                                    row["Parameter"] === displayParamName
+                                                );
+
+                                                if (!isDuplicate) {
+                                                    coaSheetData.push({
+                                                        "Target Dissolving Date": dDate, // 🟢 ใส่ให้รู้ว่าอ้างอิงจากวันใช้งานไหน
+                                                        "Lot No": lot,
+                                                        "Brand": vData["Brand"],
+                                                        "Supplier": matchedCoa.supplier || "-",
+                                                        "QC Received Date": matchedCoa.receivedDate ? new Date(matchedCoa.receivedDate).toLocaleDateString('en-GB') : "-",
+                                                        "Parameter": displayParamName,
+                                                        "COA Value": vals.coa || "-",
+                                                        "Lab Value": vals.lab || "-"
+                                                    });
+                                                }
                                             });
-                                        });
+                                        }
                                     }
                                 });
-                                if (coaSheetData.length === 0) coaSheetData.push({ "Note": "No matching COA Data Found for used lots" });
 
+                                if (coaSheetData.length === 0) coaSheetData.push({ "Note": "No matching COA Data Found for used lots" });
                                 // ==========================================
                                 // ประกอบร่าง Excel Workbook
                                 // ==========================================
@@ -1712,14 +1765,14 @@
                                                         Lot: <strong className="text-orange-600">{tx.docRef || 'N/A'}</strong>
                                                     </span>
                                                     {/* 🟢 ปุ่มดู COA ที่ลิงก์กับ Modal */}
-                                                    {tx.docRef && (
-                                                        <button 
-                                                            onClick={() => openCoaStats(tx.docRef, tx.brand, data.coaData)}
-                                                            className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded transition flex items-center gap-1 font-semibold"
-                                                        >
-                                                            <Icons.CheckCircle size={12} /> ดูสเปคเยื่อ (COA)
-                                                        </button>
-                                                    )}
+                                            {tx.docRef && (
+                                                <button 
+                                                    onClick={() => openCoaStats(tx.docRef, tx.brand, data.coaData, v.date)} 
+                                                    className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded transition flex items-center gap-1 font-semibold"
+                                                >
+                                                    <Icons.CheckCircle size={12} /> ดูสเปคเยื่อ (COA)
+                                                </button>
+                                            )}
                                                 </div>
                                             </div>
                                         </div>
@@ -2004,7 +2057,9 @@
                                                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                                                     <div className="bg-emerald-800 text-white px-4 py-2 text-sm font-bold uppercase tracking-wider flex justify-between">
                                                         <span>Supplier: {coaModal.coaData.supplier}</span>
-                                                        <span>Received: {coaModal.coaData.receivedDate ? new Date(coaModal.coaData.receivedDate).toLocaleDateString('th-TH') : '-'}</span>
+                                                        <span>
+                                                            DISSOLVING: {coaModal.targetDate ? new Date(coaModal.targetDate).toLocaleDateString('en-GB') : '-'}
+                                                        </span>
                                                     </div>
                                                     <table className="w-full text-left border-collapse text-sm">
                                                         <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">

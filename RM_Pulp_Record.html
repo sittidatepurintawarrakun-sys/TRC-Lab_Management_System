@@ -18,30 +18,22 @@
         body { font-family: 'Sarabun', sans-serif; background-color: #f0f9ff; }
         
         /* Sidebar Animation */
-        #recordSidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); }
+        #recordSidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); width: 100%; max-width: 800px; }
         #recordSidebar.open { transform: translateX(0); }
 
-        /* Comparison Grid Style */
+        /* Comparison Grid Style (For Edit Mode) */
         .param-row {
-            display: grid;
-            grid-template-columns: 2fr 1.5fr 1.5fr 1fr;
-            gap: 0.5rem;
-            align-items: center;
-            padding: 0.5rem;
-            border-bottom: 1px solid #f1f5f9;
+            display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1fr; gap: 0.5rem;
+            align-items: center; padding: 0.5rem; border-bottom: 1px solid #f1f5f9;
         }
         .param-row:hover { background-color: #f8fafc; }
         .param-label { font-size: 0.875rem; color: #475569; font-weight: 500; }
 
         .data-input {
-            width: 100%;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.25rem;
-            padding: 0.25rem 0.5rem;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
+            width: 100%; border: 1px solid #cbd5e1; border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem; text-align: right; font-variant-numeric: tabular-nums;
         }
-        .data-input:focus { outline: none; border-color: #2563eb; ring: 2px solid #bfdbfe; }
+        .data-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
 
         .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
         .status-pending { background-color: #fefce8; color: #a16207; }
@@ -51,6 +43,19 @@
         .diff-ok { color: #16a34a; }
         .diff-warning { color: #ca8a04; }
         .diff-danger { color: #dc2626; background: #fee2e2; border-radius: 4px; padding: 0 4px; }
+
+        /* Paste Area Styles */
+        .paste-area {
+            width: 100%; height: 120px; border: 2px dashed #cbd5e1; border-radius: 0.5rem;
+            padding: 1rem; font-family: monospace; font-size: 0.875rem; resize: vertical;
+            background-color: #f8fafc; color: #475569; white-space: pre; overflow-wrap: normal; overflow-x: auto;
+        }
+        .paste-area:focus { outline: none; border-color: #3b82f6; background-color: #fff; }
+        
+        .preview-table-container { max-height: 350px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; }
+        .preview-table { width: 100%; text-align: left; border-collapse: collapse; white-space: nowrap; font-size: 0.8rem; }
+        .preview-table th { background: #f1f5f9; padding: 0.5rem; position: sticky; top: 0; border-bottom: 1px solid #cbd5e1; z-index: 10;}
+        .preview-table td { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
@@ -71,7 +76,7 @@
                     <div class="flex gap-3">
                         <button id="refreshBtn" class="text-slate-500 hover:text-blue-600"><i class="fas fa-sync-alt"></i></button>
                         <button id="newRecordBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition flex items-center gap-2">
-                            <i class="fas fa-plus"></i> New Inspection
+                            <i class="fas fa-paste"></i> New Inspection
                         </button>
                     </div>
                 </div>
@@ -79,7 +84,6 @@
 
             <div class="flex-1 overflow-y-auto p-6">
                 <div class="max-w-7xl mx-auto">
-                    
                     <div class="bg-white rounded-lg shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
                         <div class="flex-1 min-w-[200px]">
                             <label class="block text-xs font-medium text-slate-500 mb-1">Search Batch/Lot</label>
@@ -97,6 +101,7 @@
                                 <option value="AV CELL">AV CELL</option>
                                 <option value="PHOENIX">PHOENIX</option>
                                 <option value="TEL Pellita">TEL Pellita</option>
+                                <option value="Lab">Lab</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
@@ -143,37 +148,88 @@
             </div>
         </main>
 
-        <aside id="recordSidebar" class="fixed inset-y-0 right-0 w-full md:w-[600px] bg-white shadow-2xl z-50 flex flex-col">
+        <aside id="recordSidebar" class="fixed inset-y-0 right-0 bg-white shadow-2xl z-50 flex flex-col">
             <div class="p-5 border-b bg-slate-50 flex justify-between items-center">
                 <div>
                     <h2 class="text-xl font-bold text-slate-800" id="sidebarTitle">New Inspection</h2>
-                    <p class="text-sm text-slate-500">Compare COA vs Lab Results</p>
+                    <p class="text-sm text-slate-500" id="sidebarDesc">Paste Excel or Edit Data</p>
                 </div>
-                <button id="closeSidebar" class="text-slate-400 hover:text-slate-600 transition text-xl">&times;</button>
+                <button id="closeSidebar" class="text-slate-400 hover:text-slate-600 transition text-2xl">&times;</button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <form id="recordForm">
-                    <div class="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <div class="col-span-2">
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Supplier / Brand</label>
-                            <select id="inp_supplier" class="w-full p-2 border rounded bg-white focus:ring-2 focus:ring-blue-200 outline-none">
+                <div id="pasteModeSection">
+                    <div class="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100 mb-4">
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">1. Select Supplier</label>
+                            <select id="inp_paste_supplier" class="w-full p-2 border rounded bg-white font-bold text-blue-700 outline-none">
                                 <option value="" disabled selected>-- Select Supplier --</option>
                                 <option value="ARAUCO">ARAUCO</option>
                                 <option value="AV NACKAWIC">AV NACKAWIC</option>
                                 <option value="AV CELL">AV CELL</option>
                                 <option value="PHOENIX">PHOENIX</option>
                                 <option value="TEL Pellita">TEL Pellita</option>
+                                <option value="Lab">Lab (Internal)</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">2. Target Month/Year (ระบุวันที่หลัก)</label>
+                            <input type="month" id="inp_targetMonth" class="w-full p-2 border rounded bg-white outline-none" title="ระบบจะดึงแค่วันที่จาก Excel แล้วนำมาประกอบกับเดือน/ปีนี้ เพื่อกันปัญหา Format เพี้ยน">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">3. Paste Excel Data (ลากคลุม Header มาด้วย)</label>
+                        <textarea id="inp_pasteArea" class="paste-area" placeholder="คลิกที่นี่ แล้วกด Ctrl+V วางข้อมูล Excel ทั้งตารางได้เลย..."></textarea>
+                    </div>
+
+                    <div class="mt-2 text-right">
+                        <button type="button" id="previewBtn" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded text-sm font-bold shadow transition">
+                            <i class="fas fa-table mr-1"></i> Process & Preview Data
+                        </button>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Remarks / Note (ใช้หมายเหตุนี้กับทุก Batch ที่วางมา)</label>
+                        <textarea id="inp_paste_remarks" rows="1" class="w-full p-2 border rounded text-sm placeholder-slate-300" placeholder="e.g., Package damaged..."></textarea>
+                    </div>
+
+                    <div id="previewSection" class="mt-6 hidden">
+                        <div class="flex justify-between items-end mb-2">
+                            <h3 class="font-bold text-slate-700"><i class="fas fa-check-circle text-green-500 mr-1"></i> Data Preview</h3>
+                            <span class="text-xs font-bold text-blue-600" id="previewCount">0 Records found</span>
+                        </div>
+                        <div class="preview-table-container">
+                            <table class="preview-table" id="previewTable">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="recordForm" class="hidden">
+                    <div class="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Supplier / Brand</label>
+                            <select id="inp_supplier" class="w-full p-2 border rounded bg-white outline-none">
+                                <option value="" disabled selected>-- Select Supplier --</option>
+                                <option value="ARAUCO">ARAUCO</option>
+                                <option value="AV NACKAWIC">AV NACKAWIC</option>
+                                <option value="AV CELL">AV CELL</option>
+                                <option value="PHOENIX">PHOENIX</option>
+                                <option value="TEL Pellita">TEL Pellita</option>
+                                <option value="Lab">Lab</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Batch No.</label>
-                            <input type="text" id="inp_batch" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-200 outline-none uppercase">
+                            <input type="text" id="inp_batch" class="w-full p-2 border rounded outline-none uppercase">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Lot / Invoice No.</label>
-                            <input type="text" id="inp_lot" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-200 outline-none uppercase">
+                            <input type="text" id="inp_lot" class="w-full p-2 border rounded outline-none uppercase">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Received Date</label>
@@ -185,12 +241,11 @@
                         </div>
                     </div>
 
-                    <div>
+                    <div class="mt-6">
                         <div class="flex justify-between items-end mb-2">
                             <h3 class="font-bold text-slate-700"><i class="fas fa-flask text-blue-500 mr-2"></i>Quality Parameters</h3>
                             <span class="text-xs text-slate-400">*Red diff means > 5% deviation</span>
                         </div>
-
                         <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                             <div class="grid grid-cols-[2fr_1.5fr_1.5fr_1fr] gap-2 bg-slate-100 p-2 border-b text-xs font-bold text-slate-600">
                                 <div>Parameter</div>
@@ -209,22 +264,29 @@
 
                     <div class="mt-4">
                         <label class="block text-xs font-bold text-slate-600 mb-1">Remarks / Note</label>
-                        <textarea id="inp_remarks" rows="2" class="w-full p-2 border rounded text-sm placeholder-slate-300" placeholder="e.g., Package damaged, COA missing..."></textarea>
+                        <textarea id="inp_remarks" rows="2" class="w-full p-2 border rounded text-sm"></textarea>
                     </div>
                 </form>
             </div>
 
             <div class="p-4 border-t bg-white flex justify-end gap-3">
                 <button type="button" id="cancelBtn" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded transition">Cancel</button>
-                <button type="button" id="saveBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg transform hover:-translate-y-0.5 transition font-semibold">
-                    <i class="fas fa-save mr-2"></i> Save Record
+                
+                <button type="button" id="savePasteBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg transition font-semibold hidden">
+                    <i class="fas fa-save mr-2"></i> Save All Pasts
+                </button>
+                
+                <button type="button" id="saveEditBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg transition font-semibold hidden">
+                    <i class="fas fa-save mr-2"></i> Update Record
                 </button>
             </div>
         </aside>
     </div>
 
     <script>
-        // --- 1. Configuration & Setup ---
+        // ============================================================================
+        //  ⚙️ SECTION 1: CONFIGURATION & SETUP
+        // ============================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
             authDomain: "lab-trc-management-system.firebaseapp.com",
@@ -236,6 +298,8 @@
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        
+        // 🔴 สำคัญมาก! บรรทัดนี้แก้ปัญหาเรื่อง Network Timeout/Firewall บล็อก
         db.settings({ experimentalForceLongPolling: true });
 
         const PULP_PARAMETERS = [
@@ -261,12 +325,13 @@
             { key: 'pentosan', label: 'Pentosan (%)' }
         ];
 
-        // --- Variables for Pagination ---
+        // --- Variables for Pagination & Data ---
         let currentDocId = null;
         let lastVisible = null; 
-        let pageStack = []; // Stack to keep track of start points for "Previous"
+        let pageStack = []; 
         let isPaginating = false;
         const PAGE_SIZE = 15;
+        let parsedDataList = [];
 
         // DOM Elements
         const recordSidebar = document.getElementById('recordSidebar');
@@ -275,28 +340,30 @@
         const nextBtn = document.getElementById('nextPage');
         const prevBtn = document.getElementById('prevPage');
 
-        // --- 2. Initialization ---
+        // ============================================================================
+        //  ⚙️ SECTION 2: INITIALIZATION
+        // ============================================================================
         document.addEventListener('DOMContentLoaded', () => {
-            // Check Auth First (Critical for Editing)
             firebase.auth().onAuthStateChanged((user) => {
                 if (user) {
                     console.log("Logged in as:", user.email);
-                    fetchRecords('reset'); // Load data only when auth checked
+                    fetchRecords('reset');
                 } else {
-                    console.log("No user logged in. Edit might fail.");
-                    fetchRecords('reset'); // Load anyway (ReadOnly mode)
+                    console.log("No user logged in.");
+                    fetchRecords('reset');
                 }
             });
 
-            // Sidebar Toggles
-            document.getElementById('newRecordBtn').addEventListener('click', () => openSidebar());
+            document.getElementById('newRecordBtn').addEventListener('click', () => openSidebar(null));
             document.getElementById('closeSidebar').addEventListener('click', () => closeSidebar());
             document.getElementById('cancelBtn').addEventListener('click', () => closeSidebar());
-
-            // Actions
-            document.getElementById('saveBtn').addEventListener('click', saveRecord);
+            
             document.getElementById('refreshBtn').addEventListener('click', () => fetchRecords('reset'));
             document.getElementById('addParamBtn').addEventListener('click', () => addCustomParameterRow());
+
+            // Save Buttons Trigger
+            document.getElementById('saveEditBtn').addEventListener('click', saveManualEdit);
+            document.getElementById('savePasteBtn').addEventListener('click', saveBatchPaste);
 
             // Filters
             document.getElementById('searchInput').addEventListener('input', debounce(() => fetchRecords('reset'), 500));
@@ -304,13 +371,526 @@
             document.getElementById('filterStartDate').addEventListener('change', () => fetchRecords('reset'));
             document.getElementById('filterEndDate').addEventListener('change', () => fetchRecords('reset'));
 
-            // Pagination Controls
+            // Pagination
             nextBtn.addEventListener('click', () => fetchRecords('next'));
             prevBtn.addEventListener('click', () => fetchRecords('prev'));
         });
 
-        // --- 3. UI Functions ---
 
+        // ============================================================================
+        //  🧠 SECTION 3: SMART MAPPING DICTIONARY
+        // ============================================================================
+        // ดักอักษรเล็ก/ใหญ่, พิมพ์ผิด, และเชื่อมโยงไปยัง Parameter หลัก
+        const MAPPING_DICT = {
+            "ARAUCO": {
+                date: ["date"], batch: ["batch"], lot: ["lot"],
+                params: {
+                    alphaCellulose: ["alphacellulose"], solubility18: ["alkalisolubilitys18"],
+                    solubility10: ["alkalisolubilitys10"], pentosan: ["pentosancontent"],
+                    brightness: ["brightness"], dirtCount: ["dirt"], resins: ["extractivescontent"],
+                    ash: ["ashcontent"], calcium: ["calciumca"], iron: ["ironfe"],
+                    silica: ["silicacontentassio2", "silicacontentassio2"], viscosity: ["intrinsicviscosity"],
+                    whiteness: ["berger"]
+                },
+                customParams: {
+                    "Manganese (Mn)": ["manganesemn", "manganese"], "Magnesium (Mg)": ["magnesiummg", "magnesium"],
+                    "Copper (Cu)": ["coppercu", "copper"], "Sodium (Na)": ["sodiumna", "sodium"]
+                },
+                specialCalc: (rowObj, paramValues) => {
+                    const drynessKey = Object.keys(rowObj).find(k => k.includes("dryness"));
+                    if (drynessKey && rowObj[drynessKey]) {
+                        const dryness = parseFloat(rowObj[drynessKey]);
+                        if (!isNaN(dryness)) paramValues["moisture"] = parseFloat((100 - dryness).toFixed(2));
+                    }
+                }
+            },
+            "AV NACKAWIC": {
+                date: ["date"], batch: ["batch"],
+                params: {
+                    alphaCellulose: ["alpha"], solubility18: ["s18"], solubility10: ["s10"],
+                    moisture: ["moist"], viscosity_t206: ["visc"], viscosity: ["viscoiso5351"],
+                    brightness: ["bright"], whiteness: ["whiteness"], silica: ["silica"],
+                    calcium: ["ca"], iron: ["fe"], ash: ["ash"], ph: ["ph"],
+                    resins: ["resin"], dirtCount: ["dirt"]
+                },
+                customParams: { "Sodium (Na)": ["na"], "Copper (Cu)": ["cu"] }
+            },
+            "AV CELL": {
+                date: ["date"], batch: ["batch"],
+                params: {
+                    alphaCellulose: ["alpha"], solubility18: ["s18"], solubility10: ["s10"],
+                    moisture: ["moist"], viscosity_t206: ["visc"], viscosity: ["viscoiso5351"],
+                    brightness: ["bright"], whiteness: ["whiteness"], silica: ["silica"],
+                    calcium: ["ca"], iron: ["fe"], ash: ["ash"], ph: ["ph"],
+                    resins: ["resin"], dirtCount: ["dirt"]
+                },
+                customParams: { "Sodium (Na)": ["na"], "Copper (Cu)": ["cu"] }
+            },
+            "PHOENIX": {
+                date: ["date"], batch: ["batch"],
+                params: { moisture: ["moisture"], viscosity_t206: ["visosity", "viscosity"], brightness: ["brightness"], dirtCount: ["dirtcount"] }
+            },
+            "TEL Pellita": {
+                date: ["date"], batch: ["batch"],
+                params: { viscosity_t206: ["visosity", "viscosity"], brightness: ["brightness"], dirtCount: ["dirtcount"], ph: ["ph"] }
+            },
+            "Lab": {
+                date: ["date", "testdate"], batch: ["batch"],
+                params: { alphaCellulose: ["alpha"], viscosity: ["viscosity"] }
+            }
+        };
+
+        const cleanHeader = (str) => {
+            if (!str) return "";
+            return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+        };
+
+        // ============================================================================
+        //  🚀 SECTION 4: SMART PASTE PARSER ENGINE
+        // ============================================================================
+        document.getElementById('previewBtn').addEventListener('click', () => {
+            const supplier = document.getElementById('inp_paste_supplier').value;
+            const targetMonth = document.getElementById('inp_targetMonth').value;
+            const rawPaste = document.getElementById('inp_pasteArea').value.trim();
+
+            if (!supplier) return alert("กรุณาเลือก Supplier ก่อน");
+            if (!targetMonth) return alert("กรุณาเลือก Target Month/Year เพื่อใช้อ้างอิงวันที่");
+            if (!rawPaste) return alert("กรุณาวางข้อมูลจาก Excel ก่อนกด Preview");
+
+            const mapDef = MAPPING_DICT[supplier] || MAPPING_DICT["Other"];
+            if (!mapDef) return alert("ยังไม่ได้ตั้งค่า Mapping สำหรับ Supplier นี้");
+
+            const rows = rawPaste.split('\n');
+            if (rows.length < 2) return alert("ข้อมูลน้อยเกินไป (ต้องมี Header และ ข้อมูลอย่างน้อย 1 แถว)");
+
+            const headers = rows[0].split('\t').map(h => cleanHeader(h));
+            
+            const findColIdx = (aliases) => {
+                if(!aliases) return -1;
+                for (let i = 0; i < headers.length; i++) {
+                    if (aliases.includes(headers[i])) return i;
+                }
+                return -1;
+            };
+
+            const dateColIdx = findColIdx(mapDef.date);
+            const batchColIdx = findColIdx(mapDef.batch);
+            
+            if (batchColIdx === -1) return alert(`หาคอลัมน์ Batch ไม่เจอ กรุณาตรวจสอบ Header อีกครั้งครับ (ระบบมองหาคอลัมน์ชื่อคล้ายๆ: ${mapDef.batch.join(', ')})`);
+
+            parsedDataList = [];
+            let lastSeenDate = "";
+
+            for (let r = 1; r < rows.length; r++) {
+                const cells = rows[r].split('\t').map(c => c.trim());
+                if (cells.length === 0 || !cells[batchColIdx]) continue; // ข้ามแถวที่ไม่มีเลข batch
+
+                const batchNo = cells[batchColIdx].toUpperCase();
+                
+                // จัดการเรื่อง Merge Cell (วันที่)
+                let rawDate = (dateColIdx !== -1 && cells[dateColIdx]) ? cells[dateColIdx] : "";
+                if (rawDate) lastSeenDate = rawDate;
+                else rawDate = lastSeenDate;
+
+                let finalDate = targetMonth + "-01";
+                if (rawDate) {
+                    const dayMatch = rawDate.match(/\d+/); // ดึงเอาเฉพาะตัวเลขวันออกมา
+                    if (dayMatch) {
+                        const dayStr = dayMatch[0].padStart(2, '0');
+                        finalDate = `${targetMonth}-${dayStr}`; 
+                    }
+                }
+
+                const rowObj = {};
+                headers.forEach((h, i) => { rowObj[h] = cells[i] || ""; });
+                const parameters = {};
+
+                // 1. ดึง Standard Params
+                if (mapDef.params) {
+                    Object.keys(mapDef.params).forEach(sysKey => {
+                        const aliases = mapDef.params[sysKey];
+                        const colIdx = findColIdx(aliases);
+                        if (colIdx !== -1 && cells[colIdx] !== "") {
+                            const val = parseFloat(cells[colIdx]);
+                            if (!isNaN(val)) {
+                                if (sysKey === "whiteness" && val === 0) return; // กฎ: ข้าม berger 0
+                                // ถ้าเป็น Lab ให้ลงช่อง lab ถ้าเป็น Supplier ลงช่อง coa
+                                parameters[sysKey] = supplier === "Lab" ? { coa: null, lab: val } : { coa: val, lab: null };
+                            }
+                        }
+                    });
+                }
+
+                // 2. คำนวณพิเศษ (เช่น หา Moisture จาก Dryness)
+                if (mapDef.specialCalc) {
+                    const tempVals = {};
+                    mapDef.specialCalc(rowObj, tempVals);
+                    Object.keys(tempVals).forEach(sysKey => {
+                        parameters[sysKey] = supplier === "Lab" ? { coa: null, lab: tempVals[sysKey] } : { coa: tempVals[sysKey], lab: null };
+                    });
+                }
+
+                // 3. Custom Params (ถ้าค่าเป็น 0 ไม่ต้องใส่)
+                if (mapDef.customParams) {
+                    Object.keys(mapDef.customParams).forEach(customName => {
+                        const aliases = mapDef.customParams[customName];
+                        const colIdx = findColIdx(aliases);
+                        if (colIdx !== -1 && cells[colIdx] !== "") {
+                            const val = parseFloat(cells[colIdx]);
+                            if (!isNaN(val) && val !== 0) {
+                                parameters[customName] = supplier === "Lab" ? { coa: null, lab: val } : { coa: val, lab: null };
+                            }
+                        }
+                    });
+                }
+
+                parsedDataList.push({
+                    supplier: supplier,
+                    batchNo: batchNo,
+                    lotNo: "-", // ใส่ default เป็นขีดไปก่อนตามคำขอ
+                    receivedDate: finalDate,
+                    coaDate: finalDate,
+                    parameters: parameters
+                });
+            }
+
+            renderPreviewTable(parsedDataList);
+        });
+
+        const renderPreviewTable = (dataList) => {
+            const tableHead = document.querySelector('#previewTable thead');
+            const tableBody = document.querySelector('#previewTable tbody');
+            const section = document.getElementById('previewSection');
+            const btnSave = document.getElementById('savePasteBtn');
+
+            if (dataList.length === 0) {
+                alert("ไม่พบข้อมูลที่จะประมวลผล กรุณาตรวจสอบ Format Excel");
+                section.classList.add('hidden');
+                btnSave.disabled = true;
+                return;
+            }
+
+            let paramKeysSet = new Set();
+            dataList.forEach(item => { Object.keys(item.parameters).forEach(k => paramKeysSet.add(k)); });
+            const paramKeysArray = Array.from(paramKeysSet);
+
+            let theadHtml = `<tr><th>Date</th><th>Batch No.</th>`;
+            paramKeysArray.forEach(k => { theadHtml += `<th>${k}</th>`; });
+            theadHtml += `</tr>`;
+            tableHead.innerHTML = theadHtml;
+
+            let tbodyHtml = "";
+            dataList.forEach(item => {
+                tbodyHtml += `<tr>
+                    <td>${item.receivedDate}</td>
+                    <td class="font-bold text-blue-700">${item.batchNo}</td>`;
+                
+                paramKeysArray.forEach(k => {
+                    const paramObj = item.parameters[k];
+                    const val = paramObj ? (paramObj.coa !== null ? paramObj.coa : paramObj.lab) : "-";
+                    tbodyHtml += `<td>${val}</td>`;
+                });
+                tbodyHtml += `</tr>`;
+            });
+
+            tableBody.innerHTML = tbodyHtml;
+            document.getElementById('previewCount').textContent = `${dataList.length} Batches Ready`;
+            
+            section.classList.remove('hidden');
+            btnSave.disabled = false;
+        };
+
+
+        // ============================================================================
+        //  💾 SECTION 5: DATABASE SAVING (Batch Paste & Manual Edit)
+        // ============================================================================
+        async function saveBatchPaste() {
+            if (parsedDataList.length === 0) return;
+            const btn = document.getElementById('savePasteBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            const remarks = document.getElementById('inp_paste_remarks').value.trim();
+            const userEmail = firebase.auth().currentUser?.email || "Guest";
+
+            try {
+                let batch = db.batch();
+                let count = 0;
+
+                for (const item of parsedDataList) {
+                    const docRef = db.collection('rm_pulp_inspections').doc(); 
+                    const docData = {
+                        supplier: item.supplier,
+                        batchNo: item.batchNo,
+                        lotNo: item.lotNo,
+                        receivedDate: item.receivedDate,
+                        coaDate: item.coaDate,
+                        remarks: remarks,
+                        parameters: item.parameters,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        bookedBy: userEmail,
+                        updatedBy: userEmail
+                    };
+
+                    batch.set(docRef, docData);
+                    count++;
+
+                    if (count === 400) {
+                        await batch.commit();
+                        batch = db.batch();
+                        count = 0;
+                    }
+                }
+                
+                if (count > 0) await batch.commit();
+
+                alert(`บันทึกข้อมูลสำเร็จ ${parsedDataList.length} Batch!`);
+                closeSidebar();
+                fetchRecords('reset');
+
+            } catch (error) {
+                console.error(error);
+                alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save All Pasts';
+            }
+        }
+
+        async function saveManualEdit() {
+            const btn = document.getElementById('saveEditBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+            try {
+                const userEmail = firebase.auth().currentUser?.email || "Guest";
+                const headerData = {
+                    supplier: document.getElementById('inp_supplier').value,
+                    batchNo: document.getElementById('inp_batch').value.toUpperCase(),
+                    lotNo: document.getElementById('inp_lot').value.toUpperCase(),
+                    receivedDate: document.getElementById('inp_receiveDate').value,
+                    coaDate: document.getElementById('inp_coaDate').value,
+                    remarks: document.getElementById('inp_remarks').value,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: userEmail
+                };
+
+                if (!headerData.supplier || !headerData.batchNo) throw new Error("Validation failed");
+
+                const parameters = {};
+                const inputs = paramsContainer.querySelectorAll('.param-row');
+                inputs.forEach(row => {
+                    let key = row.querySelector('.inp-coa')?.dataset.key;
+                    if (!key) {
+                        const nameInp = row.querySelector('.inp-param-name');
+                        if (nameInp && nameInp.value.trim() !== "") key = nameInp.value.trim();
+                    }
+                    if (key) {
+                        const coaInp = row.querySelector('.inp-coa');
+                        const labInp = row.querySelector('.inp-lab');
+                        if(coaInp.value || labInp.value) {
+                            parameters[key] = {
+                                coa: coaInp.value ? parseFloat(coaInp.value) : null,
+                                lab: labInp.value ? parseFloat(labInp.value) : null
+                            };
+                        }
+                    }
+                });
+
+                const docData = { ...headerData, parameters };
+                await db.collection('rm_pulp_inspections').doc(currentDocId).update(docData);
+                
+                closeSidebar();
+                fetchRecords('reset');
+            } catch (error) {
+                if(error.message !== "Validation failed") alert("Failed to update: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-2"></i> Update Record';
+            }
+        }
+
+
+        // ============================================================================
+        //  🖥️ SECTION 6: UI & FETCH ENGINE (Original Code logic)
+        // ============================================================================
+        function openSidebar(record = null) {
+            currentDocId = record ? record.id : null;
+            const pasteMode = document.getElementById('pasteModeSection');
+            const manualMode = document.getElementById('recordForm');
+            const savePasteBtn = document.getElementById('savePasteBtn');
+            const saveEditBtn = document.getElementById('saveEditBtn');
+
+            if (!record) {
+                // โหมดวางข้อมูล (New Record)
+                document.getElementById('sidebarTitle').textContent = 'New Inspection';
+                document.getElementById('sidebarDesc').textContent = 'Smart Paste from Excel';
+                document.getElementById('inp_targetMonth').value = new Date().toISOString().substring(0, 7);
+                document.getElementById('previewSection').classList.add('hidden');
+                document.getElementById('inp_pasteArea').value = '';
+                parsedDataList = [];
+                
+                pasteMode.classList.remove('hidden');
+                manualMode.classList.add('hidden');
+                savePasteBtn.classList.remove('hidden');
+                saveEditBtn.classList.add('hidden');
+                savePasteBtn.disabled = true; // ต้อง Preview ก่อนถึงจะกดได้
+            } else {
+                // โหมดแก้ไขแบบเดิม (Edit Mode)
+                document.getElementById('sidebarTitle').textContent = 'Edit Inspection';
+                document.getElementById('sidebarDesc').textContent = 'Compare COA vs Lab Results';
+                manualMode.reset();
+
+                pasteMode.classList.add('hidden');
+                manualMode.classList.remove('hidden');
+                savePasteBtn.classList.add('hidden');
+                saveEditBtn.classList.remove('hidden');
+
+                document.getElementById('inp_supplier').value = record.supplier || '';
+                document.getElementById('inp_batch').value = record.batchNo || '';
+                document.getElementById('inp_lot').value = record.lotNo || '';
+                document.getElementById('inp_remarks').value = record.remarks || '';
+                if (record.receivedDate) document.getElementById('inp_receiveDate').value = record.receivedDate.split('T')[0];
+                if (record.coaDate) document.getElementById('inp_coaDate').value = record.coaDate.split('T')[0];
+                
+                renderParameterRows(record.parameters);
+                if (record.parameters) {
+                    const standardKeys = PULP_PARAMETERS.map(p => p.key);
+                    Object.keys(record.parameters).forEach(key => {
+                        if (!standardKeys.includes(key)) {
+                            addCustomParameterRow({ key: key, coa: record.parameters[key].coa, lab: record.parameters[key].lab });
+                        }
+                    });
+                }
+            }
+            recordSidebar.classList.add('open');
+        }
+
+        function closeSidebar() { recordSidebar.classList.remove('open'); }
+
+        async function fetchRecords(direction = 'reset') {
+            if (isPaginating) return;
+            isPaginating = true;
+            
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></td></tr>';
+            nextBtn.disabled = true;
+            prevBtn.disabled = true;
+
+            try {
+                let query = db.collection('rm_pulp_inspections');
+
+                const supplier = document.getElementById('filterSupplier').value;
+                const startDate = document.getElementById('filterStartDate').value;
+                const endDate = document.getElementById('filterEndDate').value;
+
+                if (supplier !== 'all') query = query.where('supplier', '==', supplier);
+                if (startDate) query = query.where('receivedDate', '>=', startDate);
+                if (endDate) query = query.where('receivedDate', '<=', endDate);
+
+                if (startDate || endDate) query = query.orderBy('receivedDate', 'desc');
+                else query = query.orderBy('createdAt', 'desc');
+
+                if (direction === 'reset') {
+                    pageStack = []; lastVisible = null; query = query.limit(PAGE_SIZE);
+                } else if (direction === 'next' && lastVisible) {
+                    pageStack.push(lastVisible); query = query.startAfter(lastVisible).limit(PAGE_SIZE);
+                } else if (direction === 'prev' && pageStack.length > 0) {
+                    pageStack.pop(); 
+                    if (pageStack.length === 0) query = query.limit(PAGE_SIZE); 
+                    else query = query.startAfter(pageStack[pageStack.length - 1]).limit(PAGE_SIZE);
+                }
+
+                const snapshot = await query.get();
+
+                if (snapshot.empty) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400">No records found.</td></tr>';
+                    nextBtn.disabled = true; prevBtn.disabled = (pageStack.length === 0); isPaginating = false;
+                    return;
+                }
+
+                lastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+                let html = '';
+                const search = document.getElementById('searchInput').value.trim().toUpperCase();
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+
+                    if (search && (!data.batchNo || !data.batchNo.includes(search)) && (!data.lotNo || !data.lotNo.includes(search))) return; 
+
+                    const status = (data.parameters && Object.keys(data.parameters).length > 0) ? 'Completed' : 'Pending';
+                    const statusClass = status === 'Completed' ? 'status-completed' : 'status-pending';
+                    
+                    // ป้องกันการโชว์ - ในหน้าตาราง ถ้ามีค่าจาก Lab หรือ COA ให้แสดงค่านั้นออกมา
+                    const getVal = (p) => p ? (p.coa !== null ? p.coa : p.lab) || '-' : '-';
+                    const alpha = getVal(data.parameters?.alphaCellulose);
+                    const visc = getVal(data.parameters?.viscosity) !== '-' ? getVal(data.parameters?.viscosity) : getVal(data.parameters?.viscosity_t206);
+                    const white = getVal(data.parameters?.whiteness);
+
+                    html += `
+                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="editRecord('${doc.id}')">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${formatDate(data.receivedDate)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700"><div class="font-bold">${data.supplier}</div></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                            <div class="text-xs text-slate-400">Batch:</div> ${data.batchNo || '-'}
+                            <div class="text-xs text-slate-400 mt-1">Lot:</div> ${data.lotNo || '-'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-slate-600">
+                            <div class="flex justify-center gap-4">
+                                <div class="text-xs text-left"><span class="block text-slate-400">Alpha</span><span class="font-mono font-bold text-slate-700">${alpha}</span></div>
+                                <div class="text-xs text-left"><span class="block text-slate-400">Visc.</span><span class="font-mono font-bold text-blue-600">${visc}</span></div>
+                                <div class="text-xs text-left"><span class="block text-slate-400">White</span><span class="font-mono font-bold text-slate-700">${white}</span></div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap"><span class="status-badge ${statusClass}">${status}</span></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="event.stopPropagation(); editRecord('${doc.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="text-red-500 hover:text-red-700" onclick="event.stopPropagation(); deleteRecord('${doc.id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                });
+
+                tableBody.innerHTML = html || '<tr><td colspan="6" class="text-center py-10 text-slate-400">No matching records on this page.</td></tr>';
+                nextBtn.disabled = snapshot.docs.length < PAGE_SIZE;
+                prevBtn.disabled = (pageStack.length === 0);
+
+            } catch (error) {
+                console.error("Error:", error);
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-red-500">Error: ${error.message}</td></tr>`;
+            } finally { isPaginating = false; }
+        }
+
+        window.editRecord = async (id) => {
+            try {
+                const doc = await db.collection('rm_pulp_inspections').doc(id).get();
+                if (doc.exists) openSidebar({ id: doc.id, ...doc.data() });
+            } catch (e) { console.error(e); }
+        };
+
+        window.deleteRecord = async (id) => {
+            if(confirm("Are you sure you want to delete this record?")) {
+                await db.collection('rm_pulp_inspections').doc(id).delete();
+                fetchRecords('reset');
+            }
+        };
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const parts = dateString.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateString;
+        }
+
+        // --- ฟังก์ชันช่วยเหลือสำหรับหน้า Edit (Render แถวข้อมูล) ---
         function renderParameterRows(existingData = {}) {
             paramsContainer.innerHTML = '';
             PULP_PARAMETERS.forEach(param => {
@@ -319,8 +899,8 @@
                 row.className = 'param-row';
                 row.innerHTML = `
                     <div class="param-label">${param.label}</div>
-                    <div><input type="number" step="0.01" class="data-input inp-coa" data-key="${param.key}" value="${pData.coa || ''}" placeholder="-"></div>
-                    <div><input type="number" step="0.01" class="data-input inp-lab" data-key="${param.key}" value="${pData.lab || ''}" placeholder="-"></div>
+                    <div><input type="number" step="0.01" class="data-input inp-coa" data-key="${param.key}" value="${pData.coa !== null ? pData.coa : ''}" placeholder="-"></div>
+                    <div><input type="number" step="0.01" class="data-input inp-lab" data-key="${param.key}" value="${pData.lab !== null ? pData.lab : ''}" placeholder="-"></div>
                     <div class="diff-value" id="diff-${param.key}">-</div>
                 `;
                 paramsContainer.appendChild(row);
@@ -356,273 +936,11 @@
                     <button type="button" class="text-red-400 hover:text-red-600" onclick="this.closest('.param-row').remove()"><i class="fas fa-times-circle"></i></button>
                     <input type="text" class="data-input inp-param-name text-xs font-bold text-slate-600" value="${data.key || ''}" placeholder="Enter Param Name">
                 </div>
-                <div><input type="number" step="0.01" class="data-input inp-coa" value="${data.coa || ''}" placeholder="-"></div>
-                <div><input type="number" step="0.01" class="data-input inp-lab" value="${data.lab || ''}" placeholder="-"></div>
+                <div><input type="number" step="0.01" class="data-input inp-coa" value="${data.coa !== null ? data.coa : ''}" placeholder="-"></div>
+                <div><input type="number" step="0.01" class="data-input inp-lab" value="${data.lab !== null ? data.lab : ''}" placeholder="-"></div>
                 <div class="diff-value" id="${diffId}">-</div>
             `;
             paramsContainer.appendChild(row);
-            // Re-use logic for custom rows (omitted for brevity, assume similar to above)
-        }
-
-        function openSidebar(record = null) {
-            currentDocId = record ? record.id : null;
-            document.getElementById('sidebarTitle').textContent = record ? 'Edit Inspection' : 'New Inspection';
-            document.getElementById('recordForm').reset();
-
-            if (record) {
-                document.getElementById('inp_supplier').value = record.supplier || '';
-                document.getElementById('inp_batch').value = record.batchNo || '';
-                document.getElementById('inp_lot').value = record.lotNo || '';
-                document.getElementById('inp_remarks').value = record.remarks || '';
-                if (record.receivedDate) document.getElementById('inp_receiveDate').value = record.receivedDate.split('T')[0];
-                if (record.coaDate) document.getElementById('inp_coaDate').value = record.coaDate.split('T')[0];
-                renderParameterRows(record.parameters);
-                if (record.parameters) {
-                    const standardKeys = PULP_PARAMETERS.map(p => p.key);
-                    Object.keys(record.parameters).forEach(key => {
-                        if (!standardKeys.includes(key)) {
-                            addCustomParameterRow({ key: key, coa: record.parameters[key].coa, lab: record.parameters[key].lab });
-                        }
-                    });
-                }
-            } else {
-                document.getElementById('inp_receiveDate').valueAsDate = new Date();
-                renderParameterRows({});
-            }
-            recordSidebar.classList.add('open');
-        }
-
-        function closeSidebar() { recordSidebar.classList.remove('open'); }
-
-        // --- 4. Database Functions (Updated Pagination & Filter) ---
-
-        async function fetchRecords(direction = 'reset') {
-            if (isPaginating) return;
-            isPaginating = true;
-            
-            tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></td></tr>';
-            nextBtn.disabled = true;
-            prevBtn.disabled = true;
-
-            try {
-                let query = db.collection('rm_pulp_inspections');
-
-                // --- Filtering ---
-                const supplier = document.getElementById('filterSupplier').value;
-                const startDate = document.getElementById('filterStartDate').value;
-                const endDate = document.getElementById('filterEndDate').value;
-
-                if (supplier !== 'all') {
-                    query = query.where('supplier', '==', supplier);
-                }
-
-                // Date Range Filter
-                if (startDate) query = query.where('receivedDate', '>=', startDate);
-                if (endDate) query = query.where('receivedDate', '<=', endDate);
-
-                // Sort: Must sort by receivedDate if filtering by range, else createdAt
-                if (startDate || endDate) {
-                    query = query.orderBy('receivedDate', 'desc');
-                } else {
-                    query = query.orderBy('createdAt', 'desc');
-                }
-
-                // --- Pagination Logic ---
-                if (direction === 'reset') {
-                    pageStack = [];
-                    lastVisible = null;
-                    query = query.limit(PAGE_SIZE);
-                } 
-                else if (direction === 'next' && lastVisible) {
-                    pageStack.push(lastVisible); // Save cursor
-                    query = query.startAfter(lastVisible).limit(PAGE_SIZE);
-                } 
-                else if (direction === 'prev' && pageStack.length > 0) {
-                    const prevCursor = pageStack.pop(); // Remove current page's cursor
-                    // If stack is now empty, we are back to page 1
-                    if (pageStack.length === 0) {
-                        // Reset to page 1 logic
-                        // Need to rebuild query without startAfter
-                        // Simply calling the logic for page 1 manually
-                    } else {
-                        // We need to start after the NEW top of stack
-                        const cursorToUse = pageStack[pageStack.length - 1];
-                        query = query.startAfter(cursorToUse).limit(PAGE_SIZE);
-                    }
-                    
-                    // Note: Firestore 'prev' is tricky. Simplest robust way is:
-                    // If popping makes stack empty -> Reset.
-                    // If not empty -> startAfter(newStackTop).
-                    if (pageStack.length === 0) {
-                         // Reset query params effectively
-                         // Re-apply filters is already done above
-                         query = query.limit(PAGE_SIZE); 
-                    }
-                }
-
-                // --- Execute ---
-                const snapshot = await query.get();
-
-                if (snapshot.empty) {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400">No records found.</td></tr>';
-                    nextBtn.disabled = true;
-                    prevBtn.disabled = (pageStack.length === 0);
-                    isPaginating = false;
-                    return;
-                }
-
-                lastVisible = snapshot.docs[snapshot.docs.length - 1]; // Update cursor for Next button
-
-                let html = '';
-                const search = document.getElementById('searchInput').value.trim().toUpperCase();
-
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-
-                    // Client-side Text Search (Batch/Lot)
-                    if (search && (!data.batchNo || !data.batchNo.includes(search)) && (!data.lotNo || !data.lotNo.includes(search))) {
-                        return; 
-                    }
-
-                    const status = (data.parameters && Object.keys(data.parameters).length > 0) ? 'Completed' : 'Pending';
-                    const statusClass = status === 'Completed' ? 'status-completed' : 'status-pending';
-                    const alpha = data.parameters?.alphaCellulose?.lab || '-';
-                    const visc = data.parameters?.viscosity?.lab || '-';
-                    const white = data.parameters?.whiteness?.lab || '-';
-
-                    html += `
-                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="editRecord('${doc.id}')">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${formatDate(data.receivedDate)}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700"><div class="font-bold">${data.supplier}</div></td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                            <div class="text-xs text-slate-400">Batch:</div> ${data.batchNo || '-'}
-                            <div class="text-xs text-slate-400 mt-1">Lot:</div> ${data.lotNo || '-'}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-slate-600">
-                            <div class="flex justify-center gap-4">
-                                <div class="text-xs text-left"><span class="block text-slate-400">Alpha</span><span class="font-mono font-bold text-slate-700">${alpha}</span></div>
-                                <div class="text-xs text-left"><span class="block text-slate-400">Visc.</span><span class="font-mono font-bold text-blue-600">${visc}</span></div>
-                                <div class="text-xs text-left"><span class="block text-slate-400">White</span><span class="font-mono font-bold text-slate-700">${white}</span></div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap"><span class="status-badge ${statusClass}">${status}</span></td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="event.stopPropagation(); editRecord('${doc.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="text-red-500 hover:text-red-700" onclick="event.stopPropagation(); deleteRecord('${doc.id}')"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>`;
-                });
-
-                tableBody.innerHTML = html || '<tr><td colspan="6" class="text-center py-10 text-slate-400">No matching records on this page.</td></tr>';
-
-                // Update Buttons
-                nextBtn.disabled = snapshot.docs.length < PAGE_SIZE; // Disable Next if less than full page
-                prevBtn.disabled = (pageStack.length === 0);
-
-            } catch (error) {
-                console.error("Error:", error);
-                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-red-500">Error: ${error.message} <br> <small class="text-gray-500">(Check console if Index is required)</small></td></tr>`;
-            } finally {
-                isPaginating = false;
-            }
-        }
-
-        async function saveRecord() {
-            const btn = document.getElementById('saveBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-            try {
-                // Ensure User is Auth (Double check)
-                const currentUser = firebase.auth().currentUser;
-                const userEmail = currentUser ? currentUser.email : "Guest/Anonymous";
-
-                const headerData = {
-                    supplier: document.getElementById('inp_supplier').value,
-                    batchNo: document.getElementById('inp_batch').value.toUpperCase(),
-                    lotNo: document.getElementById('inp_lot').value.toUpperCase(),
-                    receivedDate: document.getElementById('inp_receiveDate').value,
-                    coaDate: document.getElementById('inp_coaDate').value,
-                    remarks: document.getElementById('inp_remarks').value,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedBy: userEmail // ✅ ใช้ตัวแปรที่เราสร้างไว้แทน
-                };
-
-                if (!headerData.supplier || !headerData.batchNo) {
-                    alert("Please enter Supplier and Batch No.");
-                    throw new Error("Validation failed");
-                }
-
-                const parameters = {};
-                const inputs = paramsContainer.querySelectorAll('.param-row');
-                inputs.forEach(row => {
-                    let key = row.querySelector('.inp-coa')?.dataset.key;
-                    if (!key) {
-                        const nameInp = row.querySelector('.inp-param-name');
-                        if (nameInp && nameInp.value.trim() !== "") key = nameInp.value.trim();
-                    }
-                    if (key) {
-                        const coaInp = row.querySelector('.inp-coa');
-                        const labInp = row.querySelector('.inp-lab');
-                        if(coaInp.value || labInp.value) {
-                            parameters[key] = {
-                                coa: coaInp.value ? parseFloat(coaInp.value) : null,
-                                lab: labInp.value ? parseFloat(labInp.value) : null
-                            };
-                        }
-                    }
-                });
-
-                const docData = { ...headerData, parameters };
-
-                if (currentDocId) {
-                    await db.collection('rm_pulp_inspections').doc(currentDocId).update(docData);
-                } else {
-                    docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-                    docData.bookedBy = userEmail;
-                    await db.collection('rm_pulp_inspections').add(docData);
-                }
-
-                closeSidebar();
-                fetchRecords('reset');
-            } catch (error) {
-                if(error.message !== "Validation failed") alert("Failed to save: " + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Record';
-            }
-        }
-
-        window.editRecord = async (id) => {
-            try {
-                const doc = await db.collection('rm_pulp_inspections').doc(id).get();
-                if (doc.exists) openSidebar({ id: doc.id, ...doc.data() });
-            } catch (e) { console.error(e); }
-        };
-
-        window.deleteRecord = async (id) => {
-            if(confirm("Are you sure?")) {
-                await db.collection('rm_pulp_inspections').doc(id).delete();
-                fetchRecords('reset');
-            }
-        };
-
-        function debounce(func, wait) {
-            let timeout;
-            return function(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            const parts = dateString.split('-');
-            if (parts.length === 3) {
-                const [year, month, day] = parts;
-                return `${day}/${month}/${year}`;
-            }
-            return dateString;
         }
     </script>
 </body>
