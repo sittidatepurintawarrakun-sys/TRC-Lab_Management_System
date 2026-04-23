@@ -76,7 +76,7 @@
                     <div class="flex gap-3">
                         <button id="refreshBtn" class="text-slate-500 hover:text-blue-600"><i class="fas fa-sync-alt"></i></button>
                         <button id="newRecordBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition flex items-center gap-2">
-                            <i class="fas fa-paste"></i> New Inspection
+                            <i class="fas fa-paste"></i> Smart Paste New Record
                         </button>
                     </div>
                 </div>
@@ -299,8 +299,7 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         
-        // 🔴 สำคัญมาก! บรรทัดนี้แก้ปัญหาเรื่อง Network Timeout/Firewall บล็อก
-        db.settings({ experimentalForceLongPolling: true });
+        db.settings({ experimentalForceLongPolling: true }); 
 
         const PULP_PARAMETERS = [
             { key: 'alphaCellulose', label: 'Alpha Cellulose (%)' },
@@ -325,7 +324,6 @@
             { key: 'pentosan', label: 'Pentosan (%)' }
         ];
 
-        // --- Variables for Pagination & Data ---
         let currentDocId = null;
         let lastVisible = null; 
         let pageStack = []; 
@@ -333,7 +331,6 @@
         const PAGE_SIZE = 15;
         let parsedDataList = [];
 
-        // DOM Elements
         const recordSidebar = document.getElementById('recordSidebar');
         const tableBody = document.getElementById('tableBody');
         const paramsContainer = document.getElementById('parametersContainer');
@@ -345,13 +342,7 @@
         // ============================================================================
         document.addEventListener('DOMContentLoaded', () => {
             firebase.auth().onAuthStateChanged((user) => {
-                if (user) {
-                    console.log("Logged in as:", user.email);
-                    fetchRecords('reset');
-                } else {
-                    console.log("No user logged in.");
-                    fetchRecords('reset');
-                }
+                fetchRecords('reset');
             });
 
             document.getElementById('newRecordBtn').addEventListener('click', () => openSidebar(null));
@@ -361,17 +352,14 @@
             document.getElementById('refreshBtn').addEventListener('click', () => fetchRecords('reset'));
             document.getElementById('addParamBtn').addEventListener('click', () => addCustomParameterRow());
 
-            // Save Buttons Trigger
             document.getElementById('saveEditBtn').addEventListener('click', saveManualEdit);
             document.getElementById('savePasteBtn').addEventListener('click', saveBatchPaste);
 
-            // Filters
             document.getElementById('searchInput').addEventListener('input', debounce(() => fetchRecords('reset'), 500));
             document.getElementById('filterSupplier').addEventListener('change', () => fetchRecords('reset'));
             document.getElementById('filterStartDate').addEventListener('change', () => fetchRecords('reset'));
             document.getElementById('filterEndDate').addEventListener('change', () => fetchRecords('reset'));
 
-            // Pagination
             nextBtn.addEventListener('click', () => fetchRecords('next'));
             prevBtn.addEventListener('click', () => fetchRecords('prev'));
         });
@@ -380,7 +368,6 @@
         // ============================================================================
         //  🧠 SECTION 3: SMART MAPPING DICTIONARY
         // ============================================================================
-        // ดักอักษรเล็ก/ใหญ่, พิมพ์ผิด, และเชื่อมโยงไปยัง Parameter หลัก
         const MAPPING_DICT = {
             "ARAUCO": {
                 date: ["date"], batch: ["batch"], lot: ["lot"],
@@ -389,7 +376,7 @@
                     solubility10: ["alkalisolubilitys10"], pentosan: ["pentosancontent"],
                     brightness: ["brightness"], dirtCount: ["dirt"], resins: ["extractivescontent"],
                     ash: ["ashcontent"], calcium: ["calciumca"], iron: ["ironfe"],
-                    silica: ["silicacontentassio2", "silicacontentassio2"], viscosity: ["intrinsicviscosity"],
+                    silica: ["silicacontentassio2", "silicacontentas102"], viscosity: ["intrinsicviscosity"],
                     whiteness: ["berger"]
                 },
                 customParams: {
@@ -445,6 +432,43 @@
             return str.toLowerCase().replace(/[^a-z0-9]/g, '');
         };
 
+        function parseExcelPaste(text) {
+            let rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuote = false;
+
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                let nextChar = text[i + 1];
+
+                if (char === '"') {
+                    if (inQuote && nextChar === '"') {
+                        currentCell += '"'; 
+                        i++;
+                    } else {
+                        inQuote = !inQuote; 
+                    }
+                } else if (char === '\t' && !inQuote) {
+                    currentRow.push(currentCell);
+                    currentCell = '';
+                } else if ((char === '\n' || char === '\r') && !inQuote) {
+                    if (char === '\r' && nextChar === '\n') i++; 
+                    currentRow.push(currentCell);
+                    rows.push(currentRow);
+                    currentRow = [];
+                    currentCell = '';
+                } else {
+                    currentCell += char;
+                }
+            }
+            if (currentCell !== '' || currentRow.length > 0) {
+                currentRow.push(currentCell);
+                rows.push(currentRow);
+            }
+            return rows;
+        }
+
         // ============================================================================
         //  🚀 SECTION 4: SMART PASTE PARSER ENGINE
         // ============================================================================
@@ -460,10 +484,12 @@
             const mapDef = MAPPING_DICT[supplier] || MAPPING_DICT["Other"];
             if (!mapDef) return alert("ยังไม่ได้ตั้งค่า Mapping สำหรับ Supplier นี้");
 
-            const rows = rawPaste.split('\n');
-            if (rows.length < 2) return alert("ข้อมูลน้อยเกินไป (ต้องมี Header และ ข้อมูลอย่างน้อย 1 แถว)");
+            const parsedRows = parseExcelPaste(rawPaste);
+            const validRows = parsedRows.filter(row => row.some(cell => cell.trim() !== ''));
 
-            const headers = rows[0].split('\t').map(h => cleanHeader(h));
+            if (validRows.length < 2) return alert("ข้อมูลน้อยเกินไป (ต้องมี Header และ ข้อมูลอย่างน้อย 1 แถว)");
+
+            const headers = validRows[0].map(h => cleanHeader(h));
             
             const findColIdx = (aliases) => {
                 if(!aliases) return -1;
@@ -476,25 +502,24 @@
             const dateColIdx = findColIdx(mapDef.date);
             const batchColIdx = findColIdx(mapDef.batch);
             
-            if (batchColIdx === -1) return alert(`หาคอลัมน์ Batch ไม่เจอ กรุณาตรวจสอบ Header อีกครั้งครับ (ระบบมองหาคอลัมน์ชื่อคล้ายๆ: ${mapDef.batch.join(', ')})`);
+            if (batchColIdx === -1) return alert(`หาคอลัมน์ Batch ไม่เจอ กรุณาตรวจสอบ Header อีกครั้งครับ`);
 
             parsedDataList = [];
             let lastSeenDate = "";
 
-            for (let r = 1; r < rows.length; r++) {
-                const cells = rows[r].split('\t').map(c => c.trim());
-                if (cells.length === 0 || !cells[batchColIdx]) continue; // ข้ามแถวที่ไม่มีเลข batch
+            for (let r = 1; r < validRows.length; r++) {
+                const cells = validRows[r].map(c => c.trim());
+                if (cells.length === 0 || !cells[batchColIdx]) continue; 
 
                 const batchNo = cells[batchColIdx].toUpperCase();
                 
-                // จัดการเรื่อง Merge Cell (วันที่)
                 let rawDate = (dateColIdx !== -1 && cells[dateColIdx]) ? cells[dateColIdx] : "";
                 if (rawDate) lastSeenDate = rawDate;
                 else rawDate = lastSeenDate;
 
                 let finalDate = targetMonth + "-01";
                 if (rawDate) {
-                    const dayMatch = rawDate.match(/\d+/); // ดึงเอาเฉพาะตัวเลขวันออกมา
+                    const dayMatch = rawDate.match(/\d+/); 
                     if (dayMatch) {
                         const dayStr = dayMatch[0].padStart(2, '0');
                         finalDate = `${targetMonth}-${dayStr}`; 
@@ -505,7 +530,6 @@
                 headers.forEach((h, i) => { rowObj[h] = cells[i] || ""; });
                 const parameters = {};
 
-                // 1. ดึง Standard Params
                 if (mapDef.params) {
                     Object.keys(mapDef.params).forEach(sysKey => {
                         const aliases = mapDef.params[sysKey];
@@ -513,15 +537,13 @@
                         if (colIdx !== -1 && cells[colIdx] !== "") {
                             const val = parseFloat(cells[colIdx]);
                             if (!isNaN(val)) {
-                                if (sysKey === "whiteness" && val === 0) return; // กฎ: ข้าม berger 0
-                                // ถ้าเป็น Lab ให้ลงช่อง lab ถ้าเป็น Supplier ลงช่อง coa
+                                if (sysKey === "whiteness" && val === 0) return; 
                                 parameters[sysKey] = supplier === "Lab" ? { coa: null, lab: val } : { coa: val, lab: null };
                             }
                         }
                     });
                 }
 
-                // 2. คำนวณพิเศษ (เช่น หา Moisture จาก Dryness)
                 if (mapDef.specialCalc) {
                     const tempVals = {};
                     mapDef.specialCalc(rowObj, tempVals);
@@ -530,7 +552,6 @@
                     });
                 }
 
-                // 3. Custom Params (ถ้าค่าเป็น 0 ไม่ต้องใส่)
                 if (mapDef.customParams) {
                     Object.keys(mapDef.customParams).forEach(customName => {
                         const aliases = mapDef.customParams[customName];
@@ -547,7 +568,7 @@
                 parsedDataList.push({
                     supplier: supplier,
                     batchNo: batchNo,
-                    lotNo: "-", // ใส่ default เป็นขีดไปก่อนตามคำขอ
+                    lotNo: "-",
                     receivedDate: finalDate,
                     coaDate: finalDate,
                     parameters: parameters
@@ -587,11 +608,15 @@
                 
                 paramKeysArray.forEach(k => {
                     const paramObj = item.parameters[k];
-                    const val = paramObj ? (paramObj.coa !== null ? paramObj.coa : paramObj.lab) : "-";
+                    let val = "-";
+                    if (paramObj) {
+                        const rawVal = paramObj.coa !== null ? paramObj.coa : paramObj.lab;
+                        val = (rawVal !== null && rawVal !== '' && !isNaN(rawVal)) ? Number(rawVal).toFixed(2) : "-";
+                    }
                     tbodyHtml += `<td>${val}</td>`;
                 });
-                tbodyHtml += `</tr>`;
-            });
+                tbodyHtml += `</tr>`; // 🟢 จุดที่แก้ไข: ปิด tag </tr> ให้ครบ
+            }); // 🟢 จุดที่แก้ไข: ปิดลูป forEach ให้ครบ
 
             tableBody.innerHTML = tbodyHtml;
             document.getElementById('previewCount').textContent = `${dataList.length} Batches Ready`;
@@ -711,9 +736,8 @@
             }
         }
 
-
         // ============================================================================
-        //  🖥️ SECTION 6: UI & FETCH ENGINE (Original Code logic)
+        //  🖥️ SECTION 6: UI & FETCH ENGINE
         // ============================================================================
         function openSidebar(record = null) {
             currentDocId = record ? record.id : null;
@@ -723,7 +747,6 @@
             const saveEditBtn = document.getElementById('saveEditBtn');
 
             if (!record) {
-                // โหมดวางข้อมูล (New Record)
                 document.getElementById('sidebarTitle').textContent = 'New Inspection';
                 document.getElementById('sidebarDesc').textContent = 'Smart Paste from Excel';
                 document.getElementById('inp_targetMonth').value = new Date().toISOString().substring(0, 7);
@@ -735,9 +758,8 @@
                 manualMode.classList.add('hidden');
                 savePasteBtn.classList.remove('hidden');
                 saveEditBtn.classList.add('hidden');
-                savePasteBtn.disabled = true; // ต้อง Preview ก่อนถึงจะกดได้
+                savePasteBtn.disabled = true; 
             } else {
-                // โหมดแก้ไขแบบเดิม (Edit Mode)
                 document.getElementById('sidebarTitle').textContent = 'Edit Inspection';
                 document.getElementById('sidebarDesc').textContent = 'Compare COA vs Lab Results';
                 manualMode.reset();
@@ -822,8 +844,10 @@
                     const status = (data.parameters && Object.keys(data.parameters).length > 0) ? 'Completed' : 'Pending';
                     const statusClass = status === 'Completed' ? 'status-completed' : 'status-pending';
                     
-                    // ป้องกันการโชว์ - ในหน้าตาราง ถ้ามีค่าจาก Lab หรือ COA ให้แสดงค่านั้นออกมา
-                    const getVal = (p) => p ? (p.coa !== null ? p.coa : p.lab) || '-' : '-';
+                    const getVal = (p) => {
+                        let v = p ? (p.coa !== null ? p.coa : p.lab) : null;
+                        return (v !== null && v !== '' && !isNaN(v)) ? Number(v).toFixed(2) : '-';
+                    };
                     const alpha = getVal(data.parameters?.alphaCellulose);
                     const visc = getVal(data.parameters?.viscosity) !== '-' ? getVal(data.parameters?.viscosity) : getVal(data.parameters?.viscosity_t206);
                     const white = getVal(data.parameters?.whiteness);
@@ -890,17 +914,21 @@
             return dateString;
         }
 
-        // --- ฟังก์ชันช่วยเหลือสำหรับหน้า Edit (Render แถวข้อมูล) ---
         function renderParameterRows(existingData = {}) {
             paramsContainer.innerHTML = '';
             PULP_PARAMETERS.forEach(param => {
                 const pData = existingData[param.key] || { coa: '', lab: '' };
                 const row = document.createElement('div');
                 row.className = 'param-row';
+                
+                // 🟢 ใช้วิธีเช็คค่าว่างก่อนแปลงเป็นทศนิยม 2 ตำแหน่ง ป้องกันแสดงผล 0.00
+                const coaVal = (pData.coa !== null && pData.coa !== '') ? Number(pData.coa).toFixed(2) : '';
+                const labVal = (pData.lab !== null && pData.lab !== '') ? Number(pData.lab).toFixed(2) : '';
+
                 row.innerHTML = `
                     <div class="param-label">${param.label}</div>
-                    <div><input type="number" step="0.01" class="data-input inp-coa" data-key="${param.key}" value="${pData.coa !== null ? pData.coa : ''}" placeholder="-"></div>
-                    <div><input type="number" step="0.01" class="data-input inp-lab" data-key="${param.key}" value="${pData.lab !== null ? pData.lab : ''}" placeholder="-"></div>
+                    <div><input type="number" step="0.01" class="data-input inp-coa" data-key="${param.key}" value="${coaVal}" placeholder="-"></div>
+                    <div><input type="number" step="0.01" class="data-input inp-lab" data-key="${param.key}" value="${labVal}" placeholder="-"></div>
                     <div class="diff-value" id="diff-${param.key}">-</div>
                 `;
                 paramsContainer.appendChild(row);
@@ -931,13 +959,18 @@
             const row = document.createElement('div');
             row.className = 'param-row custom-param-row';
             const diffId = 'diff-' + Math.random().toString(36).substr(2, 9);
+            
+            // 🟢 ใช้วิธีเช็คค่าว่างก่อนแปลงเป็นทศนิยม 2 ตำแหน่ง
+            const coaVal = (data.coa !== null && data.coa !== '') ? Number(data.coa).toFixed(2) : '';
+            const labVal = (data.lab !== null && data.lab !== '') ? Number(data.lab).toFixed(2) : '';
+
             row.innerHTML = `
                 <div class="flex items-center gap-1">
                     <button type="button" class="text-red-400 hover:text-red-600" onclick="this.closest('.param-row').remove()"><i class="fas fa-times-circle"></i></button>
                     <input type="text" class="data-input inp-param-name text-xs font-bold text-slate-600" value="${data.key || ''}" placeholder="Enter Param Name">
                 </div>
-                <div><input type="number" step="0.01" class="data-input inp-coa" value="${data.coa !== null ? data.coa : ''}" placeholder="-"></div>
-                <div><input type="number" step="0.01" class="data-input inp-lab" value="${data.lab !== null ? data.lab : ''}" placeholder="-"></div>
+                <div><input type="number" step="0.01" class="data-input inp-coa" value="${coaVal}" placeholder="-"></div>
+                <div><input type="number" step="0.01" class="data-input inp-lab" value="${labVal}" placeholder="-"></div>
                 <div class="diff-value" id="${diffId}">-</div>
             `;
             paramsContainer.appendChild(row);
