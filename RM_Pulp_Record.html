@@ -14,14 +14,11 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* Theme & Basic Styles */
         body { font-family: 'Sarabun', sans-serif; background-color: #f0f9ff; }
         
-        /* Sidebar Animation */
         #recordSidebar { transition: transform 0.3s ease-in-out; transform: translateX(100%); width: 100%; max-width: 800px; }
         #recordSidebar.open { transform: translateX(0); }
 
-        /* Comparison Grid Style (For Edit Mode) */
         .param-row {
             display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1fr; gap: 0.5rem;
             align-items: center; padding: 0.5rem; border-bottom: 1px solid #f1f5f9;
@@ -44,7 +41,6 @@
         .diff-warning { color: #ca8a04; }
         .diff-danger { color: #dc2626; background: #fee2e2; border-radius: 4px; padding: 0 4px; }
 
-        /* Paste Area Styles */
         .paste-area {
             width: 100%; height: 120px; border: 2px dashed #cbd5e1; border-radius: 0.5rem;
             padding: 1rem; font-family: monospace; font-size: 0.875rem; resize: vertical;
@@ -56,6 +52,9 @@
         .preview-table { width: 100%; text-align: left; border-collapse: collapse; white-space: nowrap; font-size: 0.8rem; }
         .preview-table th { background: #f1f5f9; padding: 0.5rem; position: sticky; top: 0; border-bottom: 1px solid #cbd5e1; z-index: 10;}
         .preview-table td { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+        
+        .tab-btn { padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 600; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s; }
+        .tab-btn.active { border-bottom-color: #2563eb; color: #2563eb; }
     </style>
 </head>
 <body>
@@ -76,7 +75,7 @@
                     <div class="flex gap-3">
                         <button id="refreshBtn" class="text-slate-500 hover:text-blue-600"><i class="fas fa-sync-alt"></i></button>
                         <button id="newRecordBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition flex items-center gap-2">
-                            <i class="fas fa-paste"></i> Smart Paste New Record
+                            <i class="fas fa-plus"></i> New Inspection
                         </button>
                     </div>
                 </div>
@@ -152,12 +151,17 @@
             <div class="p-5 border-b bg-slate-50 flex justify-between items-center">
                 <div>
                     <h2 class="text-xl font-bold text-slate-800" id="sidebarTitle">New Inspection</h2>
-                    <p class="text-sm text-slate-500" id="sidebarDesc">Paste Excel or Edit Data</p>
                 </div>
                 <button id="closeSidebar" class="text-slate-400 hover:text-slate-600 transition text-2xl">&times;</button>
             </div>
 
+            <div class="flex border-b bg-white px-5 pt-2" id="modeTabs">
+                <button class="tab-btn active" id="tabPasteMode"><i class="fas fa-paste mr-1"></i> วางข้อมูล Supplier (Batch)</button>
+                <button class="tab-btn" id="tabManualMode"><i class="fas fa-flask mr-1"></i> Lab Report & COA </button>
+            </div>
+
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                
                 <div id="pasteModeSection">
                     <div class="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100 mb-4">
                         <div class="col-span-2 md:col-span-1">
@@ -169,18 +173,17 @@
                                 <option value="AV CELL">AV CELL</option>
                                 <option value="PHOENIX">PHOENIX</option>
                                 <option value="TEL Pellita">TEL Pellita</option>
-                                <option value="Lab">Lab (Internal)</option>
                             </select>
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-bold text-slate-700 mb-1">2. Target Month/Year (ระบุวันที่หลัก)</label>
-                            <input type="month" id="inp_targetMonth" class="w-full p-2 border rounded bg-white outline-none" title="ระบบจะดึงแค่วันที่จาก Excel แล้วนำมาประกอบกับเดือน/ปีนี้ เพื่อกันปัญหา Format เพี้ยน">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">2. Target Month/Year</label>
+                            <input type="month" id="inp_targetMonth" class="w-full p-2 border rounded bg-white outline-none">
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">3. Paste Excel Data (ลากคลุม Header มาด้วย)</label>
-                        <textarea id="inp_pasteArea" class="paste-area" placeholder="คลิกที่นี่ แล้วกด Ctrl+V วางข้อมูล Excel ทั้งตารางได้เลย..."></textarea>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">3. Paste Supplier Excel Data</label>
+                        <textarea id="inp_pasteArea" class="paste-area" placeholder="วางข้อมูล COA หลายๆ Batch จาก Supplier..."></textarea>
                     </div>
 
                     <div class="mt-2 text-right">
@@ -190,14 +193,14 @@
                     </div>
 
                     <div class="mt-4">
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Remarks / Note (ใช้หมายเหตุนี้กับทุก Batch ที่วางมา)</label>
-                        <textarea id="inp_paste_remarks" rows="1" class="w-full p-2 border rounded text-sm placeholder-slate-300" placeholder="e.g., Package damaged..."></textarea>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Remarks / Note</label>
+                        <textarea id="inp_paste_remarks" rows="1" class="w-full p-2 border rounded text-sm placeholder-slate-300"></textarea>
                     </div>
 
                     <div id="previewSection" class="mt-6 hidden">
                         <div class="flex justify-between items-end mb-2">
                             <h3 class="font-bold text-slate-700"><i class="fas fa-check-circle text-green-500 mr-1"></i> Data Preview</h3>
-                            <span class="text-xs font-bold text-blue-600" id="previewCount">0 Records found</span>
+                            <span class="text-xs font-bold text-blue-600" id="previewCount">0 Records</span>
                         </div>
                         <div class="preview-table-container">
                             <table class="preview-table" id="previewTable">
@@ -209,35 +212,47 @@
                 </div>
 
                 <form id="recordForm" class="hidden">
-                    <div class="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    
+                    <div class="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 mb-4">
                         <div class="col-span-2">
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Supplier / Brand</label>
-                            <select id="inp_supplier" class="w-full p-2 border rounded bg-white outline-none">
-                                <option value="" disabled selected>-- Select Supplier --</option>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Supplier / Brand <span class="text-red-500">*จำเป็น</span></label>
+                            <select id="inp_supplier" class="w-full p-2 border rounded bg-white outline-none font-bold text-blue-700">
+                                <option value="" disabled selected>-- Select Supplier ก่อนทำขั้นตอนต่อไป --</option>
                                 <option value="ARAUCO">ARAUCO</option>
                                 <option value="AV NACKAWIC">AV NACKAWIC</option>
                                 <option value="AV CELL">AV CELL</option>
                                 <option value="PHOENIX">PHOENIX</option>
                                 <option value="TEL Pellita">TEL Pellita</option>
-                                <option value="Lab">Lab</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Batch No.</label>
-                            <input type="text" id="inp_batch" class="w-full p-2 border rounded outline-none uppercase">
+                            <input type="text" id="inp_batch" class="w-full p-2 border rounded outline-none uppercase font-bold text-slate-700">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Lot / Invoice No.</label>
-                            <input type="text" id="inp_lot" class="w-full p-2 border rounded outline-none uppercase">
+                            <input type="text" id="inp_lot" class="w-full p-2 border rounded outline-none uppercase font-bold text-slate-700">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Received Date</label>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Received Date <span class="text-red-500">*จำเป็น</span></label>
                             <input type="date" id="inp_receiveDate" class="w-full p-2 border rounded text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">COA Date</label>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">COA/Lab Date</label>
                             <input type="date" id="inp_coaDate" class="w-full p-2 border rounded text-sm">
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 p-4 rounded-lg mb-6 border border-purple-200">
+                        <h4 class="font-bold text-purple-800 text-sm mb-2"><i class="fas fa-magic"></i> Auto-Fill ข้อมูล Lab (Composite)</h4>
+                        <p class="text-xs text-purple-600 mb-2">1. เลือกระบุ Supplier และวันที่ด้านบนให้ถูกต้อง<br>2. วางข้อมูล Excel <b>Lab Result</b> ที่นี่ ระบบจะหยอดลงฟอร์มและ <b>ดึงค่า COA (AVG) อัตโนมัติ</b></p>
+                        <textarea id="inp_lab_paste" class="w-full p-2 text-xs border border-purple-300 rounded h-16 font-mono" placeholder="วางข้อมูล Excel Lab Result ที่นี่..."></textarea>
+                        <div class="text-right mt-2 flex justify-between items-center">
+                            <span class="text-xs font-semibold text-purple-600" id="autoFillStatus"></span>
+                            <button type="button" id="btnFillLab" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded shadow text-xs font-bold transition flex items-center gap-1">
+                                <i class="fas fa-bolt"></i> หยอดข้อมูล & ดึง COA
+                            </button>
                         </div>
                     </div>
 
@@ -273,11 +288,11 @@
                 <button type="button" id="cancelBtn" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded transition">Cancel</button>
                 
                 <button type="button" id="savePasteBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg transition font-semibold hidden">
-                    <i class="fas fa-save mr-2"></i> Save All Pasts
+                    <i class="fas fa-save mr-2"></i> Save Batch Records
                 </button>
                 
                 <button type="button" id="saveEditBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg transition font-semibold hidden">
-                    <i class="fas fa-save mr-2"></i> Update Record
+                    <i class="fas fa-save mr-2"></i> Save / Update Record
                 </button>
             </div>
         </aside>
@@ -298,7 +313,6 @@
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        
         db.settings({ experimentalForceLongPolling: true }); 
 
         const PULP_PARAMETERS = [
@@ -341,19 +355,23 @@
         //  ⚙️ SECTION 2: INITIALIZATION
         // ============================================================================
         document.addEventListener('DOMContentLoaded', () => {
-            firebase.auth().onAuthStateChanged((user) => {
-                fetchRecords('reset');
-            });
+            firebase.auth().onAuthStateChanged((user) => { fetchRecords('reset'); });
 
             document.getElementById('newRecordBtn').addEventListener('click', () => openSidebar(null));
             document.getElementById('closeSidebar').addEventListener('click', () => closeSidebar());
             document.getElementById('cancelBtn').addEventListener('click', () => closeSidebar());
             
+            document.getElementById('tabPasteMode').addEventListener('click', () => switchTab('paste'));
+            document.getElementById('tabManualMode').addEventListener('click', () => switchTab('manual'));
+
             document.getElementById('refreshBtn').addEventListener('click', () => fetchRecords('reset'));
             document.getElementById('addParamBtn').addEventListener('click', () => addCustomParameterRow());
 
             document.getElementById('saveEditBtn').addEventListener('click', saveManualEdit);
             document.getElementById('savePasteBtn').addEventListener('click', saveBatchPaste);
+            
+            // ปุ่มพิเศษสำหรับดึงข้อมูล Lab + Fetch COA Avg
+            document.getElementById('btnFillLab').addEventListener('click', fillLabDataToForm);
 
             document.getElementById('searchInput').addEventListener('input', debounce(() => fetchRecords('reset'), 500));
             document.getElementById('filterSupplier').addEventListener('change', () => fetchRecords('reset'));
@@ -366,23 +384,19 @@
 
 
         // ============================================================================
-        //  🧠 SECTION 3: SMART MAPPING DICTIONARY
+        //  🧠 SECTION 3: MAPPING DICTIONARY
         // ============================================================================
         const MAPPING_DICT = {
             "ARAUCO": {
-                date: ["date"], batch: ["batch"], lot: ["lot"],
+                date: ["date"], batch: ["batch"],
                 params: {
                     alphaCellulose: ["alphacellulose"], solubility18: ["alkalisolubilitys18"],
                     solubility10: ["alkalisolubilitys10"], pentosan: ["pentosancontent"],
                     brightness: ["brightness"], dirtCount: ["dirt"], resins: ["extractivescontent"],
                     ash: ["ashcontent"], calcium: ["calciumca"], iron: ["ironfe"],
-                    silica: ["silicacontentassio2", "silicacontentas102"], viscosity: ["intrinsicviscosity"],
-                    whiteness: ["berger"]
+                    silica: ["silicacontentassio2", "silicacontentas102"], viscosity: ["intrinsicviscosity"], whiteness: ["berger"]
                 },
-                customParams: {
-                    "Manganese (Mn)": ["manganesemn", "manganese"], "Magnesium (Mg)": ["magnesiummg", "magnesium"],
-                    "Copper (Cu)": ["coppercu", "copper"], "Sodium (Na)": ["sodiumna", "sodium"]
-                },
+                customParams: { "Manganese (Mn)": ["manganesemn", "manganese"], "Magnesium (Mg)": ["magnesiummg", "magnesium"], "Copper (Cu)": ["coppercu", "copper"], "Sodium (Na)": ["sodiumna", "sodium"] },
                 specialCalc: (rowObj, paramValues) => {
                     const drynessKey = Object.keys(rowObj).find(k => k.includes("dryness"));
                     if (drynessKey && rowObj[drynessKey]) {
@@ -393,24 +407,12 @@
             },
             "AV NACKAWIC": {
                 date: ["date"], batch: ["batch"],
-                params: {
-                    alphaCellulose: ["alpha"], solubility18: ["s18"], solubility10: ["s10"],
-                    moisture: ["moist"], viscosity_t206: ["visc"], viscosity: ["viscoiso5351"],
-                    brightness: ["bright"], whiteness: ["whiteness"], silica: ["silica"],
-                    calcium: ["ca"], iron: ["fe"], ash: ["ash"], ph: ["ph"],
-                    resins: ["resin"], dirtCount: ["dirt"]
-                },
+                params: { alphaCellulose: ["alpha"], solubility18: ["s18"], solubility10: ["s10"], moisture: ["moist"], viscosity_t206: ["visc"], viscosity: ["viscoiso5351"], brightness: ["bright"], whiteness: ["whiteness"], silica: ["silica"], calcium: ["ca"], iron: ["fe"], ash: ["ash"], ph: ["ph"], resins: ["resin"], dirtCount: ["dirt"] },
                 customParams: { "Sodium (Na)": ["na"], "Copper (Cu)": ["cu"] }
             },
             "AV CELL": {
                 date: ["date"], batch: ["batch"],
-                params: {
-                    alphaCellulose: ["alpha"], solubility18: ["s18"], solubility10: ["s10"],
-                    moisture: ["moist"], viscosity_t206: ["visc"], viscosity: ["viscoiso5351"],
-                    brightness: ["bright"], whiteness: ["whiteness"], silica: ["silica"],
-                    calcium: ["ca"], iron: ["fe"], ash: ["ash"], ph: ["ph"],
-                    resins: ["resin"], dirtCount: ["dirt"]
-                },
+                params: { alphaCellulose: ["alpha"], solubility18: ["s18"], solubility10: ["s10"], moisture: ["moist"], viscosity_t206: ["visc"], viscosity: ["viscoiso5351"], brightness: ["bright"], whiteness: ["whiteness"], silica: ["silica"], calcium: ["ca"], iron: ["fe"], ash: ["ash"], ph: ["ph"], resins: ["resin"], dirtCount: ["dirt"] },
                 customParams: { "Sodium (Na)": ["na"], "Copper (Cu)": ["cu"] }
             },
             "PHOENIX": {
@@ -421,9 +423,17 @@
                 date: ["date"], batch: ["batch"],
                 params: { viscosity_t206: ["visosity", "viscosity"], brightness: ["brightness"], dirtCount: ["dirtcount"], ph: ["ph"] }
             },
-            "Lab": {
-                date: ["date", "testdate"], batch: ["batch"],
-                params: { alphaCellulose: ["alpha"], viscosity: ["viscosity"] }
+            "LAB_UNIVERSAL": {
+                params: {
+                    moisture: ["moisture"], alphaCellulose: ["alphacellulose"],
+                    viscosity_t206: ["viscositycpt206"], viscosity: ["viscositycpiso", "viscositycpisomlg"],
+                    solubility10: ["solubilityin10naoh", "solubilityin10naoh("], solubility18: ["solubilityin18naoh", "solubilityin18naoh("],
+                    whiteness: ["bergerwhiteness"], ash: ["ash"], silica: ["acidinsolublesilica"],
+                    iron: ["ironasfe"], calcium: ["calciumascao"], resins: ["resinsfatsdcm"],
+                    brightness: ["isobrightness"], ph: ["phof1solution"], swelling: ["swellingfactor"],
+                    dirtCount: ["dirtcount"], r18: ["r18"], kappa: ["kappanumber"],
+                    reactivity: ["reactivity"], pentosan: ["pentosan"]
+                }
             }
         };
 
@@ -433,44 +443,36 @@
         };
 
         function parseExcelPaste(text) {
-            let rows = [];
-            let currentRow = [];
-            let currentCell = '';
-            let inQuote = false;
-
+            let rows = []; let currentRow = []; let currentCell = ''; let inQuote = false;
             for (let i = 0; i < text.length; i++) {
-                let char = text[i];
-                let nextChar = text[i + 1];
-
+                let char = text[i]; let nextChar = text[i + 1];
                 if (char === '"') {
-                    if (inQuote && nextChar === '"') {
-                        currentCell += '"'; 
-                        i++;
-                    } else {
-                        inQuote = !inQuote; 
-                    }
+                    if (inQuote && nextChar === '"') { currentCell += '"'; i++; } else { inQuote = !inQuote; }
                 } else if (char === '\t' && !inQuote) {
-                    currentRow.push(currentCell);
-                    currentCell = '';
+                    currentRow.push(currentCell); currentCell = '';
                 } else if ((char === '\n' || char === '\r') && !inQuote) {
                     if (char === '\r' && nextChar === '\n') i++; 
-                    currentRow.push(currentCell);
-                    rows.push(currentRow);
-                    currentRow = [];
-                    currentCell = '';
-                } else {
-                    currentCell += char;
-                }
+                    currentRow.push(currentCell); rows.push(currentRow); currentRow = []; currentCell = '';
+                } else { currentCell += char; }
             }
-            if (currentCell !== '' || currentRow.length > 0) {
-                currentRow.push(currentCell);
-                rows.push(currentRow);
-            }
+            if (currentCell !== '' || currentRow.length > 0) { currentRow.push(currentCell); rows.push(currentRow); }
             return rows;
         }
 
+        // ฟังก์ชันหาวันสิ้นเดือนที่รองรับ Timezone ไทย
+        function getLastDayOfMonth(dateInput) {
+            if(!dateInput) return "";
+            const d = new Date(dateInput);
+            const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0); 
+            const yyyy = eom.getFullYear();
+            const mm = String(eom.getMonth() + 1).padStart(2, '0');
+            const dd = String(eom.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+
         // ============================================================================
-        //  🚀 SECTION 4: SMART PASTE PARSER ENGINE
+        //  🚀 SECTION 4: SMART PASTE PARSER ENGINE (SUPPLIER MODE)
         // ============================================================================
         document.getElementById('previewBtn').addEventListener('click', () => {
             const supplier = document.getElementById('inp_paste_supplier').value;
@@ -481,7 +483,7 @@
             if (!targetMonth) return alert("กรุณาเลือก Target Month/Year เพื่อใช้อ้างอิงวันที่");
             if (!rawPaste) return alert("กรุณาวางข้อมูลจาก Excel ก่อนกด Preview");
 
-            const mapDef = MAPPING_DICT[supplier] || MAPPING_DICT["Other"];
+            const mapDef = MAPPING_DICT[supplier];
             if (!mapDef) return alert("ยังไม่ได้ตั้งค่า Mapping สำหรับ Supplier นี้");
 
             const parsedRows = parseExcelPaste(rawPaste);
@@ -490,18 +492,13 @@
             if (validRows.length < 2) return alert("ข้อมูลน้อยเกินไป (ต้องมี Header และ ข้อมูลอย่างน้อย 1 แถว)");
 
             const headers = validRows[0].map(h => cleanHeader(h));
-            
             const findColIdx = (aliases) => {
                 if(!aliases) return -1;
-                for (let i = 0; i < headers.length; i++) {
-                    if (aliases.includes(headers[i])) return i;
-                }
-                return -1;
+                for (let i = 0; i < headers.length; i++) { if (aliases.includes(headers[i])) return i; } return -1;
             };
 
             const dateColIdx = findColIdx(mapDef.date);
             const batchColIdx = findColIdx(mapDef.batch);
-            
             if (batchColIdx === -1) return alert(`หาคอลัมน์ Batch ไม่เจอ กรุณาตรวจสอบ Header อีกครั้งครับ`);
 
             parsedDataList = [];
@@ -512,10 +509,8 @@
                 if (cells.length === 0 || !cells[batchColIdx]) continue; 
 
                 const batchNo = cells[batchColIdx].toUpperCase();
-                
                 let rawDate = (dateColIdx !== -1 && cells[dateColIdx]) ? cells[dateColIdx] : "";
-                if (rawDate) lastSeenDate = rawDate;
-                else rawDate = lastSeenDate;
+                if (rawDate) lastSeenDate = rawDate; else rawDate = lastSeenDate;
 
                 let finalDate = targetMonth + "-01";
                 if (rawDate) {
@@ -526,55 +521,40 @@
                     }
                 }
 
-                const rowObj = {};
-                headers.forEach((h, i) => { rowObj[h] = cells[i] || ""; });
+                const rowObj = {}; headers.forEach((h, i) => { rowObj[h] = cells[i] || ""; });
                 const parameters = {};
 
                 if (mapDef.params) {
                     Object.keys(mapDef.params).forEach(sysKey => {
-                        const aliases = mapDef.params[sysKey];
-                        const colIdx = findColIdx(aliases);
+                        const colIdx = findColIdx(mapDef.params[sysKey]);
                         if (colIdx !== -1 && cells[colIdx] !== "") {
                             const val = parseFloat(cells[colIdx]);
                             if (!isNaN(val)) {
                                 if (sysKey === "whiteness" && val === 0) return; 
-                                parameters[sysKey] = supplier === "Lab" ? { coa: null, lab: val } : { coa: val, lab: null };
+                                parameters[sysKey] = { coa: val, lab: null };
                             }
                         }
                     });
                 }
-
                 if (mapDef.specialCalc) {
-                    const tempVals = {};
-                    mapDef.specialCalc(rowObj, tempVals);
-                    Object.keys(tempVals).forEach(sysKey => {
-                        parameters[sysKey] = supplier === "Lab" ? { coa: null, lab: tempVals[sysKey] } : { coa: tempVals[sysKey], lab: null };
-                    });
+                    const tempVals = {}; mapDef.specialCalc(rowObj, tempVals);
+                    Object.keys(tempVals).forEach(sysKey => { parameters[sysKey] = { coa: tempVals[sysKey], lab: null }; });
                 }
-
                 if (mapDef.customParams) {
                     Object.keys(mapDef.customParams).forEach(customName => {
-                        const aliases = mapDef.customParams[customName];
-                        const colIdx = findColIdx(aliases);
+                        const colIdx = findColIdx(mapDef.customParams[customName]);
                         if (colIdx !== -1 && cells[colIdx] !== "") {
                             const val = parseFloat(cells[colIdx]);
-                            if (!isNaN(val) && val !== 0) {
-                                parameters[customName] = supplier === "Lab" ? { coa: null, lab: val } : { coa: val, lab: null };
-                            }
+                            if (!isNaN(val) && val !== 0) parameters[customName] = { coa: val, lab: null };
                         }
                     });
                 }
 
                 parsedDataList.push({
-                    supplier: supplier,
-                    batchNo: batchNo,
-                    lotNo: "-",
-                    receivedDate: finalDate,
-                    coaDate: finalDate,
-                    parameters: parameters
+                    supplier: supplier, batchNo: batchNo, lotNo: "-",
+                    receivedDate: finalDate, coaDate: finalDate, parameters: parameters
                 });
             }
-
             renderPreviewTable(parsedDataList);
         });
 
@@ -586,9 +566,7 @@
 
             if (dataList.length === 0) {
                 alert("ไม่พบข้อมูลที่จะประมวลผล กรุณาตรวจสอบ Format Excel");
-                section.classList.add('hidden');
-                btnSave.disabled = true;
-                return;
+                section.classList.add('hidden'); btnSave.disabled = true; return;
             }
 
             let paramKeysSet = new Set();
@@ -597,15 +575,11 @@
 
             let theadHtml = `<tr><th>Date</th><th>Batch No.</th>`;
             paramKeysArray.forEach(k => { theadHtml += `<th>${k}</th>`; });
-            theadHtml += `</tr>`;
-            tableHead.innerHTML = theadHtml;
+            theadHtml += `</tr>`; tableHead.innerHTML = theadHtml;
 
             let tbodyHtml = "";
             dataList.forEach(item => {
-                tbodyHtml += `<tr>
-                    <td>${item.receivedDate}</td>
-                    <td class="font-bold text-blue-700">${item.batchNo}</td>`;
-                
+                tbodyHtml += `<tr><td>${item.receivedDate}</td><td class="font-bold text-blue-700">${item.batchNo}</td>`;
                 paramKeysArray.forEach(k => {
                     const paramObj = item.parameters[k];
                     let val = "-";
@@ -615,78 +589,173 @@
                     }
                     tbodyHtml += `<td>${val}</td>`;
                 });
-                tbodyHtml += `</tr>`; // 🟢 จุดที่แก้ไข: ปิด tag </tr> ให้ครบ
-            }); // 🟢 จุดที่แก้ไข: ปิดลูป forEach ให้ครบ
-
+                tbodyHtml += `</tr>`;
+            });
             tableBody.innerHTML = tbodyHtml;
             document.getElementById('previewCount').textContent = `${dataList.length} Batches Ready`;
-            
-            section.classList.remove('hidden');
-            btnSave.disabled = false;
+            section.classList.remove('hidden'); btnSave.disabled = false;
         };
 
 
         // ============================================================================
-        //  💾 SECTION 5: DATABASE SAVING (Batch Paste & Manual Edit)
+        //  🧪 SECTION 4.5: LAB AUTO-FILL & FETCH COA AVG ENGINE
+        // ============================================================================
+        async function fillLabDataToForm() {
+            const supplier = document.getElementById('inp_supplier').value;
+            if (!supplier) return alert("กรุณาเลือก Supplier / Brand ให้เรียบร้อยก่อนครับ เพื่อให้ระบบดึงค่า COA Avg มาให้ถูกบริษัท");
+
+            const rawPaste = document.getElementById('inp_lab_paste').value.trim();
+            if (!rawPaste) return alert("กรุณาวางข้อมูล Excel ลงในกล่องก่อนครับ");
+
+            const btn = document.getElementById('btnFillLab');
+            const statusTxt = document.getElementById('autoFillStatus');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            statusTxt.textContent = "กำลังแปลงข้อมูล Lab...";
+
+            try {
+                const parsedRows = parseExcelPaste(rawPaste);
+                const validRows = parsedRows.filter(row => row.some(cell => cell.trim() !== ''));
+                if (validRows.length < 2) {
+                    alert("ข้อมูลน้อยเกินไป (ต้องก๊อปปี้ส่วนที่เป็น Header มาด้วยครับ)");
+                    return;
+                }
+
+                // 1. เซ็ตค่าคงที่พื้นฐานของ Lab (Composite)
+                document.getElementById('inp_batch').value = "COMPOSITE";
+                document.getElementById('inp_lot').value = "COMPOSITE";
+                
+                const formDate = document.getElementById('inp_receiveDate').value;
+                let targetDate = formDate ? formDate : new Date().toISOString().split('T')[0];
+                const endOfMonth = getLastDayOfMonth(targetDate);
+                
+                document.getElementById('inp_receiveDate').value = endOfMonth;
+                document.getElementById('inp_coaDate').value = endOfMonth;
+
+                // 2. ดึงค่า COA เฉลี่ยจาก Firestore (stats_pulp)
+                statusTxt.textContent = "กำลังดึงค่า COA จากฐานข้อมูล...";
+                const year = endOfMonth.split('-')[0];
+                const monthKey = endOfMonth.substring(0, 7); // รูปแบบ: YYYY-MM
+                
+                let coaAverages = {};
+                try {
+                    const statDoc = await db.collection('stats_pulp').doc(`summary_${year}`).get();
+                    if (statDoc.exists) {
+                        const incoming = statDoc.data().pulp_incoming || {};
+                        // เจาะเข้าไปหา monthKey -> supplier -> params
+                        const supplierStats = incoming[monthKey]?.[supplier]?.params || {};
+                        coaAverages = supplierStats;
+                    }
+                } catch (e) {
+                    console.error("Error fetching COA Avg from stats_pulp:", e);
+                    // ปล่อยผ่านไป ไม่ต้องพังฟอร์มเผื่อเน็ตหลุด
+                }
+
+                // 3. เริ่มหยอดข้อมูล Lab และ COA ใส่ Form
+                statusTxt.textContent = "กำลังหยอดตัวเลขลงฟอร์ม...";
+                const headers = validRows[0].map(h => cleanHeader(h));
+                const cells = validRows[1].map(c => c.trim()); // สนใจแค่บรรทัดแรกของ Data
+
+                const mapDef = MAPPING_DICT["LAB_UNIVERSAL"].params; 
+                let matchedCount = 0;
+
+                // วนลูปตามหัวข้อทั้งหมดที่มีในระบบ
+                PULP_PARAMETERS.forEach(paramConfig => {
+                    const sysKey = paramConfig.key;
+                    
+                    // --- หยอดค่า Lab (ถ้ามีใน Excel) ---
+                    const aliases = mapDef[sysKey];
+                    let colIdx = -1;
+                    if (aliases) {
+                        for (let i = 0; i < headers.length; i++) { if (aliases.includes(headers[i])) { colIdx = i; break; } }
+                    }
+                    
+                    if (colIdx !== -1 && cells[colIdx] !== "") {
+                        const val = parseFloat(cells[colIdx]);
+                        if (!isNaN(val)) {
+                            const labInput = document.querySelector(`.inp-lab[data-key="${sysKey}"]`);
+                            if (labInput) {
+                                labInput.value = Number(val).toFixed(2);
+                                matchedCount++;
+                            }
+                        }
+                    }
+
+                    // --- หยอดค่า COA Avg (ถ้าดึงมาได้จาก DB) ---
+                    if (coaAverages[sysKey] && coaAverages[sysKey].coa_avg !== undefined) {
+                        const coaVal = coaAverages[sysKey].coa_avg;
+                        if (coaVal !== null && !isNaN(coaVal)) {
+                            const coaInput = document.querySelector(`.inp-coa[data-key="${sysKey}"]`);
+                            if (coaInput) {
+                                coaInput.value = Number(coaVal).toFixed(2);
+                            }
+                        }
+                    }
+
+                    // กระตุ้นให้คำนวณ Diff (%) อัตโนมัติสำหรับแถวนี้
+                    const labInput = document.querySelector(`.inp-lab[data-key="${sysKey}"]`);
+                    if(labInput) labInput.dispatchEvent(new Event('input'));
+                });
+
+                if(matchedCount > 0) {
+                    // เอฟเฟกต์สำเร็จ
+                    const container = document.getElementById('parametersContainer');
+                    container.style.opacity = '0.3';
+                    setTimeout(() => container.style.opacity = '1', 200);
+                    document.getElementById('inp_lab_paste').value = ""; 
+                    statusTxt.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle"></i> หยอดสำเร็จ ${matchedCount} ค่า</span>`;
+                } else {
+                    alert("ไม่พบข้อมูล Lab ที่ตรงกับตาราง กรุณาตรวจสอบว่า Copy มาถูกตารางหรือไม่");
+                    statusTxt.textContent = "ลองใหม่อีกครั้ง";
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("เกิดข้อผิดพลาดในการประมวลผล: " + err.message);
+                statusTxt.textContent = "เกิดข้อผิดพลาด";
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-bolt"></i> หยอดข้อมูล & ดึง COA';
+                setTimeout(() => statusTxt.textContent = "", 4000);
+            }
+        }
+
+
+        // ============================================================================
+        //  💾 SECTION 5: DATABASE SAVING
         // ============================================================================
         async function saveBatchPaste() {
             if (parsedDataList.length === 0) return;
             const btn = document.getElementById('savePasteBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             const remarks = document.getElementById('inp_paste_remarks').value.trim();
             const userEmail = firebase.auth().currentUser?.email || "Guest";
 
             try {
-                let batch = db.batch();
-                let count = 0;
-
+                let batch = db.batch(); let count = 0;
                 for (const item of parsedDataList) {
                     const docRef = db.collection('rm_pulp_inspections').doc(); 
-                    const docData = {
-                        supplier: item.supplier,
-                        batchNo: item.batchNo,
-                        lotNo: item.lotNo,
-                        receivedDate: item.receivedDate,
-                        coaDate: item.coaDate,
-                        remarks: remarks,
-                        parameters: item.parameters,
+                    batch.set(docRef, {
+                        ...item, remarks: remarks,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        bookedBy: userEmail,
-                        updatedBy: userEmail
-                    };
-
-                    batch.set(docRef, docData);
+                        bookedBy: userEmail, updatedBy: userEmail
+                    });
                     count++;
-
-                    if (count === 400) {
-                        await batch.commit();
-                        batch = db.batch();
-                        count = 0;
-                    }
+                    if (count === 400) { await batch.commit(); batch = db.batch(); count = 0; }
                 }
-                
                 if (count > 0) await batch.commit();
 
                 alert(`บันทึกข้อมูลสำเร็จ ${parsedDataList.length} Batch!`);
-                closeSidebar();
-                fetchRecords('reset');
-
-            } catch (error) {
-                console.error(error);
-                alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save All Pasts';
-            }
+                closeSidebar(); fetchRecords('reset');
+            } catch (error) { alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message); } 
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Batch Records'; }
         }
 
         async function saveManualEdit() {
             const btn = document.getElementById('saveEditBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             try {
                 const userEmail = firebase.auth().currentUser?.email || "Guest";
@@ -712,8 +781,7 @@
                         if (nameInp && nameInp.value.trim() !== "") key = nameInp.value.trim();
                     }
                     if (key) {
-                        const coaInp = row.querySelector('.inp-coa');
-                        const labInp = row.querySelector('.inp-lab');
+                        const coaInp = row.querySelector('.inp-coa'); const labInp = row.querySelector('.inp-lab');
                         if(coaInp.value || labInp.value) {
                             parameters[key] = {
                                 coa: coaInp.value ? parseFloat(coaInp.value) : null,
@@ -724,51 +792,69 @@
                 });
 
                 const docData = { ...headerData, parameters };
-                await db.collection('rm_pulp_inspections').doc(currentDocId).update(docData);
+                if(currentDocId) {
+                    await db.collection('rm_pulp_inspections').doc(currentDocId).update(docData);
+                } else {
+                    docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    docData.bookedBy = userEmail;
+                    await db.collection('rm_pulp_inspections').add(docData);
+                }
                 
-                closeSidebar();
-                fetchRecords('reset');
-            } catch (error) {
-                if(error.message !== "Validation failed") alert("Failed to update: " + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save mr-2"></i> Update Record';
-            }
+                closeSidebar(); fetchRecords('reset');
+            } catch (error) { if(error.message !== "Validation failed") alert("Failed to save: " + error.message); } 
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save / Update Record'; }
         }
 
         // ============================================================================
         //  🖥️ SECTION 6: UI & FETCH ENGINE
         // ============================================================================
+        function switchTab(mode) {
+            document.getElementById('tabPasteMode').classList.remove('active');
+            document.getElementById('tabManualMode').classList.remove('active');
+            document.getElementById('pasteModeSection').classList.add('hidden');
+            document.getElementById('recordForm').classList.add('hidden');
+            document.getElementById('savePasteBtn').classList.add('hidden');
+            document.getElementById('saveEditBtn').classList.add('hidden');
+
+            if(mode === 'paste') {
+                document.getElementById('tabPasteMode').classList.add('active');
+                document.getElementById('pasteModeSection').classList.remove('hidden');
+                document.getElementById('savePasteBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('tabManualMode').classList.add('active');
+                document.getElementById('recordForm').classList.remove('hidden');
+                document.getElementById('saveEditBtn').classList.remove('hidden');
+                
+                if(!document.getElementById('inp_receiveDate').value) {
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('inp_receiveDate').value = today;
+                    document.getElementById('inp_coaDate').value = today;
+                }
+            }
+        }
+
         function openSidebar(record = null) {
             currentDocId = record ? record.id : null;
-            const pasteMode = document.getElementById('pasteModeSection');
-            const manualMode = document.getElementById('recordForm');
-            const savePasteBtn = document.getElementById('savePasteBtn');
-            const saveEditBtn = document.getElementById('saveEditBtn');
+            document.getElementById('modeTabs').classList.remove('hidden');
 
             if (!record) {
                 document.getElementById('sidebarTitle').textContent = 'New Inspection';
-                document.getElementById('sidebarDesc').textContent = 'Smart Paste from Excel';
                 document.getElementById('inp_targetMonth').value = new Date().toISOString().substring(0, 7);
                 document.getElementById('previewSection').classList.add('hidden');
                 document.getElementById('inp_pasteArea').value = '';
+                document.getElementById('inp_lab_paste').value = '';
                 parsedDataList = [];
                 
-                pasteMode.classList.remove('hidden');
-                manualMode.classList.add('hidden');
-                savePasteBtn.classList.remove('hidden');
-                saveEditBtn.classList.add('hidden');
-                savePasteBtn.disabled = true; 
+                document.getElementById('recordForm').reset();
+                renderParameterRows({});
+                switchTab('paste'); 
+                document.getElementById('savePasteBtn').disabled = true; 
             } else {
                 document.getElementById('sidebarTitle').textContent = 'Edit Inspection';
-                document.getElementById('sidebarDesc').textContent = 'Compare COA vs Lab Results';
-                manualMode.reset();
+                document.getElementById('modeTabs').classList.add('hidden'); 
+                document.getElementById('recordForm').reset();
 
-                pasteMode.classList.add('hidden');
-                manualMode.classList.remove('hidden');
-                savePasteBtn.classList.add('hidden');
-                saveEditBtn.classList.remove('hidden');
-
+                switchTab('manual'); 
                 document.getElementById('inp_supplier').value = record.supplier || '';
                 document.getElementById('inp_batch').value = record.batchNo || '';
                 document.getElementById('inp_lot').value = record.lotNo || '';
@@ -794,10 +880,8 @@
         async function fetchRecords(direction = 'reset') {
             if (isPaginating) return;
             isPaginating = true;
-            
             tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></td></tr>';
-            nextBtn.disabled = true;
-            prevBtn.disabled = true;
+            nextBtn.disabled = true; prevBtn.disabled = true;
 
             try {
                 let query = db.collection('rm_pulp_inspections');
@@ -813,11 +897,9 @@
                 if (startDate || endDate) query = query.orderBy('receivedDate', 'desc');
                 else query = query.orderBy('createdAt', 'desc');
 
-                if (direction === 'reset') {
-                    pageStack = []; lastVisible = null; query = query.limit(PAGE_SIZE);
-                } else if (direction === 'next' && lastVisible) {
-                    pageStack.push(lastVisible); query = query.startAfter(lastVisible).limit(PAGE_SIZE);
-                } else if (direction === 'prev' && pageStack.length > 0) {
+                if (direction === 'reset') { pageStack = []; lastVisible = null; query = query.limit(PAGE_SIZE); } 
+                else if (direction === 'next' && lastVisible) { pageStack.push(lastVisible); query = query.startAfter(lastVisible).limit(PAGE_SIZE); } 
+                else if (direction === 'prev' && pageStack.length > 0) {
                     pageStack.pop(); 
                     if (pageStack.length === 0) query = query.limit(PAGE_SIZE); 
                     else query = query.startAfter(pageStack[pageStack.length - 1]).limit(PAGE_SIZE);
@@ -827,8 +909,7 @@
 
                 if (snapshot.empty) {
                     tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400">No records found.</td></tr>';
-                    nextBtn.disabled = true; prevBtn.disabled = (pageStack.length === 0); isPaginating = false;
-                    return;
+                    nextBtn.disabled = true; prevBtn.disabled = (pageStack.length === 0); isPaginating = false; return;
                 }
 
                 lastVisible = snapshot.docs[snapshot.docs.length - 1];
@@ -876,13 +957,10 @@
                 });
 
                 tableBody.innerHTML = html || '<tr><td colspan="6" class="text-center py-10 text-slate-400">No matching records on this page.</td></tr>';
-                nextBtn.disabled = snapshot.docs.length < PAGE_SIZE;
-                prevBtn.disabled = (pageStack.length === 0);
+                nextBtn.disabled = snapshot.docs.length < PAGE_SIZE; prevBtn.disabled = (pageStack.length === 0);
 
-            } catch (error) {
-                console.error("Error:", error);
-                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-red-500">Error: ${error.message}</td></tr>`;
-            } finally { isPaginating = false; }
+            } catch (error) { console.error(error); tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-red-500">Error: ${error.message}</td></tr>`; } 
+            finally { isPaginating = false; }
         }
 
         window.editRecord = async (id) => {
@@ -901,10 +979,7 @@
 
         function debounce(func, wait) {
             let timeout;
-            return function(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
+            return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); };
         }
 
         function formatDate(dateString) {
@@ -921,7 +996,6 @@
                 const row = document.createElement('div');
                 row.className = 'param-row';
                 
-                // 🟢 ใช้วิธีเช็คค่าว่างก่อนแปลงเป็นทศนิยม 2 ตำแหน่ง ป้องกันแสดงผล 0.00
                 const coaVal = (pData.coa !== null && pData.coa !== '') ? Number(pData.coa).toFixed(2) : '';
                 const labVal = (pData.lab !== null && pData.lab !== '') ? Number(pData.lab).toFixed(2) : '';
 
@@ -960,7 +1034,6 @@
             row.className = 'param-row custom-param-row';
             const diffId = 'diff-' + Math.random().toString(36).substr(2, 9);
             
-            // 🟢 ใช้วิธีเช็คค่าว่างก่อนแปลงเป็นทศนิยม 2 ตำแหน่ง
             const coaVal = (data.coa !== null && data.coa !== '') ? Number(data.coa).toFixed(2) : '';
             const labVal = (data.lab !== null && data.lab !== '') ? Number(data.lab).toFixed(2) : '';
 
