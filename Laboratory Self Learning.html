@@ -53,9 +53,9 @@
                     <p class="text-xs text-indigo-500 font-semibold">TRC Department</p>
                 </div>
             </div>
-            <nav class="space-y-2">
-                <a href="#" class="flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-medium transition"><i class="fa-solid fa-house w-5 text-center"></i> หน้าหลัก</a>
-                <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl font-medium transition"><i class="fa-solid fa-trophy w-5 text-center"></i> กระดานผู้นำ</a>
+        <nav class="space-y-2">
+                <button onclick="switchMainView('courses')" id="nav-courses" class="w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-medium transition"><i class="fa-solid fa-house w-5 text-center"></i> หน้าหลัก</button>
+                <button onclick="switchMainView('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl font-medium transition"><i class="fa-solid fa-chart-line w-5 text-center"></i> แดชบอร์ด & ผู้นำ</button>
             </nav>
         </div>
         <div class="p-6 border-t border-slate-100">
@@ -81,16 +81,23 @@
             </div>
             <button id="btn-open-admin" onclick="openAdminModal()" class="hidden px-4 md:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md transition items-center gap-2 text-sm">
                 <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">เพิ่มบทเรียน</span><span class="sm:hidden">เพิ่ม</span>
-            </button>
-        </header>
+                    </button>
+                    </header>
 
-        <div class="px-5 md:px-10 pb-10 flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mt-2 md:mt-0">
-            <div class="flex flex-col gap-6 lg:order-last">
-                <div class="glass-panel p-6 rounded-2xl shadow-sm border-t-4 border-t-emerald-400">
+                    <div id="main-courses-container" class="px-5 md:px-10 pb-10 flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mt-2 md:mt-0 transition-all">
+                        <div class="flex flex-col gap-6 lg:order-last">
+                            <div class="glass-panel p-6 rounded-2xl shadow-sm border-t-4 border-t-emerald-400">
                     <h4 class="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">สถิติของฉัน</h4>
                     <div class="flex items-end gap-4 mb-2">
                         <div class="text-4xl md:text-5xl font-black text-emerald-600" id="my-total-score">0</div>
                         <div class="text-slate-500 font-medium mb-1.5">คะแนนรวม</div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl shadow-sm hidden md:block border border-slate-100">
+                    <h4 class="text-sm font-bold text-slate-800 mb-3"><i class="fa-solid fa-chart-pie text-indigo-500 mr-2"></i> ประวัติการสอบของฉัน</h4>
+                    <div id="my-progress-list" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                        <div class="text-xs text-center text-slate-400 py-4">กำลังโหลดข้อมูล...</div>
                     </div>
                 </div>
             </div>
@@ -102,22 +109,137 @@
                 <div id="courses-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                     <div class="col-span-full text-center py-10 text-slate-400">
                         <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i><br>กำลังโหลดบทเรียน...
-                    </div>
+    </div>
                 </div>
             </div>
         </div>
+
+        <div id="dashboard-container" class="hidden px-5 md:px-10 pb-10 flex-1 flex-col gap-6 mt-2 md:mt-0">
+
+            <div class="glass-panel p-2 rounded-xl inline-flex self-start bg-slate-100/50 shadow-sm border border-slate-200">
+                <button onclick="toggleDashboardView('my-view')" id="btn-my-view" class="px-6 py-2 rounded-lg font-bold text-sm bg-white text-indigo-600 shadow-sm transition">
+                    <i class="fa-solid fa-user-circle mr-2"></i> My View
+                </button>
+                <button onclick="toggleDashboardView('team-view')" id="btn-team-view" class="hidden px-6 py-2 rounded-lg font-bold text-sm text-slate-500 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-users mr-2"></i> Team View
+                </button>
+            </div>
+
+            <div id="view-my-dashboard" class="flex flex-col gap-6 animate-fade-in">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-indigo-400">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">ระดับของคุณ</p>
+                        <p class="text-2xl font-black text-slate-800">Lv. <span id="dash-my-level">1</span></p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-400">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">บทเรียนที่ผ่าน</p>
+                        <p class="text-2xl font-black text-emerald-600"><span id="dash-my-accuracy">0</span> <span class="text-sm text-slate-500 font-medium">เรื่อง</span></p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-400 relative">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">อันดับเดือนนี้</p>
+                        <div class="flex items-baseline gap-2">
+                            <p class="text-2xl font-black text-amber-500">#<span id="dash-my-month-rank">-</span></p>
+                            <span id="dash-my-month-score" class="text-xs font-bold text-slate-400">0 แต้ม</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-blue-400 relative">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">อันดับปีนี้ (สะสม)</p>
+                        <div class="flex items-center gap-2">
+                            <p class="text-2xl font-black text-blue-600">#<span id="dash-my-alltime-rank">-</span></p>
+                            <div id="dash-my-rank-trend" class="text-sm font-bold">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[400px]">
+                        <div class="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+                            <h4 class="font-bold text-slate-800"><i class="fa-solid fa-fire text-amber-500 mr-2"></i> Top 10 เดือนนี้</h4>
+                            <span class="text-[10px] bg-white px-2 py-1 rounded-full border border-slate-200 text-slate-500 shadow-sm" id="lb-month-label">Month</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 p-2">
+                            <table class="w-full text-sm text-left">
+                                <tbody id="lb-month-body" class="divide-y divide-slate-50">
+                                    <tr><td class="p-4 text-center text-slate-400">กำลังโหลด...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[400px]">
+                        <div class="bg-indigo-50 p-4 border-b border-indigo-100 flex justify-between items-center shrink-0">
+                            <h4 class="font-bold text-indigo-800"><i class="fa-solid fa-trophy text-indigo-500 mr-2"></i> Top 10 คะแนนสะสม</h4>
+                            <span class="text-[10px] bg-white px-2 py-1 rounded-full border border-indigo-200 text-indigo-500 shadow-sm">All-Time</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 p-2">
+                            <table class="w-full text-sm text-left">
+                                <tbody id="lb-alltime-body" class="divide-y divide-slate-50">
+                                    <tr><td class="p-4 text-center text-slate-400">กำลังโหลด...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[400px] lg:col-span-2 xl:col-span-1">
+                        <div class="bg-emerald-50 p-4 border-b border-emerald-100 flex justify-between items-center shrink-0">
+                            <h4 class="font-bold text-emerald-800"><i class="fa-solid fa-bolt text-emerald-500 mr-2"></i> Top 10 ผู้พิชิตความเร็ว</h4>
+                            <span class="text-[10px] bg-white px-2 py-1 rounded-full border border-emerald-200 text-emerald-600 shadow-sm truncate max-w-[100px]" id="lb-fastest-label">บทเรียนล่าสุด</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 p-2">
+                            <table class="w-full text-sm text-left">
+                                <tbody id="lb-fastest-body" class="divide-y divide-slate-50">
+                                    <tr><td class="p-4 text-center text-slate-400">กำลังโหลด...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-team-dashboard" class="hidden flex-col gap-6 animate-fade-in">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-indigo-500">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">Completion Rate</p>
+                        <p class="text-2xl font-black text-slate-800"><span id="dash-team-completion">0</span>%</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">Average Score</p>
+                        <p class="text-2xl font-black text-emerald-600"><span id="dash-team-avg-score">0</span></p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-amber-500">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">Top Performer</p>
+                        <p class="text-sm font-bold text-amber-600 truncate mt-2" id="dash-team-top-name">-</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-rose-500">
+                        <p class="text-xs text-slate-400 font-bold uppercase mb-1">At-Risk (ต่ำกว่าเกณฑ์)</p>
+                        <p class="text-2xl font-black text-rose-600"><span id="dash-team-risk-count">0</span> คน</p>
+                    </div>
+                </div>
+                <div class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
+                    <h4 class="font-bold text-indigo-800 mb-2"><i class="fa-solid fa-lightbulb text-amber-500 mr-2"></i>Action Insights</h4>
+                    <ul class="text-sm text-indigo-700 space-y-1 list-disc list-inside pl-4" id="dash-action-insights">
+                        <li>กำลังโหลดข้อมูลวิเคราะห์...</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-[300px] flex items-center justify-center text-slate-400">
+                    [พื้นที่สำหรับตาราง Employee Drill-down Table]
+                </div>
+            </div>
+
+        </div>
     </main>
 
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center p-2 z-40 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <a href="#" class="flex flex-col items-center p-2 text-indigo-600">
-            <i class="fa-solid fa-house text-lg mb-1"></i>
-            <span class="text-[10px] font-bold">หน้าหลัก</span>
-        </a>
-        <a href="#" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-600 transition">
-            <i class="fa-solid fa-trophy text-lg mb-1"></i>
-            <span class="text-[10px] font-medium">กระดานผู้นำ</span>
-        </a>
-        <button onclick="logout()" class="flex flex-col items-center p-2 text-red-400 hover:text-red-600 transition">
+            <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center p-2 z-40 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <button onclick="switchMainView('courses')" id="nav-mobile-courses" class="flex flex-col items-center p-2 text-indigo-600">
+                    <i class="fa-solid fa-house text-lg mb-1"></i>
+                    <span class="text-[10px] font-bold">หน้าหลัก</span>
+                </button>
+                <button onclick="switchMainView('dashboard')" id="nav-mobile-dashboard" class="flex flex-col items-center p-2 text-slate-400 hover:text-slate-600 transition">
+                    <i class="fa-solid fa-chart-line text-lg mb-1"></i>
+                    <span class="text-[10px] font-medium">แดชบอร์ด</span>
+                </button>
+                <button onclick="logout()" class="flex flex-col items-center p-2 text-red-400 hover:text-red-600 transition">
             <i class="fa-solid fa-arrow-right-from-bracket text-lg mb-1"></i>
             <span class="text-[10px] font-medium">ออกจากระบบ</span>
         </button>
@@ -177,11 +299,9 @@
     <div id="video-modal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md hidden items-center justify-center z-[60] p-0 md:p-4">
         <div class="w-full h-full md:h-auto md:max-w-4xl bg-black md:rounded-2xl overflow-hidden shadow-2xl relative flex flex-col">
             <button onclick="closeVideoModal()" class="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition backdrop-blur-sm"><i class="fa-solid fa-xmark text-xl"></i></button>
-            
             <div class="flex-1 md:flex-none flex items-center justify-center bg-black min-h-[30vh]">
                 <div class="aspect-video w-full" id="youtube-player-container"></div>
             </div>
-            
             <div class="p-5 md:p-6 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
                 <h3 id="current-course-title" class="font-bold text-base md:text-lg text-slate-800 line-clamp-2 sm:pr-4">...</h3>
                 <div class="w-full sm:w-auto flex flex-col sm:items-end shrink-0">
@@ -196,7 +316,7 @@
         </div>
     </div>
 
-    <div id="quiz-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md hidden items-center justify-center z-[70] p-4">
+    <div id="quiz-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center z-[70] p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
             <div class="bg-gradient-to-r from-emerald-500 to-green-600 p-4 md:p-5 flex justify-between items-center text-white shrink-0">
                 <div><h3 class="font-bold text-lg md:text-xl mb-1">แบบทดสอบหลังเรียน</h3></div>
@@ -209,7 +329,7 @@
                 <div id="quiz-intro" class="text-center my-auto">
                     <div class="text-5xl mb-4">🧠</div>
                     <h4 class="font-bold text-slate-800 text-lg md:text-xl mb-2">พร้อมสำหรับบททดสอบแล้วหรือยัง?</h4>
-                    <p class="text-sm text-slate-500 mb-6">ตอบไวใน 10 วิ มีคะแนนโบนัส!</p>
+                    <p class="text-sm text-slate-500 mb-6">ตอบไวได้โบนัส! (เกณฑ์ผ่าน 80%)</p>
                     <button onclick="startQuiz()" class="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg">เริ่มทำข้อสอบเลย</button>
                 </div>
 
@@ -240,12 +360,33 @@
             </div>
         </div>
     </div>
+    <div id="reward-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center z-[80] p-4 transition-opacity">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl flex flex-col items-center p-8 text-center transform scale-95 transition-transform duration-300 border-4 border-amber-300 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-amber-100/50 to-transparent pointer-events-none"></div>
+
+            <div class="relative z-10">
+                <div class="text-7xl mb-2 animate-bounce">🏆</div>
+                <h3 class="text-2xl font-black text-amber-600 mb-1 tracking-tight">โบนัสผู้พิชิต!</h3>
+                <p id="reward-rank-text" class="text-slate-600 font-semibold mb-6">คุณสอบผ่านเป็นอันดับที่ X ของบทเรียนนี้</p>
+
+                <div class="bg-gradient-to-r from-amber-400 to-yellow-500 rounded-2xl p-5 mb-6 shadow-lg shadow-amber-200 text-white w-full">
+                    <p class="text-sm font-medium opacity-90 mb-1">คะแนนพิเศษที่ได้รับ</p>
+                    <div class="text-5xl font-black drop-shadow-md">+<span id="reward-bonus-score">0</span></div>
+                </div>
+
+                <button onclick="closeRewardModal()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold shadow-md transition">
+                    รับรางวัลและปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, initializeFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
+        // 🌟 CONFIG ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
             authDomain: "lab-trc-management-system.firebaseapp.com",
@@ -261,10 +402,13 @@
         
         let currentUser = null;
         let isAdmin = false;
+        let userQuizHistory = {}; // เก็บประวัติสอบเพื่อทำป้ายสถานะ
 
-        onAuthStateChanged(auth, (user) => {
+        // ==========================================
+        // 🔐 ตรวจสอบสถานะการ Login
+        // ==========================================
+        onAuthStateChanged(auth, async (user) => {
             const loginModal = document.getElementById('login-modal');
-            
             if (user) {
                 loginModal.classList.add('hidden');
                 loginModal.classList.remove('flex');
@@ -272,18 +416,21 @@
                 currentUser = user;
                 const userAlias = user.email.split('@')[0];
                 document.getElementById('user-name-display').innerText = userAlias;
-                // 📱 อัปเดตชื่อในหน้าจอมือถือ
                 if(document.getElementById('mobile-user-name')) {
                     document.getElementById('mobile-user-name').innerText = userAlias;
                 }
                 
+                // 🌟 ADMIN LIST: เช็คสิทธิ์แอดมิน
                 if(user.email === "sittidate.p@adityabirla.com" || user.email === "datejub@hotmail.com") {
                     isAdmin = true;
                     document.getElementById('btn-open-admin').classList.remove('hidden');
                     document.getElementById('btn-open-admin').classList.add('flex');
                 }
+                
+                // โหลดข้อมูลตามลำดับ (ดึงประวัติก่อน แล้วค่อยดึงบทเรียน)
+                await loadUserHistory();
+                await loadUserScore();
                 loadCourses();
-                loadUserScore();
             } else {
                 loginModal.classList.remove('hidden');
                 loginModal.classList.add('flex');
@@ -313,12 +460,172 @@
 
         window.logout = () => signOut(auth).then(() => { window.location.reload(); });
 
+        // ==========================================
+        // 📊 โหลดประวัติการทำข้อสอบ (My Progress)
+        // ==========================================
+        async function loadUserHistory() {
+            if(!currentUser) return;
+            userQuizHistory = {};
+            try {
+                const historySnap = await getDocs(collection(db, `Users/${currentUser.uid}/QuizHistory`));
+                historySnap.forEach(doc => {
+                    userQuizHistory[doc.id] = doc.data();
+                });
+                renderMyProgress();
+            } catch (error) {
+                console.error("Error loading history", error);
+            }
+        }
+
+        function renderMyProgress() {
+            const list = document.getElementById('my-progress-list');
+            if(!list) return;
+            list.innerHTML = '';
+
+            let hasHistory = false;
+            for(const [courseId, data] of Object.entries(userQuizHistory)) {
+                hasHistory = true;
+                const title = data.courseTitle || 'บทเรียน';
+                const score = data.highestScore || 0;
+
+                let statusIcon = '<i class="fa-solid fa-circle-exclamation text-rose-500" title="ยังไม่ผ่าน"></i>';
+                let statusClass = 'border-l-4 border-l-rose-400';
+
+                if(data.isPassed) {
+                    statusIcon = '<i class="fa-solid fa-circle-check text-emerald-500" title="ผ่านแล้ว"></i>';
+                    statusClass = 'border-l-4 border-l-emerald-400';
+                }
+
+                // ดึงคะแนนพิเศษมาแสดง (ถ้ามี)
+                const rankBonusDisplay = data.rankBonus ? `<p class="text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded">โบนัสอันดับ: +${data.rankBonus}</p>` : '';
+
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm ${statusClass} mb-2">
+                        <div class="flex-1 truncate pr-3">
+                            <p class="text-xs font-bold text-slate-800 truncate">${title}</p>
+                            <div class="flex flex-wrap gap-2 mt-1.5 items-center">
+                                <p class="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">คะแนนสูงสุด: <span class="font-bold text-indigo-600">${score}</span></p>
+                                <p class="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">แต้มทบทวน: <span class="font-bold text-blue-500">+${data.engagementPoints || 0}</span></p>
+                                ${rankBonusDisplay}
+                            </div>
+                        </div>
+                        <div class="text-lg shrink-0">${statusIcon}</div>
+                    </div>
+                `;
+            }
+            if(!hasHistory) {
+                 list.innerHTML = `<div class="text-xs text-center text-slate-400 py-4 border border-dashed border-slate-200 rounded-xl">ยังไม่มีประวัติการเรียน</div>`;
+            }
+        }
+
+        // ==========================================
+        // 📚 โหลดข้อมูลบทเรียน & ป้ายสถานะ
+        // ==========================================
+        async function loadCourses() {
+            const grid = document.getElementById('courses-grid');
+            grid.innerHTML = '';
+
+            try {
+                const q = query(collection(db, "Courses"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+
+                if(querySnapshot.empty) {
+                    grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">ยังไม่มีบทเรียนในระบบ</div>';
+                    return;
+                }
+
+                let isLatestCourse = true; // ตัวแปรเช็คว่าเป็นบทเรียนล่าสุดหรือไม่
+
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const courseId = docSnap.id;
+                    const encodedData = encodeURIComponent(JSON.stringify(data)); 
+
+                    // ⚡ สร้าง Fastest Board จากบทเรียนแรกสุด (ล่าสุด) ที่ Query มาได้
+                    if (isLatestCourse) {
+                        renderFastestBoard(data);
+                        isLatestCourse = false;
+                    }
+
+                    // 🌟 ระบบป้ายสถานะบทเรียน (Badge)
+                    const history = userQuizHistory[courseId];
+                    let badge = `<span class="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm"><i class="fa-solid fa-sparkles mr-1"></i>ใหม่</span>`;
+                    if (history && history.isPassed) {
+                        badge = `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm"><i class="fa-solid fa-check mr-1"></i>เรียนแล้ว</span>`;
+                    } else if (history && !history.isPassed) {
+                        badge = `<span class="bg-rose-100 text-rose-700 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm"><i class="fa-solid fa-rotate-right mr-1"></i>รอสอบแก้</span>`;
+                    }
+
+                    const adminControls = isAdmin ? `
+                        <div class="absolute top-2 left-2 flex gap-2 z-10">
+                            <button onclick="event.stopPropagation(); editCourse('${courseId}', '${encodedData}')" class="bg-blue-600/90 backdrop-blur text-white w-8 h-8 rounded-lg hover:bg-blue-700 shadow transition flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="event.stopPropagation(); deleteCourse('${courseId}')" class="bg-red-600/90 backdrop-blur text-white w-8 h-8 rounded-lg hover:bg-red-700 shadow transition flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
+                        </div>
+                    ` : '';
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition group cursor-pointer relative flex flex-col h-full";
+                    card.onclick = () => playVideo(courseId, data.title, data.youtubeId, encodedData);
+
+                    card.innerHTML = `
+                        ${adminControls}
+                        <div class="absolute top-3 right-3 z-10">${badge}</div>
+                        <div class="aspect-video bg-slate-200 relative overflow-hidden shrink-0">
+                            <img src="https://img.youtube.com/vi/${data.youtubeId}/hqdefault.jpg" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <div class="absolute inset-0 bg-slate-900/20 group-hover:bg-transparent transition"></div>
+                            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm">
+                                <i class="fa-solid fa-calendar mr-1"></i> ${data.monthStr}
+                            </div>
+                        </div>
+                        <div class="p-4 flex flex-col flex-1">
+                            <div class="text-xs font-bold text-indigo-500 mb-1 uppercase tracking-wide">${data.category}</div>
+                            <h4 class="font-bold text-slate-800 text-sm md:text-base leading-tight mb-2 line-clamp-2 flex-1">${data.title}</h4>
+                            <div class="flex items-center justify-between text-[10px] text-slate-500 mt-auto pt-3 border-t border-slate-100">
+                                <span><i class="fa-solid fa-list-check mr-1"></i> ${data.quiz ? data.quiz.length : 0} ข้อ</span>
+                                <span class="bg-slate-100 px-2 py-1 rounded"><i class="fa-solid fa-users mr-1"></i> สอบผ่าน ${data.passedCount || 0} คน</span>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error("Error loading courses:", error);
+            }
+        }
+
+        // ฟังก์ชันสำหรับวาด Fastest Board 
+        window.renderFastestBoard = (courseData) => {
+            const tbody = document.getElementById('lb-fastest-body');
+            document.getElementById('lb-fastest-label').innerText = courseData.title || "บทเรียนล่าสุด";
+
+            if (!courseData.fastestFinishers || courseData.fastestFinishers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-slate-400">ยังไม่มีผู้สอบผ่านในบทเรียนนี้</td></tr>';
+                return;
+            }
+
+            let html = '';
+            courseData.fastestFinishers.forEach((user, index) => {
+                const rank = index + 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="text-slate-400 w-5 inline-block text-center">${rank}</span>`;
+                html += `
+                    <tr class="transition hover:bg-slate-50">
+                        <td class="p-3 w-12 text-center text-lg">${medal}</td>
+                        <td class="p-3 text-slate-700 truncate max-w-[120px]">${user.email}</td>
+                        <td class="p-3 text-right font-bold text-emerald-600">+${user.bonus}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        };
+
+        // ==========================================
+        // 🛠 ADMIN: เพิ่ม/แก้ไข/ลบ บทเรียน
+        // ==========================================
         let questionCount = 0;
         window.openAdminModal = () => {
             document.getElementById('admin-modal').classList.remove('hidden');
             document.getElementById('admin-modal').classList.add('flex');
         };
-
         window.closeAdminModal = () => {
             document.getElementById('admin-modal').classList.remove('flex');
             document.getElementById('admin-modal').classList.add('hidden');
@@ -336,7 +643,6 @@
             const qDiv = document.createElement('div');
             qDiv.className = "bg-white p-4 rounded-lg shadow-sm border border-amber-200 relative";
             qDiv.id = `q-block-${questionCount}`;
-            
             qDiv.innerHTML = `
                 <div class="absolute top-2 right-2 text-red-400 hover:text-red-600 cursor-pointer p-1" onclick="removeQuestionField(${questionCount})"><i class="fa-solid fa-trash"></i></div>
                 <label class="block text-xs font-bold text-amber-800 mb-1">คำถามข้อที่ ${questionCount}</label>
@@ -352,11 +658,7 @@
             `;
             container.appendChild(qDiv);
         };
-
-        window.removeQuestionField = (id) => {
-            const el = document.getElementById(`q-block-${id}`);
-            if(el) el.remove();
-        };
+        window.removeQuestionField = (id) => { const el = document.getElementById(`q-block-${id}`); if(el) el.remove(); };
 
         document.getElementById('add-course-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -371,7 +673,6 @@
             const youtubeUrl = document.getElementById('course-youtube').value;
             
             let youtubeId = "";
-            // 💡 Regex อัปเดตให้รองรับ YouTube Shorts ด้วย
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
             const match = youtubeUrl.match(regExp);
             if (match && match[2].length === 11) youtubeId = match[2];
@@ -384,7 +685,6 @@
                 const radioInputs = block.querySelectorAll('input[type="radio"]');
                 const options = [];
                 let correctIndex = 0;
-                
                 optInputs.forEach((input, index) => {
                     if(input.value.trim() !== '') {
                         options.push(input.value.trim());
@@ -406,8 +706,8 @@
                 } else {
                     payload.createdBy = currentUser.uid;
                     payload.createdAt = serverTimestamp();
+                    payload.passedCount = 0; // เริ่มต้นคนที่สอบผ่านเป็น 0 เสมอ
                     
-                    // 💡 เพิ่ม Timestamp 4 ตัวท้ายกัน ID ซ้ำ
                     const safeTitle = title.replace(/[^a-zA-Z0-9ก-๙]/g, '_').substring(0, 20);
                     const uniqueSuffix = Date.now().toString().slice(-4);
                     const customDocId = `${monthStr}_${category}_${safeTitle}_${uniqueSuffix}`;
@@ -427,7 +727,6 @@
 
         window.editCourse = (courseId, encodedData) => {
             const data = JSON.parse(decodeURIComponent(encodedData));
-            
             document.getElementById('edit-course-id').value = courseId;
             document.getElementById('course-category').value = data.category;
             document.getElementById('course-month').value = data.monthStr;
@@ -445,13 +744,10 @@
                     const opts = block.querySelectorAll('.q-opt');
                     const radios = block.querySelectorAll('input[type="radio"]');
 
-                    q.options.forEach((optText, i) => {
-                        if(opts[i]) opts[i].value = optText;
-                    });
+                    q.options.forEach((optText, i) => { if(opts[i]) opts[i].value = optText; });
                     if(radios[q.correctIndex]) radios[q.correctIndex].checked = true;
                 });
             }
-
             document.getElementById('admin-modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> แก้ไขบทเรียนและข้อสอบ';
             document.getElementById('btn-save-course').innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> อัปเดตการเปลี่ยนแปลง';
             openAdminModal();
@@ -462,66 +758,14 @@
                 try {
                     await deleteDoc(doc(db, "Courses", courseId));
                     loadCourses();
-                } catch(error) {
-                    alert("ลบไม่สำเร็จ: " + error.message);
-                }
+                } catch(error) { alert("ลบไม่สำเร็จ: " + error.message); }
             }
         };
 
-        async function loadCourses() {
-            const grid = document.getElementById('courses-grid');
-            grid.innerHTML = '';
-            
-            try {
-                const q = query(collection(db, "Courses"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                
-                if(querySnapshot.empty) {
-                    grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">ยังไม่มีบทเรียนในระบบ</div>';
-                    return;
-                }
-
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const courseId = docSnap.id;
-                    const encodedData = encodeURIComponent(JSON.stringify(data)); 
-
-                    const adminControls = isAdmin ? `
-                        <div class="absolute top-2 left-2 flex gap-2 z-10">
-                            <button onclick="event.stopPropagation(); editCourse('${courseId}', '${encodedData}')" class="bg-blue-600/90 backdrop-blur text-white w-8 h-8 rounded-lg hover:bg-blue-700 shadow transition flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
-                            <button onclick="event.stopPropagation(); deleteCourse('${courseId}')" class="bg-red-600/90 backdrop-blur text-white w-8 h-8 rounded-lg hover:bg-red-700 shadow transition flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
-                        </div>
-                    ` : '';
-
-                    const card = document.createElement('div');
-                    card.className = "bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition group cursor-pointer relative flex flex-col h-full";
-                    card.onclick = () => playVideo(courseId, data.title, data.youtubeId, encodedData);
-                    
-                    card.innerHTML = `
-                        ${adminControls}
-                        <div class="aspect-video bg-slate-200 relative overflow-hidden shrink-0">
-                            <img src="https://img.youtube.com/vi/${data.youtubeId}/hqdefault.jpg" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                            <div class="absolute inset-0 bg-slate-900/20 group-hover:bg-transparent transition"></div>
-                            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm">
-                                <i class="fa-solid fa-calendar mr-1"></i> ${data.monthStr}
-                            </div>
-                        </div>
-                        <div class="p-4 flex flex-col flex-1">
-                            <div class="text-xs font-bold text-indigo-500 mb-1 uppercase tracking-wide">${data.category}</div>
-                            <h4 class="font-bold text-slate-800 text-sm md:text-base leading-tight mb-2 line-clamp-2 flex-1">${data.title}</h4>
-                            <div class="flex items-center text-xs text-slate-500 gap-2 mt-auto pt-2 border-t border-slate-50">
-                                <i class="fa-solid fa-list-check"></i> ${data.quiz ? data.quiz.length : 0} ข้อ
-                            </div>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-            } catch (error) {
-                console.error("Error loading courses:", error);
-            }
-        }
-
-        let currentQuizData = null, currentCourseId = null, ytPlayer = null, isVideoFinished = false;
+        // ==========================================
+        // 🎥 ระบบ YOUTUBE PLAYER
+        // ==========================================
+        let currentQuizData = null, currentCourseId = null, currentCourseTitle = "", ytPlayer = null, isVideoFinished = false;
 
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -532,23 +776,25 @@
 
         window.playVideo = (courseId, title, youtubeId, encodedData) => {
             const data = JSON.parse(decodeURIComponent(encodedData));
-            currentCourseId = courseId; currentQuizData = data.quiz || []; isVideoFinished = false; 
+            currentCourseId = courseId; 
+            currentCourseTitle = title;
+            currentQuizData = data.quiz || []; 
+            isVideoFinished = false; 
             
             document.getElementById('current-course-title').innerText = title;
             const btnQuiz = document.getElementById('take-quiz-btn');
             const statusMsg = document.getElementById('video-status-msg');
 
             if (!currentQuizData || currentQuizData.length === 0) {
-                btnQuiz.classList.add('hidden');
-                statusMsg.classList.remove('hidden');
+                btnQuiz.classList.add('hidden'); statusMsg.classList.remove('hidden');
                 statusMsg.innerHTML = '<i class="fa-solid fa-info-circle"></i> บทเรียนนี้ไม่มีข้อสอบ';
                 statusMsg.className = "text-xs sm:text-sm font-semibold text-slate-500 bg-slate-100 px-4 py-3 sm:py-2 rounded-lg text-center w-full sm:w-auto";
             } else if (isAdmin) {
                 btnQuiz.classList.remove('hidden'); statusMsg.classList.add('hidden');
             } else {
                 btnQuiz.classList.add('hidden'); statusMsg.classList.remove('hidden');
-                statusMsg.innerHTML = '<i class="fa-solid fa-video"></i> กรุณาดูวิดีโอให้จบ';
-                statusMsg.className = "text-xs sm:text-sm font-semibold text-amber-500 bg-amber-50 px-4 py-3 sm:py-2 rounded-lg text-center w-full sm:w-auto";
+                statusMsg.innerHTML = '<i class="fa-solid fa-video animate-pulse mr-1"></i> กรุณาดูวิดีโอให้จบ';
+                statusMsg.className = "text-xs sm:text-sm font-semibold text-amber-600 bg-amber-100 border border-amber-200 px-4 py-3 sm:py-2 rounded-lg text-center w-full sm:w-auto transition-all";
             }
 
             document.getElementById('video-modal').classList.remove('hidden');
@@ -568,9 +814,13 @@
             if (event.data === YT.PlayerState.ENDED) {
                 isVideoFinished = true;
                 if (currentQuizData && currentQuizData.length > 0) {
-                    document.getElementById('take-quiz-btn').classList.remove('hidden');
-                    document.getElementById('video-status-msg').classList.add('hidden');
-                    // ปรับ Alert ให้ไม่กวนสายตาเกินไปเมื่อจบบนมือถือ (หรือจะเอาออกก็ได้)
+                    const statusMsg = document.getElementById('video-status-msg');
+                    statusMsg.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> ดูจบแล้ว';
+                    statusMsg.className = "text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-4 py-3 sm:py-2 rounded-lg text-center w-full sm:w-auto";
+                    setTimeout(() => {
+                        statusMsg.classList.add('hidden');
+                        document.getElementById('take-quiz-btn').classList.remove('hidden');
+                    }, 1000);
                 }
             }
         }
@@ -581,6 +831,9 @@
             if (ytPlayer) ytPlayer.stopVideo(); 
         };
 
+        // ==========================================
+        // 🧠 ระบบแบบทดสอบ และ Gamification 
+        // ==========================================
         document.getElementById('take-quiz-btn').addEventListener('click', () => {
             if(!currentQuizData || currentQuizData.length === 0) return;
             if (!isAdmin && !isVideoFinished) { alert("กรุณารับชมวิดีโอให้จบก่อนทำแบบทดสอบครับ"); return; }
@@ -635,6 +888,7 @@
             clearInterval(questionTimer); totalTimeSpent += timeSpentOnCurrentQ;
             if(selectedIndex === correctIndex) {
                 correctAnswersCount++;
+                // ทำได้ใน 10 วิ ได้คะแนน 11-15 ค่อยๆ ลดหลั่นกันไป
                 totalScore += 10 + (timeSpentOnCurrentQ <= 10 ? Math.floor((10 - timeSpentOnCurrentQ)/2) || 1 : 0);
             }
             document.getElementById('score-live-display').innerText = `Score: ${totalScore}`;
@@ -672,30 +926,88 @@
             try {
                 const historyRef = doc(db, "Users", currentUser.uid, "QuizHistory", currentCourseId);
                 const userRef = doc(db, "Users", currentUser.uid);
+                const courseRef = doc(db, "Courses", currentCourseId);
+
                 const docSnap = await getDoc(historyRef);
-
                 let scoreToSummarize = 0; 
+                let isFirstTimePassing = false;
+                let newEngagementPoints = 0;
+                let currentRankBonus = 0; // ตัวแปรเก็บโบนัสที่จะถูกเซฟลง History
 
+                // เช็คสถานะการสอบผ่านครั้งแรกเพื่อคำนวณโบนัสลำดับ
+                if (isPassedCurrent && (!docSnap.exists() || !docSnap.data().isPassed)) {
+                    isFirstTimePassing = true;
+                }
+
+                // 🏆 คำนวณโบนัส 10 คนแรก (ต้องดึงข้อมูล Course มาก่อนที่จะอัปเดต History)
+                // 🏆 คำนวณโบนัส 10 คนแรก และบันทึกชื่อลง Fastest Board
+                if (isFirstTimePassing) {
+                    const courseSnap = await getDoc(courseRef);
+                    let currentPassCount = courseSnap.exists() ? (courseSnap.data().passedCount || 0) : 0;
+
+                    if (currentPassCount < 10) {
+                        if (currentPassCount === 0) currentRankBonus = 20;      // อันดับ 1
+                        else if (currentPassCount === 1) currentRankBonus = 15; // อันดับ 2
+                        else if (currentPassCount === 2) currentRankBonus = 10; // อันดับ 3
+                        else currentRankBonus = 5;                              // อันดับ 4-10
+
+                        scoreToSummarize += currentRankBonus;
+
+                        // ดึงรายชื่อคนเร็วสุดเดิมมา แล้วเพิ่มชื่อคนปัจจุบันเข้าไป
+                        let currentFastest = courseSnap.exists() && courseSnap.data().fastestFinishers ? courseSnap.data().fastestFinishers : [];
+                        currentFastest.push({
+                            email: currentUser.email.split('@')[0],
+                            bonus: currentRankBonus
+                        });
+
+                        // อัปเดต Database ของบทเรียน
+                        await updateDoc(courseRef, { 
+                            passedCount: increment(1),
+                            fastestFinishers: currentFastest
+                        });
+
+                        // เรียกใช้งาน UI/UX Modal แทน Alert
+                        setTimeout(() => {
+                            document.getElementById('reward-rank-text').innerText = `คุณสอบผ่านเป็นอันดับที่ ${currentPassCount + 1} ของบทเรียนนี้`;
+                            document.getElementById('reward-bonus-score').innerText = currentRankBonus;
+                            document.getElementById('reward-modal').classList.remove('hidden');
+                            document.getElementById('reward-modal').classList.add('flex');
+                        }, 800);
+                    } else {
+                        // ถ้าหลุด Top 10 ก็เพิ่มแค่จำนวนคนสอบผ่าน
+                        await updateDoc(courseRef, { passedCount: increment(1) });
+                    }
+                }
+
+                let isPassedOverall = isPassedCurrent;
+
+                // 🔄 บันทึก / อัปเดต Quiz History
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     const now = new Date();
                     const lastAttemptDate = data.lastAttemptAt ? data.lastAttemptAt.toDate() : new Date(0);
                     const timeDiffHours = (now - lastAttemptDate) / (1000 * 60 * 60);
 
-                    let newEngagementPoints = data.engagementPoints || 0;
-                    
+                    newEngagementPoints = data.engagementPoints || 0;
+                    let bonusMessage = "";
+
+                    // แต้มทบทวนความรู้
                     if (timeDiffHours >= 24) {
                         newEngagementPoints += 5; 
                         scoreToSummarize += 5; 
+                        bonusMessage = " ยินดีด้วย! คุณได้รับ +5 แต้มความขยันจากการทบทวนบทเรียน";
                     }
 
                     const newHighestScore = Math.max(data.highestScore || 0, totalScore);
                     const newHighestCorrect = Math.max(data.highestCorrect || 0, correctAnswersCount);
-                    const isPassedOverall = data.isPassed || isPassedCurrent; 
+                    isPassedOverall = data.isPassed || isPassedCurrent; 
 
                     if(totalScore > (data.highestScore || 0)) {
                         scoreToSummarize += (totalScore - (data.highestScore || 0));
                     }
+
+                    // รวม rankBonus เดิมเข้ากับของใหม่ (ถ้ามี)
+                    const accumulatedRankBonus = (data.rankBonus || 0) + currentRankBonus;
 
                     await updateDoc(historyRef, { 
                         highestScore: newHighestScore, 
@@ -703,13 +1015,18 @@
                         attemptCount: (data.attemptCount || 0) + 1, 
                         lastAttemptAt: serverTimestamp(),
                         isPassed: isPassedOverall,
-                        engagementPoints: newEngagementPoints
+                        engagementPoints: newEngagementPoints,
+                        rankBonus: accumulatedRankBonus // บันทึกโบนัสลงฐานข้อมูล
                     });
 
+                    if(bonusMessage !== "") setTimeout(() => alert(bonusMessage), 1000);
+
                 } else {
-                    scoreToSummarize = totalScore; 
+                    scoreToSummarize += totalScore; 
+
                     await setDoc(historyRef, { 
                         courseId: currentCourseId, 
+                        courseTitle: currentCourseTitle, 
                         firstAttemptScore: totalScore, 
                         firstAttemptCorrect: correctAnswersCount,
                         highestScore: totalScore,      
@@ -717,10 +1034,12 @@
                         attemptCount: 1, 
                         lastAttemptAt: serverTimestamp(),
                         isPassed: isPassedCurrent,            
-                        engagementPoints: 0            
+                        engagementPoints: 0,
+                        rankBonus: currentRankBonus // บันทึกโบนัสลงฐานข้อมูลตั้งแต่ครั้งแรก
                     });
                 }
 
+                // 📈 อัปเดตคะแนนรวม (Total Score) หน้าปก
                 if (scoreToSummarize > 0) {
                     const currentMonthKey = `score_${new Date().getFullYear()}_${new Date().getMonth() + 1}`; 
                     await setDoc(userRef, {
@@ -729,11 +1048,21 @@
                         [currentMonthKey]: increment(scoreToSummarize)
                     }, { merge: true });
 
-                    loadUserScore(); 
+                    await loadUserScore(); 
                 }
+
+                await loadUserHistory();
+                loadCourses();
+
             } catch (error) {
-                console.error("เกิดข้อผิดพลาดในการบันทึกคะแนน: ", error);
+                console.error("[finishQuiz - Error] เกิดข้อผิดพลาดในการบันทึกคะแนน: ", error);
+                alert("ระบบไม่สามารถบันทึกคะแนนได้: " + error.message);
             }
+        };
+
+        window.closeRewardModal = () => {
+            document.getElementById('reward-modal').classList.remove('flex');
+            document.getElementById('reward-modal').classList.add('hidden');
         };
 
         window.closeQuizModal = () => {
@@ -741,6 +1070,9 @@
             document.getElementById('quiz-modal').classList.add('hidden');
         };
         
+        // ==========================================
+        // 📈 ดึงคะแนน User อัปเดตหน้าเว็บ
+        // ==========================================
         async function loadUserScore() {
             if(!currentUser) return;
             try {
@@ -762,6 +1094,230 @@
                     }, 50);
                 }
             } catch (error) { console.error("โหลดคะแนนไม่สำเร็จ: ", error); }
+        }
+        // ==========================================
+        // 🎛 ระบบ NAVIGATION & VIEW TOGGLE (แก้ไขใหม่)
+        // ==========================================
+        window.switchMainView = (viewName) => {
+            const coursesContainer = document.getElementById('main-courses-container');
+            const dashboardContainer = document.getElementById('dashboard-container');
+
+            // จัดการสีกระดุม Sidebar
+            document.getElementById('nav-courses').className = viewName === 'courses' 
+                ? "w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-medium transition" 
+                : "w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl font-medium transition";
+
+            document.getElementById('nav-dashboard').className = viewName === 'dashboard' 
+                ? "w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-medium transition" 
+                : "w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl font-medium transition";
+
+            // สลับ View อย่างปลอดภัยโดยใช้ ID
+            if (viewName === 'courses') {
+                coursesContainer.classList.remove('hidden');
+                coursesContainer.classList.add('grid');
+                dashboardContainer.classList.add('hidden');
+                dashboardContainer.classList.remove('flex');
+            } else {
+                coursesContainer.classList.add('hidden');
+                coursesContainer.classList.remove('grid');
+                dashboardContainer.classList.remove('hidden');
+                dashboardContainer.classList.add('flex');
+
+                // เมื่อเข้าหน้า Dashboard ให้คำนวณและโหลดข้อมูล
+                loadDashboardData();
+
+                // เช็คสิทธิ์เพื่อแสดงปุ่ม Team View
+                if(isAdmin) {
+                    document.getElementById('btn-team-view').classList.remove('hidden');
+                }
+            }
+        };
+
+        window.toggleDashboardView = (viewType) => {
+            const myView = document.getElementById('view-my-dashboard');
+            const teamView = document.getElementById('view-team-dashboard');
+            const btnMy = document.getElementById('btn-my-view');
+            const btnTeam = document.getElementById('btn-team-view');
+
+            const activeClass = "px-6 py-2 rounded-lg font-bold text-sm bg-white text-indigo-600 shadow-sm transition";
+            const inactiveClass = "px-6 py-2 rounded-lg font-bold text-sm text-slate-500 hover:text-slate-700 transition";
+
+            if (viewType === 'my-view') {
+                myView.classList.remove('hidden');
+                myView.classList.add('flex');
+                teamView.classList.add('hidden');
+                teamView.classList.remove('flex');
+                btnMy.className = activeClass;
+                btnTeam.className = inactiveClass;
+            } else {
+                myView.classList.add('hidden');
+                myView.classList.remove('flex');
+                teamView.classList.remove('hidden');
+                teamView.classList.add('flex');
+                btnMy.className = inactiveClass;
+                btnTeam.className = activeClass;
+            }
+        };
+
+        // ==========================================
+        // 📈 โหลดและคำนวณข้อมูลลง Dashboard & Leaderboards
+        // ==========================================
+        async function loadDashboardData() {
+            if (!currentUser) return;
+
+            try {
+                // 1. ดึงข้อมูล Users ทุกคนมาวิเคราะห์ (ใช้ 1 Read ต่อ 1 User แต่ได้ Data ทั้งระบบ)
+                const usersSnap = await getDocs(collection(db, "Users"));
+                let allUsers = [];
+                let totalUsersCount = 0;
+                let totalScoreAll = 0;
+                let riskCount = 0;
+                let topUser = { email: '-', score: -1 };
+
+                // เตรียม Key ของเดือนปัจจุบัน
+                const date = new Date();
+                const currentMonthKey = `score_${date.getFullYear()}_${date.getMonth() + 1}`;
+                document.getElementById('lb-month-label').innerText = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+
+                usersSnap.forEach(doc => {
+                    const data = doc.data();
+                    const totalScore = data.totalScore || 0;
+                    const monthScore = data[currentMonthKey] || 0;
+                    const alias = data.email ? data.email.split('@')[0] : 'Unknown';
+                    
+                    // คำนวณคะแนนของเดือนที่แล้ว (เพื่อใช้เทียบ Trend อันดับว่าขึ้นหรือลง)
+                    const lastMonthTotal = totalScore - monthScore; 
+
+                    allUsers.push({
+                        uid: doc.id,
+                        email: alias,
+                        totalScore: totalScore,
+                        monthScore: monthScore,
+                        lastMonthTotal: lastMonthTotal,
+                        isMe: doc.id === currentUser.uid
+                    });
+
+                    // คำนวณ KPIs สำหรับ Team View
+                    totalUsersCount++;
+                    totalScoreAll += totalScore;
+                    if (totalScore > topUser.score) { topUser = { email: alias, score: totalScore }; }
+                    if (totalScore === 0) { riskCount++; }
+                });
+
+                // ==========================================
+                // 🏆 คำนวณ LEADERBOARDS & RANKS
+                // ==========================================
+                
+                // --- A. คำนวณ All-Time Rank (ของเดือนที่แล้ว) เพื่อหา Trend ---
+                allUsers.sort((a, b) => b.lastMonthTotal - a.lastMonthTotal);
+                allUsers.forEach((u, index) => { u.previousAllTimeRank = index + 1; });
+
+                // --- B. คำนวณ All-Time Rank (ปัจจุบัน) ---
+                allUsers.sort((a, b) => b.totalScore - a.totalScore);
+                let myAllTimeRank = '-';
+                let myPreviousRank = '-';
+                let htmlAllTime = '';
+                
+                allUsers.forEach((u, index) => {
+                    const rank = index + 1;
+                    if (u.isMe) {
+                        myAllTimeRank = rank;
+                        myPreviousRank = u.previousAllTimeRank;
+                    }
+                    if (rank <= 10) {
+                        const highlight = u.isMe ? 'bg-indigo-50 border-l-2 border-indigo-500 font-bold' : 'hover:bg-slate-50';
+                        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="text-slate-400 w-5 inline-block text-center">${rank}</span>`;
+                        htmlAllTime += `
+                            <tr class="transition ${highlight}">
+                                <td class="p-3 w-12 text-center text-lg">${medal}</td>
+                                <td class="p-3 text-slate-700 truncate max-w-[120px]">${u.email}</td>
+                                <td class="p-3 text-right font-black text-indigo-600">${u.totalScore}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                // --- C. คำนวณ Monthly Rank (ปัจจุบัน) ---
+                allUsers.sort((a, b) => b.monthScore - a.monthScore);
+                let myMonthRank = '-';
+                let myMonthScore = 0;
+                let htmlMonth = '';
+
+                allUsers.forEach((u, index) => {
+                    const rank = index + 1;
+                    if (u.isMe) {
+                        myMonthRank = u.monthScore > 0 ? rank : '-'; // ถ้าไม่มีคะแนนเดือนนี้ ให้เป็น -
+                        myMonthScore = u.monthScore;
+                    }
+                    if (rank <= 10 && u.monthScore > 0) { // โชว์เฉพาะคนที่มีคะแนนเดือนนี้
+                        const highlight = u.isMe ? 'bg-amber-50 border-l-2 border-amber-500 font-bold' : 'hover:bg-slate-50';
+                        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="text-slate-400 w-5 inline-block text-center">${rank}</span>`;
+                        htmlMonth += `
+                            <tr class="transition ${highlight}">
+                                <td class="p-3 w-12 text-center text-lg">${medal}</td>
+                                <td class="p-3 text-slate-700 truncate max-w-[120px]">${u.email}</td>
+                                <td class="p-3 text-right font-black text-amber-600">${u.monthScore}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                if(htmlMonth === '') htmlMonth = '<tr><td colspan="3" class="p-6 text-center text-slate-400">ยังไม่มีใครทำคะแนนในเดือนนี้</td></tr>';
+
+                // ==========================================
+                // 🎨 RENDER MY VIEW (User KPIs)
+                // ==========================================
+                const totalMyScore = parseInt(document.getElementById('my-total-score').innerText) || 0;
+                document.getElementById('dash-my-level').innerText = Math.floor(totalMyScore / 50) + 1;
+                
+                // ใช้จำนวนบทเรียนที่สอบผ่านแทน Accuracy เพื่อความเข้าใจง่าย
+                const passedCoursesCount = Object.values(userQuizHistory).filter(h => h.isPassed).length;
+                document.getElementById('dash-my-accuracy').innerText = passedCoursesCount;
+
+                // อัปเดต Rank เดือนนี้
+                document.getElementById('dash-my-month-rank').innerText = myMonthRank;
+                document.getElementById('dash-my-month-score').innerText = `${myMonthScore} แต้ม`;
+
+                // อัปเดต Rank สะสม และ สัญลักษณ์ Trend (ขึ้น/ลง)
+                document.getElementById('dash-my-alltime-rank').innerText = myAllTimeRank;
+                const trendBox = document.getElementById('dash-my-rank-trend');
+                if (myAllTimeRank !== '-' && myPreviousRank !== '-') {
+                    if (myAllTimeRank < myPreviousRank) {
+                        trendBox.innerHTML = `<span class="text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-arrow-trend-up"></i> ขึ้น ${myPreviousRank - myAllTimeRank}</span>`;
+                    } else if (myAllTimeRank > myPreviousRank) {
+                        trendBox.innerHTML = `<span class="text-rose-500 bg-rose-50 px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-arrow-trend-down"></i> ลง ${myAllTimeRank - myPreviousRank}</span>`;
+                    } else {
+                        trendBox.innerHTML = `<span class="text-slate-400 bg-slate-50 px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-minus"></i> คงที่</span>`;
+                    }
+                }
+
+                // วาดตาราง Leaderboard
+                document.getElementById('lb-month-body').innerHTML = htmlMonth;
+                document.getElementById('lb-alltime-body').innerHTML = htmlAllTime;
+
+                // ==========================================
+                // 👥 RENDER TEAM VIEW (Manager KPIs)
+                // ==========================================
+                if (isAdmin) {
+                    const avgScore = totalUsersCount > 0 ? Math.round(totalScoreAll / totalUsersCount) : 0;
+                    const completionRate = totalUsersCount > 0 ? Math.round(((totalUsersCount - riskCount) / totalUsersCount) * 100) : 0;
+
+                    document.getElementById('dash-team-completion').innerText = completionRate;
+                    document.getElementById('dash-team-avg-score').innerText = avgScore;
+                    document.getElementById('dash-team-top-name').innerText = topUser.email;
+                    document.getElementById('dash-team-risk-count').innerText = riskCount;
+
+                    document.getElementById('dash-action-insights').innerHTML = `
+                        <li class="py-1">⚠️ มีพนักงาน <span class="font-bold text-rose-500">${riskCount} คน</span> ที่ยังไม่มีคะแนนสะสมเลย</li>
+                        <li class="py-1">📊 คะแนนสะสมเฉลี่ยของแผนกอยู่ที่ <span class="font-bold text-emerald-600">${avgScore} แต้ม</span></li>
+                        <li class="py-1">🏆 พนักงานที่มีคะแนนสูงสุดคือ <span class="font-bold text-indigo-600">${topUser.email}</span> (${topUser.score} แต้ม)</li>
+                        <li class="py-1">✅ อัตราพนักงานที่มีส่วนร่วม (Engagement) อยู่ที่ <span class="font-bold text-blue-500">${completionRate}%</span></li>
+                    `;
+                }
+
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+            }
         }
 
     </script>

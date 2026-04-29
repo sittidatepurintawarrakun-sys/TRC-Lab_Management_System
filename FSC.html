@@ -1013,19 +1013,20 @@
       const headers = rows[0].map(h => h.trim().toLowerCase());
       const dataRows = rows.slice(1);
 
-      const dateIdx = headers.findIndex(h => h === "date" || h === "วันที่");
-      const workCtrIdx = headers.findIndex(h => h === "work ctr" || h === "work center");
-      const matIdx = headers.findIndex(h => h === "material");
+      // --- จุดที่แก้ไข: ปรับการค้นหาหัวตารางให้ยืดหยุ่นขึ้น ---
+      const dateIdx = headers.findIndex(h => h.includes("date") || h.includes("วันที่"));
+      const workCtrIdx = headers.findIndex(h => h.includes("work ctr") || h.includes("work center"));
+      const matIdx = headers.findIndex(h => h.includes("material"));
       const weightIdx = headers.findIndex(h => h.includes("invoice weight"));
 
       if (dateIdx === -1 || workCtrIdx === -1 || matIdx === -1 || weightIdx === -1) {
-        throw new Error("หัวตารางไม่ครบถ้วน (ต้องการ: Date, Work ctr, Material, Invoice Weight KG)");
+        throw new Error(`หัวตารางไม่ครบถ้วน\nตรวจพบ: ${headers.join(", ")}\nต้องการ: Date, Work ctr, Material, Invoice Weight`);
       }
 
       const targetDateObj = new Date(targetMonthStr);
       const targetMonthIndex = targetDateObj.getMonth();
 
-      // Format Detector แบบเดียวกับ Viscose/Store
+      // Format Detector
       let scoreDMY = 0; let scoreMDY = 0;
       for (let i = 0; i < Math.min(dataRows.length, 10); i++) {
         if (!dataRows[i][dateIdx]) continue;
@@ -1039,7 +1040,7 @@
       }
       const detectedFormat = scoreMDY > scoreDMY ? "MDY" : "DMY";
 
-      const payloadGroup = {}; // จัดกลุ่ม { "YYYY-MM-DD": { "Line MC5": { total: 0, mats: { "MatA": 10 } } } }
+      const payloadGroup = {}; 
       let successCount = 0;
       let skippedCount = 0;
 
@@ -1059,23 +1060,23 @@
         }
         const formattedDate = `${targetMonthStr}-${dayStr}`;
 
-        // 2. จัดการ Line
+        // 2. จัดการ Line (Mapping Work Center)
         const workCtr = row[workCtrIdx].toUpperCase().trim();
         let line = "";
-        if (workCtr === "SPG1-L02") line = "Line MC2";
-        else if (workCtr === "SPG1-L03") line = "Line MC3";
-        else if (workCtr === "SPG1-L05") line = "Line MC5";
-        else if (workCtr === "SPG1-L06") line = "Line MC6";
+        if (workCtr.includes("L02")) line = "Line MC2";
+        else if (workCtr.includes("L03")) line = "Line MC3";
+        else if (workCtr.includes("L05")) line = "Line MC5";
+        else if (workCtr.includes("L06")) line = "Line MC6";
         else { skippedCount++; continue; }
 
-        // 3. จัดการน้ำหนักแปลงเป็น Ton
+        // 3. จัดการน้ำหนัก (ข้อมูลคุณเป็น KG) แปลงเป็น Ton
         const material = row[matIdx].trim();
         let weightStr = (row[weightIdx] || "0").replace(/,/g, '').trim();
         let weightKg = parseFloat(weightStr);
         if (isNaN(weightKg) || weightKg <= 0) { skippedCount++; continue; }
         let weightTon = weightKg / 1000;
 
-        // 4. บวกรวมยอด
+        // 4. บวกรวมยอดแยกตามวันและ Line
         if (!payloadGroup[formattedDate]) payloadGroup[formattedDate] = {};
         if (!payloadGroup[formattedDate][line]) payloadGroup[formattedDate][line] = { total: 0, mats: {} };
 
@@ -1086,9 +1087,9 @@
         successCount++;
       }
 
-      if (successCount === 0) throw new Error("ไม่พบข้อมูลที่สามารถบันทึกได้");
+      if (successCount === 0) throw new Error("ไม่พบข้อมูลที่ตรงกับเงื่อนไขการบันทึก");
 
-      // 5. แปลงโครงสร้างส่งเข้า Firebase
+      // 5. บันทึกลง Firebase
       const promises = Object.entries(payloadGroup).map(([dateKey, lineData]) => {
         const dateObj = new Date(dateKey);
         const year = dateObj.getFullYear().toString();
@@ -1101,8 +1102,8 @@
             recordedBy: currentUser ? currentUser.email : "Guest",
             line: lineName,
             claimType: claimType,
-            weight: data.total,       // ยอดรวมให้ Backend เก่าทำงานได้
-            materials: data.mats      // ของใหม่! เก็บแยกตาม Material
+            weight: data.total,
+            materials: data.mats
           });
         });
 
@@ -1120,11 +1121,9 @@
       await Promise.all(promises);
 
       statusMsg.className = "bg-green-50 text-green-800 border border-green-200 p-3 rounded-lg shadow-sm";
-      statusMsg.innerHTML = `  ✅  <b>สำเร็จ!</b> ประมวลผล ${successCount} รายการ (จัดกลุ่มตาม Line & Material เรียบร้อย)`;
+      statusMsg.innerHTML = `  ✅  <b>สำเร็จ!</b> นำเข้าข้อมูล ${successCount} รายการเรียบร้อยแล้ว`;
       document.getElementById("spinningPasteArea").value = "";
-
-      // อัปเดตตารางและกราฟ
-      window.loadSpinningMassBalance(Object.keys(payloadGroup)[0]); // รีเฟรชดูยอดวันล่าสุดที่เพิ่งอัปโหลด
+      window.loadSpinningMassBalance(Object.keys(payloadGroup)[0]);
 
     } catch (error) {
       console.error("Spinning Upload Error:", error);
