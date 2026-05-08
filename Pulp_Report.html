@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.3.0/build/index.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -74,22 +75,16 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <div class="mb-8">
-            <div
-                class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="w-full md:w-1/3">
-                    <label class="block text-xs font-bold text-blue-800 mb-1 uppercase tracking-wide">Select Parameter
-                        to Analyze</label>
+                    <label class="block text-xs font-bold text-blue-800 mb-1 uppercase tracking-wide">Select Parameter to Analyze</label>
                     <div class="relative">
-                        <select id="paramSelector"
-                            class="custom-select w-full bg-white border border-blue-300 text-slate-700 py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold">
-                        </select>
+                        <select id="paramSelector" class="custom-select w-full bg-white border border-blue-300 text-slate-700 py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"></select>
                     </div>
                 </div>
                 <div class="flex-1 w-full">
                     <div class="flex items-start gap-3">
-                        <div class="bg-blue-100 p-2 rounded-full text-blue-600 mt-1">
-                            <i class="fas fa-lightbulb"></i>
-                        </div>
+                        <div class="bg-blue-100 p-2 rounded-full text-blue-600 mt-1"><i class="fas fa-lightbulb"></i></div>
                         <div>
                             <h4 class="font-bold text-blue-900 text-sm">Process Impact Insight:</h4>
                             <p id="impactHint" class="text-sm text-blue-800 mt-1">Loading insights...</p>
@@ -101,81 +96,86 @@
 
         <div class="flex flex-col gap-6 mb-8">
             <div class="card w-full">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
                     <h3 class="font-bold text-lg text-slate-700">Monthly Trend by Supplier (Lab Result)</h3>
-                    <div class="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                        <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
-                            <input type="checkbox" id="toggleMaxLimit" class="rounded text-blue-600 focus:ring-blue-500"> Show Max Limit
-                        </label>
-                        <span class="text-slate-300">|</span>
-                        <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
-                            <input type="checkbox" id="toggleMinLimit" class="rounded text-blue-600 focus:ring-blue-500"> Show Min Limit
-                        </label>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200">
+                            <i class="fas fa-calendar-alt text-slate-400 text-xs"></i>
+                            <input type="month" id="chartFilterStart" class="bg-transparent border-none text-xs p-0 focus:ring-0 text-slate-600 font-medium cursor-pointer outline-none hover:text-blue-600">
+                            <span class="text-slate-300 text-xs">-</span>
+                            <input type="month" id="chartFilterEnd" class="bg-transparent border-none text-xs p-0 focus:ring-0 text-slate-600 font-medium cursor-pointer outline-none hover:text-blue-600">
+                        </div>
+                        <div class="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
+                                <input type="checkbox" id="toggleMaxLimit" class="rounded text-blue-600 focus:ring-blue-500"> Show Max Limit
+                            </label>
+                            <span class="text-slate-300">|</span>
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 hover:text-blue-600">
+                                <input type="checkbox" id="toggleMinLimit" class="rounded text-blue-600 focus:ring-blue-500"> Show Min Limit
+                            </label>
+                        </div>
                     </div>
                 </div>
-                <div class="h-72 relative">
-                    <canvas id="trendChart"></canvas>
-                </div>
+                <div class="h-72 relative"><canvas id="trendChart"></canvas></div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div class="card p-4">
-                    <h4 class="font-bold text-sm text-blue-900 mb-2 border-b pb-2">ARAUCO</h4>
+                <div class="card p-4 group">
+                    <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <h4 class="font-bold text-sm text-blue-900">ARAUCO</h4>
+                        <button onclick="openFocusMode('ARAUCO', 'chart_ARAUCO')" class="text-slate-400 hover:text-blue-600 transition opacity-0 group-hover:opacity-100"><i class="fas fa-expand-arrows-alt"></i></button>
+                    </div>
                     <div class="h-40 relative"><canvas id="chart_ARAUCO"></canvas></div>
                 </div>
-                <div class="card p-4">
-                    <h4 class="font-bold text-sm text-green-700 mb-2 border-b pb-2">AV NACKAWIC</h4>
+                <div class="card p-4 group">
+                    <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <h4 class="font-bold text-sm text-green-700">AV NACKAWIC</h4>
+                        <button onclick="openFocusMode('AV NACKAWIC', 'chart_AV_NACKAWIC')" class="text-slate-400 hover:text-green-600 transition opacity-0 group-hover:opacity-100"><i class="fas fa-expand-arrows-alt"></i></button>
+                    </div>
                     <div class="h-40 relative"><canvas id="chart_AV_NACKAWIC"></canvas></div>
                 </div>
-                <div class="card p-4">
-                    <h4 class="font-bold text-sm text-amber-600 mb-2 border-b pb-2">AV CELL</h4>
+                <div class="card p-4 group">
+                    <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <h4 class="font-bold text-sm text-amber-600">AV CELL</h4>
+                        <button onclick="openFocusMode('AV CELL', 'chart_AV_CELL')" class="text-slate-400 hover:text-amber-600 transition opacity-0 group-hover:opacity-100"><i class="fas fa-expand-arrows-alt"></i></button>
+                    </div>
                     <div class="h-40 relative"><canvas id="chart_AV_CELL"></canvas></div>
                 </div>
-                <div class="card p-4" id="card_OTHER" style="display: none;">
+                <div class="card p-4 group" id="card_OTHER" style="display: none;">
                     <div class="flex justify-between items-center mb-2 border-b pb-2">
                         <h4 class="font-bold text-sm text-slate-600">Other</h4>
-                        <select id="select_OTHER" class="text-xs border border-slate-300 rounded px-1 py-0.5 text-slate-600 outline-none"></select>
+                        <div class="flex items-center gap-2">
+                            <select id="select_OTHER" class="text-xs border border-slate-300 rounded px-1 py-0.5 text-slate-600 outline-none"></select>
+                            <button onclick="openFocusMode(document.getElementById('select_OTHER').value, 'chart_OTHER')" class="text-slate-400 hover:text-slate-800 transition opacity-0 group-hover:opacity-100"><i class="fas fa-expand-arrows-alt"></i></button>
+                        </div>
                     </div>
                     <div class="h-40 relative"><canvas id="chart_OTHER"></canvas></div>
                 </div>
             </div>
-        </div>
-
-        <div
-            class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b border-slate-100 pb-6">
-
+        </div> 
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b border-slate-100 pb-6">
             <div class="w-full md:w-auto">
                 <h3 class="font-bold text-xl text-slate-800 mb-1 flex items-center gap-2">
                     <i class="fas fa-table text-blue-500"></i> Inspection Records
                 </h3>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-slate-500">
                     <span>Detailed raw data log</span>
-
                     <span class="hidden sm:inline-block w-px h-4 bg-slate-300 mx-1"></span>
-
                     <div class="flex items-center gap-3">
                         <span class="text-xs font-semibold uppercase tracking-wide text-slate-400 mr-1">Legend:</span>
-                        <div class="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-xs">
-                            <span class="font-bold text-slate-800">123</span>
-                            <span class="text-slate-500">Lab</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-xs">
-                            <span class="text-slate-400">123</span>
-                            <span class="text-slate-500">COA</span>
-                        </div>
+                        <div class="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-xs"><span class="font-bold text-slate-800">123</span><span class="text-slate-500">Lab</span></div>
+                        <div class="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-xs"><span class="text-slate-400">123</span><span class="text-slate-500">COA</span></div>
                     </div>
                 </div>
             </div>
 
             <div class="flex flex-wrap gap-3 w-full md:w-auto items-center">
-
                 <div class="flex bg-slate-50 p-1 rounded-lg border border-slate-200">
-                    <div class="relative border-r border-slate-200">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-building text-slate-400 text-xs"></i>
-                        </div>
-                        <select id="tableFilterSupplier"
-                            class="appearance-none bg-transparent border-none text-sm pl-8 pr-8 py-1.5 focus:ring-0 text-slate-600 font-medium cursor-pointer hover:text-blue-600 transition outline-none">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-building text-slate-400 text-xs"></i></div>
+                        <select id="tableFilterSupplier" class="appearance-none bg-transparent border-none text-sm pl-8 pr-8 py-1.5 focus:ring-0 text-slate-600 font-medium cursor-pointer hover:text-blue-600 transition outline-none">
                             <option value="all">All Suppliers</option>
                             <option value="ARAUCO">ARAUCO</option>
                             <option value="AV NACKAWIC">AV NACKAWIC</option>
@@ -183,38 +183,67 @@
                             <option value="PHOENIX">PHOENIX</option>
                             <option value="Other">Other</option>
                         </select>
-                        <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                            <i class="fas fa-chevron-down text-slate-400 text-xs"></i>
-                        </div>
+                        <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none"><i class="fas fa-chevron-down text-slate-400 text-xs"></i></div>
                     </div>
-
+                </div> <div class="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
                     <div class="relative">
-                        <input type="month" id="tableFilterMonth"
-                            class="bg-transparent border-none text-sm pl-3 pr-2 py-1.5 focus:ring-0 text-slate-600 font-medium cursor-pointer hover:text-blue-600 transition outline-none">
+                        <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><i class="fas fa-calendar-alt text-slate-400 text-xs"></i></div>
+                        <input type="date" id="tableFilterStartDate" title="Start Date" class="bg-transparent border-none text-sm pl-7 pr-2 py-1.5 focus:ring-0 text-slate-600 font-medium cursor-pointer hover:text-blue-600 outline-none">
+                    </div>
+                    <span class="text-slate-300 text-xs">-</span>
+                    <div class="relative">
+                        <input type="date" id="tableFilterEndDate" title="End Date" class="bg-transparent border-none text-sm px-2 py-1.5 focus:ring-0 text-slate-600 font-medium cursor-pointer hover:text-blue-600 outline-none">
                     </div>
                 </div>
 
-                <button id="exportBtn"
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition shadow-sm hover:shadow-md active:transform active:scale-95">
-                    <i class="fas fa-file-excel"></i>
-                    <span class="hidden sm:inline">Export Excel</span>
+                <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition shadow-sm hover:shadow-md active:transform active:scale-95">
+                    <i class="fas fa-file-excel"></i> <span class="hidden sm:inline">Export Excel</span>
                 </button>
             </div>
         </div>
 
         <div class="overflow-x-auto border rounded-lg shadow-sm">
             <table class="min-w-full divide-y divide-slate-200 text-sm whitespace-nowrap" id="dynamicTable">
-                <thead class="bg-slate-50 sticky top-0 z-10" id="tableHeader">
-                </thead>
+                <thead class="bg-slate-50 sticky top-0 z-10" id="tableHeader"></thead>
                 <tbody id="dataTableBody" class="divide-y divide-slate-100 bg-white">
-                    <tr>
-                        <td colspan="100%" class="text-center py-8 text-slate-400">Loading data...</td>
-                    </tr>
+                    <tr><td colspan="100%" class="text-center py-8 text-slate-400">Loading data...</td></tr>
                 </tbody>
             </table>
         </div>
 
     </main>
+
+    <div id="focusModal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col transform transition-transform scale-95 duration-300" id="focusModalContent">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
+                <h3 class="font-bold text-xl text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-search-plus text-blue-600"></i>
+                    <span id="focusModalTitleText">Focus Mode</span>
+                </h3>
+                <div class="flex items-center gap-4">
+                    <div id="boxPlotControls" class="hidden items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                        <i class="fas fa-calendar-week text-slate-400 text-xs"></i>
+                        <span class="text-xs text-slate-500 font-bold uppercase">View:</span>
+                        <select id="boxPlotTimeframe" onchange="drawBoxPlotChart()" class="text-sm bg-transparent border-none font-semibold text-blue-700 cursor-pointer outline-none hover:text-blue-800 focus:ring-0">
+                            <option value="monthly">Monthly</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+
+                    <button id="toggleBoxPlotBtn" onclick="toggleBoxPlotMode()" class="flex items-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-semibold border border-indigo-200 transition shadow-sm">
+                        <i class="fas fa-chart-bar" id="boxPlotIcon"></i> <span id="boxPlotText">Switch to Box Plot</span>
+                    </button>
+                    <div class="w-px h-6 bg-slate-300"></div>
+                    <button onclick="closeFocusModal()" class="text-slate-400 hover:text-red-500 transition focus:outline-none bg-slate-100 hover:bg-red-50 w-8 h-8 rounded-full flex items-center justify-center">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 p-6 relative w-full h-full bg-white rounded-b-xl">
+                <canvas id="focusChartCanvas"></canvas>
+            </div>
+        </div>
+    </div>
 
     <button id="copilot-btn" class="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl z-50 hover:scale-110 transition-transform duration-200 ring-2 ring-white">
         <i class="fa-solid fa-robot"></i>
@@ -271,11 +300,10 @@
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const functions = firebase.app().functions('asia-southeast1'); // เรียกใช้ Functions (ถ้าไม่มี library ข้างบนจะ error ตรงนี้)
-        db.settings({ experimentalForceLongPolling: true, merge: true });
-        
+        const functions = firebase.app().functions('asia-southeast1');
+        db.settings({ experimentalForceLongPolling: true }); 
 
-        // 🔥 Master Config: เพิ่มค่า limitMin และ limitMax ตามมาตรฐานทั่วไป (แก้ไขตัวเลขได้ตามต้องการ)
+        // 🔥 Master Config
         const PULP_CONFIG = [
             {
                 key: 'alphaCellulose', 
@@ -419,7 +447,6 @@
             }
         ];
 
-
         const SUPPLIER_COLORS = {
             'ARAUCO': '#3b82f6', 'AV NACKAWIC': '#10b981', 'AV CELL': '#f59e0b',
             'PHOENIX': '#ef4444', 'SODRA': '#ec4899', 'Other': '#94a3b8'
@@ -436,6 +463,23 @@
                 const el = document.getElementById(id);
                 if (el) el.addEventListener(event, func);
             };
+            const dateEnd = new Date();
+            const dateStart = new Date();
+            dateStart.setMonth(dateStart.getMonth() - 11); // ถอยกลับไป 11 เดือน (รวมเดือนปัจจุบันเป็น 12)
+
+            // Format เป็น YYYY-MM
+            document.getElementById('chartFilterStart').value = dateStart.toISOString().slice(0, 7);
+            document.getElementById('chartFilterEnd').value = dateEnd.toISOString().slice(0, 7);
+
+            // ผูก Event เมื่อมีการเปลี่ยนเดือน ให้กราฟอัปเดต
+            safeBind('chartFilterStart', 'change', () => {
+                const sel = document.getElementById('paramSelector');
+                if (sel) updateCharts(sel.value);
+            });
+            safeBind('chartFilterEnd', 'change', () => {
+                const sel = document.getElementById('paramSelector');
+                if (sel) updateCharts(sel.value);
+            });
 
             safeBind('paramSelector', 'change', (e) => {
                 updateCharts(e.target.value);
@@ -452,7 +496,8 @@
 
             safeBind('loadMoreBtn', 'click', fetchTableData);
             safeBind('exportBtn', 'click', exportToExcel);
-            safeBind('tableFilterMonth', 'change', resetAndFetchTable);
+            safeBind('tableFilterStartDate', 'change', resetAndFetchTable);
+            safeBind('tableFilterEndDate', 'change', resetAndFetchTable);
             safeBind('tableFilterSupplier', 'change', resetAndFetchTable);
 
             // Setup AI Chat
@@ -501,36 +546,29 @@
                 const currentYear = new Date().getFullYear();
                 const prevYear = currentYear - 1;
 
-                // 1. ดึงข้อมูล 2 ปีล่าสุด (ปีปัจจุบัน + ปีก่อนหน้า) เพื่อให้ได้ข้อมูล 12 เดือนย้อนหลังแน่นอน
-                // ถ้าช่วงเปลี่ยนปี (เช่น ม.ค. 2025) เราจำเป็นต้องมีข้อมูลปี 2024 มาแสดงด้วย
                 const [currDoc, prevDoc, legacyDoc] = await Promise.all([
                     db.collection('stats_pulp').doc(`summary_${currentYear}`).get(),
                     db.collection('stats_pulp').doc(`summary_${prevYear}`).get(),
-                    // (Optional) เผื่อใครยังไม่ได้ย้ายข้อมูลเก่า ดึง main_summary มากันเหนียวไว้ก่อน
                     db.collection('stats_pulp').doc('main_summary').get() 
                 ]);
 
-                // 2. รวมร่างข้อมูล (Merge Data)
                 let mergedIncoming = {};
 
                 const mergeStats = (docSnapshot) => {
                     if (docSnapshot.exists) {
                         const data = docSnapshot.data();
                         if (data.pulp_incoming) {
-                            // แตก Object ออกมาผสมกัน (Spread Operator)
                             mergedIncoming = { ...mergedIncoming, ...data.pulp_incoming };
                         }
                     }
                 };
 
-                mergeStats(legacyDoc); // เอาของเก่าใส่ก่อน (ถ้ามี)
-                mergeStats(prevDoc);   // ทับด้วยปีก่อน
-                mergeStats(currDoc);   // ทับด้วยปีปัจจุบัน (ล่าสุดสำคัญสุด)
+                mergeStats(legacyDoc); 
+                mergeStats(prevDoc);   
+                mergeStats(currDoc);   
 
-                // 3. สร้าง Cache สำหรับกราฟ
                 summaryDataCache = { pulp_incoming: mergedIncoming };
 
-                // อัปเดตเวลาล่าสุด (เอาจากปีปัจจุบัน)
                 if (currDoc.exists) {
                     const data = currDoc.data();
                      document.getElementById('lastUpdatedTime').textContent = data.lastUpdated
@@ -538,10 +576,7 @@
                         : '-';
                 }
 
-                // 4. วาดกราฟ (ฟังก์ชัน updateCharts จะจัดการตัดเลือก 12 เดือนให้เอง)
                 updateCharts(PULP_CONFIG[0].key);
-
-                // โหลดตาราง
                 fetchTableData();
 
             } catch (error) { console.error("Dashboard Init Error:", error); }
@@ -561,8 +596,21 @@
 
             try {
                 let query = db.collection('rm_pulp_inspections').orderBy('receivedDate', 'desc');
+
                 const filterSupplier = document.getElementById('tableFilterSupplier').value;
-                if (filterSupplier !== 'all') query = query.where('supplier', '==', filterSupplier);
+                if (filterSupplier !== 'all') {
+                    query = query.where('supplier', '==', filterSupplier);
+                }
+
+                const startDate = document.getElementById('tableFilterStartDate').value;
+                const endDate = document.getElementById('tableFilterEndDate').value;
+
+                if (startDate) {
+                    query = query.where('receivedDate', '>=', startDate);
+                }
+                if (endDate) {
+                    query = query.where('receivedDate', '<=', endDate);
+                }
 
                 query = query.limit(20);
                 if (lastVisibleDoc) query = query.startAfter(lastVisibleDoc);
@@ -576,12 +624,10 @@
                 }
 
                 if (!snapshot.empty) lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
-                const filterMonth = document.getElementById('tableFilterMonth').value;
                 let html = '';
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (filterMonth && (!data.receivedDate || !data.receivedDate.startsWith(filterMonth))) return;
                     const p = data.parameters || {};
                     let paramsHTML = '';
                     PULP_CONFIG.forEach(conf => {
@@ -614,40 +660,77 @@
         async function exportToExcel() {
             const btn = document.getElementById('exportBtn');
             btn.disabled = true;
-            btn.innerHTML = 'Processing...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
             try {
-                let query = db.collection('rm_pulp_inspections').orderBy('receivedDate', 'desc').limit(500);
+                let query = db.collection('rm_pulp_inspections').orderBy('receivedDate', 'desc');
+
+                const filterSupplier = document.getElementById('tableFilterSupplier').value;
+                const startDate = document.getElementById('tableFilterStartDate').value;
+                const endDate = document.getElementById('tableFilterEndDate').value;
+
+                if (filterSupplier !== 'all') {
+                    query = query.where('supplier', '==', filterSupplier);
+                }
+                if (startDate) {
+                    query = query.where('receivedDate', '>=', startDate);
+                }
+                if (endDate) {
+                    query = query.where('receivedDate', '<=', endDate);
+                }
+
+                query = query.limit(2000); 
+
                 const snapshot = await query.get();
                 const exportData = [];
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     const p = d.parameters || {};
-                    const row = { Date: d.receivedDate, Supplier: d.supplier, Batch: d.batchNo, Lot: d.lotNo };
+                    const row = { Date: formatDate(d.receivedDate), Supplier: d.supplier, Batch: d.batchNo, Lot: d.lotNo };
                     PULP_CONFIG.forEach(conf => {
                         row[`${conf.label} (Lab)`] = p[conf.key]?.lab ?? '';
                         row[`${conf.label} (COA)`] = p[conf.key]?.coa ?? '';
                     });
                     exportData.push(row);
                 });
+
+                if(exportData.length === 0) {
+                    alert("No data found for the selected filters.");
+                    return;
+                }
+
                 const ws = XLSX.utils.json_to_sheet(exportData);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Pulp Data");
-                XLSX.writeFile(wb, "Pulp_Report.xlsx");
-            } catch (e) { alert("Error"); }
-            finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-excel"></i> Export Excel'; }
+
+                const fileName = `Pulp_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+
+            } catch (e) { 
+                console.error("Export Error:", e);
+                alert("Error exporting data. Check console for details."); 
+            } finally { 
+                btn.disabled = false; 
+                btn.innerHTML = '<i class="fas fa-file-excel"></i> <span class="hidden sm:inline">Export Excel</span>'; 
+            }
         }
 
         // --- 6. Chart Functions ---
-        // ✅ [แก้ไข] คืนชีพ function updateCharts ที่หายไป พร้อม Logic ใหม่
         function updateCharts(paramKey) {
             if (!summaryDataCache || !summaryDataCache.pulp_incoming) return;
 
             const stats = summaryDataCache.pulp_incoming;
             let allMonths = Object.keys(stats).sort();
 
-            // ตัดเอาเฉพาะ 12 เดือนล่าสุด
-            if (allMonths.length > 12) {
-                allMonths = allMonths.slice(allMonths.length - 12);
+            const filterStart = document.getElementById('chartFilterStart').value;
+            const filterEnd = document.getElementById('chartFilterEnd').value;
+
+            // กรองข้อมูลตามช่วงเดือนที่เลือก
+            if (filterStart) {
+                allMonths = allMonths.filter(m => m >= filterStart);
+            }
+            if (filterEnd) {
+                allMonths = allMonths.filter(m => m <= filterEnd);
             }
             const months = allMonths;
 
@@ -657,17 +740,13 @@
             const currentConfig = PULP_CONFIG.find(c => c.key === paramKey);
             const paramLabel = currentConfig ? currentConfig.label : paramKey;
 
-            // --- Main Trend Chart ---
             const datasets = [];
             allSuppliers.forEach(supplier => {
                 const dataPoints = months.map(month => {
                     const val = stats[month]?.[supplier]?.params?.[paramKey];
 
-                    // ✅ FIX 1: ดึงค่า Lab
                     let labValue = (val && val.lab_avg !== undefined) ? val.lab_avg : null;
 
-                    // ✅ FIX 2: ป้องกันกราฟตกเป็น 0 ถ้าค่าเป็น 0 (สมมติว่า Lab ยังไม่ออก) ให้เปลี่ยนเป็น null
-                    // (ใช้ parseFloat เพื่อความชัวร์ เผื่อมาเป็น string "0")
                     if (labValue !== null && parseFloat(labValue) === 0) {
                         labValue = null;
                     }
@@ -675,7 +754,6 @@
                     return labValue;
                 });
 
-                // ตรวจสอบว่าใน dataPoints มีตัวเลขจริงๆ อย่างน้อย 1 ตัวไหม (ถ้าเป็น null หมด ไม่ต้องพลอต)
                 if (dataPoints.some(v => v !== null)) {
                     datasets.push({
                         label: supplier,
@@ -683,19 +761,18 @@
                         borderColor: SUPPLIER_COLORS[supplier] || '#666',
                         backgroundColor: SUPPLIER_COLORS[supplier] || '#666',
                         tension: 0.3,
-                        spanGaps: true // true = ลากเส้นเชื่อมข้ามเดือนที่ข้อมูลหาย, false = เส้นขาดเมื่อไม่มีข้อมูล
+                        spanGaps: true 
                     });
                 }
             });
 
-            // Limits Logic (เหมือนเดิม)
             const showMax = document.getElementById('toggleMaxLimit').checked;
             const showMin = document.getElementById('toggleMinLimit').checked;
             const createLimitDataset = (val, label, color) => ({
                 label: `${label} (${val})`,
                 data: new Array(months.length).fill(val),
                 borderColor: color, borderWidth: 2, borderDash: [6, 6],
-                pointRadius: 0, pointHoverRadius: 0, fill: false, order: 0 // ปรับ pointRadius เป็น 0 ให้เส้น Limit ดูสะอาดตา
+                pointRadius: 0, pointHoverRadius: 0, fill: false, order: 0 
             });
 
             if (showMax && currentConfig?.limitMax) datasets.push(createLimitDataset(currentConfig.limitMax, 'Max', '#ef4444'));
@@ -703,7 +780,6 @@
 
             renderChart('trendChart', 'line', months, datasets, `Avg ${paramLabel} Trend`);
 
-            // --- Sub Charts (Comparison) ---
             const targets = [
                 { id: 'chart_ARAUCO', name: 'ARAUCO' },
                 { id: 'chart_AV_NACKAWIC', name: 'AV NACKAWIC' },
@@ -714,7 +790,6 @@
                 renderSmallComparisonChart(target.id, target.name, months, stats, paramKey, paramLabel);
             });
 
-            // Other Supplier Logic (เหมือนเดิม)
             const fixedNames = targets.map(t => t.name);
             const otherSuppliers = Array.from(allSuppliers).filter(s => !fixedNames.includes(s));
             const cardOther = document.getElementById('card_OTHER');
@@ -739,7 +814,6 @@
             }
         }
 
-        // ✅ [แก้ไข] ฟังก์ชันวาดกราฟเล็ก (ใช้ lab_avg ตรงๆ)
         function renderSmallComparisonChart(canvasId, supplierName, months, stats, paramKey, paramLabel) {
             const ctx = document.getElementById(canvasId);
             if (!ctx) return;
@@ -751,7 +825,6 @@
             months.forEach(month => {
                 const val = stats[month]?.[supplierName]?.params?.[paramKey];
 
-                // ✅ FIX: Logic เดียวกัน ถ้าเป็น 0 ให้เป็น null
                 let labVal = (val && val.lab_avg !== undefined) ? val.lab_avg : null;
                 if (labVal !== null && parseFloat(labVal) === 0) labVal = null;
 
@@ -764,9 +837,6 @@
                 if (labVal !== null || coaVal !== null) hasData = true;
             });
 
-            // เพิ่มเทคนิค: ถ้า LabData เดือนสุดท้ายเป็น Null (ยังไม่ทำ) แต่เดือนก่อนหน้ามีค่า
-            // เส้นกราฟจะหยุดแค่เดือนก่อนหน้า ไม่ทิ่มลง 0 ทำให้ดู Trend ได้ง่ายขึ้น
-
             renderChart(canvasId, 'line', months, [
                 { 
                     label: 'COA', 
@@ -775,7 +845,7 @@
                     borderDash: [4, 4], 
                     tension: 0.1, 
                     pointRadius: 2,
-                    spanGaps: true // อนุญาตให้ลากเส้นข้ามจุดที่ว่าง
+                    spanGaps: true 
                 },
                 { 
                     label: 'Lab', 
@@ -783,7 +853,7 @@
                     borderColor: SUPPLIER_COLORS[supplierName] || '#3b82f6', 
                     tension: 0.1, 
                     pointRadius: 3,
-                    spanGaps: true // อนุญาตให้ลากเส้นข้ามจุดที่ว่าง
+                    spanGaps: true 
                 }
             ], hasData ? paramLabel : `${paramLabel} (No Data)`);
         }
@@ -827,17 +897,13 @@
             return (parts.length === 3) ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
         }
 
-            // --- 7. AI Chat Logic (Setup) ---
-            function setupAIChat() {
-                // ⚠️ แก้ไข 1: ระบุ Region 'asia-southeast1' ให้ตรงกับ Backend
-                // ถ้าไม่ระบุ มันจะวิ่งไป us-central1 แล้วเจอ CORS Error
-                const functions = firebase.app().functions('asia-southeast1');
+        // --- 7. AI Chat Logic (Setup) ---
+        function setupAIChat() {
+            const functions = firebase.app().functions('asia-southeast1');
+            const askPlantInsightAI = functions.httpsCallable('askPulpChat'); 
 
-                // ⚠️ แก้ไข 2: เปลี่ยนชื่อเรียกให้ตรงกับใน index.js (จาก askPlantInsightAI เป็น askPulpChat)
-                const askPlantInsightAI = functions.httpsCallable('askPulpChat'); 
-
-                const copilotBtn = document.getElementById('copilot-btn');
-                const copilotSidebar = document.getElementById('copilot-sidebar');
+            const copilotBtn = document.getElementById('copilot-btn');
+            const copilotSidebar = document.getElementById('copilot-sidebar');
             const closeCopilotBtn = document.getElementById('close-copilot-btn');
             const copilotInput = document.getElementById('copilot-input');
             const copilotSend = document.getElementById('copilot-send');
@@ -900,6 +966,292 @@
                     if (e.key === 'Enter') handleChat();
                 });
             }
+        }
+        
+        // --- 8. Focus Mode Logic ---
+        let focusChartInstance = null;
+        let currentFocusSupplier = ''; 
+        let currentFocusParamKey = '';
+        let isBoxPlotMode = false;
+        let currentSourceCanvasId = '';
+
+        function openFocusMode(supplierName, sourceCanvasId) {
+            const sourceChart = window[sourceCanvasId + 'Instance'];
+            if (!sourceChart) return;
+
+            currentFocusSupplier = supplierName;
+            currentSourceCanvasId = sourceCanvasId;
+            currentFocusParamKey = document.getElementById('paramSelector').value;
+            isBoxPlotMode = false; 
+            updateBoxPlotButtonUI();
+
+            const modal = document.getElementById('focusModal');
+            const titleText = document.getElementById('focusModalTitleText');
+            const focusCanvas = document.getElementById('focusChartCanvas');
+
+            const paramSelector = document.getElementById('paramSelector');
+            const paramLabel = paramSelector.options[paramSelector.selectedIndex].text;
+            titleText.textContent = `${supplierName} Analysis - ${paramLabel}`;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('focusModalContent').classList.remove('scale-95');
+                document.getElementById('focusModalContent').classList.add('scale-100');
+            }, 10);
+
+            if (focusChartInstance) focusChartInstance.destroy();
+
+            const datasets = sourceChart.data.datasets.map(ds => {
+                return {
+                    ...ds,
+                    pointRadius: ds.label === 'COA' ? 4 : 6,
+                    pointHoverRadius: ds.label === 'COA' ? 6 : 8,
+                    borderWidth: 2
+                };
+            });
+
+            focusChartInstance = new Chart(focusCanvas.getContext('2d'), {
+                type: sourceChart.config.type,
+                data: {
+                    labels: sourceChart.data.labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: false },
+                        legend: { 
+                            position: 'top', 
+                            labels: { usePointStyle: true, font: { size: 14, family: "'Sarabun', sans-serif" } } 
+                        },
+                        tooltip: {
+                            titleFont: { size: 14, family: "'Sarabun', sans-serif" },
+                            bodyFont: { size: 14, family: "'Sarabun', sans-serif" },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) label += parseFloat(context.parsed.y).toFixed(2);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            grid: { color: '#f1f5f9' }, 
+                            ticks: { font: { size: 12, family: "'Sarabun', sans-serif" } } 
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grace: '10%',
+                            grid: { color: '#f1f5f9' },
+                            ticks: { 
+                                font: { size: 13, family: "'Sarabun', sans-serif" },
+                                callback: function(value) { return parseFloat(value).toFixed(2); } 
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ฟังก์ชันจัดการหน้าตาปุ่มเปิด/ปิด โหมด Box Plot
+        function updateBoxPlotButtonUI() {
+            const btnText = document.getElementById('boxPlotText');
+            const btnIcon = document.getElementById('boxPlotIcon');
+            const controls = document.getElementById('boxPlotControls'); 
+
+            if (isBoxPlotMode) {
+                btnText.textContent = "Switch to Trend Line";
+                btnIcon.className = "fas fa-chart-line";
+                controls.classList.remove('hidden');
+                controls.classList.add('flex');
+            } else {
+                btnText.textContent = "Switch to Box Plot";
+                btnIcon.className = "fas fa-chart-bar";
+                controls.classList.add('hidden');
+                controls.classList.remove('flex');
+            }
+        }
+
+        async function toggleBoxPlotMode() {
+            isBoxPlotMode = !isBoxPlotMode;
+            updateBoxPlotButtonUI();
+
+            if (isBoxPlotMode) {
+                await drawBoxPlotChart();
+            } else {
+                openFocusMode(currentFocusSupplier, currentSourceCanvasId);
+            }
+        }
+
+        // ฟังก์ชันคำนวณหาวันจันทร์ของสัปดาห์นั้นๆ 
+        function getWeekMonday(dateStr) {
+            const d = new Date(dateStr);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(d.setDate(diff));
+            return monday.toISOString().split('T')[0];
+        }
+
+        // ฟังก์ชันวาดกราฟ Box Plot (อัปเดตแกน Y และการ Grouping)
+                async function drawBoxPlotChart() {
+                const btn = document.getElementById('toggleBoxPlotBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Data...';
+                btn.disabled = true;
+
+                try {
+                    const timeframe = document.getElementById('boxPlotTimeframe').value;
+
+                    // ---- [เริ่มส่วนที่ปรับแก้: ดึงวันที่จาก Filter แทนการฟิกซ์ 1 ปี] ----
+                    const filterStart = document.getElementById('chartFilterStart').value;
+                    const filterEnd = document.getElementById('chartFilterEnd').value;
+
+                    let query = db.collection('rm_pulp_inspections')
+                        .where('supplier', '==', currentFocusSupplier);
+
+                    if (filterStart) {
+                        // เติม -01 เพื่อให้เป็นรูปแบบ YYYY-MM-DD สำหรับค้นหา
+                        query = query.where('receivedDate', '>=', filterStart + '-01');
+                    }
+
+                    if (filterEnd) {
+                        // หาวันสุดท้ายของเดือนที่ระบุ เพื่อครอบคลุมทั้งเดือน
+                        const [year, month] = filterEnd.split('-');
+                        const lastDay = new Date(year, month, 0).getDate(); 
+                        query = query.where('receivedDate', '<=', `${filterEnd}-${lastDay}`);
+                    }
+
+                    query = query.orderBy('receivedDate', 'asc');
+                    const snapshot = await query.get();
+                    // ---- [จบส่วนที่ปรับแก้] ----
+
+                    const groupedCOA = {};
+                    const groupedLab = {};
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (!data.receivedDate) return;
+
+                    let groupKey = '';
+                    if (timeframe === 'weekly') {
+                        groupKey = getWeekMonday(data.receivedDate);
+                    } else {
+                        groupKey = data.receivedDate.substring(0, 7); 
+                    }
+
+                    const params = data.parameters || {};
+                    const targetParam = params[currentFocusParamKey];
+
+                    if (!groupedCOA[groupKey]) groupedCOA[groupKey] = [];
+                    if (!groupedLab[groupKey]) groupedLab[groupKey] = [];
+
+                    if (targetParam) {
+                        if (targetParam.coa !== null && targetParam.coa !== "") {
+                            groupedCOA[groupKey].push(parseFloat(targetParam.coa));
+                        }
+                        if (targetParam.lab !== null && targetParam.lab !== "") {
+                            groupedLab[groupKey].push(parseFloat(targetParam.lab));
+                        }
+                    }
+                });
+
+                const labels = Object.keys(groupedCOA).sort();
+                const dataCOA = labels.map(m => groupedCOA[m]);
+                const dataLab = labels.map(m => groupedLab[m]);
+
+                if (focusChartInstance) focusChartInstance.destroy();
+                const focusCanvas = document.getElementById('focusChartCanvas');
+
+                // ---- [เริ่มส่วนที่เพิ่มเข้ามาใหม่: คำนวณหาขอบเขตแกน Y อัตโนมัติ] ----
+                const allValues = [...dataCOA.flat(), ...dataLab.flat()].filter(v => v !== null && !isNaN(v));
+                allValues.sort((a, b) => a - b);
+
+                let yMin = undefined;
+                let yMax = undefined;
+
+                if (allValues.length > 0) {
+                    // คำนวณ Q1, Q3 และ IQR เพื่อหาช่วงข้อมูลปกติ
+                    const q1 = allValues[Math.floor(allValues.length * 0.25)];
+                    const q3 = allValues[Math.floor(allValues.length * 0.75)];
+                    const iqr = q3 - q1;
+
+                    // กำหนดขอบเขตบน-ล่าง (จุดไหนเกิน ±1.5 IQR จะถูกมองข้ามในการสร้างสเกลแกน Y)
+                    yMin = q1 - (2.0 * iqr);
+                    yMax = q3 + (2.0 * iqr);
+
+                    // ป้องกันกรณีข้อมูลเกาะกลุ่มกันมากจน Min = Max
+                    if (yMin === yMax) {
+                        yMin -= 5;
+                        yMax += 5;
+                    }
+                }
+                // ---- [จบส่วนที่เพิ่มเข้ามาใหม่] ----
+
+                focusChartInstance = new Chart(focusCanvas.getContext('2d'), {
+                    type: 'boxplot',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'COA',
+                                data: dataCOA,
+                                backgroundColor: 'rgba(148, 163, 184, 0.4)',
+                                borderColor: '#94a3b8',
+                                borderWidth: 2,
+                                outlierColor: '#cbd5e1'
+                            },
+                            {
+                                label: 'Lab',
+                                data: dataLab,
+                                backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                                borderColor: '#3b82f6',
+                                borderWidth: 2,
+                                outlierColor: '#93c5fd'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { font: { family: "'Sarabun', sans-serif" } } },
+                            tooltip: { titleFont: { family: "'Sarabun', sans-serif" }, bodyFont: { family: "'Sarabun', sans-serif" } }
+                        },
+                        scales: {
+                            x: { grid: { color: '#f1f5f9' } },
+                            y: { 
+                                beginAtZero: false, 
+                                grace: '10%', // เผื่อขอบบนล่างเพิ่มนิดหน่อยให้ดูกล่องไม่ชิดขอบไป
+                                min: yMin,    // บังคับค่า Min ที่คำนวณได้
+                                max: yMax,    // บังคับค่า Max ที่คำนวณได้
+                                grid: { color: '#f1f5f9' },
+                                ticks: { font: { family: "'Sarabun', sans-serif" } }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Box Plot Error:", error);
+                alert("เกิดข้อผิดพลาดในการโหลดข้อมูล Box Plot กรุณาลองใหม่อีกครั้ง");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function closeFocusModal() {
+            const modal = document.getElementById('focusModal');
+            document.getElementById('focusModalContent').classList.remove('scale-100');
+            document.getElementById('focusModalContent').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (focusChartInstance) { focusChartInstance.destroy(); focusChartInstance = null; }
+            }, 200); 
         }
     </script>
 </body>
