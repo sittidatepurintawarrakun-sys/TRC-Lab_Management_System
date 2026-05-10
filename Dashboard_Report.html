@@ -13,6 +13,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.3.0/build/index.umd.min.js"></script>
 
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
@@ -88,6 +90,9 @@
                     <i class="fas fa-tree"></i>
                     <span>1. Raw Material Input (COA Analysis)</span>
                 </div>
+                <button onclick="exportPulpExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold transition shadow-sm flex items-center gap-1">
+                    <i class="fas fa-file-excel"></i> Export
+                </button>
             </div>
             <div id="pulpSupplierContainer" class="flex flex-col gap-4">
                 <div class="w-full h-24 bg-white rounded-xl border border-slate-200 flex items-center justify-center">
@@ -97,33 +102,42 @@
         </section>
 
         <section class="flex flex-col">
-            <div class="section-title text-blue-700 flex justify-between mb-2">
+            <div class="section-title text-blue-700 flex justify-between items-center mb-2">
                 <span><i class="fas fa-cogs"></i> 2. Process Control (<span id="lblMcProcess">MC2</span>)</span>
-                <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border">Impacts Quality Directly</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border hidden md:inline-block">Impacts Quality Directly</span>
+                    <button onclick="exportProcessExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold transition shadow-sm flex items-center gap-1">
+                        <i class="fas fa-file-excel"></i> Export
+                    </button>
+                </div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-blue-500 w-full">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc1" onchange="updateSingleChart('Proc', 1)"></select>
+                            <button onclick="openFocusMode('Proc', 1)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProc1"><canvas id="chartProc1"></canvas></div>
                     </div>
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc2" onchange="updateSingleChart('Proc', 2)"></select>
+                            <button onclick="openFocusMode('Proc', 2)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProc2"><canvas id="chartProc2"></canvas></div>
                     </div>
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc3" onchange="updateSingleChart('Proc', 3)"></select>
+                            <button onclick="openFocusMode('Proc', 3)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProc3"><canvas id="chartProc3"></canvas></div>
                     </div>
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-sm font-bold text-blue-800 bg-blue-50 rounded px-2 py-1 outline-none border border-blue-100" id="selProc4" onchange="updateSingleChart('Proc', 4)"></select>
+                            <button onclick="openFocusMode('Proc', 4)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProc4"><canvas id="chartProc4"></canvas></div>
                     </div>
@@ -149,7 +163,12 @@
                     </div>
                 </div>
 
-                <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border whitespace-nowrap shrink-0">Result of Process</span>
+            <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded border hidden md:inline-block">Result of Process</span>
+                    <button onclick="exportProductExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold transition shadow-sm flex items-center gap-1">
+                        <i class="fas fa-file-excel"></i> Export
+                    </button>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -200,24 +219,28 @@
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition bg-slate-50/50">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100 max-w-[70%]" id="selProd1" onchange="updateSingleChart('Prod', 1)"></select>
+                            <button onclick="openFocusMode('Prod', 1)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProd1"><canvas id="chartProd1"></canvas></div>
                     </div>
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition bg-slate-50/50">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100 max-w-[70%]" id="selProd2" onchange="updateSingleChart('Prod', 2)"></select>
+                            <button onclick="openFocusMode('Prod', 2)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProd2"><canvas id="chartProd2"></canvas></div>
                     </div>
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition bg-slate-50/50">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100 max-w-[70%]" id="selProd3" onchange="updateSingleChart('Prod', 3)"></select>
+                            <button onclick="openFocusMode('Prod', 3)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProd3"><canvas id="chartProd3"></canvas></div>
                     </div>
                     <div class="border rounded p-3 shadow-sm hover:shadow-md transition bg-slate-50/50">
                         <div class="flex justify-between mb-2 items-center">
                             <select class="text-xs font-bold text-emerald-800 bg-emerald-50 rounded px-2 py-1 outline-none border border-emerald-100 max-w-[70%]" id="selProd4" onchange="updateSingleChart('Prod', 4)"></select>
+                            <button onclick="openFocusMode('Prod', 4)" class="text-slate-400 hover:text-indigo-600 transition p-1"><i class="fas fa-expand-arrows-alt"></i></button>
                         </div>
                         <div class="chart-container" id="containerProd4"><canvas id="chartProd4"></canvas></div>
                     </div>
@@ -312,9 +335,37 @@
 
             </div>
         </section>
-    </div>
-
-    <div class="fixed bottom-6 right-6 z-50">
+        </div> <div id="focusModal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col transform transition-transform scale-95 duration-300" id="focusModalContent">
+                <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
+                    <h3 class="font-bold text-xl text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-search-plus text-indigo-600"></i>
+                        <span id="focusModalTitleText">Focus Mode</span>
+                    </h3>
+                    <div class="flex items-center gap-4">
+                        <div id="boxPlotControls" class="hidden items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                            <i class="fas fa-calendar-week text-slate-400 text-xs"></i>
+                            <span class="text-xs text-slate-500 font-bold uppercase">View:</span>
+                            <select id="boxPlotTimeframe" onchange="drawBoxPlotChart()" class="text-sm bg-transparent border-none font-semibold text-indigo-700 cursor-pointer outline-none hover:text-indigo-800 focus:ring-0">
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        <button id="toggleBoxPlotBtn" onclick="toggleBoxPlotMode()" class="flex items-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-200 transition shadow-sm">
+                            <i class="fas fa-chart-bar" id="boxPlotIcon"></i> <span id="boxPlotText">Switch to Box Plot</span>
+                        </button>
+                        <div class="w-px h-6 bg-slate-300"></div>
+                        <button onclick="closeFocusModal()" class="text-slate-400 hover:text-red-500 transition focus:outline-none bg-slate-100 hover:bg-red-50 w-8 h-8 rounded-full flex items-center justify-center">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 p-6 relative w-full h-full bg-white rounded-b-xl">
+                    <canvas id="focusChartCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="fixed bottom-6 right-6 z-50">
         <div id="chatWindow" class="hidden bg-white w-96 h-[450px] rounded-xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden">
             <div class="bg-gradient-to-r from-indigo-700 to-purple-700 p-3 text-white flex justify-between items-center">
                 <div class="flex items-center gap-2">
@@ -1507,9 +1558,10 @@
         // 7. PULP SECTION (Kept mostly original but optimized)
         // =========================================================
         function getPulpDocID(year, monthIndex) {
-            if (year > 2025) return 'summary_2025';
-            if (year === 2025 && monthIndex >= 10) return 'summary_2025';
-            return 'main_summary';
+            if (year >= 2025) {
+                return `summary_${year}`; // ดึงไฟล์ตามปีนั้นๆ โดยตรง
+            }
+            return 'main_summary'; // ถ้าเก่ากว่า 2025 ค่อยไปดึงไฟล์เก่า
         }
 
         // Function 1: Render หน้าจอ (แก้ไขให้ดึงข้อมูลเก่าจาก stats_pulp)
@@ -2326,6 +2378,325 @@
                 btn.disabled = false;
                 btn.innerHTML = originalText;
                 btn.className = "text-[10px] bg-red-50 border border-red-300 text-red-600 px-2 py-1 rounded hover:bg-red-600 hover:text-white transition-all";
+            }
+        }
+        // =========================================================
+        // 11. EXPORT TO EXCEL FUNCTIONS
+        // =========================================================
+        async function exportPulpExcel() {
+            const mc = document.getElementById('mcFilter').value;
+            const startStr = document.getElementById('startDate').value;
+            const endStr = document.getElementById('endDate').value;
+            const suppliers = MC_SUPPLIER_RULES[mc] || ["ARAUCO", "AVC", "PHOENIX", "AV NACKAWIC"];
+
+            try {
+                // ดึงข้อมูลใหม่
+                const data = await fetchRawPulpData(startStr, endStr, suppliers);
+                const exportData = [];
+
+                Object.keys(data).forEach(sup => {
+                    if(data[sup] && data[sup].lotCount > 0) {
+                        exportData.push({
+                            "Supplier": sup,
+                            "Total Lots": data[sup].lotCount,
+                            "Alpha Cellulose (%)": data[sup].alpha ? data[sup].alpha.toFixed(2) : "-",
+                            "Viscosity (ml/g)": data[sup].viscosity ? data[sup].viscosity.toFixed(2) : "-",
+                            "Whiteness (%)": data[sup].whiteness ? data[sup].whiteness.toFixed(2) : "-",
+                            "Silica (ppm)": data[sup].silica ? data[sup].silica.toFixed(2) : "-",
+                            "Calcium (ppm)": data[sup].calcium ? data[sup].calcium.toFixed(2) : "-"
+                        });
+                    }
+                });
+
+                if(exportData.length === 0) return alert("ไม่มีข้อมูลในช่วงเวลานี้ครับ");
+
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Raw Material Input");
+                XLSX.writeFile(wb, `Raw_Material_Pulp_${startStr}_to_${endStr}.xlsx`);
+            } catch(e) {
+                console.error("Export Pulp Error:", e);
+                alert("เกิดข้อผิดพลาดในการ Export");
+            }
+        }
+
+        async function exportProcessExcel() { exportChartsToExcel('Proc', "Process_Control"); }
+        async function exportProductExcel() { exportChartsToExcel('Prod', "Product_Quality"); }
+
+        async function exportChartsToExcel(type, fileNamePrefix) {
+            const mc = document.getElementById('mcFilter').value;
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            const mode = getGranularity();
+
+            // ดึงชื่อ Parameter ที่เลือกใน Dropdown ทั้ง 4 กราฟ
+            const selectedParams = [];
+            for(let i=1; i<=4; i++) {
+                const el = document.getElementById(`sel${type}${i}`);
+                if(el && el.value) selectedParams.push(el.value);
+            }
+
+            if(selectedParams.length === 0) return;
+
+            try {
+                const fetchFn = type === 'Proc' ? fetchProcessDataByType : fetchProductDataByType;
+                const promises = selectedParams.map(param => fetchFn(mc, param, start, end, mode));
+                const results = await Promise.all(promises);
+
+                // นำข้อมูลมาเรียงตามแถว (Row = Date/Time, Column = Parameter)
+                // ยึดเอา Label (เวลา) จากกราฟแรกเป็นหลัก (เนื่องจาก Timeline ตรงกัน)
+                const masterLabels = results[0].labels;
+                const exportData = [];
+
+                masterLabels.forEach((label, index) => {
+                    const row = { "Date/Time": label };
+                    let hasData = false;
+
+                    selectedParams.forEach((paramName, pIndex) => {
+                        const val = results[pIndex].data[index];
+                        if(val !== null && val !== undefined && val !== "") {
+                            row[paramName] = Number(val.toFixed(2));
+                            hasData = true;
+                        } else {
+                            row[paramName] = "";
+                        }
+                    });
+
+                    // บันทึกเฉพาะบรรทัดที่มีข้อมูลอย่างน้อย 1 ตัว
+                    if(hasData) exportData.push(row);
+                });
+
+                if(exportData.length === 0) return alert("ไม่มีข้อมูลในช่วงเวลานี้ครับ");
+
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, fileNamePrefix);
+                XLSX.writeFile(wb, `${fileNamePrefix}_${mc}_${start}_to_${end}.xlsx`);
+            } catch(e) {
+                console.error(`Export ${type} Error:`, e);
+                alert("เกิดข้อผิดพลาดในการ Export");
+            }
+        }
+        // =========================================================
+        // 12. FOCUS MODE & BOX PLOT LOGIC
+        // =========================================================
+        let focusChartInstance = null;
+        let currentFocusType = '';   // 'Proc' หรือ 'Prod'
+        let currentFocusIndex = 1;
+        let currentFocusParam = '';
+        let isBoxPlotMode = false;
+
+        function openFocusMode(type, index) {
+            const chartCanvasId = `chart${type}${index}`;
+            const selId = `sel${type}${index}`;
+            const paramLabel = document.getElementById(selId).value;
+            const sourceChart = chartInstances[chartCanvasId];
+
+            if (!sourceChart) return;
+
+            currentFocusType = type;
+            currentFocusIndex = index;
+            currentFocusParam = paramLabel;
+            isBoxPlotMode = false;
+            updateBoxPlotButtonUI();
+
+            const modal = document.getElementById('focusModal');
+            const titleText = document.getElementById('focusModalTitleText');
+            const focusCanvas = document.getElementById('focusChartCanvas');
+
+            const mc = document.getElementById('mcFilter').value;
+            titleText.innerHTML = `<span class="text-slate-500">${mc} ></span> ${paramLabel}`;
+
+            // เปิด Modal พร้อม Animation
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('focusModalContent').classList.remove('scale-95');
+                document.getElementById('focusModalContent').classList.add('scale-100');
+            }, 10);
+
+            // วาดกราฟ Line (Copy จากของเดิม)
+            if (focusChartInstance) focusChartInstance.destroy();
+
+            const clonedDatasets = sourceChart.data.datasets.map(ds => ({
+                ...ds,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                borderWidth: 3
+            }));
+
+            focusChartInstance = new Chart(focusCanvas.getContext('2d'), {
+                type: sourceChart.config.type,
+                data: {
+                    labels: sourceChart.data.labels,
+                    datasets: clonedDatasets
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        x: { display: true, ticks: { maxTicksLimit: 15 } },
+                        y: { display: true, beginAtZero: false, grace: '10%' }
+                    }
+                }
+            });
+        }
+
+        function closeFocusModal() {
+            const modal = document.getElementById('focusModal');
+            document.getElementById('focusModalContent').classList.remove('scale-100');
+            document.getElementById('focusModalContent').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (focusChartInstance) { focusChartInstance.destroy(); focusChartInstance = null; }
+            }, 200);
+        }
+
+        function updateBoxPlotButtonUI() {
+            const btnText = document.getElementById('boxPlotText');
+            const btnIcon = document.getElementById('boxPlotIcon');
+            const controls = document.getElementById('boxPlotControls');
+            if (isBoxPlotMode) {
+                btnText.textContent = "Switch to Trend Line";
+                btnIcon.className = "fas fa-chart-line";
+                controls.classList.remove('hidden');
+                controls.classList.add('flex');
+            } else {
+                btnText.textContent = "Switch to Box Plot";
+                btnIcon.className = "fas fa-chart-bar";
+                controls.classList.add('hidden');
+                controls.classList.remove('flex');
+            }
+        }
+
+        async function toggleBoxPlotMode() {
+            isBoxPlotMode = !isBoxPlotMode;
+            updateBoxPlotButtonUI();
+
+            if (isBoxPlotMode) {
+                await drawBoxPlotChart();
+            } else {
+                openFocusMode(currentFocusType, currentFocusIndex);
+            }
+        }
+
+        function getWeekMonday(dateStr) {
+            const d = new Date(dateStr.split(' ')[0]); // เผื่อมีเวลาติดมา
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff)).toISOString().split('T')[0];
+        }
+
+        async function drawBoxPlotChart() {
+            const btn = document.getElementById('toggleBoxPlotBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+
+            const mc = document.getElementById('mcFilter').value;
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            const timeframe = document.getElementById('boxPlotTimeframe').value;
+
+            try {
+                // เพื่อทำ Boxplot ที่สมบูรณ์ เราต้องไปดึงข้อมูล "รายชั่วโมง" หรือ raw data มาจัดกลุ่ม
+                const collectionName = currentFocusType === 'Proc' ? 'process_raw_logs' : 'product_raw_logs';
+                const snapshot = await db.collection(collectionName)
+                    .where('machineId', '==', mc)
+                    .where('date', '>=', start).where('date', '<=', end)
+                    .get();
+
+                const groupedData = {};
+
+                // หา Category ย่อย
+                const config = MACHINE_PROCESS_CONFIG[mc] || MACHINE_PROCESS_CONFIG["MC2"];
+                let category = "Viscose"; // Default สำหรับ Proc
+                if (currentFocusType === 'Proc') {
+                    if ((config.auxiliary||[]).includes(currentFocusParam)) category = "Auxiliary";
+                    else if ((config.spinning||[]).includes(currentFocusParam)) category = "Spinning";
+                } else {
+                    category = MC_COLLECTION_MAP[mc] || "Modal"; // Default สำหรับ Prod
+                }
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (!d.data) return;
+
+                    let targetNode = currentFocusType === 'Proc' ? (d.data[category] || d.data[category.toLowerCase()]) : d.data[category];
+
+                    if (targetNode && targetNode[currentFocusParam]) {
+                        // หาวิธี Group ตามสัปดาห์ หรือ เดือน
+                        let groupKey = '';
+                        if (timeframe === 'weekly') {
+                            groupKey = getWeekMonday(d.date);
+                        } else {
+                            groupKey = d.date.substring(0, 7); // YYYY-MM
+                        }
+
+                        if (!groupedData[groupKey]) groupedData[groupKey] = [];
+
+                        // วนลูป 24 ชั่วโมง ดึงค่าที่ไม่เป็น null
+                        const valArr = targetNode[currentFocusParam];
+                        for(let h=0; h<24; h++) {
+                            if(valArr[h] !== undefined && valArr[h] !== null && valArr[h] !== "") {
+                                groupedData[groupKey].push(Number(valArr[h]));
+                            }
+                        }
+                    }
+                });
+
+                const labels = Object.keys(groupedData).sort();
+                const boxData = labels.map(m => groupedData[m]);
+
+                // คำนวณแกน Y อัตโนมัติ (ขจัด Outlier เล็กน้อยตอนโชว์แกน)
+                const allValues = boxData.flat().filter(v => !isNaN(v));
+                allValues.sort((a, b) => a - b);
+                let yMin = undefined, yMax = undefined;
+
+                if (allValues.length > 0) {
+                    const q1 = allValues[Math.floor(allValues.length * 0.25)];
+                    const q3 = allValues[Math.floor(allValues.length * 0.75)];
+                    const iqr = q3 - q1;
+                    yMin = q1 - (2.0 * iqr);
+                    yMax = q3 + (2.0 * iqr);
+                    if (yMin === yMax) { yMin -= 2; yMax += 2; }
+                }
+
+                if (focusChartInstance) focusChartInstance.destroy();
+                const focusCanvas = document.getElementById('focusChartCanvas');
+
+                const colorBase = currentFocusType === 'Proc' ? '#3b82f6' : '#10b981'; // ฟ้าสำหรับ Proc, เขียวสำหรับ Prod
+                const colorBg = currentFocusType === 'Proc' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.4)';
+
+                focusChartInstance = new Chart(focusCanvas.getContext('2d'), {
+                    type: 'boxplot',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: currentFocusParam,
+                            data: boxData,
+                            backgroundColor: colorBg,
+                            borderColor: colorBase,
+                            borderWidth: 2,
+                            outlierColor: colorBase
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { min: yMin, max: yMax, grace: '10%' }
+                        }
+                    }
+                });
+
+            } catch(e) {
+                console.error("Box Plot Error:", e);
+                alert("เกิดข้อผิดพลาดในการสร้าง Box Plot");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
     </script>
