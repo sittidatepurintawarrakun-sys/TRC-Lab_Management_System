@@ -432,19 +432,22 @@
                     <span id="quiz-timer" class="font-bold text-base md:text-lg">0</span>
                 </div>
             </div>
-            <div class="p-5 md:p-6 bg-slate-50 flex-1 overflow-y-auto flex flex-col justify-center min-h-[300px]">
+            <!-- แก้ไขตรงนี้: ลบ justify-center ออก เพื่อให้บนมือถือเลื่อนเนื้อหาลงมาได้โดยไม่ทะลุขอบบน -->
+            <div class="p-5 md:p-6 bg-slate-50 flex-1 overflow-y-auto flex flex-col min-h-[300px]">
                 <div id="quiz-intro" class="text-center my-auto">
                     <div class="text-5xl mb-4">🧠</div>
                     <h4 class="font-bold text-slate-800 text-lg md:text-xl mb-2">พร้อมสำหรับบททดสอบแล้วหรือยัง?</h4>
                     <p class="text-sm text-slate-500 mb-6">ตอบไวได้โบนัส! (เกณฑ์ผ่าน 80%)</p>
                     <button onclick="startQuiz()" class="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg">เริ่มทำข้อสอบเลย</button>
                 </div>
-                <div id="quiz-active" class="hidden flex-col h-full">
-                    <div class="flex justify-between items-center mb-4 text-xs font-bold text-slate-400">
+                <!-- แก้ไขตรงนี้: ลบ h-full ออก เพื่อให้ยืดหยุ่นตามเนื้อหา -->
+                <div id="quiz-active" class="hidden flex-col">
+                    <div class="flex justify-between items-center mb-4 text-xs font-bold text-slate-400 shrink-0">
                         <span>ข้อที่ <span id="current-q-index" class="text-emerald-600 text-lg">1</span> / <span id="total-q-count">0</span></span>
                         <span id="score-live-display" class="bg-slate-200 px-3 py-1 rounded-full text-slate-600">Score: 0</span>
                     </div>
-                    <h4 id="question-text" class="text-base md:text-lg font-semibold text-slate-800 mb-6 leading-relaxed">...</h4>
+                    <!-- แก้ไขตรงนี้: เพิ่ม shrink-0 เพื่อไม่ให้ข้อความโดนบีบเมื่อหน้าจอเล็ก -->
+                    <h4 id="question-text" class="text-base md:text-lg font-semibold text-slate-800 mb-6 leading-relaxed shrink-0">...</h4>
                     <div id="options-container" class="flex flex-col gap-3 pb-4"></div>
                 </div>
                 <div id="quiz-result" class="hidden text-center my-auto">
@@ -928,7 +931,7 @@
             } catch (error) { console.error("[Courses] Error:", error); }
         }
 
-        window.renderFastestBoard = (d) => {
+        window.renderFastestBoard = (d, allUsers = []) => {
             const b = document.getElementById('lb-fastest-body');
             const label = document.getElementById('lb-fastest-label');
             if(label) label.innerText = d.title || "ล่าสุด";
@@ -940,15 +943,29 @@
 
             b.innerHTML = d.fastestFinishers.map((u, i) => {
                 const medal = i < 3 ? ['🥇','🥈','🥉'][i] : `<span class="text-slate-400 w-5 inline-block text-center">${i+1}</span>`;
-                const avatarHtml = u.photoURL 
-                    ? `<img src="${u.photoURL}" class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm mx-auto">` 
+
+                // 🌟 ดึงข้อมูลล่าสุดจาก allUsers มาเทียบ
+                let displayAlias = u.displayName || u.email; // ค่าเริ่มต้น
+                let displayPhoto = u.photoURL;
+
+                if (allUsers.length > 0) {
+                    // เทียบชื่ออีเมลท่อนหน้า เพื่อดึง displayName และรูปโปรไฟล์ล่าสุด
+                    const matchedUser = allUsers.find(user => user.email && user.email.split('@')[0] === u.email);
+                    if (matchedUser) {
+                        displayAlias = matchedUser.displayName || displayAlias;
+                        displayPhoto = matchedUser.photoURL || displayPhoto;
+                    }
+                }
+
+                const avatarHtml = displayPhoto 
+                    ? `<img src="${displayPhoto}" class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm mx-auto">` 
                     : `<div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 border border-slate-200 shadow-sm mx-auto"><i class="fa-solid fa-user text-xs"></i></div>`;
 
                 return `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="p-3 w-10 text-center text-lg">${medal}</td>
                         <td class="p-2 w-12 text-center">${avatarHtml}</td>
-                        <td class="p-3 text-slate-700 font-bold truncate max-w-[120px]">${u.email}</td>
+                        <td class="p-3 text-slate-700 font-bold truncate max-w-[120px]">${displayAlias}</td>
                         <td class="p-3 text-right text-emerald-600 font-bold">+${u.bonus}</td>
                     </tr>
                 `;
@@ -1282,26 +1299,29 @@
                     const courseSnap = await getDoc(courseRef);
                     let currentPassCount = courseSnap.exists() ? (courseSnap.data().passedCount || 0) : 0;
 
-                    // 2. ปรับการดึงรูปภาพโปรไฟล์ให้ใช้ข้อมูลจาก userSnap ที่เราเพิ่งดึงมา
-                    const userData = userSnap.exists() ? userSnap.data() : {};
-                    const userPhoto = userData.photoURL || "";
+                        // 2. ปรับการดึงรูปภาพโปรไฟล์ให้ใช้ข้อมูลจาก userSnap ที่เราเพิ่งดึงมา
+                        const userData = userSnap.exists() ? userSnap.data() : {};
+                        const userPhoto = userData.photoURL || "";
+                        // 🌟 เพิ่มบรรทัดดึง Display Name เตรียมไว้
+                        const userDisplayName = (userData.displayName && userData.displayName.trim() !== "") ? userData.displayName : currentUser.email.split('@')[0];
 
-                    if (currentPassCount < 10) {
-                        if (currentPassCount === 0) currentRankBonus = 20;     
-                        else if (currentPassCount === 1) currentRankBonus = 15; 
-                        else if (currentPassCount === 2) currentRankBonus = 10; 
-                        else currentRankBonus = 5;                              
-                        scoreToSummarize += currentRankBonus;
+                        if (currentPassCount < 10) {
+                            if (currentPassCount === 0) currentRankBonus = 20;     
+                            else if (currentPassCount === 1) currentRankBonus = 15; 
+                            else if (currentPassCount === 2) currentRankBonus = 10; 
+                            else currentRankBonus = 5;                              
+                            scoreToSummarize += currentRankBonus;
 
-                        // บันทึกรูปภาพลงในกระดานผู้พิชิตความเร็ว
-                        await updateDoc(courseRef, { 
-                            passedCount: increment(1),
-                            fastestFinishers: arrayUnion({
-                                email: currentUser.email.split('@')[0],
-                                photoURL: userPhoto, // <-- ใช้ตัวแปร userPhoto ตรงนี้
-                                bonus: currentRankBonus
-                            })
-                        });
+                            // บันทึกรูปภาพลงในกระดานผู้พิชิตความเร็ว
+                            await updateDoc(courseRef, { 
+                                passedCount: increment(1),
+                                fastestFinishers: arrayUnion({
+                                    email: currentUser.email.split('@')[0],
+                                    displayName: userDisplayName, // 🌟 เพิ่มบรรทัดนี้เพื่อเซฟชื่อลงไปเลย
+                                    photoURL: userPhoto,
+                                    bonus: currentRankBonus
+                                })
+                            });
 
                         setTimeout(() => {
                             document.getElementById('reward-rank-text').innerText = `คุณสอบผ่านเป็นอันดับที่ ${currentPassCount + 1} ของบทเรียนนี้`;
@@ -1653,13 +1673,13 @@
 
                 // อัปเดตกระดานผู้พิชิตความเร็ว
                 if (foundCourse) {
-                    renderFastestBoard(foundCourse);
+                    renderFastestBoard(foundCourse, allUsers); // 🌟 เพิ่ม , allUsers เข้าไป
                 } else {
                     // ถ้าเดือนนั้นยังไม่มีบทเรียน
                     renderFastestBoard({ 
                         title: selectedMonth === 'all' ? "ยังไม่มีบทเรียน" : `ไม่มีบทเรียนในเดือน${monthNames[selectedMonth]}`, 
                         fastestFinishers: [] 
-                    });
+                    }, allUsers); // 🌟 เพิ่ม , allUsers เข้าไป
                 }
 
                 // อัปเดต Team View (เฉพาะ Admin)

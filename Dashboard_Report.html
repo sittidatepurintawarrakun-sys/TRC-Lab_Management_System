@@ -360,8 +360,13 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex-1 p-6 relative w-full h-full bg-white rounded-b-xl">
-                    <canvas id="focusChartCanvas"></canvas>
+                <div class="flex-1 p-6 relative w-full h-full bg-white rounded-b-xl flex flex-col">
+                    <div class="flex-1 relative w-full"><canvas id="focusChartCanvas"></canvas></div>
+                    <div id="boxPlotLegend" class="hidden mt-4 pt-3 border-t border-slate-100 flex-wrap justify-center gap-6 text-[11px] text-slate-500">
+                        <span class="flex items-center gap-1"><i class="fas fa-minus text-indigo-500 font-bold"></i> เส้นกลาง = ค่าเฉลี่ย (Median)</span>
+                        <span class="flex items-center gap-1"><i class="fas fa-square text-indigo-200"></i> กล่อง = ช่วงข้อมูลของคนส่วนใหญ่ (50%) ยิ่งแคบยิ่งเสถียร</span>
+                        <span class="flex items-center gap-1"><i class="fas fa-circle text-indigo-500 text-[6px]"></i> จุด = ข้อมูลที่โดดออกจากกลุ่ม (Outlier)</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2503,6 +2508,16 @@
             const modal = document.getElementById('focusModal');
             const titleText = document.getElementById('focusModalTitleText');
             const focusCanvas = document.getElementById('focusChartCanvas');
+            const legend = document.getElementById('boxPlotLegend');
+            if (isBoxPlotMode) {
+                // ... โค้ดเดิม ...
+                if(legend) legend.classList.remove('hidden');
+                if(legend) legend.classList.add('flex');
+            } else {
+                // ... โค้ดเดิม ...
+                if(legend) legend.classList.add('hidden');
+                if(legend) legend.classList.remove('flex');
+            }
 
             const mc = document.getElementById('mcFilter').value;
             titleText.innerHTML = `<span class="text-slate-500">${mc} ></span> ${paramLabel}`;
