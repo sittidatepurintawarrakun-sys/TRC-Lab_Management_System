@@ -1,112 +1,2245 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Lab Chemical Control - TRC</title>
-    <style>
-        :root {
-            --primary: #0056b3;
-            --secondary: #00d2ff;
-            --danger: #ff4757;
-            --warning: #ffa502;
-            --success: #2ed573;
-            --bg-color: #f4f7f6;
-            --card-bg: #ffffff;
-            --text-main: #2f3542;
-        }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid #eccc68; margin-bottom: 20px; }
-        .header h1 { margin: 0; color: var(--primary); font-size: 24px; }
-        .status-badge { background-color: var(--success); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRC Smart Lab - Chemical & Inventory Control (GMP)</title>
 
-        /* Grid Layout for Modules */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+  <!-- UI Libraries (คงแนวทางเดิม) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://unpkg.com/html5-qrcode"></script>
 
-        .card { background-color: var(--card-bg); border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border-top: 4px solid var(--primary); }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
-        .card h3 { margin: 10px 0; color: var(--primary); }
-        .card p { font-size: 14px; color: #747d8c; }
-        .card.scan { border-top-color: var(--secondary); background: linear-gradient(135deg, #ffffff 0%, #e0f7fa 100%); }
-        .card.alert { border-top-color: var(--danger); }
-
-        /* Quick Alerts Section */
-        .alerts-section { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid var(--warning); }
-        .alerts-section h3 { margin-top: 0; }
-        .alert-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .alert-item:last-child { border-bottom: none; }
-        .text-danger { color: var(--danger); font-weight: bold; }
-
-        /* Floating Action Button (FAB) */
-        .fab { position: fixed; bottom: 30px; right: 30px; background-color: var(--primary); color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; }
-    </style>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Prompt', sans-serif; background-color: #f4f7f6; }
+    .hidden-module { display: none !important; }
+    .active-view { display: block !important; }
+    .nav-item.active { background-color: #0d9488; color: white; }
+    .fab-hover:hover { transform: scale(1.08); box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.5); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .badge { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 0.25rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: .35rem; }
+    .badge-green { background:#dcfce7; color:#166534; border: 1px solid #bbf7d0; }
+    .badge-amber { background:#fffbeb; color:#92400e; border: 1px solid #fde68a; }
+    .badge-red { background:#fee2e2; color:#991b1b; border: 1px solid #fecaca; }
+    .badge-slate { background:#f1f5f9; color:#334155; border: 1px solid #e2e8f0; }
+  </style>
 </head>
-<body>
 
-    <div class="header">
+<body class="bg-slate-100 flex h-screen overflow-hidden">
+
+  <!-- =========================
+       LOGIN PAGE
+  ========================== -->
+  <div id="loginPage" class="fixed inset-0 bg-slate-100 z-[200] flex items-center justify-center p-4 transition-all">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-4 border-teal-600">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-800">
+          <i class="fa-solid fa-flask-vial text-teal-600 mr-2"></i>TRC Smart Lab
+        </h1>
+        <p class="text-slate-500 mt-2">Chemical Management System (GMP / ISO 17025)</p>
+      </div>
+
+      <div class="space-y-4">
+        <input type="email" id="loginEmail" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+          placeholder="Email (เช่น admin@trc.com)" />
+        <input type="password" id="loginPassword" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+          placeholder="Password" />
+        <button id="btnLogin" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95">
+          เข้าสู่ระบบ
+        </button>
+        <p id="loginError" class="text-red-500 text-xs text-center mt-2 hidden"></p>
+        <div class="text-[11px] text-slate-400 mt-4 leading-relaxed">
+          <i class="fa-solid fa-shield-halved mr-1"></i>
+          หมายเหตุ: ระบบนี้ต้องใช้ Firebase Auth/Firestore ตาม config เดิม (ไม่ถูกแก้ไขในไฟล์นี้)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
+       MAIN APP LAYOUT
+  ========================== -->
+  <div id="mainContent" class="hidden-module flex w-full h-full">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-20">
+      <div class="p-6 border-b border-slate-700">
+        <h1 class="text-xl font-bold text-teal-400">
+          <i class="fa-solid fa-microscope mr-2"></i>TRC Smart Lab
+        </h1>
+        <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">GMP Compliance (Merged Build)</p>
+      </div>
+
+      <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+        <button id="navDashboard" class="nav-item active w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
+          <i class="fa-solid fa-chart-line w-6 text-left"></i> Dashboard
+        </button>
+        <button id="navScan" class="nav-item w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
+          <i class="fa-solid fa-qrcode w-6 text-left"></i> Scan / Quick Actions
+        </button>
+        <button id="navStore" class="nav-item w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
+          <i class="fa-solid fa-boxes-stacked w-6 text-left"></i> Main Store
+        </button>
+        <button id="navWS" class="nav-item w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
+          <i class="fa-solid fa-flask-vial w-6 text-left"></i> Working Solutions
+        </button>
+        <button id="navAudit" class="nav-item w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
+          <i class="fa-solid fa-file-contract w-6 text-left"></i> Audit / Trace
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-slate-800">
+        <div class="text-xs text-slate-400 mb-2">
+          Logged in as: <span id="userInfo" class="font-bold text-slate-200">--</span>
+        </div>
+        <button id="btnLogout" class="w-full text-left p-2 text-slate-400 hover:text-red-400 text-sm transition-colors">
+          <i class="fa-solid fa-power-off mr-2"></i> ออกจากระบบ
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col overflow-y-auto relative bg-slate-50">
+      <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+        <h2 id="viewTitle" class="text-xl font-semibold text-slate-700">Dashboard</h2>
+        <div class="flex items-center gap-3">
+          <span class="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold flex items-center border border-green-200">
+            <span class="w-2.5 h-2.5 bg-green-500 rounded-full mr-2 animate-pulse"></span> Cloud Active
+          </span>
+          <button id="btnRefresh" class="bg-slate-900 hover:bg-slate-950 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
+            <i class="fa-solid fa-rotate mr-2"></i>Refresh
+          </button>
+        </div>
+      </header>
+
+      <!-- =========================
+           DASHBOARD VIEW
+      ========================== -->
+      <div id="dashboardView" class="p-6 space-y-6 active-view">
+        <div class="bg-white rounded-xl shadow-sm border-l-4 border-amber-500 p-5">
+          <h3 class="text-lg font-bold text-slate-800 mb-3">
+            <i class="fa-solid fa-bell text-amber-500 mr-2"></i>Smart Alerts (Action Required)
+          </h3>
+          <div id="alertList" class="space-y-3">
+            <div class="p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 font-medium">
+              <i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูลจาก Cloud...
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <p class="text-xs font-bold text-slate-400 uppercase">WS Pending</p>
+            <h4 class="text-3xl font-bold text-amber-500" id="statPending">0</h4>
+            <p class="text-xs text-slate-400 mt-1">รอทวนสอบ/อนุมัติ</p>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <p class="text-xs font-bold text-slate-400 uppercase">WS Active</p>
+            <h4 class="text-3xl font-bold text-green-600" id="statActive">0</h4>
+            <p class="text-xs text-slate-400 mt-1">ใช้งานอยู่</p>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <p class="text-xs font-bold text-slate-400 uppercase">WS Expired/Discarded</p>
+            <h4 class="text-3xl font-bold text-red-600" id="statExpired">0</h4>
+            <p class="text-xs text-slate-400 mt-1">หมดอายุ/ทิ้ง</p>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <p class="text-xs font-bold text-slate-400 uppercase">Store Lots</p>
+            <h4 class="text-3xl font-bold text-slate-800" id="statStoreLots">--</h4>
+            <p class="text-xs text-slate-400 mt-1">จำนวน Lot ในคลังหลัก</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">
+              <i class="fa-solid fa-hourglass-half text-amber-500 mr-2"></i>Near Expiry (Working Solutions)
+            </h3>
+            <div id="nearExpiryWS" class="space-y-3 text-sm text-slate-600">
+              <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังโหลด...
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">
+              <i class="fa-solid fa-truck-ramp-box text-blue-600 mr-2"></i>Near Expiry / Low Stock (Main Store)
+            </h3>
+            <div id="storeAlerts" class="space-y-3 text-sm text-slate-600">
+              <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังโหลด...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================
+           SCAN VIEW
+      ========================== -->
+      <div id="scanView" class="p-6 space-y-6 hidden-module">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">
+              <i class="fa-solid fa-qrcode text-teal-600 mr-2"></i>Scan / Quick Actions
+            </h3>
+            <p class="text-sm text-slate-500">สแกน QR หรือยิง USB Scanner เพื่อดูสถานะ “ขวด/ตู้/ชั้น” และทำงานแบบ Poka‑Yoke</p>
+          </div>
+          <button id="btnStartScan" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+            <i class="fa-solid fa-camera mr-2"></i>Start Camera Scan
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Scanner Card -->
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <p class="text-xs font-bold text-slate-500 uppercase mb-2">Camera QR Scan</p>
+                <div id="qr-reader" class="w-full rounded-lg overflow-hidden border-2 border-dashed border-slate-300"></div>
+                <p class="text-xs text-slate-400 mt-2">หากไม่ใช้กล้อง ให้ใช้ช่อง USB scanner ด้านล่าง</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-bold text-slate-500 uppercase mb-2">USB Scanner / Manual Input</p>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i class="fa-solid fa-barcode text-slate-400"></i>
+                  </div>
+                  <input id="usbScannerInput" class="w-full p-4 pl-10 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 mono text-center shadow-inner"
+                    placeholder="ยิงบาร์โค้ด/QR หรือพิมพ์รหัส แล้วกด Enter" autocomplete="off" />
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2">
+                  รองรับ 2 ประเภท: (1) ขวดสาร (Bottle QR) และ (2) ชั้นวาง (Shelf QR)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Result Card -->
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div id="scanWaitingCard" class="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 min-h-[320px]">
+              <i class="fa-solid fa-flask text-5xl mb-3 text-slate-300"></i>
+              <p class="font-semibold text-slate-500">รอการสแกน...</p>
+            </div>
+
+            <div id="scanResultCard" class="hidden-module">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="badge badge-slate">
+                    <i class="fa-solid fa-id-card"></i>
+                    ID: <span id="resScanId" class="mono">--</span>
+                  </div>
+                  <h2 id="resTitle" class="text-2xl font-bold text-slate-800 mt-3">--</h2>
+                  <p id="resSubtitle" class="text-sm text-slate-500 mt-1">--</p>
+                </div>
+                <div class="text-right">
+                  <div id="resTypeBadge" class="badge badge-green"><i class="fa-solid fa-circle-check"></i>--</div>
+                </div>
+              </div>
+
+              <div class="mt-5 bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-xs font-bold text-slate-500 uppercase">Last Status</span>
+                  <span id="resStatus" class="font-semibold text-slate-800">--</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-xs font-bold text-slate-500 uppercase">Prepared / Updated</span>
+                  <span id="resPrepDate" class="font-semibold text-slate-800">--</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-xs font-bold text-slate-500 uppercase">Expiry</span>
+                  <span id="resExpDate" class="font-bold text-slate-800">--</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-xs font-bold text-slate-500 uppercase">Trace Ref</span>
+                  <span id="resTraceRef" class="mono text-teal-700 font-bold">--</span>
+                </div>
+              </div>
+
+              <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button id="btnQuickRenew" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center">
+                  <i class="fa-solid fa-arrows-rotate mr-2"></i> Renew WS (Pending)
+                </button>
+
+                <button id="btnGoAudit" class="bg-slate-900 hover:bg-slate-950 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center">
+                  <i class="fa-solid fa-magnifying-glass mr-2"></i> Open Trace
+                </button>
+              </div>
+
+              <div class="mt-4 text-[11px] text-slate-400 leading-relaxed">
+                <i class="fa-solid fa-circle-info mr-1"></i>
+                Renew ที่นี่จะสร้างรายการใหม่ในสถานะ <b>Pending</b> ตาม GMP และต้องไปอนุมัติในหน้า Working Solutions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shelf Compatibility Monitor -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h3 class="text-lg font-bold text-slate-800 mb-4">
+            <i class="fa-solid fa-shield-halved text-amber-500 mr-2"></i>Compatibility Check (Scan Shelf ID)
+          </h3>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Incoming Chemical (เลือกจาก Master)</label>
+                <select id="compatChemSelect" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+                  <option value="">-- เลือกสารเคมี --</option>
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1">ระบบจะ map hazard class เพื่อใช้ matrix</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Scan Shelf QR (เช่น LAB-SHELF1A-TOP)</label>
+                <input id="compatShelfInput" class="w-full p-4 bg-amber-50 border border-amber-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 mono text-center font-bold text-amber-900"
+                  placeholder="สแกน/พิมพ์ แล้วกด Enter" autocomplete="off" />
+              </div>
+
+              <div id="compatibilityAlert" class="hidden-module p-4 rounded-xl border flex items-start">
+                <i id="compatIcon" class="fa-solid text-xl mr-3 mt-0.5"></i>
+                <div class="w-full">
+                  <h5 id="compatTitle" class="font-bold text-sm">--</h5>
+                  <p id="compatDesc" class="text-xs mt-1">--</p>
+
+                  <div id="compatSuggestionBox" class="hidden-module mt-3 bg-white/60 p-3 rounded-lg border border-slate-200">
+                    <p class="text-xs font-bold text-slate-700 mb-1">
+                      <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i> จุดจัดเก็บที่แนะนำแทน:
+                    </p>
+                    <p id="compatSuggestionText" class="text-xs text-slate-600">--</p>
+                  </div>
+                </div>
+              </div>
+
+              <button id="btnSaveToShelf" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-colors opacity-50 cursor-not-allowed"
+                disabled>
+                <i class="fa-solid fa-download mr-2"></i> Save Placement (Real Write)
+              </button>
+
+              <div class="text-[11px] text-slate-400 leading-relaxed">
+                <i class="fa-solid fa-circle-info mr-1"></i>
+                ปุ่ม Save จะเปิดใช้งานเฉพาะเมื่อ “Compatible” และจะเขียนลง Firestore จริง (ไม่ใช่ fake)
+              </div>
+            </div>
+
+            <div class="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-700 text-white">
+              <h4 class="font-bold text-slate-200 mb-4 border-b border-slate-700 pb-2">
+                <i class="fa-solid fa-server mr-2"></i>Cabinet & Shelf Monitor
+              </h4>
+
+              <div id="cabinetStatusEmpty" class="flex flex-col items-center justify-center text-slate-400 min-h-[220px]">
+                <i class="fa-solid fa-box-open text-5xl mb-3 opacity-50"></i>
+                <p class="text-sm">สแกน Shelf ID เพื่อดูโครงสร้างตู้/ชั้น</p>
+              </div>
+
+              <div id="cabinetStatusActive" class="hidden-module">
+                <div class="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 id="monitorCabName" class="text-2xl font-bold text-blue-400">--</h2>
+                    <p id="monitorShelfName" class="text-sm text-slate-300 mt-1">Target: --</p>
+                  </div>
+                </div>
+
+                <h5 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Shelves State</h5>
+                <div id="monitorShelfList" class="space-y-3 mb-6"></div>
+
+                <div class="p-3 bg-slate-950 rounded-lg border border-slate-700">
+                  <p class="text-xs text-slate-400">
+                    <i class="fa-solid fa-shield-halved text-amber-400 mr-1"></i>
+                    Poka‑Yoke matrix ประเมินทั้งระดับ “ตู้” และ “ชั้น”
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- =========================
+           STORE VIEW
+      ========================== -->
+      <div id="storeView" class="p-6 space-y-6 hidden-module">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">
+              <i class="fa-solid fa-boxes-stacked text-blue-600 mr-2"></i>Main Store Stock
+            </h3>
+            <p class="text-sm text-slate-500">รับเข้า, เปิดขวด, ติดตาม Lot และ FEFO</p>
+          </div>
+          <button id="btnOpenReceiveModal" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+            <i class="fa-solid fa-truck-ramp-box mr-2"></i>Receive New Lot
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+              <tr>
+                <th class="p-4 font-medium">Chemical / Brand</th>
+                <th class="p-4 font-medium">Manufacturer Lot</th>
+                <th class="p-4 font-medium text-center">Stock</th>
+                <th class="p-4 font-medium">Exp Date</th>
+                <th class="p-4 font-medium text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="storeTableBody" class="divide-y divide-slate-100">
+              <tr><td colspan="5" class="p-8 text-center text-slate-400">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="text-[11px] text-slate-400">
+          <i class="fa-solid fa-circle-info mr-1"></i>
+          ระบบนี้อ่าน/เขียนคอลเลกชัน <span class="mono">Store_Chemicals</span> และ <span class="mono">Store_Transaction_Logs</span> ตาม backend เดิม
+        </div>
+      </div>
+
+      <!-- =========================
+           WORKING SOLUTIONS VIEW
+      ========================== -->
+      <div id="wsView" class="p-6 space-y-6 hidden-module">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">
+              <i class="fa-solid fa-flask-vial text-teal-600 mr-2"></i>Working Solutions (GMP Workflow)
+            </h3>
+            <p class="text-sm text-slate-500">Pending → Approve/Standardize → Active → Expired/Discarded</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnOpenPrepWSModal" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+              <i class="fa-solid fa-plus mr-2"></i>New Preparation (Pending)
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+          <div class="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-bold text-slate-500 uppercase">Filter:</label>
+              <select id="wsStatusFilter" class="p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="ALL">All</option>
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+                <option value="Expired">Expired</option>
+                <option value="Discarded">Discarded</option>
+              </select>
+              <button id="btnWSReload" class="bg-slate-900 hover:bg-slate-950 text-white text-xs font-bold px-3 py-2 rounded-xl">
+                <i class="fa-solid fa-rotate mr-2"></i>Reload
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="wsSearch" class="p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500 w-full md:w-72"
+                placeholder="ค้นหา: QR, master, lot, preparer" />
+            </div>
+          </div>
+
+          <table class="w-full text-left border-collapse text-sm">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+              <tr>
+                <th class="p-4 font-medium">Bottle QR</th>
+                <th class="p-4 font-medium">Chemical</th>
+                <th class="p-4 font-medium">Prep / Trace</th>
+                <th class="p-4 font-medium">Expiry</th>
+                <th class="p-4 font-medium text-center">Status</th>
+                <th class="p-4 font-medium text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="wsTableBody" class="divide-y divide-slate-100">
+              <tr><td colspan="6" class="p-8 text-center text-slate-400">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+
+          <div class="p-4 border-t border-slate-200 text-xs text-slate-500">
+            <i class="fa-solid fa-circle-info mr-1"></i>
+            หมายเหตุ: Expiry จะถูกคำนวณตอน Approve (Active) +45 วัน ตามแนวทางเดิม [1](https://adityabirla-my.sharepoint.com/personal/sittidate_p_adityabirla_com/_layouts/15/Doc.aspx?sourcedoc=%7BABC60B9C-2522-45FA-9F5A-4BD186EFCFFC%7D&file=TRC%20Smart%20Lab%20(%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%AD%E0%B8%B1%E0%B8%9B%E0%B9%80%E0%B8%94%E0%B8%95%20working%20Soultion).docx&action=default&mobileredirect=true)
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================
+           AUDIT / TRACE VIEW
+      ========================== -->
+      <div id="auditView" class="p-6 space-y-6 hidden-module">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">
+              <i class="fa-solid fa-file-contract text-amber-600 mr-2"></i>Audit / Traceability
+            </h3>
+            <p class="text-sm text-slate-500">ค้นหา Trace chain: Working Solution → Raw Chemical Lot → (DI Water Lot)</p>
+          </div>
+          <button id="btnExportTrace" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+            <i class="fa-solid fa-file-export mr-2"></i>Export (JSON)
+          </button>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Search by Bottle QR</label>
+              <input id="auditSearchQr" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 mono"
+                placeholder="เช่น TRC-NaOH-001 หรือ WS-..." />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Search by Raw Lot</label>
+              <input id="auditSearchLot" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 mono"
+                placeholder="เช่น K23456789" />
+            </div>
+            <div class="flex items-end">
+              <button id="btnRunTrace" class="w-full bg-slate-900 hover:bg-slate-950 text-white font-bold py-3 rounded-xl shadow-md transition-all">
+                <i class="fa-solid fa-magnifying-glass mr-2"></i>Run Trace
+              </button>
+            </div>
+          </div>
+
+          <div id="traceResult" class="mt-2 space-y-3">
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 text-sm">
+              ยังไม่มีข้อมูล — ใส่ QR หรือ Lot แล้วกด Run Trace
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Printer (placeholder) -->
+      <button id="btnConnectPrinter" class="fab-hover absolute bottom-8 right-8 bg-teal-600 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-lg z-50">
+        <i class="fa-solid fa-print"></i>
+      </button>
+
+    </main>
+  </div>
+
+  <!-- =========================
+       MODALS
+  ========================== -->
+
+  <!-- Receive Chemical Modal -->
+  <div id="receiveChemicalModal" class="fixed inset-0 bg-black/60 hidden-module z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+        <h3 class="font-bold text-lg"><i class="fa-solid fa-dolly mr-2"></i>Receive Raw Chemical (New Lot)</h3>
+        <button id="btnCloseReceiveModal" class="text-blue-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4">
         <div>
-            <h1>🔬 Smart Lab Inventory & Chemical Control</h1>
-            <p style="margin: 5px 0 0 0; font-size: 14px; color: #747d8c;">Cellulose Quality Control Lab (GMP & ISO 17025 Compliant)</p>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Chemical Name / Brand</label>
+          <input type="text" id="recvChemName" class="w-full p-3 border border-slate-300 rounded-xl" placeholder="เช่น H2SO4 98% (Merck)" />
         </div>
-        <div class="status-badge">System Online: Cloud Active</div>
+        <div>
+          <label class="block text-xs font-bold text-blue-600 uppercase mb-1">Manufacturer Lot No. *</label>
+          <input type="text" id="recvLotNo" class="w-full p-3 border border-blue-300 bg-blue-50 rounded-xl mono font-bold" placeholder="สแกนหรือพิมพ์ Lot จากข้างขวด" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Qty Received (bottles)</label>
+            <input type="number" id="recvQty" class="w-full p-3 border border-slate-300 rounded-xl" min="1" value="1" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Exp Date</label>
+            <input type="date" id="recvExpDate" class="w-full p-3 border border-slate-300 rounded-xl" />
+          </div>
+        </div>
+
+        <button id="btnSaveReceive" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors">
+          <i class="fa-solid fa-save mr-2"></i>Save to Store
+        </button>
+
+        <p class="text-[11px] text-slate-400">
+          ระบบบันทึกเข้าคอลเลกชัน <span class="mono">Store_Chemicals</span> และ log ที่ <span class="mono">Store_Transaction_Logs</span> ตาม backend เดิม [3](https://adityabirla-my.sharepoint.com/personal/sittidate_p_adityabirla_com/_layouts/15/Doc.aspx?sourcedoc=%7B6D532FCF-4D76-467C-B5DB-38CEB8FDA74B%7D&file=TRC%20Smart%20Lab%20(%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%AD%E0%B8%B1%E0%B8%9B%E0%B9%80%E0%B8%94%E0%B8%95%20Main%20Store%20%26%20Raw%20Chemicals%20and%20Backend).docx&action=default&mobileredirect=true)
+        </p>
+      </div>
     </div>
+  </div>
 
-    <div class="dashboard-grid">
-        <div class="card scan" onclick="openModule('scanModule')">
-            <h2>📷</h2>
-            <h3>สแกน QR Code / บาร์โค้ด</h3>
-            <p>อัปเดตสถานะขวดสาร หรือสั่งพิมพ์ป้ายสติ๊กเกอร์ (Auto-Label) ทันที</p>
+  <!-- Prep WS Modal -->
+  <div id="prepWSModal" class="fixed inset-0 bg-black/60 hidden-module z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="bg-teal-600 p-4 text-white flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-lg"><i class="fa-solid fa-flask text-teal-200 mr-2"></i>New Working Solution (Pending)</h3>
+        <button id="btnClosePrepWSModal" class="text-teal-100 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4 overflow-y-auto">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Bottle QR (Fixed ID)</label>
+          <input type="text" id="wsBottleQr" class="w-full p-3 border border-slate-300 rounded-xl mono"
+            placeholder="สแกน QR ขวด (เช่น TRC-NaOH-001) หรือปล่อยว่างให้ระบบสร้างชั่วคราว" />
+          <p class="text-[11px] text-slate-400 mt-1">แนะนำให้ใช้ Fixed QR ติดถาวรที่ขวด เพื่อ Traceability</p>
         </div>
 
-        <div class="card" onclick="openModule('storeStockModule')">
-            <h2>📦</h2>
-            <h3>คลังสารเคมีหลัก (Store)</h3>
-            <p>รับเข้า, เบิกจ่าย, ตรวจสอบสต๊อกสารเคมีดิบ (Raw Chemicals)</p>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Master Chemical</label>
+          <select id="wsMasterSelect" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500">
+            <option value="">-- โหลดรายการสารเคมี... --</option>
+          </select>
         </div>
 
-        <div class="card" onclick="openModule('workingSolutionModule')">
-            <h2>🧪</h2>
-            <h3>สารเคมีเตรียมเอง (Working Sol.)</h3>
-            <p>จัดการสารที่เตรียมในแล็บ เช่น NaOH, H2SO4, CS2 (มาตรฐาน 45 วัน)</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Prep Date</label>
+            <input type="date" id="wsPrepDate" class="w-full p-3 border border-slate-300 rounded-xl" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-teal-600 uppercase mb-1">Expiry (Calculated after Approve)</label>
+            <input type="text" id="wsExpDate" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-500 cursor-not-allowed"
+              value="ระบบจะคำนวณหลัง Approve (+45 วัน)" readonly />
+          </div>
         </div>
 
-        <div class="card" onclick="openModule('auditDashboardModule')">
-            <h2>📊</h2>
-            <h3>Audit Dashboard & Reports</h3>
-            <p>ดูประวัติย้อนหลัง, สรุปการใช้งาน, เชื่อมต่อ Looker Studio สำหรับ Auditor</p>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Raw Chemical Lot Ref (Traceability)</label>
+          <input type="text" id="wsRawLotRef" class="w-full p-3 border border-slate-300 rounded-xl mono" placeholder="สแกน/พิมพ์ Manufacturer Lot ที่ใช้ผสม" />
         </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">DI Water Lot (Optional but GMP Recommended)</label>
+            <input type="text" id="wsDIWaterLot" class="w-full p-3 border border-slate-300 rounded-xl mono" placeholder="เช่น DI-2026-W21" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">DI Water Date</label>
+            <input type="date" id="wsDIWaterDate" class="w-full p-3 border border-slate-300 rounded-xl" />
+          </div>
+        </div>
+
+        <button id="btnSaveWS" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors">
+          <i class="fa-solid fa-save mr-2"></i>Save as Pending (Quarantine)
+        </button>
+
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          ตาม workflow เดิม: Pending = “ห้ามใช้” จนกว่าจะ Approve/Standardize [1](https://adityabirla-my.sharepoint.com/personal/sittidate_p_adityabirla_com/_layouts/15/Doc.aspx?sourcedoc=%7BABC60B9C-2522-45FA-9F5A-4BD186EFCFFC%7D&file=TRC%20Smart%20Lab%20(%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%AD%E0%B8%B1%E0%B8%9B%E0%B9%80%E0%B8%94%E0%B8%95%20working%20Soultion).docx&action=default&mobileredirect=true)
+        </p>
+      </div>
     </div>
+  </div>
 
-    <div class="alerts-section">
-        <h3>⚠️ การแจ้งเตือน (Smart Alerts - Action Required)</h3>
-        <div id="alertsContainer">
-            <div class="alert-item">
-                <span>Working Sol: 0.1N NaOH (ขวดเบอร์ 3)</span>
-                <span class="text-danger">หมดอายุพรุ่งนี้! (เตรียมเมื่อ 44 วันที่แล้ว)</span>
+  <!-- Approve WS Modal -->
+  <div id="approveModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div class="bg-amber-500 p-4 text-white flex justify-between items-center">
+        <h3 class="font-bold text-lg"><i class="fa-solid fa-clipboard-check mr-2"></i>Approve / Standardization (E-Sign Lite)</h3>
+        <button id="btnCloseApproveModal" class="text-amber-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-slate-600">
+          เมื่อ Approve ระบบจะเปลี่ยนสถานะเป็น <b>Active</b> และคำนวณ Expiry = วันที่ Approve + 45 วัน พร้อมบันทึกผู้ทวนสอบและค่า factor [1](https://adityabirla-my.sharepoint.com/personal/sittidate_p_adityabirla_com/_layouts/15/Doc.aspx?sourcedoc=%7BABC60B9C-2522-45FA-9F5A-4BD186EFCFFC%7D&file=TRC%20Smart%20Lab%20(%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%AD%E0%B8%B1%E0%B8%9B%E0%B9%80%E0%B8%94%E0%B8%95%20working%20Soultion).docx&action=default&mobileredirect=true)
+        </p>
+
+        <input type="hidden" id="approveDocId" />
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Actual Factor / Concentration</label>
+          <input type="number" step="0.0001" id="approveFactor" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+            placeholder="เช่น 0.1005 หรือ 1.002" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Remark</label>
+          <input type="text" id="approveRemark" class="w-full p-3 border border-slate-300 rounded-xl" placeholder="เช่น อยู่ในเกณฑ์ที่ยอมรับได้" />
+        </div>
+
+        <button id="btnConfirmApprove" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors">
+          <i class="fa-solid fa-check-double mr-2"></i>Approve (Active)
+        </button>
+
+        <p class="text-[11px] text-slate-400">
+          หมายเหตุ: E‑Sign แบบ pharma full (password re-entry) สามารถเพิ่มภายหลังได้
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
+       APP LOGIC (Firebase v10 Module)
+  ========================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      initializeFirestore,
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      addDoc,
+      updateDoc,
+      collection,
+      query,
+      where,
+      orderBy,
+      limit,
+      startAfter,
+      getDocs,
+      runTransaction,
+      serverTimestamp,
+    writeBatch,
+      increment
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+
+    // =========================================================
+    // ✅ FIREBASE CONFIG (DO NOT EDIT) - คงตามเดิม
+    // =========================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+      authDomain: "lab-trc-management-system.firebaseapp.com",
+      projectId: "lab-trc-management-system",
+      storageBucket: "lab-trc-management-system.appspot.com",
+      messagingSenderId: "43919979160",
+      appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // ⚠️ คงแนวทางเดิมเพื่อเจาะผ่าน Enterprise Firewall
+    const db = initializeFirestore(app, { experimentalForceLongPolling: true });
+
+    // ตั้งค่า Firebase Functions
+    const functions = getFunctions(app);
+
+    // 🤖 Background Task: Lazy Daily Maintenance (Cost-Saving 100%)
+    function runLazyMaintenance() {
+      const triggerDailyMaintenance = httpsCallable(functions, 'triggerDailyMaintenance');
+      triggerDailyMaintenance()
+        .then((result) => {
+          if (result.data?.updated > 0) {
+            console.log(`[Maintenance] Auto-expired ${result.data.updated} items silently.`);
+            refreshDashboardOnly(); // อัปเดตตัวเลขหน้าจอแบบเนียนๆ
+          } else {
+            console.log("[Maintenance] Already up to date.");
+          }
+        })
+        .catch(err => console.error("[Maintenance] Error:", err));
+    }
+
+    // =========================================================
+    // GLOBAL UI HELPERS
+    // =========================================================
+    const $ = (id) => document.getElementById(id);
+
+    function show(id) { $(id).classList.remove("hidden-module"); }
+    function hide(id) { $(id).classList.add("hidden-module"); }
+
+    function setActiveNav(btnId) {
+      const ids = ["navDashboard", "navScan", "navStore", "navWS", "navAudit"];
+      ids.forEach(i => {
+        const el = $(i);
+        el.classList.remove("active", "bg-teal-600", "text-white");
+        el.classList.add("text-slate-300");
+      });
+      const btn = $(btnId);
+      btn.classList.add("active", "bg-teal-600", "text-white");
+      btn.classList.remove("text-slate-300");
+    }
+
+    function switchView(viewId, title, navBtnId) {
+      const views = ["dashboardView", "scanView", "storeView", "wsView", "auditView"];
+      views.forEach(v => hide(v));
+      show(viewId);
+      $("viewTitle").innerText = title;
+      if (navBtnId) setActiveNav(navBtnId);
+    }
+
+    function safeText(v) { return (v === undefined || v === null) ? "" : String(v); }
+
+    function ymd(dateObj) {
+      const d = new Date(dateObj);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toISOString().split("T")[0];
+    }
+
+    function addDaysToYMD(baseDate, days) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + days);
+      return ymd(d);
+    }
+
+    function humanDaysLeft(expYmd) {
+      if (!expYmd) return { text: "N/A", days: null };
+      const exp = new Date(expYmd);
+      const now = new Date();
+      const days = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+      if (days < 0) return { text: `${expYmd} (Expired)`, days };
+      return { text: `${expYmd} (${days} days)`, days };
+    }
+
+    // =========================================================
+    // MASTER CHEMICAL LIST (คงจาก working solution ฉบับเดิม)
+    // =========================================================
+    const wsMasterData = [
+      { id: "BaCl2_0.1M", name: "BaCl2 (Barium Chloride)", conc: "0.1 M", cas: "10361-37-2" },
+      { id: "CaCO3_0.01M", name: "CaCO3 (Calcium Carbonate)", conc: "0.01 M", cas: "471-34-1" },
+      { id: "K2CrO4_5pct", name: "K2CrO4 (Potassium Chromate)", conc: "5%", cas: "7789-00-6" },
+      { id: "Mix_FeSO4", name: "Mix acid for FeSO4", conc: "Mixture", cas: "Mixture" },
+      { id: "NaOH_1.0N", name: "NaOH (Sodium Hydroxide)", conc: "1.0 N", cas: "1310-73-2" },
+      { id: "NaOH_0.1N", name: "NaOH (Sodium Hydroxide)", conc: "0.1 N", cas: "1310-73-2" },
+      { id: "NaOH_0.01N", name: "NaOH (Sodium Hydroxide)", conc: "0.01 N", cas: "1310-73-2" },
+      { id: "NaOH_1.2N", name: "NaOH (Sodium Hydroxide)", conc: "1.2 N", cas: "1310-73-2" },
+      { id: "Univ_Indicator", name: "Universal Indicator", conc: "Mixture", cas: "Mixture" },
+      { id: "CdSO4_1.25pct", name: "CdSO4 (Cadmium Sulphate)", conc: "1.25%", cas: "10124-36-4" },
+      { id: "Buffer_CBOD", name: "Phosphate Buffer - CBOD", conc: "pH 7.2", cas: "Mixture" },
+      { id: "MgSO4_2.25pct", name: "MgSO4 (Magnesium sulphate)", conc: "2.25%", cas: "7487-88-9" },
+      { id: "CaCl2_2.75pct", name: "CaCl2 (Calcium chloride)", conc: "2.75%", cas: "10043-52-4" },
+      { id: "FeCl3_0.03pct", name: "FeCl3 (Ferric chloride)", conc: "0.03%", cas: "7705-08-0" },
+      { id: "H2SO4_1.0N", name: "H2SO4 (Sulfuric Acid)", conc: "1.0 N", cas: "7664-93-9" },
+      { id: "H2SO4_0.1N", name: "H2SO4 (Sulfuric Acid)", conc: "0.1 N", cas: "7664-93-9" },
+      { id: "H2SO4_2.0N", name: "H2SO4 (Sulfuric Acid)", conc: "2.0 N", cas: "7664-93-9" },
+      { id: "H2SO4_4.0N", name: "H2SO4 (Sulfuric Acid)", conc: "4.0 N", cas: "7664-93-9" },
+      { id: "H2SO4_10pct", name: "H2SO4 (Sulfuric Acid)", conc: "10%", cas: "7664-93-9" },
+      { id: "H2SO4_20pct", name: "H2SO4 (Sulfuric Acid)", conc: "20%", cas: "7664-93-9" },
+      { id: "H2SO4_55pct", name: "H2SO4 (Sulfuric Acid)", conc: "55%", cas: "7664-93-9" },
+      { id: "NH4Cl_10pct", name: "NH4Cl (Ammonium Chloride)", conc: "10%", cas: "12125-02-9" },
+      { id: "Na2S2O3_0.1N", name: "Na2S2O3 (Sodium thiosulphate)", conc: "0.1 N", cas: "7772-98-7" },
+      { id: "Na2S2O3_0.2N", name: "Na2S2O3 (Sodium thiosulphate)", conc: "0.2 N", cas: "7772-98-7" },
+      { id: "Buffer_NH4", name: "NH4OH + NH4Cl (Buffer)", conc: "pH 8.3-9.2", cas: "Mixture" },
+      { id: "EDTA_0.01M", name: "EDTA", conc: "0.01 M", cas: "60-00-4" },
+      { id: "EBT_1pct", name: "Eriochrome Black T", conc: "1%", cas: "1787-61-7" },
+      { id: "Methyl_Red_0.1pct", name: "Methyl Red", conc: "0.10%", cas: "493-52-7" },
+      { id: "Methyl_Orange_0.05pct", name: "Methyl Orange", conc: "0.05%", cas: "547-58-0" },
+      { id: "Buffer_Acetate", name: "Sodium Acetate (Buffer)", conc: "pH 5.6", cas: "127-09-3" },
+      { id: "Phenolphthalein_0.2pct", name: "Phenolphthalein", conc: "0.20%", cas: "77-09-8" },
+      { id: "Starch_0.2pct", name: "Starch Solution", conc: "0.20%", cas: "9005-84-9" },
+      { id: "CH3COOH_10pct", name: "CH3COOH (Acetic Acid)", conc: "10%", cas: "64-19-7" },
+      { id: "CH3COOH_0.3N", name: "CH3COOH (Acetic Acid)", conc: "0.3 N", cas: "64-19-7" },
+      { id: "Phenanthroline_0.25pct", name: "Phenanthroline", conc: "0.25%", cas: "66-71-7" },
+      { id: "TEA_10pct", name: "TEA (Triethanolamine)", conc: "10%", cas: "102-71-6" },
+      { id: "FeCl3_0.1M", name: "FeCl3 (Ferric chloride)", conc: "0.1 M", cas: "7705-08-0" },
+      { id: "FAS_0.25N", name: "FAS (Ferrous Ammonium Sulfate)", conc: "0.25 N", cas: "7783-85-9" },
+      { id: "AgNO3_0.1N", name: "AgNO3 (Silver Nitrate)", conc: "0.1 N", cas: "7761-88-8" },
+      { id: "AgNO3_0.02N", name: "AgNO3 (Silver Nitrate)", conc: "0.02 N", cas: "7761-88-8" },
+      { id: "Iodide_Iodate", name: "Iodide - Iodate Solution", conc: "0.02 N", cas: "Mixture" },
+      { id: "ZnAcetate_2.0N", name: "Zn(CH3COO)2 (Zinc Acetate)", conc: "2.0 N", cas: "557-34-6" },
+      { id: "PO4_Sol1", name: "PO4 (Phosphate solution NO 1)", conc: "Mixture", cas: "Mixture" },
+      { id: "KCNS_0.1N", name: "KCNS (Potassium thiocyanate)", conc: "0.1 N", cas: "333-20-0" },
+      { id: "CH3COONa_2.0N", name: "CH3COONa (Sodium Acetate)", conc: "2.0 N", cas: "127-09-3" },
+      { id: "NH2OH_HCl_10pct", name: "NH2OH·HCl (Hydroxyl ammonium cl)", conc: "10%", cas: "01-11-70" },
+      { id: "ZnSO4_0.01M", name: "ZnSO4 (Zinc Sulphate)", conc: "0.01 M", cas: "7446-20-0" },
+      { id: "ZnSO4_0.001M", name: "ZnSO4 (Zinc Sulphate)", conc: "0.001 M", cas: "7446-20-0" },
+      { id: "K2Cr2O7_1.0N", name: "K2Cr2O7 (Potassium Dichromate)", conc: "1.0 N", cas: "7778-50-9" },
+      { id: "K2Cr2O7_0.1N", name: "K2Cr2O7 (Potassium Dichromate)", conc: "0.1 N", cas: "7778-50-9" },
+      { id: "K2Cr2O7_0.4N", name: "K2Cr2O7 (Potassium Dichromate)", conc: "0.4 N", cas: "7778-50-9" },
+      { id: "H2O2_10pct", name: "Hydrogen peroxide", conc: "10%", cas: "7722-84-1" },
+      { id: "BaClO4_0.01N", name: "Ba(ClO4)2 (Barium perchlorate)", conc: "0.01 N", cas: "13465-95-7" },
+      { id: "Condition_reagent", name: "Condition reagent", conc: "Mixture", cas: "Mixture" },
+      { id: "Ferric_Alum_Cu", name: "Ferric Alum Copper Number", conc: "Mixture", cas: "Mixture" },
+      { id: "KOH_8M", name: "KOH (Potassium Hydroxide)", conc: "8 M", cas: "1310-58-3" },
+      { id: "BaCl2_5pct", name: "BaCl2 (Barium chloride)", conc: "5%", cas: "10361-37-2" },
+      { id: "HCl_10pct", name: "HCl (Hydrochloric Acid)", conc: "10%", cas: "7647-01-0" },
+      { id: "HCl_1M", name: "HCl (Hydrochloric Acid)", conc: "1 M", cas: "7647-01-0" },
+      { id: "HCl_3.7M", name: "HCl (Hydrochloric Acid)", conc: "3.7 M", cas: "7647-01-0" },
+      { id: "HCl_0.5M", name: "HCl (Hydrochloric Acid)", conc: "0.5 M", cas: "7647-01-0" },
+      { id: "I2_0.1N", name: "I2 (Iodine)", conc: "0.1 N", cas: "7553-56-2" },
+      { id: "I2_0.05N", name: "I2 (Iodine)", conc: "0.05 N", cas: "7553-56-2" },
+      { id: "Trion_Indicator", name: "Trion Indicator", conc: "Mixture", cas: "Mixture" },
+      { id: "CuSO4_Sulfamic", name: "Copper Sulphate sulfamic Acid", conc: "Mix", cas: "Mixture" },
+      { id: "HNO3_5pct", name: "HNO3 (Nitric Acid)", conc: "5%", cas: "7697-37-2" },
+      { id: "NaOH_10pct", name: "NaOH (Sodium Hydroxide)", conc: "10%", cas: "1310-73-2" },
+      { id: "NaOH_18pct", name: "NaOH (Sodium Hydroxide)", conc: "18%", cas: "1310-73-2" },
+      { id: "KMnO4_0.01M", name: "KMnO4 (Potassium permanganate)", conc: "0.01 M", cas: "7722-64-7" },
+      { id: "KMnO4_0.5N", name: "KMnO4 (Potassium permanganate)", conc: "0.5 N", cas: "7722-64-7" },
+      { id: "MgCl2", name: "Magnesium chloride", conc: "Mixture", cas: "7786-30-3" },
+      { id: "Magnesia_Mixture", name: "Magnesia Mixture", conc: "Mixture", cas: "Mixture" },
+      { id: "EtOH_KOH_0.1N", name: "Ethyl Alcoholic KOH", conc: "0.1 N", cas: "Mixture" },
+      { id: "NaAcetate_pH4.9", name: "Sodium Acetate", conc: "pH 4.9", cas: "127-09-3" }
+    ];
+
+    // =========================================================
+    // HAZARD CLASS MAP (Practical)
+    // =========================================================
+    function classifyHazardByMaster(masterId) {
+      const id = (masterId || "").toUpperCase();
+      if (id.includes("HNO3") || id.includes("K2CR2O7") || id.includes("KMNO4") || id.includes("H2O2") || id.includes("K2CRO4") || id.includes("CLO4")) return "Oxidizer";
+      if (id.includes("NAOH") || id.includes("KOH") || id.includes("NH4OH") || id.includes("BUFFER_NH4")) return "Corrosive_Base";
+      if (id.includes("H2SO4") || id.includes("HCL") || id.includes("CH3COOH")) return "Corrosive_Acid";
+      return "General";
+    }
+
+    // =========================================================
+    // LAB LOCATION MOCK (คงแนวคิดเดิม 11 ตู้ 27 ชั้น)
+    // =========================================================
+    const mockLabState = {
+      "LAB-SHELF1A": { name: "LAB-SHELF1A", shelves: {
+        "LAB-SHELF1A-TOP": { id:"LAB-SHELF1A-TOP", name:"TOP", currentHazards: [] },
+        "LAB-SHELF1A-BOTTOM": { id:"LAB-SHELF1A-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-SHELF1B": { name: "LAB-SHELF1B", shelves: {
+        "LAB-SHELF1B-TOP": { id:"LAB-SHELF1B-TOP", name:"TOP", currentHazards: [] },
+        "LAB-SHELF1B-BOTTOM": { id:"LAB-SHELF1B-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-SHELF1C": { name: "LAB-SHELF1C", shelves: {
+        "LAB-SHELF1C-TOP": { id:"LAB-SHELF1C-TOP", name:"TOP", currentHazards: [] },
+        "LAB-SHELF1C-BOTTOM": { id:"LAB-SHELF1C-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-SHELF1D": { name: "LAB-SHELF1D", shelves: {
+        "LAB-SHELF1D-TOP": { id:"LAB-SHELF1D-TOP", name:"TOP", currentHazards: [] },
+        "LAB-SHELF1D-BOTTOM": { id:"LAB-SHELF1D-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-STORE1A": { name:"LAB-STORE1A", shelves: {
+        "LAB-STORE1A-TOP": { id:"LAB-STORE1A-TOP", name:"TOP", currentHazards: [] },
+        "LAB-STORE1A-MIDDLE": { id:"LAB-STORE1A-MIDDLE", name:"MIDDLE", currentHazards: [] },
+        "LAB-STORE1A-BOTTOM": { id:"LAB-STORE1A-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-STORE1B": { name:"LAB-STORE1B", shelves: {
+        "LAB-STORE1B-TOP": { id:"LAB-STORE1B-TOP", name:"TOP", currentHazards: [] },
+        "LAB-STORE1B-MIDDLE": { id:"LAB-STORE1B-MIDDLE", name:"MIDDLE", currentHazards: [] },
+        "LAB-STORE1B-BOTTOM": { id:"LAB-STORE1B-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-STORE1C": { name:"LAB-STORE1C", shelves: {
+        "LAB-STORE1C-TOP": { id:"LAB-STORE1C-TOP", name:"TOP", currentHazards: [] },
+        "LAB-STORE1C-MIDDLE": { id:"LAB-STORE1C-MIDDLE", name:"MIDDLE", currentHazards: [] },
+        "LAB-STORE1C-BOTTOM": { id:"LAB-STORE1C-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-STORE1D": { name:"LAB-STORE1D", shelves: {
+        "LAB-STORE1D-TOP": { id:"LAB-STORE1D-TOP", name:"TOP", currentHazards: [] },
+        "LAB-STORE1D-MIDDLE": { id:"LAB-STORE1D-MIDDLE", name:"MIDDLE", currentHazards: [] },
+        "LAB-STORE1D-BOTTOM": { id:"LAB-STORE1D-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-STORE1E": { name:"LAB-STORE1E", shelves: {
+        "LAB-STORE1E-TOP": { id:"LAB-STORE1E-TOP", name:"TOP", currentHazards: [] },
+        "LAB-STORE1E-BOTTOM": { id:"LAB-STORE1E-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-STORE1F": { name:"LAB-STORE1F", shelves: {
+        "LAB-STORE1F-TOP": { id:"LAB-STORE1F-TOP", name:"TOP", currentHazards: [] },
+        "LAB-STORE1F-BOTTOM": { id:"LAB-STORE1F-BOTTOM", name:"BOTTOM", currentHazards: [] }
+      }},
+      "LAB-FLAMABLE": { name:"LAB-FLAMABLE (Flammable Cabinet)", shelves: {
+        "LAB-FLAMABLE-TOP": { id:"LAB-FLAMABLE-TOP", name:"TOP", currentHazards: ["Flammable"] },
+        "LAB-FLAMABLE-MIDDLE": { id:"LAB-FLAMABLE-MIDDLE", name:"MIDDLE", currentHazards: ["Flammable"] },
+        "LAB-FLAMABLE-BOTTOM": { id:"LAB-FLAMABLE-BOTTOM", name:"BOTTOM", currentHazards: ["Flammable"] }
+      }}
+    };
+
+    const compatibilityMatrix = {
+      "Oxidizer": { cabBlock: ["Flammable"], shelfBlock: ["Corrosive_Acid", "Corrosive_Base"] },
+      "Flammable": { cabBlock: ["Oxidizer"], shelfBlock: ["Corrosive_Acid", "Corrosive_Base"] },
+      "Corrosive_Acid": { cabBlock: [], shelfBlock: ["Flammable", "Oxidizer", "Corrosive_Base"] },
+      "Corrosive_Base": { cabBlock: [], shelfBlock: ["Flammable", "Oxidizer", "Corrosive_Acid"] },
+      "General": { cabBlock: [], shelfBlock: [] }
+    };
+
+    function findCabinetByShelf(shelfId) {
+      for (const cabId in mockLabState) {
+        if (mockLabState[cabId].shelves[shelfId]) {
+          return { cabId, cabinet: mockLabState[cabId], shelf: mockLabState[cabId].shelves[shelfId] };
+        }
+      }
+      return null;
+    }
+
+    function renderCabinetMonitor(cabinet, targetShelfId) {
+      $("cabinetStatusEmpty").classList.add("hidden-module");
+      $("cabinetStatusActive").classList.remove("hidden-module");
+
+      $("monitorCabName").innerText = cabinet.name;
+      $("monitorShelfName").innerHTML = `Target: <span class="font-bold text-white bg-blue-900 px-2 py-0.5 rounded mono">${targetShelfId}</span>`;
+
+      let html = "";
+      for (const sId in cabinet.shelves) {
+        const s = cabinet.shelves[sId];
+        const isTarget = (sId === targetShelfId);
+        const hazardBadges = (s.currentHazards.length > 0)
+          ? s.currentHazards.map(h => `<span class="px-2 py-0.5 bg-slate-800 text-slate-200 rounded text-[10px] border border-slate-600">${h}</span>`).join(" ")
+          : `<span class="text-xs text-slate-400">Empty</span>`;
+        html += `
+          <div class="p-3 rounded-lg border ${isTarget ? 'bg-blue-900/30 border-blue-500' : 'bg-slate-800 border-slate-700'} flex justify-between items-center">
+            <div class="text-sm font-bold ${isTarget ? 'text-blue-300' : 'text-slate-200'}">
+              ${s.name} ${isTarget ? '<i class="fa-solid fa-crosshairs ml-2"></i>' : ''}
             </div>
-            <div class="alert-item">
-                <span>Standard: 0.05N Iodine</span>
-                <span class="text-danger">หมดอายุแล้ว (โปรด Discard & ทำการ Renew)</span>
-            </div>
-        </div>
-    </div>
+            <div class="flex gap-2 flex-wrap justify-end">${hazardBadges}</div>
+          </div>
+        `;
+      }
+      $("monitorShelfList").innerHTML = html;
+    }
 
-    <button class="fab" title="เชื่อมต่อเครื่องพิมพ์สติ๊กเกอร์" onclick="connectPrinter()">🖨️</button>
+    // =========================================================
+    // AUTH
+    // =========================================================
+    $("btnLogin").addEventListener("click", async () => {
+      const e = $("loginEmail").value.trim();
+      const p = $("loginPassword").value;
+      $("loginError").classList.add("hidden");
 
-    <script>
-        // Mockup Navigation Function
-        function openModule(moduleName) {
-            console.log("Navigating to: " + moduleName);
-            alert("กำลังเปิดหน้าต่าง: " + moduleName + "\n(จะทำการพัฒนาในเฟสถัดไป)");
+      const btn = $("btnLogin");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
+
+      try {
+        await signInWithEmailAndPassword(auth, e, p);
+      } catch (err) {
+        $("loginError").innerText = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+        $("loginError").classList.remove("hidden");
+        btn.disabled = false;
+        btn.innerText = "เข้าสู่ระบบ";
+      }
+    });
+
+        $("btnLogout").addEventListener("click", () => signOut(auth));
+
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            hide("loginPage");
+            show("mainContent");
+            $("userInfo").innerText = user.email;
+            initDropdowns();
+            wireNavigation();
+            await refreshAll();
+
+            // 🚀 Trigger ระบบ Maintenance แบบ Background (ไม่บล็อค UI)
+            runLazyMaintenance();
+
+          } else {
+            show("loginPage");
+        hide("mainContent");
+      }
+    });
+
+    // =========================================================
+    // NAVIGATION
+    // =========================================================
+    function wireNavigation() {
+      $("navDashboard").onclick = () => switchView("dashboardView", "Dashboard", "navDashboard");
+      $("navScan").onclick = () => { switchView("scanView", "Scan / Quick Actions", "navScan"); startScannerIfNeeded(); $("usbScannerInput").focus(); };
+      $("navStore").onclick = () => { switchView("storeView", "Main Store", "navStore"); loadStoreTable(); };
+      $("navWS").onclick = () => { switchView("wsView", "Working Solutions", "navWS"); loadWSBatches(true); };
+      $("navAudit").onclick = () => { switchView("auditView", "Audit / Traceability", "navAudit"); };
+
+      $("btnRefresh").onclick = async () => { await refreshAll(); };
+
+      $("btnConnectPrinter").onclick = () => alert("🖨️ Web Bluetooth Printer: พร้อมสำหรับ Phase ต่อไป (ยังไม่เปิดใช้งานใน build นี้)");
+    }
+
+    // =========================================================
+    // INIT DROPDOWNS
+    // =========================================================
+    function initDropdowns() {
+      // WS master select
+      const selectWS = $("wsMasterSelect");
+      selectWS.innerHTML = '<option value="">-- พิมพ์หรือเลือกสารเคมี --</option>';
+      wsMasterData.forEach(item => {
+        selectWS.innerHTML += `<option value="${item.id}">${item.name} (${item.conc}) - CAS: ${item.cas}</option>`;
+      });
+
+      // Compatibility select
+      const selectCompat = $("compatChemSelect");
+      selectCompat.innerHTML = '<option value="">-- เลือกสารเคมี --</option>';
+      wsMasterData.forEach(item => {
+        selectCompat.innerHTML += `<option value="${item.id}">${item.name} (${item.conc})</option>`;
+      });
+
+      $("wsStatusFilter").onchange = () => loadWSBatches(true);
+      $("btnWSReload").onclick = () => loadWSBatches(true);
+      $("wsSearch").oninput = () => loadWSBatches(true);
+
+      // Modals
+      $("btnOpenReceiveModal").onclick = () => show("receiveChemicalModal");
+      $("btnCloseReceiveModal").onclick = () => hide("receiveChemicalModal");
+
+      $("btnOpenPrepWSModal").onclick = () => show("prepWSModal");
+      $("btnClosePrepWSModal").onclick = () => hide("prepWSModal");
+
+      $("btnCloseApproveModal").onclick = () => hide("approveModal");
+      $("btnExportTrace").onclick = () => exportTraceJSON();
+
+      $("btnRunTrace").onclick = () => runTrace();
+
+      // Enter handlers
+      $("usbScannerInput").addEventListener("keypress", async (e) => {
+        if (e.key === "Enter") {
+          const val = $("usbScannerInput").value.trim();
+          $("usbScannerInput").value = "";
+          if (!val) return;
+          await processScannedId(val);
+        }
+      });
+
+      $("compatShelfInput").addEventListener("keypress", async (e) => {
+        if (e.key === "Enter") {
+          const shelfId = $("compatShelfInput").value.trim().toUpperCase();
+          if (!shelfId) return;
+          const masterId = $("compatChemSelect").value;
+          if (!masterId) { alert("กรุณาเลือกสารเคมีก่อน"); return; }
+          await evaluateCompatibility(shelfId, masterId);
+        }
+      });
+
+      $("btnSaveToShelf").onclick = async () => {
+        await savePlacementReal();
+      };
+
+      $("btnStartScan").onclick = () => startScannerIfNeeded();
+    }
+
+    // =========================================================
+    // DASHBOARD
+    // =========================================================
+    async function loadDashboardStatsFromSystemStats() {
+      // ใช้ System_Stats ที่ backend aggregate ไว้ (ลด read) [3](https://adityabirla-my.sharepoint.com/personal/sittidate_p_adityabirla_com/_layouts/15/Doc.aspx?sourcedoc=%7B6D532FCF-4D76-467C-B5DB-38CEB8FDA74B%7D&file=TRC%20Smart%20Lab%20(%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%AD%E0%B8%B1%E0%B8%9B%E0%B9%80%E0%B8%94%E0%B8%95%20Main%20Store%20%26%20Raw%20Chemicals%20and%20Backend).docx&action=default&mobileredirect=true)
+      try {
+        const ref = doc(db, "System_Stats", "Lab_Chemical_Dashboard");
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const s = snap.data();
+          $("statPending").innerText = s.total_pending ?? 0;
+          $("statActive").innerText = s.total_active ?? 0;
+          $("statExpired").innerText = s.total_expired ?? 0;
+        } else {
+          $("statPending").innerText = 0;
+          $("statActive").innerText = 0;
+          $("statExpired").innerText = 0;
+        }
+      } catch (err) {
+        console.error("loadDashboardStatsFromSystemStats error:", err);
+      }
+    }
+
+    async function loadDashboardStoreCount() {
+      try {
+        const q = query(collection(db, "Store_Chemicals"), limit(200));
+        const snap = await getDocs(q);
+        $("statStoreLots").innerText = snap.size;
+      } catch (err) {
+        $("statStoreLots").innerText = "--";
+      }
+    }
+
+    async function loadNearExpiryWS() {
+      try {
+        // แสดง Active ที่ใกล้หมดอายุ 7 วัน
+        const q1 = query(collection(db, "WS_Batches"), where("status", "==", "Active"), orderBy("exp_date", "asc"), limit(12));
+        const snap = await getDocs(q1);
+        if (snap.empty) {
+          $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium">
+            <i class="fa-solid fa-circle-check mr-2"></i>No near-expiry active working solutions
+          </div>`;
+          return;
+        }
+        let html = "";
+        let hasAny = false;
+        snap.forEach(d => {
+          const x = d.data();
+          if (!x.exp_date) return;
+          const left = humanDaysLeft(x.exp_date);
+          if (left.days !== null && left.days <= 7) {
+            hasAny = true;
+            const cls = (left.days < 0) ? "bg-red-50 border-red-200 text-red-800" : (left.days <= 3 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-slate-50 border-slate-200 text-slate-700");
+            html += `
+              <div class="p-3 rounded-lg border ${cls}">
+                <div class="flex justify-between items-start gap-3">
+                  <div>
+                    <div class="mono font-bold text-teal-700">${safeText(x.label_id)}</div>
+                    <div class="text-sm font-semibold">${safeText(x.master_name)} <span class="text-xs text-teal-600 font-bold">(${safeText(x.master_conc)})</span></div>
+                    <div class="text-xs text-slate-500 mt-1">Raw Lot: <span class="mono">${safeText(x.raw_lot_ref)}</span></div>
+                  </div>
+                  <div class="text-right text-xs font-bold">${left.text}</div>
+                </div>
+              </div>
+            `;
+          }
+        });
+        if (!hasAny) {
+          $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium">
+            <i class="fa-solid fa-circle-check mr-2"></i>No near-expiry within 7 days
+          </div>`;
+        } else {
+          $("nearExpiryWS").innerHTML = html;
+        }
+      } catch (err) {
+        console.error("loadNearExpiryWS error:", err);
+        $("nearExpiryWS").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium">
+          <i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading near-expiry list
+        </div>`;
+      }
+    }
+
+    async function loadStoreAlerts() {
+      try {
+        const q1 = query(collection(db, "Store_Chemicals"), orderBy("exp_date", "asc"), limit(25));
+        const snap = await getDocs(q1);
+
+        if (snap.empty) {
+          $("storeAlerts").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium">
+            <i class="fa-solid fa-circle-check mr-2"></i>No store items
+          </div>`;
+          return;
         }
 
-        function connectPrinter() {
-            alert("กำลังค้นหาเครื่องพิมพ์ Bluetooth สำหรับ Auto-Labeling...");
-            // โค้ดเชื่อมต่อ Web Bluetooth API จะอยู่ตรงนี้
+        const now = new Date();
+        let nearExp = [];
+        let lowStock = [];
+        snap.forEach(d => {
+          const x = d.data();
+          const total = Number(x.total_bottles || 0);
+          const opened = Number(x.opened_bottles || 0);
+          const remaining = Math.max(0, total - opened);
+          if (remaining <= 1) {
+            lowStock.push({ lot: d.id, name: x.chemical_name, remaining, exp: x.exp_date });
+          }
+          if (x.exp_date) {
+            const exp = new Date(x.exp_date);
+            const days = Math.ceil((exp - now) / (1000*60*60*24));
+            if (days <= 30) {
+              nearExp.push({ lot: d.id, name: x.chemical_name, remaining, exp: x.exp_date, days });
+            }
+          }
+        });
+
+        let html = "";
+        if (nearExp.length === 0 && lowStock.length === 0) {
+          html = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium">
+            <i class="fa-solid fa-circle-check mr-2"></i>No alerts
+          </div>`;
+        } else {
+          if (nearExp.length > 0) {
+            html += `<div class="p-3 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 font-medium">
+              <i class="fa-solid fa-hourglass-half mr-2"></i>Near Expiry (≤30 days): ${nearExp.length} lot(s)
+            </div>`;
+            nearExp.slice(0, 6).forEach(x => {
+              const cls = (x.days < 0) ? "text-red-700" : (x.days <= 7 ? "text-amber-700" : "text-slate-700");
+              html += `<div class="p-3 bg-white rounded-lg border border-slate-200">
+                <div class="flex justify-between gap-3">
+                  <div>
+                    <div class="font-bold text-slate-800">${safeText(x.name)}</div>
+                    <div class="text-xs text-slate-500">Lot: <span class="mono font-bold text-blue-700">${safeText(x.lot)}</span></div>
+                    <div class="text-xs text-slate-500">Remaining: <b>${x.remaining}</b></div>
+                  </div>
+                  <div class="text-right text-xs font-bold ${cls}">${safeText(x.exp)} (${x.days} days)</div>
+                </div>
+              </div>`;
+            });
+          }
+          if (lowStock.length > 0) {
+            html += `<div class="p-3 bg-red-50 text-red-800 rounded-lg border border-red-200 font-medium mt-3">
+              <i class="fa-solid fa-triangle-exclamation mr-2"></i>Low Stock (≤1 bottle): ${lowStock.length} lot(s)
+            </div>`;
+            lowStock.slice(0, 6).forEach(x => {
+              html += `<div class="p-3 bg-white rounded-lg border border-slate-200">
+                <div class="flex justify-between gap-3">
+                  <div>
+                    <div class="font-bold text-slate-800">${safeText(x.name)}</div>
+                    <div class="text-xs text-slate-500">Lot: <span class="mono font-bold text-blue-700">${safeText(x.lot)}</span></div>
+                  </div>
+                  <div class="text-right text-xs font-bold text-red-700">Remaining: ${x.remaining}</div>
+                </div>
+              </div>`;
+            });
+          }
         }
 
-        // Fetch Alerts from Backend (Mockup)
-        // fetch('https://[YOUR_REGION]-[YOUR_PROJECT].cloudfunctions.net/getAlerts')...
-    </script>
+        $("storeAlerts").innerHTML = html;
+
+      } catch (err) {
+        console.error("loadStoreAlerts error:", err);
+        $("storeAlerts").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium">
+          <i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading store alerts
+        </div>`;
+      }
+    }
+
+    async function loadAlertBoxSummary() {
+      try {
+        const pending = Number($("statPending").innerText || 0);
+        const expired = Number($("statExpired").innerText || 0);
+        let html = "";
+        if (pending > 0) {
+          html += `<div class="p-3 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 font-medium">
+            <i class="fa-solid fa-clipboard-list mr-2"></i>มี Working Solution รอการทวนสอบ (Pending) จำนวน <b>${pending}</b> รายการ
+          </div>`;
+        }
+        if (expired > 0) {
+          html += `<div class="p-3 bg-red-50 text-red-800 rounded-lg border border-red-200 font-medium">
+            <i class="fa-solid fa-triangle-exclamation mr-2"></i>มีรายการ Expired/Discarded ในระบบจำนวน <b>${expired}</b> รายการ (ตรวจสอบการจัดการของเสีย)
+          </div>`;
+        }
+        if (!html) {
+          html = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium">
+            <i class="fa-solid fa-circle-check mr-2"></i>ไม่มีรายการเร่งด่วน ระบบอยู่ในสถานะปลอดภัย
+          </div>`;
+        }
+        $("alertList").innerHTML = html;
+      } catch (err) {
+        console.error("loadAlertBoxSummary error:", err);
+      }
+    }
+
+    // =========================================================
+    // STORE MODULE (Real Firestore Writes)
+    // =========================================================
+    async function loadStoreTable() {
+      try {
+        const q1 = query(collection(db, "Store_Chemicals"), orderBy("exp_date", "asc"), limit(200));
+        const snap = await getDocs(q1);
+        const tbody = $("storeTableBody");
+
+        if (snap.empty) {
+          tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">ยังไม่มีข้อมูลในคลัง</td></tr>`;
+          return;
+        }
+
+        let html = "";
+        snap.forEach(docSnap => {
+          const x = docSnap.data();
+          const lot = docSnap.id;
+          const total = Number(x.total_bottles || 0);
+          const opened = Number(x.opened_bottles || 0);
+          const remaining = Math.max(0, total - opened);
+          const exp = safeText(x.exp_date);
+          const expObj = exp ? new Date(exp) : null;
+          let expCls = "text-slate-700";
+          if (expObj && !Number.isNaN(expObj.getTime())) {
+            const days = Math.ceil((expObj - new Date()) / (1000*60*60*24));
+            if (days < 0) expCls = "text-red-600 font-bold";
+            else if (days <= 30) expCls = "text-amber-600 font-bold";
+          }
+
+          html += `
+            <tr class="hover:bg-slate-50">
+              <td class="p-4">
+                <p class="font-bold text-slate-800">${safeText(x.chemical_name)}</p>
+                <p class="text-xs text-slate-500">${safeText(x.status || "In Stock")}</p>
+              </td>
+              <td class="p-4 mono font-bold text-blue-600">${lot}</td>
+              <td class="p-4 text-center">
+                <span class="bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded">${remaining} / ${total}</span>
+                <div class="text-[10px] text-slate-400 mt-1">opened: ${opened}</div>
+              </td>
+              <td class="p-4">
+                <span class="${expCls}">${exp || "-"}</span>
+              </td>
+              <td class="p-4 text-center">
+                <button data-lot="${lot}" class="btnOpenBottle bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold transition-colors shadow-sm">
+                  <i class="fa-solid fa-box-open mr-1"></i>Open 1 Bottle
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+
+        tbody.innerHTML = html;
+
+        document.querySelectorAll(".btnOpenBottle").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const lot = btn.getAttribute("data-lot");
+            await openBottleClientTransaction(lot);
+          });
+        });
+
+    } catch (err) {
+        console.error("loadStoreTable error:", err);
+        $("storeTableBody").innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-600">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
+      }
+    }
+
+    async function openBottleClientTransaction(storeDocId) {
+      // storeDocId ตอนนี้คือ Composite ID (เช่น H2SO498_K123)
+      const docId = String(storeDocId).trim();
+      if (!docId) return;
+
+      const btnText = "Open 1 Bottle";
+      try {
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, "Store_Chemicals", docId);
+          const snap = await tx.get(ref);
+          if (!snap.exists()) throw new Error("ไม่พบข้อมูล Lot นี้ในระบบ");
+
+          const x = snap.data();
+          const total = Number(x.total_bottles || 0);
+          const opened = Number(x.opened_bottles || 0);
+
+          if (opened >= total) throw new Error("ไม่มีขวดใหม่เหลือให้เปิดแล้วใน Lot นี้");
+
+          tx.update(ref, {
+            opened_bottles: opened + 1,
+            last_opened_date: serverTimestamp(),
+            last_opened_by: auth.currentUser.email,
+            lastUpdated: serverTimestamp()
+          });
+
+          // บันทึก Log การเปิดขวด พร้อมเก็บ ID แบบ Composite
+          const logRef = doc(collection(db, "Store_Transaction_Logs"));
+          tx.set(logRef, {
+            action: "OPEN_BOTTLE",
+            document_id: docId,
+            manufacturer_lot: x.manufacturer_lot || "N/A",
+            chemical_name: x.chemical_name || "",
+            qty_changed: 1,
+            operator: auth.currentUser.email,
+            timestamp: serverTimestamp()
+          });
+        });
+
+        alert("✅ บันทึกการเปิดขวดสำเร็จ (มี Timestamp สำหรับ GMP แล้ว)");
+        await loadStoreTable();
+        await loadStoreAlerts();
+      } catch (err) {
+        alert("❌ " + err.message);
+      }
+    }
+
+    $("btnSaveReceive").addEventListener("click", async () => {
+      const chemName = $("recvChemName").value.trim();
+      const lot = $("recvLotNo").value.trim().toUpperCase();
+      const qty = Number($("recvQty").value || 0);
+      const expDate = $("recvExpDate").value;
+
+      if (!chemName || !lot || !qty || !expDate) {
+        alert("กรุณากรอกข้อมูลให้ครบ");
+        return;
+      }
+
+      // 🌟 สร้าง Composite ID โดยลบอักขระพิเศษออกจากชื่อสาร แล้วจับคู่กับ Lot
+      // ตัวอย่าง: พิมพ์ "H2SO4 98%" และ Lot "K123" -> ID จะกลายเป็น "H2SO498_K123"
+      const cleanName = chemName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      const compositeDocId = `${cleanName}_${lot}`;
+
+      const btn = $("btnSaveReceive");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
+
+      try {
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, "Store_Chemicals", compositeDocId);
+          const snap = await tx.get(ref);
+
+          if (snap.exists()) {
+            const x = snap.data();
+            tx.update(ref, {
+              chemical_name: chemName, // เก็บชื่อเต็มมีเว้นวรรคไว้โชว์
+              exp_date: expDate,
+              total_bottles: Number(x.total_bottles || 0) + qty,
+              status: "In Stock",
+              lastUpdated: serverTimestamp()
+            });
+          } else {
+            tx.set(ref, {
+              chemical_name: chemName, // เก็บชื่อเต็มมีเว้นวรรคไว้โชว์
+              manufacturer_lot: lot,
+              total_bottles: qty,
+              opened_bottles: 0,
+              exp_date: expDate,
+              status: "In Stock",
+              received_by: auth.currentUser.email,
+              received_date: serverTimestamp(),
+              lastUpdated: serverTimestamp()
+            });
+          }
+
+          const logRef = doc(collection(db, "Store_Transaction_Logs"));
+          tx.set(logRef, {
+            action: "RECEIVE",
+            document_id: compositeDocId,
+            manufacturer_lot: lot,
+            chemical_name: chemName,
+            qty_changed: qty,
+            operator: auth.currentUser.email,
+            timestamp: serverTimestamp()
+          });
+        });
+
+        alert("✅ รับเข้าสารเคมีเข้าคลังเรียบร้อย");
+        $("recvChemName").value = "";
+        $("recvLotNo").value = "";
+        $("recvQty").value = 1;
+        $("recvExpDate").value = "";
+        hide("receiveChemicalModal");
+
+        await loadStoreTable();
+        await loadStoreAlerts();
+        await loadDashboardStoreCount();
+      } catch (err) {
+        console.error("receive error:", err);
+        alert("❌ บันทึกไม่สำเร็จ: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save to Store';
+      }
+    });
+
+    // =========================================================
+    // WORKING SOLUTIONS MODULE (Pending -> Approve -> Active)
+    // =========================================================
+    $("btnSaveWS").addEventListener("click", async () => {
+      const qr = $("wsBottleQr").value.trim() || `WS-${Date.now().toString().slice(-6)}`;
+      const masterId = $("wsMasterSelect").value;
+      const prepDate = $("wsPrepDate").value;
+      const rawLot = $("wsRawLotRef").value.trim();
+      const diLot = $("wsDIWaterLot").value.trim();
+      const diDate = $("wsDIWaterDate").value;
+
+      if (!masterId || !prepDate) {
+        alert("กรุณาเลือกสารและวันที่เตรียม");
+        return;
+      }
+
+      const master = wsMasterData.find(m => m.id === masterId);
+      const btn = $("btnSaveWS");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
+
+      try {
+        await addDoc(collection(db, "WS_Batches"), {
+          label_id: qr,
+          master_id: masterId,
+          master_name: master?.name || masterId,
+          master_conc: master?.conc || "",
+          hazard_class: classifyHazardByMaster(masterId),
+          prep_date: prepDate,
+          exp_date: "",
+          raw_lot_ref: rawLot || "N/A",
+          di_water_lot: diLot || "",
+          di_water_date: diDate || "",
+          preparer: auth.currentUser.email,
+          status: "Pending",
+          standardization: null,
+          timestamp: serverTimestamp(),
+          lastUpdated: serverTimestamp()
+        });
+
+        alert("✅ บันทึกสำเร็จ: สถานะ Pending (Quarantine) — ห้ามใช้งานจนกว่าจะ Approve");
+        $("wsBottleQr").value = "";
+        $("wsMasterSelect").value = "";
+        $("wsPrepDate").value = "";
+        $("wsRawLotRef").value = "";
+        $("wsDIWaterLot").value = "";
+        $("wsDIWaterDate").value = "";
+
+        hide("prepWSModal");
+        await loadWSBatches(true);
+        await refreshDashboardOnly();
+      } catch (err) {
+        console.error("save WS pending error:", err);
+        alert("❌ บันทึกไม่สำเร็จ: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save as Pending (Quarantine)';
+      }
+    });
+
+    function openApproveModal(docId) {
+      $("approveDocId").value = docId;
+      $("approveFactor").value = "";
+      $("approveRemark").value = "";
+      show("approveModal");
+    }
+
+    $("btnConfirmApprove").addEventListener("click", async () => {
+      const docId = $("approveDocId").value;
+      const factor = $("approveFactor").value;
+      const remark = $("approveRemark").value;
+
+      if (!docId) return;
+      if (!factor) { alert("กรุณากรอก factor"); return; }
+
+      const btn = $("btnConfirmApprove");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Approving...';
+
+      try {
+        const expDateStr = addDaysToYMD(new Date(), 45);
+
+        await updateDoc(doc(db, "WS_Batches", docId), {
+          status: "Active",
+          exp_date: expDateStr,
+          standardization: {
+            factor: String(factor),
+            remark: remark || "",
+            verified_by: auth.currentUser.email,
+            verified_at: new Date().toISOString()
+          },
+          lastUpdated: serverTimestamp()
+        });
+
+        alert("✅ Approve สำเร็จ: เปลี่ยนเป็น Active และกำหนด Expiry (+45 วัน)");
+        hide("approveModal");
+        await loadWSBatches(true);
+        await refreshDashboardOnly();
+      } catch (err) {
+        console.error("approve error:", err);
+        alert("❌ Approve ไม่สำเร็จ: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i>Approve (Active)';
+      }
+    });
+
+    async function discardWS(docId) {
+      if (!docId) return;
+      const reason = prompt("ใส่เหตุผลการ Discard (GMP):", "Expired / Contaminated / Replaced");
+      if (reason === null) return;
+
+      try {
+        await updateDoc(doc(db, "WS_Batches", docId), {
+          status: "Discarded",
+          discard_reason: reason,
+          discarded_by: auth.currentUser.email,
+          discarded_at: new Date().toISOString(),
+          lastUpdated: serverTimestamp()
+        });
+        alert("✅ Discarded");
+        await loadWSBatches(true);
+        await refreshDashboardOnly();
+      } catch (err) {
+        alert("❌ Discard ไม่สำเร็จ: " + err.message);
+      }
+    }
+
+    // Pagination (ไม่ย่อ logic แต่จำกัด read)
+    const WS_PAGE_SIZE = 80;
+    let wsLastDoc = null;
+
+    async function loadWSBatches(reset = false) {
+      try {
+        if (reset) wsLastDoc = null;
+
+        const statusFilter = $("wsStatusFilter").value;
+        const keyword = $("wsSearch").value.trim().toLowerCase();
+
+        // base query
+        let q1 = query(collection(db, "WS_Batches"), orderBy("timestamp", "desc"), limit(WS_PAGE_SIZE));
+        if (!reset && wsLastDoc) {
+          q1 = query(collection(db, "WS_Batches"), orderBy("timestamp", "desc"), startAfter(wsLastDoc), limit(WS_PAGE_SIZE));
+        }
+
+        const snap = await getDocs(q1);
+
+        const tbody = $("wsTableBody");
+        if (snap.empty) {
+          tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ยังไม่มีข้อมูล</td></tr>`;
+          return;
+        }
+
+        wsLastDoc = snap.docs[snap.docs.length - 1];
+
+        let rows = [];
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          const id = docSnap.id;
+
+          // filter status (client-side)
+          if (statusFilter !== "ALL" && d.status !== statusFilter) return;
+
+          // keyword filter
+          const hay = [
+            safeText(d.label_id),
+            safeText(d.master_name),
+            safeText(d.master_id),
+            safeText(d.raw_lot_ref),
+            safeText(d.preparer),
+            safeText(d.status)
+          ].join(" ").toLowerCase();
+          if (keyword && !hay.includes(keyword)) return;
+
+          const expInfo = humanDaysLeft(d.exp_date);
+          let expHtml = d.status === "Pending"
+            ? `<span class="text-slate-400 italic">Waiting Approve</span>`
+            : `<span class="${(expInfo.days !== null && expInfo.days <= 3) ? "text-amber-600 font-bold" : "text-slate-700"}">${expInfo.text}</span>`;
+
+          let statusBadge = "";
+          if (d.status === "Pending") statusBadge = `<span class="badge badge-amber"><i class="fa-solid fa-clock"></i>Pending</span>`;
+          else if (d.status === "Active") statusBadge = `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i>Active</span>`;
+          else statusBadge = `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>${safeText(d.status)}</span>`;
+
+          let actionHtml = "";
+          if (d.status === "Pending") {
+            actionHtml = `<button data-id="${id}" class="btnApprove bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">
+              <i class="fa-solid fa-check-double mr-1"></i>Approve
+            </button>`;
+          } else if (d.status === "Active") {
+            const f = d.standardization?.factor ? safeText(d.standardization.factor) : "-";
+            actionHtml = `
+              <div class="text-xs text-slate-500">
+                Factor: <b class="text-green-700">${f}</b><br/>
+                By: <span class="mono">${safeText(d.standardization?.verified_by || "").split("@")[0]}</span><br/>
+                <button data-id="${id}" class="btnDiscard mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">
+                  <i class="fa-solid fa-trash mr-1"></i>Discard
+                </button>
+              </div>
+            `;
+          } else {
+            actionHtml = `<div class="text-xs text-slate-400">Locked</div>`;
+          }
+
+          rows.push(`
+            <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+              <td class="p-4 mono font-bold text-teal-700 text-xs">
+                <i class="fa-solid fa-qrcode mr-1"></i>${safeText(d.label_id)}
+              </td>
+              <td class="p-4">
+                <p class="font-bold text-slate-800">${safeText(d.master_name)}</p>
+                <p class="text-xs text-teal-600 font-semibold bg-teal-50 inline-block px-2 rounded mt-1">${safeText(d.master_conc)}</p>
+                <div class="text-[10px] text-slate-500 mt-1">Hazard: <b>${safeText(d.hazard_class || "General")}</b></div>
+              </td>
+              <td class="p-4 text-xs">
+                <p class="text-slate-500 mb-1"><i class="fa-regular fa-calendar mr-1"></i>Prep: ${safeText(d.prep_date)}</p>
+                <p class="text-slate-400"><i class="fa-solid fa-flask mr-1"></i>Raw Lot: <span class="mono">${safeText(d.raw_lot_ref)}</span></p>
+                <p class="text-slate-400"><i class="fa-solid fa-droplet mr-1"></i>DI Lot: <span class="mono">${safeText(d.di_water_lot)}</span></p>
+              </td>
+              <td class="p-4 text-sm">${expHtml}</td>
+              <td class="p-4 text-center">${statusBadge}</td>
+              <td class="p-4 text-center align-middle">${actionHtml}</td>
+            </tr>
+          `);
+        });
+
+        if (rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ไม่พบข้อมูลตามเงื่อนไข</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = rows.join("");
+
+        document.querySelectorAll(".btnApprove").forEach(b => {
+          b.addEventListener("click", () => openApproveModal(b.getAttribute("data-id")));
+        });
+        document.querySelectorAll(".btnDiscard").forEach(b => {
+          b.addEventListener("click", () => discardWS(b.getAttribute("data-id")));
+        });
+
+      } catch (err) {
+        console.error("loadWSBatches error:", err);
+        $("wsTableBody").innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-600">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
+      }
+    }
+
+    // =========================================================
+    // SCAN MODULE (Bottle / Shelf)
+    // =========================================================
+    let html5Scanner = null;
+    let lastScanCache = null;
+
+    function startScannerIfNeeded() {
+      if (html5Scanner) return;
+      const el = $("qr-reader");
+      if (!el) return;
+
+      html5Scanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+      html5Scanner.render(async (decodedText) => {
+        try {
+          html5Scanner.pause(true);
+          await processScannedId(decodedText);
+        } finally {
+          setTimeout(() => {
+            try { html5Scanner.resume(); } catch (e) {}
+          }, 700);
+        }
+      }, undefined);
+    }
+
+    async function processScannedId(scanIdRaw) {
+      const scanId = String(scanIdRaw || "").trim();
+      if (!scanId) return;
+
+      // determine type
+      const upper = scanId.toUpperCase();
+      if (upper.startsWith("LAB-") && upper.includes("SHELF")) {
+        // shelf scan
+        await showShelfScanResult(upper);
+      } else {
+        // bottle scan
+        await showBottleScanResult(scanId);
+      }
+    }
+
+    async function showShelfScanResult(shelfId) {
+      $("scanWaitingCard").classList.add("hidden-module");
+      $("scanResultCard").classList.remove("hidden-module");
+
+      $("resScanId").innerText = shelfId;
+      $("resTitle").innerText = "Shelf Location";
+      $("resSubtitle").innerText = "ใช้สำหรับ Compatibility / Placement";
+      $("resTypeBadge").className = "badge badge-slate";
+      $("resTypeBadge").innerHTML = '<i class="fa-solid fa-layer-group"></i>SHELF';
+
+      $("resStatus").innerText = "N/A";
+      $("resPrepDate").innerText = "-";
+      $("resExpDate").innerText = "-";
+      $("resTraceRef").innerText = "-";
+
+      // auto fill compatibility shelf input
+      $("compatShelfInput").value = shelfId;
+      // render cabinet monitor if found
+      const loc = findCabinetByShelf(shelfId);
+      if (loc) renderCabinetMonitor(loc.cabinet, shelfId);
+
+      // disable renew actions (only for bottles)
+      $("btnQuickRenew").disabled = true;
+      $("btnQuickRenew").classList.add("opacity-50", "cursor-not-allowed");
+      $("btnQuickRenew").innerHTML = '<i class="fa-solid fa-ban mr-2"></i>Renew Disabled';
+
+      $("btnGoAudit").onclick = () => {
+        switchView("auditView", "Audit / Traceability", "navAudit");
+        $("auditSearchQr").value = "";
+        $("auditSearchLot").value = "";
+        $("traceResult").innerHTML = `<div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 text-sm">Shelf ID ไม่ใช้ trace chain แบบ WS</div>`;
+      };
+
+      lastScanCache = { type: "SHELF", id: shelfId };
+    }
+
+    async function showBottleScanResult(bottleId) {
+      $("scanWaitingCard").classList.add("hidden-module");
+      $("scanResultCard").classList.remove("hidden-module");
+
+      $("resScanId").innerText = bottleId;
+      $("resTitle").innerText = "Bottle / Working Solution";
+      $("resSubtitle").innerText = "ดึง Batch ล่าสุดจาก WS_Batches";
+      $("resTypeBadge").className = "badge badge-green";
+      $("resTypeBadge").innerHTML = '<i class="fa-solid fa-vial"></i>BOTTLE';
+
+      // find latest batch for this bottle
+      try {
+        const q1 = query(
+          collection(db, "WS_Batches"),
+          where("label_id", "==", bottleId),
+          orderBy("timestamp", "desc"),
+          limit(1)
+        );
+        const snap = await getDocs(q1);
+
+        if (snap.empty) {
+          $("resStatus").innerText = "Not Registered";
+          $("resPrepDate").innerText = "-";
+          $("resExpDate").innerText = "-";
+          $("resTraceRef").innerText = "-";
+          $("btnQuickRenew").disabled = false;
+          $("btnQuickRenew").classList.remove("opacity-50", "cursor-not-allowed");
+          $("btnQuickRenew").innerHTML = '<i class="fa-solid fa-arrows-rotate mr-2"></i>Renew WS (Pending)';
+          lastScanCache = { type: "BOTTLE", id: bottleId, latestDocId: null, latest: null };
+        } else {
+          const docSnap = snap.docs[0];
+          const x = docSnap.data();
+          const expInfo = humanDaysLeft(x.exp_date);
+
+          $("resStatus").innerText = safeText(x.status);
+          $("resPrepDate").innerText = safeText(x.prep_date);
+          $("resExpDate").innerText = (x.status === "Pending") ? "Waiting Approve" : expInfo.text;
+          $("resTraceRef").innerText = safeText(x.raw_lot_ref || "N/A");
+
+          $("btnQuickRenew").disabled = false;
+          $("btnQuickRenew").classList.remove("opacity-50", "cursor-not-allowed");
+          $("btnQuickRenew").innerHTML = '<i class="fa-solid fa-arrows-rotate mr-2"></i>Renew WS (Pending)';
+          lastScanCache = { type: "BOTTLE", id: bottleId, latestDocId: docSnap.id, latest: x };
+        }
+
+        $("btnQuickRenew").onclick = async () => {
+          await quickRenewPendingFromScan();
+        };
+
+        $("btnGoAudit").onclick = () => {
+          switchView("auditView", "Audit / Traceability", "navAudit");
+          $("auditSearchQr").value = bottleId;
+          $("auditSearchLot").value = "";
+          runTrace();
+        };
+
+      } catch (err) {
+        console.error("showBottleScanResult error:", err);
+        $("resStatus").innerText = "Error";
+        $("resPrepDate").innerText = "-";
+        $("resExpDate").innerText = "-";
+        $("resTraceRef").innerText = "-";
+      }
+    }
+
+    async function quickRenewPendingFromScan() {
+      if (!lastScanCache || lastScanCache.type !== "BOTTLE") return;
+
+      const bottleId = lastScanCache.id;
+      const masterGuess = lastScanCache.latest?.master_id || "";
+      const rawLotGuess = lastScanCache.latest?.raw_lot_ref || "";
+
+      const masterId = prompt("ใส่ Master ID (หรือเว้นว่างเพื่อใช้ค่าเดิม):", masterGuess);
+      if (masterId === null) return;
+      const prepDate = prompt("ใส่วันที่เตรียม (YYYY-MM-DD):", ymd(new Date()));
+      if (prepDate === null) return;
+      const rawLot = prompt("ใส่ Raw Lot Ref (หรือเว้นว่างเพื่อใช้ค่าเดิม):", rawLotGuess);
+      if (rawLot === null) return;
+
+      const m = wsMasterData.find(x => x.id === masterId) || wsMasterData.find(x => x.id === masterGuess);
+      const usedMasterId = masterId.trim() || masterGuess;
+
+      try {
+        await addDoc(collection(db, "WS_Batches"), {
+          label_id: bottleId,
+          master_id: usedMasterId,
+          master_name: m?.name || usedMasterId,
+          master_conc: m?.conc || "",
+          hazard_class: classifyHazardByMaster(usedMasterId),
+          prep_date: prepDate,
+          exp_date: "",
+          raw_lot_ref: (rawLot.trim() || rawLotGuess || "N/A"),
+          di_water_lot: "",
+          di_water_date: "",
+          preparer: auth.currentUser.email,
+          status: "Pending",
+          standardization: null,
+          timestamp: serverTimestamp(),
+          lastUpdated: serverTimestamp()
+        });
+
+        alert("✅ Renew สำเร็จ: สร้างรายการ Pending แล้ว (ไป Approve ในหน้า Working Solutions)");
+        await showBottleScanResult(bottleId);
+        await refreshDashboardOnly();
+      } catch (err) {
+        alert("❌ Renew ไม่สำเร็จ: " + err.message);
+      }
+    }
+
+    // =========================================================
+    // COMPATIBILITY + REAL SAVE PLACEMENT
+    // =========================================================
+    let compatCache = {
+      shelfId: null,
+      cabinetId: null,
+      incomingMasterId: null,
+      incomingHazard: null,
+      isSafe: false,
+      suggestion: null
+    };
+
+    async function evaluateCompatibility(targetShelfId, masterId) {
+      const incomingHazard = classifyHazardByMaster(masterId);
+      const rules = compatibilityMatrix[incomingHazard] || { cabBlock: [], shelfBlock: [] };
+
+      const locationData = findCabinetByShelf(targetShelfId);
+      const alertBox = $("compatibilityAlert");
+      const icon = $("compatIcon");
+      const title = $("compatTitle");
+      const desc = $("compatDesc");
+      const suggestionBox = $("compatSuggestionBox");
+      const suggestionText = $("compatSuggestionText");
+      const btnSave = $("btnSaveToShelf");
+
+      show("compatibilityAlert");
+      suggestionBox.classList.add("hidden-module");
+
+      if (!locationData) {
+        alertBox.className = "p-4 rounded-xl border flex items-start bg-slate-100 border-slate-300 text-slate-700";
+        icon.className = "fa-solid fa-circle-question text-xl mr-3 mt-0.5";
+        title.innerText = `ไม่พบรหัสชั้นวาง: ${targetShelfId}`;
+        desc.innerText = "กรุณาตรวจสอบว่าสแกน QR ถูกต้อง";
+        btnSave.disabled = true;
+        btnSave.classList.add("opacity-50", "cursor-not-allowed");
+        compatCache = { shelfId: targetShelfId, cabinetId: null, incomingMasterId: masterId, incomingHazard, isSafe: false, suggestion: null };
+        return;
+      }
+
+      const { cabId, cabinet, shelf } = locationData;
+      renderCabinetMonitor(cabinet, targetShelfId);
+
+      // Evaluate cabinet-level
+      let isSafe = true;
+      let rejectReason = "";
+      let suggestion = null;
+
+      for (const sId in cabinet.shelves) {
+        const sHaz = cabinet.shelves[sId].currentHazards || [];
+        const conflict = sHaz.find(h => rules.cabBlock.includes(h));
+        if (conflict) {
+          isSafe = false;
+          rejectReason = `ปฏิเสธ! มีสาร "${conflict}" ในตู้นี้ (ห้ามอยู่ตู้เดียวกันกับ ${incomingHazard})`;
+          suggestion = suggestAlternativeCabinet(incomingHazard);
+          break;
+        }
+      }
+
+      // Evaluate shelf-level
+      if (isSafe) {
+        const targetHaz = shelf.currentHazards || [];
+        const conflict = targetHaz.find(h => rules.shelfBlock.includes(h));
+        if (conflict) {
+          isSafe = false;
+          rejectReason = `ปฏิเสธ! ชั้นนี้มี "${conflict}" (ห้ามอยู่ชั้นเดียวกันกับ ${incomingHazard})`;
+          suggestion = suggestAlternativeShelf(cabinet, incomingHazard, rules);
+        }
+      }
+
+      // Update UI
+      if (isSafe) {
+        alertBox.className = "p-4 rounded-xl border flex items-start bg-green-50 border-green-200 text-green-800";
+        icon.className = "fa-solid fa-shield-check text-green-600 text-xl mr-3 mt-0.5";
+        title.innerText = "Compatible ✅";
+        desc.innerText = `สามารถจัดเก็บ ${incomingHazard} ที่ ${targetShelfId} ได้`;
+        btnSave.disabled = false;
+        btnSave.classList.remove("opacity-50", "cursor-not-allowed");
+      } else {
+        alertBox.className = "p-4 rounded-xl border flex items-start bg-red-50 border-red-200 text-red-800 animate-pulse";
+        icon.className = "fa-solid fa-triangle-exclamation text-red-600 text-xl mr-3 mt-0.5";
+        title.innerText = "Incompatible ❌";
+        desc.innerText = rejectReason;
+        btnSave.disabled = true;
+        btnSave.classList.add("opacity-50", "cursor-not-allowed");
+        if (suggestion) {
+          suggestionBox.classList.remove("hidden-module");
+          suggestionText.innerText = suggestion;
+        }
+      }
+
+      compatCache = { shelfId: targetShelfId, cabinetId: cabId, incomingMasterId: masterId, incomingHazard, isSafe, suggestion };
+    }
+
+    function suggestAlternativeShelf(cabinet, incomingHazard, rules) {
+      for (const sId in cabinet.shelves) {
+        const sHaz = cabinet.shelves[sId].currentHazards || [];
+        const conflict = sHaz.find(h => rules.shelfBlock.includes(h));
+        if (!conflict) {
+          return `แนะนำชั้น "${cabinet.shelves[sId].name}" ในตู้นี้แทน`;
+        }
+      }
+      return suggestAlternativeCabinet(incomingHazard);
+    }
+
+    function suggestAlternativeCabinet(incomingHazard) {
+      const rules = compatibilityMatrix[incomingHazard] || { cabBlock: [], shelfBlock: [] };
+
+      for (const cabId in mockLabState) {
+        const cab = mockLabState[cabId];
+        let isCabSafe = true;
+
+        for (const sId in cab.shelves) {
+          const sHaz = cab.shelves[sId].currentHazards || [];
+          const conflict = sHaz.find(h => rules.cabBlock.includes(h));
+          if (conflict) { isCabSafe = false; break; }
+        }
+        if (!isCabSafe) continue;
+
+        for (const sId in cab.shelves) {
+          const sHaz = cab.shelves[sId].currentHazards || [];
+          const conflict = sHaz.find(h => rules.shelfBlock.includes(h));
+          if (!conflict) {
+            return `แนะนำ ${cab.name} → ชั้น ${cab.shelves[sId].name} (${sId})`;
+          }
+        }
+      }
+      return "ไม่พบจุดจัดเก็บที่ปลอดภัยในระบบ กรุณาแยกเก็บในพื้นที่กักกันพิเศษ!";
+    }
+
+    async function savePlacementReal() {
+      if (!compatCache || !compatCache.isSafe) {
+        alert("ยังไม่ผ่านเงื่อนไข Compatible");
+        return;
+      }
+
+      const shelfId = compatCache.shelfId;
+      const masterId = compatCache.incomingMasterId;
+      const incomingHazard = compatCache.incomingHazard;
+
+      const lot = prompt("กรอก Manufacturer Lot (หรือรหัสอ้างอิง) ที่จะนำไปวาง:", "");
+      if (lot === null) return;
+
+      const qty = prompt("จำนวนขวด/หน่วย (ตัวเลข):", "1");
+      if (qty === null) return;
+
+      const nQty = Number(qty || 0);
+      if (!nQty || nQty <= 0) { alert("จำนวนไม่ถูกต้อง"); return; }
+
+      const btn = $("btnSaveToShelf");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
+
+      try {
+        // ✅ REAL WRITE: บันทึก placement + log
+        const placementRef = doc(collection(db, "Lab_Inventory_Placements"));
+        await setDoc(placementRef, {
+          shelf_id: shelfId,
+          cabinet_id: compatCache.cabinetId,
+          master_id: masterId,
+          hazard_class: incomingHazard,
+          manufacturer_lot_ref: lot.trim().toUpperCase(),
+          qty: nQty,
+          operator: auth.currentUser.email,
+          placed_at: serverTimestamp()
+        });
+
+        const logRef = doc(collection(db, "Lab_Inventory_Logs"));
+        await setDoc(logRef, {
+          action: "PLACE",
+          shelf_id: shelfId,
+          master_id: masterId,
+          hazard_class: incomingHazard,
+          manufacturer_lot_ref: lot.trim().toUpperCase(),
+          qty: nQty,
+          operator: auth.currentUser.email,
+          timestamp: serverTimestamp()
+        });
+
+        // update mock state in-memory (for UI only)
+        const loc = findCabinetByShelf(shelfId);
+        if (loc) {
+          const arr = loc.shelf.currentHazards || [];
+          if (!arr.includes(incomingHazard)) arr.push(incomingHazard);
+          loc.shelf.currentHazards = arr;
+          renderCabinetMonitor(loc.cabinet, shelfId);
+        }
+
+        alert("✅ บันทึก placement สำเร็จ (เขียน Firestore จริง)");
+        $("compatShelfInput").value = shelfId;
+      } catch (err) {
+        console.error("savePlacementReal error:", err);
+        alert("❌ บันทึกไม่สำเร็จ: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-download mr-2"></i> Save Placement (Real Write)';
+      }
+    }
+
+    // =========================================================
+    // AUDIT / TRACE
+    // =========================================================
+    let lastTracePayload = null;
+
+    async function runTrace() {
+      const qr = $("auditSearchQr").value.trim();
+      const lot = $("auditSearchLot").value.trim().toUpperCase();
+
+      if (!qr && !lot) {
+        alert("กรุณาใส่ QR หรือ Lot อย่างน้อย 1 ช่อง");
+        return;
+      }
+
+      $("traceResult").innerHTML = `<div class="p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 font-medium">
+        <i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลัง Trace...
+      </div>`;
+
+      try {
+        let wsRecords = [];
+        if (qr) {
+          const q1 = query(collection(db, "WS_Batches"), where("label_id", "==", qr), orderBy("timestamp", "desc"), limit(20));
+          const snap = await getDocs(q1);
+          snap.forEach(d => wsRecords.push({ id: d.id, ...d.data() }));
+        } else if (lot) {
+          const q1 = query(collection(db, "WS_Batches"), where("raw_lot_ref", "==", lot), orderBy("timestamp", "desc"), limit(20));
+          const snap = await getDocs(q1);
+          snap.forEach(d => wsRecords.push({ id: d.id, ...d.data() }));
+        }
+
+        // fetch store lot info if available
+        let storeLot = null;
+        if (lot) {
+          const s = await getDoc(doc(db, "Store_Chemicals", lot));
+          if (s.exists()) storeLot = { id: lot, ...s.data() };
+        } else if (wsRecords.length > 0) {
+          const lot2 = (wsRecords[0].raw_lot_ref || "").toString().trim().toUpperCase();
+          if (lot2) {
+            const s = await getDoc(doc(db, "Store_Chemicals", lot2));
+            if (s.exists()) storeLot = { id: lot2, ...s.data() };
+          }
+        }
+
+        // render
+        if (wsRecords.length === 0 && !storeLot) {
+          $("traceResult").innerHTML = `<div class="p-3 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 font-medium">
+            <i class="fa-solid fa-circle-question mr-2"></i>ไม่พบข้อมูล Trace ในระบบ
+          </div>`;
+          lastTracePayload = null;
+          return;
+        }
+
+        let html = "";
+        if (storeLot) {
+          const total = Number(storeLot.total_bottles || 0);
+          const opened = Number(storeLot.opened_bottles || 0);
+          const remaining = Math.max(0, total - opened);
+          html += `
+            <div class="p-4 bg-white rounded-xl border border-slate-200">
+              <div class="flex justify-between items-start gap-4">
+                <div>
+                  <div class="text-xs font-bold text-slate-500 uppercase">Raw Chemical Lot</div>
+                  <div class="text-xl font-bold text-slate-800">${safeText(storeLot.chemical_name)}</div>
+                  <div class="text-sm text-slate-500">Lot: <span class="mono font-bold text-blue-700">${safeText(storeLot.id)}</span></div>
+                </div>
+                <div class="text-right">
+                  <div class="badge badge-slate"><i class="fa-solid fa-boxes-stacked"></i>Store</div>
+                  <div class="text-xs text-slate-500 mt-2">Exp: <b>${safeText(storeLot.exp_date || "-")}</b></div>
+                  <div class="text-xs text-slate-500">Remaining: <b>${remaining}</b> / ${total}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (wsRecords.length > 0) {
+          html += `<div class="p-4 bg-slate-900 rounded-xl text-white border border-slate-800">
+            <div class="text-xs font-bold text-slate-300 uppercase">Working Solution Records</div>
+            <div class="text-sm text-slate-300 mt-1">พบ ${wsRecords.length} รายการล่าสุด (เรียงใหม่→เก่า)</div>
+          </div>`;
+
+          wsRecords.forEach(x => {
+            const expInfo = humanDaysLeft(x.exp_date);
+            const badge = (x.status === "Active") ? "badge-green" : (x.status === "Pending" ? "badge-amber" : "badge-red");
+            html += `
+              <div class="p-4 bg-white rounded-xl border border-slate-200">
+                <div class="flex justify-between items-start gap-4">
+                  <div>
+                    <div class="mono font-bold text-teal-700">${safeText(x.label_id)}</div>
+                    <div class="font-bold text-slate-800">${safeText(x.master_name)} <span class="text-xs text-teal-600 font-bold">(${safeText(x.master_conc)})</span></div>
+                    <div class="text-xs text-slate-500 mt-1">Prep: <b>${safeText(x.prep_date)}</b> | By: <span class="mono">${safeText(x.preparer || "").split("@")[0]}</span></div>
+                    <div class="text-xs text-slate-500">Raw Lot: <span class="mono font-bold">${safeText(x.raw_lot_ref)}</span></div>
+                    <div class="text-xs text-slate-500">DI Lot: <span class="mono">${safeText(x.di_water_lot)}</span> (${safeText(x.di_water_date)})</div>
+                  </div>
+                  <div class="text-right">
+                    <span class="badge ${badge}">
+                      ${x.status === "Active" ? '<i class="fa-solid fa-circle-check"></i>' : (x.status === "Pending" ? '<i class="fa-solid fa-clock"></i>' : '<i class="fa-solid fa-ban"></i>')}
+                      ${safeText(x.status)}
+                    </span>
+                    <div class="text-xs text-slate-500 mt-2">Expiry: <b>${x.status === "Pending" ? "Waiting Approve" : expInfo.text}</b></div>
+                    <div class="text-xs text-slate-500 mt-1">Factor: <b>${safeText(x.standardization?.factor || "-")}</b></div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        $("traceResult").innerHTML = html;
+        lastTracePayload = { storeLot, wsRecords };
+
+      } catch (err) {
+        console.error("runTrace error:", err);
+        $("traceResult").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium">
+          <i class="fa-solid fa-triangle-exclamation mr-2"></i>Trace error: ${safeText(err.message)}
+        </div>`;
+        lastTracePayload = null;
+      }
+    }
+
+    function exportTraceJSON() {
+      if (!lastTracePayload) {
+        alert("ยังไม่มีผล Trace ให้ export");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(lastTracePayload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TRC_Trace_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // =========================================================
+    // REFRESH ALL
+    // =========================================================
+    async function refreshDashboardOnly() {
+      await loadDashboardStatsFromSystemStats();
+      await loadDashboardStoreCount();
+      await loadAlertBoxSummary();
+      await loadNearExpiryWS();
+      await loadStoreAlerts();
+    }
+
+    async function refreshAll() {
+      await refreshDashboardOnly();
+      await loadStoreTable();
+      await loadWSBatches(true);
+    }
+
+  </script>
 </body>
 </html>

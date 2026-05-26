@@ -510,21 +510,55 @@
                                 // SHEET 1: Traceability Audit Data (แบบกว้าง - รูปแบบเดิมสำหรับคนอ่าน)
                                 // =========================================================================
                                 const storeBrandsOrder = [
-                                    "ARAUCO FSC Mix Credit",
-                                    "ARAUCO FSC Control Wood",
-                                    "ARAUCO PEFC",
-                                    "AVC FSC Mix Credit",
-                                    "AVC FSC Control Wood",
-                                    "AVC PEFC",
-                                    "AVN FSC Mix Credit",
-                                    "AVN FSC Control Wood",
-                                    "PHOENIX FSC Control Wood",
-                                    "TEL Pellita FSC Control Wood"
+                                    "ARAUCO FSC Mix Credit", "ARAUCO FSC Control Wood", "ARAUCO PEFC",
+                                    "AVC FSC Mix Credit", "AVC FSC Control Wood", "AVC PEFC",
+                                    "AVN FSC Mix Credit", "AVN FSC Control Wood",
+                                    "PHOENIX FSC Control Wood", "TEL Pellita FSC Control Wood"
                                 ];
 
-                                const originalData = filteredData.map((d) => {
+                                // 🟢 1. จัดเรียงข้อมูลให้เป็นจาก เก่า ไป ใหม่ (Ascending)
+                                const sortedForExport = [...filteredData].sort((a, b) => a.name.localeCompare(b.name));
+
+                                // 🟢 2. ระบบ Audit Baseline (ตั้งค่าปิดงบ 31/03/2026)
+                                const BASELINE_PERIOD = "2026-03";
+                                const auditBaseMix = 51185.56;
+                                const auditBaseCw = 102308.45;
+                                const auditBasePefc = 14498.53;
+
+                                let cumFscMix = auditBaseMix;
+                                let cumFscCw = auditBaseCw;
+                                let cumPefc = auditBasePefc;
+
+                                // ตรวจสอบว่าผู้ใช้ดึงข้อมูลย้อนหลังไปก่อนเกิด Baseline หรือไม่ (เช่น ดึง Feb 2026)
+                                if (sortedForExport.length > 0 && sortedForExport[0].name <= BASELINE_PERIOD) {
+                                    // ดึงเฉพาะข้อมูลที่อยู่ก่อนหรือเท่ากับเดือนมีนาคม เพื่อคำนวณย้อนกลับ
+                                    const preBaselineData = sortedForExport.filter(d => d.name <= BASELINE_PERIOD);
+
+                                    let totalMixEarned = 0, totalCwEarned = 0, totalPefcEarned = 0;
+                                    let totalFscSales = 0, totalPefcSales = 0;
+
+                                    preBaselineData.forEach(d => {
+                                        totalMixEarned += (d.Theoretical_FSC_Mix || 0);
+                                        totalCwEarned += (d.Theoretical_FSC_CW || 0);
+                                        totalPefcEarned += (d.Theoretical_PEFC || 0);
+                                        totalFscSales += (d.totalFSCSold || 0);
+                                        totalPefcSales += (d.totalPEFCSold || 0);
+                                    });
+
+                                    // คำนวณย้อนหลัง (ยอดยกมาเริ่มต้น = ยอดปิด Audit - ยอดเครดิตที่สร้าง + ยอดที่ขายออกไป)
+                                    cumPefc = auditBasePefc - totalPefcEarned + totalPefcSales;
+                                    cumFscMix = auditBaseMix - totalMixEarned + totalFscSales;
+                                    cumFscCw = auditBaseCw - totalCwEarned;
+
+                                    // ป้องกันยอดยกมาติดลบจากการคำนวณย้อนหลัง หากข้อมูลประวัติก่อนหน้ามีไม่ครบ
+                                    if (cumFscMix < 0) { cumFscCw += cumFscMix; cumFscMix = 0; }
+                                }
+
+                                // เริ่มเตรียมข้อมูลลง Excel
+                                const originalData = sortedForExport.map((d) => {
                                     let row = { "Period (เดือน/ปี/วัน)": d.name };
 
+                                    // --- ส่วนจัดเรียงคอลัมน์ Store ---
                                     if (d.storeData) {
                                         storeBrandsOrder.forEach((brandKey) => {
                                             row[`${brandKey} Receive (T)`] = d.storeData[brandKey]?.IN || 0;
@@ -538,8 +572,10 @@
                                         });
                                     }
 
-                                    row["FSC Pulp Consumed (Tons)"] = d.Pulp_FSC_Mix_Input || d.Pulp_FSC_Input;
+                                    // --- ข้อมูลหน้างาน ---
+                                    row["FSC Mix Pulp Consumed (Tons)"] = d.Pulp_FSC_Mix_Input || d.Pulp_FSC_Input;
                                     row["Max Allowed FSC Mix Credit (Tons)"] = d.Theoretical_FSC_Mix;
+                                    row["FSC CW Pulp Consumed (Tons)"] = d.Pulp_FSC_CW_Input || 0;
                                     row["Max Allowed FSC CW Credit (Tons)"] = d.Theoretical_FSC_CW;
                                     row["PEFC Pulp Consumed (Tons)"] = d.Pulp_PEFC_Input;
                                     row["Max Allowed PEFC Credit (Tons)"] = d.Theoretical_PEFC;
@@ -563,8 +599,6 @@
                                     row["Total Actual FSC Fibre (Tons)"] = d.Fibre_FSC_Actual;
                                     row["Total Actual PEFC Fibre (Tons)"] = d.Fibre_PEFC_Actual;
 
-                                    // 🟢 เพิ่มข้อมูลฝั่ง Marketing (Sales) ลงในตารางกว้าง
-                                    // ⚠️ จุดที่ต้องตรวจสอบ: เปลี่ยนชื่อตัวแปร d.marketingData ให้ตรงกับ JSON ของคุณ
                                     const salesFSC = d.totalFSCSold || 0;
                                     const salesPEFC = d.totalPEFCSold || 0;
                                     const salesNonClaim = d.totalNormalSold || 0;
@@ -572,6 +606,36 @@
                                     row["Sales FSC (Tons)"] = salesFSC;
                                     row["Sales PEFC (Tons)"] = salesPEFC;
                                     row["Sales Non-Claim (Tons)"] = salesNonClaim;
+
+                                    // 🟢 3. คำนวณยอดสะสม (Cumulative Balance) ประจำแถวแบบเดินหน้าตามปกติ
+                                    cumFscMix += (d.Theoretical_FSC_Mix || 0);
+                                    cumFscCw += (d.Theoretical_FSC_CW || 0);
+                                    cumPefc += (d.Theoretical_PEFC || 0);
+
+                                    // หักยอดขาย
+                                    cumPefc -= salesPEFC;
+                                    let dailyFscSales = salesFSC;
+                                    if (cumFscMix >= dailyFscSales) {
+                                        cumFscMix -= dailyFscSales;
+                                    } else {
+                                        let remainder = dailyFscSales - cumFscMix;
+                                        cumFscMix = 0;
+                                        cumFscCw -= remainder;
+                                    }
+
+                                    // 🌟 จุดสำคัญ (AUDIT OVERRIDE): 
+                                    // ถ้าแถวนั้นคือเดือนมีนาคม 2026 ให้บังคับยอดตอนจบแถวให้เป๊ะตาม Audit Baseline เสมอ!
+                                    // เพื่อล้างความเพี้ยนของทศนิยมและทำบัญชีให้สอดคล้องกับงบปี
+                                    if (d.name === BASELINE_PERIOD) {
+                                        cumFscMix = auditBaseMix;
+                                        cumFscCw = auditBaseCw;
+                                        cumPefc = auditBasePefc;
+                                    }
+
+                                    // เติมฟิลด์ลงใน Excel
+                                    row["Cumulative Balance FSC Mix (Tons)"] = Number(cumFscMix.toFixed(3));
+                                    row["Cumulative Balance FSC CW (Tons)"] = Number(cumFscCw.toFixed(3));
+                                    row["Cumulative Balance PEFC (Tons)"] = Number(cumPefc.toFixed(3));
 
                                     return row;
                                 });

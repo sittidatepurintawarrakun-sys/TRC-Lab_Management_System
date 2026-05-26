@@ -250,53 +250,50 @@
                 let currentPage = 1;
                 const PAGE_SIZE = 20;
 
-                // --- INIT ---
-                document.addEventListener('DOMContentLoaded', () => {
-                    const now = new Date();
+                    // --- INIT ---
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const now = new Date();
 
-                    // ฟังก์ชันช่วยแปลงวันที่ให้อยู่ในรูปแบบ YYYY-MM-DD (หลีกเลี่ยงปัญหา Timezone)
-                    const formatYMD = (date) => {
-                        const y = date.getFullYear();
-                        const m = String(date.getMonth() + 1).padStart(2, '0');
-                        const d = String(date.getDate()).padStart(2, '0');
-                        return `${y}-${m}-${d}`;
-                    };
+                        // ฟังก์ชันช่วยแปลงวันที่ให้อยู่ในรูปแบบ YYYY-MM-DD (หลีกเลี่ยงปัญหา Timezone)
+                        const formatYMD = (date) => {
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                            const d = String(date.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${d}`;
+                        };
 
-                    // -----------------------------------------------------------
-                    // คำนวณช่วงเวลา: 3 เดือนย้อนหลัง (ไม่รวมเดือนปัจจุบัน)
-                    // -----------------------------------------------------------
-                    // 1. หาวันสุดท้ายของเดือนที่แล้ว (End Date ของกราฟ)
-                    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                        // -----------------------------------------------------------
+                        // คำนวณช่วงเวลา: 3 เดือนย้อนหลัง (จนถึงปัจจุบัน)
+                        // -----------------------------------------------------------
+                        // 1. กำหนดค่า "วันนี้" (End Date สำหรับกราฟและตาราง)
+                        const todayStr = formatYMD(now);
 
-                    // 2. หาวันแรกของ 3 เดือนที่แล้ว (Start Date ของกราฟ)
-                    const startOfThreeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                        // 2. หาวันที่ของ 3 เดือนที่แล้วแบบไดนามิก (Start Date)
+                        const startOfThreeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                        const defaultGraphStart = formatYMD(startOfThreeMonthsAgo);
 
-                    const defaultGraphStart = formatYMD(startOfThreeMonthsAgo);
-                    const defaultGraphEnd = formatYMD(endOfLastMonth);
+                        // ให้กราฟสิ้นสุดที่ "วันนี้" แทนที่จะเป็นสิ้นเดือนที่แล้ว
+                        const defaultGraphEnd = todayStr; 
 
-                    // ค่า "วันนี้" สำหรับตารางด้านล่าง (เพื่อให้ตารางยังคงเห็นของปัจจุบัน)
-                    const todayStr = formatYMD(now);
+                        // 1. Set Default Date for Dashboard (Top) - กราฟส่วนแรก 3 เดือนย้อนหลัง
+                        document.getElementById('startDate').value = defaultGraphStart;
+                        document.getElementById('endDate').value = defaultGraphEnd;
 
-                    // 1. Set Default Date for Dashboard (Top) - กราฟส่วนแรก 3 เดือนย้อนหลัง
-                    document.getElementById('startDate').value = defaultGraphStart;
-                    document.getElementById('endDate').value = defaultGraphEnd;
+                        // 2. Set Default Date for Table (Bottom) - ตารางส่วนล่าง 3 เดือนย้อนหลัง
+                        const tableStart = document.getElementById('tableStartDate');
+                        const tableEnd = document.getElementById('tableEndDate');
+                        if(tableStart && tableEnd) {
+                            tableStart.value = defaultGraphStart; 
+                            tableEnd.value = todayStr; 
+                        }
 
-                    // 2. Set Default Date for Table (Bottom) - ตารางส่วนล่าง
-                    // ผมปรับ Start ให้เป็น 3 เดือนย้อนหลังเหมือนกราฟเพื่อไม่ให้โหลดกินโควต้า 
-                    // แต่กำหนด End Date ให้ถึงวันนี้ เพื่อให้ User ตรวจสอบข้อมูลล่าสุดได้ตามปกติ
-                    const tableStart = document.getElementById('tableStartDate');
-                    const tableEnd = document.getElementById('tableEndDate');
-                    if(tableStart && tableEnd) {
-                        tableStart.value = defaultGraphStart; 
-                        tableEnd.value = todayStr; 
-                    }
+                        fetchDashboardData();
+                        resetAndLoadTable();
+                        setupAIChat();
+                    });
 
-                    fetchDashboardData();
-                    resetAndLoadTable();
-                    setupAIChat();
-                });
-                // --- ACTION 1: SWITCH PARAMETER ---
-                function switchParam(paramKey) {
+                    // --- ACTION 1: SWITCH PARAMETER ---
+                    function switchParam(paramKey) {
                     currentParam = paramKey;
                     document.querySelectorAll('.param-btn').forEach(btn => btn.classList.remove('active'));
                     const targetBtn = document.querySelector(`button[onclick="switchParam('${paramKey}')"]`);
