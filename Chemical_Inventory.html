@@ -982,7 +982,11 @@
               $("btnWSReload").onclick = () => loadWSBatches(true);
               $("wsSearch").oninput = () => loadWSBatches(true);
 
-              $("btnOpenReceiveModal").onclick = () => { $("recvCompatAlert").classList.add("hidden-module"); show("receiveChemicalModal"); };
+              $("btnOpenReceiveModal").onclick = async () => { 
+                $("recvCompatAlert").classList.add("hidden-module"); 
+                await populateWsDeductEngine(); // 🔥 เพิ่มตรงนี้ เพื่ออัปเดตประวัติสารเคมีล่าสุดเข้า Cache ก่อนเปิดหน้าต่างกรอกข้อมูล
+                show("receiveChemicalModal"); 
+              };
               $("btnCloseReceiveModal").onclick = () => { hide("receiveChemicalModal"); if (modalScanner && isModalScanning) { modalScanner.stop(); isModalScanning = false; hide("modal-qr-wrapper"); } };
 
               $("btnCloseApproveModal").onclick = () => hide("approveModal");
@@ -1697,7 +1701,12 @@
             }
 
             async function refreshDashboardOnly() { await loadDashboardStatsFromSystemStats(); await loadDashboardStoreCount(); await loadAlertBoxSummary(); await loadNearExpiryWS(); await loadStoreAlerts(); }
-            async function refreshAll() { await refreshDashboardOnly(); await loadStoreTable(); await loadWSBatches(true); }
+            async function refreshAll() { 
+              await refreshDashboardOnly(); 
+              await loadStoreTable(); 
+              await loadWSBatches(true); 
+              await populateWsDeductEngine(); // 🔥 เพิ่มตรงนี้ เพื่อให้โหลดข้อมูลสารเคมีเข้า Cache ทันทีตั้งแต่เปิดเว็บ
+            }
           </script>
 </body>
 </html>
