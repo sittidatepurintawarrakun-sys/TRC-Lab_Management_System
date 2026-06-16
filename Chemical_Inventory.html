@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -10,12 +9,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Prompt', sans-serif; background-color: #f4f7f6; }
     .hidden-module { display: none !important; }
-    .active-view { display: block !important; }
     .nav-item.active { background-color: #0d9488; color: white; }
     .fab-hover:hover { transform: scale(1.08); box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.5); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -92,6 +91,12 @@
         <button id="navAudit" class="nav-item w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
           <i class="fa-solid fa-file-contract w-6 text-left"></i> Audit / Trace
         </button>
+        <button id="navMaster" class="nav-item w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
+          <i class="fa-solid fa-database w-6 text-left"></i> Master Data (สูตร WS)
+        </button>
+        <button id="navDIWaterLog" class="nav-item w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
+          <i class="fa-solid fa-droplet w-6 text-left text-cyan-400"></i> DI Water Log
+        </button>
       </nav>
 
       <div class="p-4 border-t border-slate-800">
@@ -126,7 +131,7 @@
       <!-- =========================
            DASHBOARD VIEW
       ========================== -->
-      <div id="dashboardView" class="p-6 space-y-6 active-view">
+          <div id="dashboardView" class="p-6 space-y-6">
         <div class="bg-white rounded-xl shadow-sm border-l-4 border-amber-500 p-5">
           <h3 class="text-lg font-bold text-slate-800 mb-3">
             <i class="fa-solid fa-bell text-amber-500 mr-2"></i>Smart Alerts (Action Required)
@@ -200,7 +205,11 @@
           <button id="btnStartScan" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
             <i class="fa-solid fa-camera mr-2"></i>Start Camera Scan
           </button>
+          <button id="btnOpenDIWaterModal" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors ml-2">
+            <i class="fa-solid fa-droplet mr-2"></i>Daily DI Water
+          </button>
         </div>
+        
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Scanner Card -->
@@ -384,58 +393,139 @@
             </tbody>
           </table>
 
-          <div class="p-4 border-t border-slate-200 text-xs text-slate-500">
-            <i class="fa-solid fa-circle-info mr-1"></i>
-            หมายเหตุ: Expiry จะถูกคำนวณตอน Approve (Active) +45 วัน ตามแนวทางเดิม [1](https://adityabirla-my.sharepoint.com/personal/sittidate_p_adityabirla_com/_layouts/15/Doc.aspx?sourcedoc=%7BABC60B9C-2522-45FA-9F5A-4BD186EFCFFC%7D&file=TRC%20Smart%20Lab%20(%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%AD%E0%B8%B1%E0%B8%9B%E0%B9%80%E0%B8%94%E0%B8%95%20working%20Soultion).docx&action=default&mobileredirect=true)
-          </div>
         </div>
       </div>
 
       <!-- =========================
            AUDIT / TRACE VIEW
       ========================== -->
-      <div id="auditView" class="p-6 space-y-6 hidden-module">
-        <div class="flex justify-between items-center">
-          <div>
-            <h3 class="text-lg font-bold text-slate-800">
-              <i class="fa-solid fa-file-contract text-amber-600 mr-2"></i>Audit / Traceability
-            </h3>
-            <p class="text-sm text-slate-500">ค้นหา Trace chain: Working Solution → Raw Chemical Lot → (DI Water Lot)</p>
-          </div>
-          <button id="btnExportTrace" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
-            <i class="fa-solid fa-file-export mr-2"></i>Export (JSON)
-          </button>
-        </div>
-
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Search by Bottle QR</label>
-              <input id="auditSearchQr" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 mono"
-                placeholder="เช่น TRC-NaOH-001 หรือ WS-..." />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Search by Raw Lot</label>
-              <input id="auditSearchLot" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 mono"
-                placeholder="เช่น K23456789" />
-            </div>
-            <div class="flex items-end">
-              <button id="btnRunTrace" class="w-full bg-slate-900 hover:bg-slate-950 text-white font-bold py-3 rounded-xl shadow-md transition-all">
-                <i class="fa-solid fa-magnifying-glass mr-2"></i>Run Trace
+        <div id="auditView" class="p-6 space-y-6 hidden-module">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800">
+                  <i class="fa-solid fa-file-contract text-amber-600 mr-2"></i>Audit / Traceability
+                </h3>
+                <p class="text-sm text-slate-500">ค้นหา Trace chain: Working Solution → Raw Chemical Lot → (DI Water Lot)</p>
+              </div>
+              <button id="btnExportTrace" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+                <i class="fa-solid fa-file-export mr-2"></i>Export (JSON)
               </button>
             </div>
-          </div>
 
-          <div id="traceResult" class="mt-2 space-y-3">
-            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 text-sm">
-              ยังไม่มีข้อมูล — ใส่ QR หรือ Lot แล้วกด Run Trace
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Search by Bottle QR</label>
+                  <input id="auditSearchQr" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 mono"
+                    placeholder="เช่น TRC-NaOH-001 หรือ WS-..." />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Search by Raw Lot</label>
+                  <input id="auditSearchLot" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 mono"
+                    placeholder="เช่น K23456789" />
+                </div>
+                <div class="flex items-end">
+                  <button id="btnRunTrace" class="w-full bg-slate-900 hover:bg-slate-950 text-white font-bold py-3 rounded-xl shadow-md transition-all">
+                    <i class="fa-solid fa-magnifying-glass mr-2"></i>Run Trace
+                  </button>
+                </div>
+              </div>
+
+              <div id="traceResult" class="mt-2 space-y-3">
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 text-sm">
+                  ยังไม่มีข้อมูล — ใส่ QR หรือ Lot แล้วกด Run Trace
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-    </main>
-  </div>
+          <div id="masterView" class="p-6 space-y-6 hidden-module">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800">
+                  <i class="fa-solid fa-database text-indigo-600 mr-2"></i>Master WS Formulas
+                </h3>
+                <p class="text-sm text-slate-500">จัดการฐานข้อมูลสูตรสารเคมีเตรียมเอง (Working Solutions)</p>
+              </div>
+              <button id="btnOpenAddMasterModal" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+                <i class="fa-solid fa-plus mr-2"></i>เพิ่มสูตรใหม่
+              </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+                  <tr>
+                    <th class="p-4 font-medium w-1/3">Chemical Name & Conc.</th>
+                    <th class="p-4 font-medium">GHS Hazards</th>
+                    <th class="p-4 font-medium">CAS No.</th>
+                    <th class="p-4 font-medium text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="masterTableBody" class="divide-y divide-slate-100">
+                  <tr><td colspan="4" class="p-8 text-center text-slate-400">กำลังโหลด...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div id="diWaterView" class="p-6 space-y-6 hidden-module">
+            <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800">
+                  <i class="fa-solid fa-chart-line text-cyan-600 mr-2"></i>DI Water Trend & Logs
+                </h3>
+                <p class="text-sm text-slate-500">ข้อมูลบนหน้าเว็บแสดงย้อนหลัง 1 เดือน </p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs font-bold text-slate-500 uppercase ml-2">Export:</span>
+                <input type="date" id="exportDiStart" class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                <span class="text-slate-400">-</span>
+                <input type="date" id="exportDiEnd" class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                <button id="btnExportDIWater" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors flex items-center">
+                  <i class="fa-solid fa-file-csv mr-2"></i>Export CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h4 class="text-sm font-bold text-slate-700 mb-4 uppercase">Conductivity Trend (µS/cm)</h4>
+                <div class="relative h-64 w-full">
+                  <canvas id="diTrendChart"></canvas>
+                </div>
+              </div>
+
+              <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h4 class="text-sm font-bold text-slate-700 mb-4 uppercase">pH Trend</h4>
+                <div class="relative h-64 w-full">
+                  <canvas id="phTrendChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="overflow-x-auto w-full">
+                <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                  <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+                    <tr>
+                      <th class="p-4 font-medium">Date / Time</th>
+                      <th class="p-4 font-medium">Lot ID & Instrument</th>
+                      <th class="p-4 font-medium text-center">Cond. (< 0.5)</th>
+                      <th class="p-4 font-medium text-center">pH (5.0-7.5)</th>
+                      <th class="p-4 font-medium text-center">Status</th>
+                      <th class="p-4 font-medium">Inspector & Remark</th>
+                    </tr>
+                  </thead>
+                  <tbody id="diLogTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="6" class="p-8 text-center text-slate-400">กำลังโหลด...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </main>
 
   <!-- =========================
        MODALS
@@ -611,9 +701,18 @@
     </div>
   </div>
 
-    <div class="col-span-2 mb-4">
-       <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">DI Water (สแกน QR ขวดน้ำกลั่นที่นำมาผสม - ถ้ามี)</label>
-       <input type="text" id="wsDIWaterQr" class="w-full p-3 border border-slate-300 bg-slate-50 rounded-xl mono outline-none focus:ring-2 focus:ring-teal-500" placeholder="ยิง QR ขวดน้ำกลั่น..." autocomplete="off" />
+    <div class="col-span-2 mb-4 p-4 bg-cyan-50 rounded-xl border border-cyan-200">
+       <label class="block text-[10px] font-bold text-cyan-800 uppercase mb-2">
+         <i class="fa-solid fa-droplet mr-1"></i>DI Water (คลิกเลือก 7 ล็อตล่าสุด หรือสแกน QR ขวดน้ำกลั่น)
+       </label>
+       <div class="flex gap-2">
+         <input type="text" id="wsDIWaterQr" list="recentDiList" class="w-full p-3 border border-cyan-300 bg-white rounded-xl mono font-bold text-cyan-800 outline-none focus:ring-2 focus:ring-cyan-500" placeholder="คลิกเพื่อเลือก หรือ สแกน QR..." autocomplete="off" />
+         <datalist id="recentDiList">
+           </datalist>
+         <button id="btnScanDiWater" type="button" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 rounded-xl shadow-md transition-all active:scale-95">
+           <i class="fa-solid fa-camera text-lg"></i>
+         </button>
+       </div>
     </div>
 
   <div class="grid grid-cols-2 gap-4">
@@ -729,6 +828,96 @@
   </div>
   </div>
   </div>
+        <div id="diWaterModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div class="bg-cyan-600 p-4 text-white flex justify-between items-center">
+              <h3 class="font-bold text-lg"><i class="fa-solid fa-droplet mr-2"></i>Daily DI Water Log (GMP)</h3>
+              <button id="btnCloseDIWaterModal" class="text-cyan-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-6 space-y-4">
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">DI Water Lot ID</label>
+                  <input type="text" id="diWaterLot" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl mono font-bold text-cyan-700 outline-none" readonly />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Instrument ID (รหัสเครื่องวัด) *</label>
+                  <input type="text" id="diInstrument" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 uppercase" placeholder="เช่น COND-01" />
+                </div>
+              </div>
+
+              <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Conductivity (TIS 1287-2538)<span class="text-red-500">*</span></label>
+                    <input type="number" step="0.01" id="diCond" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-lg" placeholder="0.00" />
+                    <p class="text-[10px] font-semibold text-slate-500 mt-1">Limit: &lt; 0.5 µS/cm</p>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">pH (TIS 1287-2538) <span class="text-red-500">*</span></label>
+                    <input type="number" step="0.01" id="diPh" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-lg" placeholder="0.00" />
+                    <p class="text-[10px] font-semibold text-slate-500 mt-1">Limit: 5.0 - 7.5</p>
+                  </div>
+                </div>
+              </div>
+
+              <div id="diEvalBox" class="p-3 rounded-xl border flex items-center justify-between bg-slate-100 border-slate-200">
+                <span class="text-sm font-bold text-slate-600">System Evaluation:</span>
+                <span id="diEvalResult" class="font-bold text-slate-500"><i class="fa-solid fa-spinner mr-2"></i>รอข้อมูล...</span>
+              </div>
+
+              <div id="diActionBox" class="hidden-module p-4 bg-red-50 border border-red-200 rounded-xl">
+                <label class="block text-xs font-bold text-red-700 uppercase mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>OOS Action Taken (การแก้ไข) *</label>
+                <input type="text" id="diRemark" class="w-full p-3 border border-red-300 rounded-xl outline-none focus:ring-2 focus:ring-red-500 text-sm" placeholder="เช่น ปล่อยน้ำทิ้ง 15 นาที / เปลี่ยนไส้กรอง" />
+                <p class="text-[10px] text-red-600 mt-1">หมายเหตุ: Lot นี้จะไม่สามารถนำไปใช้เตรียม WS ได้ (บันทึกเพื่อเป็น Audit Trail เท่านั้น)</p>
+              </div>
+
+              <button id="btnSaveDIWater" class="w-full bg-slate-300 text-slate-500 font-bold py-3 rounded-xl shadow-sm transition-colors cursor-not-allowed" disabled>
+                <i class="fa-solid fa-save mr-2"></i>กรุณากรอกข้อมูลให้ครบ
+              </button>
+
+            </div>
+          </div>
+        </div>
+  <div id="masterFormulaModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+      <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-lg"><i class="fa-solid fa-flask mr-2"></i>จัดการสูตร Working Solution</h3>
+        <button id="btnCloseMasterModal" class="text-indigo-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+      <div class="p-6 space-y-4 overflow-y-auto">
+        <input type="hidden" id="masterDocId" />
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Chemical Name *</label>
+            <input type="text" id="masterName" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="เช่น NaOH (Sodium Hydroxide)" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Concentration *</label>
+            <input type="text" id="masterConc" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="เช่น 1.0 N หรือ 5%" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">CAS No.</label>
+          <input type="text" id="masterCas" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 mono" placeholder="เช่น 1310-73-2" />
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-2"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i>GHS Pictograms (เลือกได้มากกว่า 1)</label>
+          <div id="masterGhsList" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] font-semibold text-slate-600">
+            </div>
+        </div>
+
+        <button id="btnSaveMasterFormula" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors">
+          <i class="fa-solid fa-save mr-2"></i>บันทึกสูตรสารเคมี
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- =========================
        APP LOGIC (Firebase v10 Module)
@@ -778,8 +967,13 @@
             // =========================================================
             const $ = (id) => document.getElementById(id);
 
-            function show(id) { $(id).classList.remove("hidden-module"); }
-            function hide(id) { $(id).classList.add("hidden-module"); }
+            function show(id) { 
+              $(id).classList.remove("hidden-module"); 
+            }
+
+            function hide(id) { 
+              $(id).classList.add("hidden-module"); 
+            }
 
             function setActiveNav(btnId) {
               const ids = ["navDashboard", "navScan", "navStore", "navWS", "navAudit"];
@@ -794,13 +988,13 @@
             }
 
             function switchView(viewId, title, navBtnId) {
-              const views = ["dashboardView", "scanView", "storeView", "wsView", "auditView"];
+              // 🔥 เพิ่ม "masterView" เข้าไปในวงเล็บก้ามปู 🔥
+              const views = ["dashboardView", "scanView", "storeView", "wsView", "auditView", "masterView", "diWaterView"];
               views.forEach(v => hide(v));
               show(viewId);
               $("viewTitle").innerText = title;
               if (navBtnId) setActiveNav(navBtnId);
 
-              // 🛑 NEW: ฆ่า Process กล้องทันทีเมื่อเปลี่ยนหน้าจอ (แก้ปัญหากล้องค้าง)
               if (viewId !== "scanView") {
                 if (typeof stopScanner === "function") stopScanner();
               }
@@ -848,34 +1042,21 @@
               "Corrosive_Base": "https://firebasestorage.googleapis.com/v0/b/lab-trc-management-system.firebasestorage.app/o/GHS_Pictograms%2FGHS05_acid_red.width-1280.png?alt=media&token=25eef728-f5d2-4037-8a9d-b55b5b5b57c0",
               "Corrosive_Acid": "https://firebasestorage.googleapis.com/v0/b/lab-trc-management-system.firebasestorage.app/o/GHS_Pictograms%2FGHS05_acid_red.width-1280.png?alt=media&token=25eef728-f5d2-4037-8a9d-b55b5b5b57c0"
             };
-              const wsMasterData = [
-              { id: "DI_WATER", name: "DI Water (น้ำกลั่นห้องปฏิบัติการ)", conc: "100%", cas: "7732-18-5" },
-              { id: "BaCl2_0.1M", name: "BaCl2 (Barium Chloride)", conc: "0.1 M", cas: "10361-37-2" },
-              { id: "CaCO3_0.01M", name: "CaCO3 (Calcium Carbonate)", conc: "0.01 M", cas: "471-34-1" },
-              { id: "K2CrO4_5pct", name: "K2CrO4 (Potassium Chromate)", conc: "5%", cas: "7789-00-6" },
-              { id: "Mix_FeSO4", name: "Mix acid for FeSO4", conc: "Mixture", cas: "Mixture" },
-              { id: "NaOH_1.0N", name: "NaOH (Sodium Hydroxide)", conc: "1.0 N", cas: "1310-73-2" },
-              { id: "H2SO4_1.0N", name: "H2SO4 (Sulfuric Acid)", conc: "1.0 N", cas: "7664-93-9" }
-              // หมายเหตุ: ตัดทอน list แสดงผลเฉพาะบางส่วนเพื่อความกระชับ (คุณสามารถ copy ตัวแปรเดิมมาใส่เต็มๆได้)
-            ];
+            // =========================================================
+            // 🌍 GLOBAL CACHE & GHS DICTIONARY
+            // =========================================================
+            let globalMasterFormulas = []; // เก็บ Cache สูตรมาตรฐาน เพื่อเอาไปใส่ Dropdown
 
-            function classifyHazardByMaster(masterId) {
-              const id = (masterId || "").toUpperCase();
-              if (id.includes("HNO3") || id.includes("K2CR2O7") || id.includes("KMNO4") || id.includes("H2O2") || id.includes("K2CRO4") || id.includes("CLO4")) return "Oxidizer";
-              if (id.includes("NAOH") || id.includes("KOH") || id.includes("NH4OH") || id.includes("BUFFER_NH4")) return "Corrosive_Base";
-              if (id.includes("H2SO4") || id.includes("HCL") || id.includes("CH3COOH")) return "Corrosive_Acid";
-              return "General";
+                        // ฟังก์ชันแปลง GHS Array เป็นรูปภาพ HTML
+            function renderGHSPictograms(ghsArray) {
+              if (!ghsArray || ghsArray.length === 0) return `<span class="text-xs text-slate-400">No GHS</span>`;
+              return ghsArray.map(g => {
+                const img = ghsImages[g]; // 🔥 แก้ให้ใช้ ghsImages ตัวหลัก
+                return img 
+                  ? `<img src="${img}" title="${g}" class="w-6 h-6 inline-block mr-1 shadow-sm border border-slate-200 rounded-sm bg-white p-0.5" />` 
+                  : `<span class="badge badge-slate mr-1">${g}</span>`;
+              }).join("");
             }
-
-            const mockLabState = {
-              "LAB-SHELF1A": { name: "LAB-SHELF1A", shelves: {
-                "LAB-SHELF1A-TOP": { id:"LAB-SHELF1A-TOP", name:"TOP", currentHazards: [] },
-                "LAB-SHELF1A-BOTTOM": { id:"LAB-SHELF1A-BOTTOM", name:"BOTTOM", currentHazards: [] }
-              }},
-              "LAB-FLAMABLE": { name:"LAB-FLAMABLE (Flammable Cabinet)", shelves: {
-                "LAB-FLAMABLE-TOP": { id:"LAB-FLAMABLE-TOP", name:"TOP", currentHazards: ["Flammable"] }
-              }}
-            };
 
             const compatibilityMatrix = {
               "Oxidizer": { cabBlock: ["Flammable"], shelfBlock: ["Corrosive_Acid", "Corrosive_Base"] },
@@ -885,13 +1066,50 @@
               "General": { cabBlock: [], shelfBlock: [] }
             };
 
-            function findCabinetByShelf(shelfId) {
-              for (const cabId in mockLabState) {
-                if (mockLabState[cabId].shelves[shelfId]) {
-                  return { cabId, cabinet: mockLabState[cabId], shelf: mockLabState[cabId].shelves[shelfId] };
+            // =========================================================
+            // DYNAMIC SHELF & POKA-YOKE ENGINE
+            // =========================================================
+            function findCabinetByShelf(targetShelfId) {
+              // ตรวจสอบความถูกต้องของรูปแบบ ID
+              if (!targetShelfId || !targetShelfId.includes("-")) return null;
+
+              // 1. แยกชื่อตู้ (Cabinet) ออกจากชื่อชั้น (Shelf) โดยหาเครื่องหมายขีด (-) ตัวสุดท้าย
+              // ตัวอย่าง: "LAB-SHELF1C-BOTTOM" -> จะได้ cabId = "LAB-SHELF1C"
+              const lastDashIndex = targetShelfId.lastIndexOf("-");
+              const cabId = targetShelfId.substring(0, lastDashIndex);
+
+              // สร้าง Object โครงสร้างตู้แบบไดนามิก
+              const cabinet = { name: cabId, shelves: {} };
+
+              // 2. วนลูปอ่านข้อมูลสารเคมีทั้งหมดที่อยู่ในคลัง (ดึงจาก Cache ที่โหลดมาตอนเข้าหน้าเว็บ)
+              // เพื่อประเมินว่า "ปัจจุบัน" ในตู้นี้ มีความเสี่ยง (Hazards) อะไรวางอยู่บ้าง
+              storeChemicalsCache.forEach(item => {
+                if (!item.shelf_id) return;
+                const itemCabId = item.shelf_id.substring(0, item.shelf_id.lastIndexOf("-"));
+
+                // ถ้าสารเคมีชิ้นนี้ถูกเก็บอยู่ในตู้เดียวกันกับที่เรากำลังสแกน
+                if (itemCabId === cabId) {
+                  if (!cabinet.shelves[item.shelf_id]) {
+                    cabinet.shelves[item.shelf_id] = { id: item.shelf_id, currentHazards: [] };
+                  }
+
+                  // ดึง GHS ของสารเคมีเดิมมารวมไว้ในชั้น
+                  const hazards = item.ghs_classes || [];
+                  hazards.forEach(h => {
+                    if (!cabinet.shelves[item.shelf_id].currentHazards.includes(h)) {
+                      cabinet.shelves[item.shelf_id].currentHazards.push(h);
+                    }
+                  });
                 }
+              });
+
+              // 3. เตรียมชั้นวางเป้าหมายให้พร้อม (กรณีเป็นชั้นวางใหม่เอี่ยมที่เพิ่งใช้งานครั้งแรก)
+              if (!cabinet.shelves[targetShelfId]) {
+                cabinet.shelves[targetShelfId] = { id: targetShelfId, currentHazards: [] };
               }
-              return null;
+
+              // ส่งข้อมูลกลับไปให้ Poka-Yoke System ทำงานต่อ
+              return { cabId, cabinet, shelf: cabinet.shelves[targetShelfId] };
             }
 
             // =========================================================
@@ -936,20 +1154,471 @@
               $("navWS").onclick = () => navHandler("wsView", "Working Solutions", "navWS", () => loadWSBatches(true));
               $("navAudit").onclick = () => navHandler("auditView", "Audit / Traceability", "navAudit");
               $("btnRefresh").onclick = async () => { await refreshAll(); };
+              $("navMaster").onclick = () => navHandler("masterView", "Master Data", "navMaster", loadMasterDataUI);
+              $("navDIWaterLog").onclick = () => navHandler("diWaterView", "DI Water Log", "navDIWaterLog", loadDIWaterLogUI);
             }
+            // =========================================================
+            // 💧 DI WATER QUALITY MODULE (GMP COMPLIANT)
+            // =========================================================
+
+            // ฟังก์ชันสร้าง Lot ID ตามวันที่และเวลา (ป้องกันเลขซ้ำหากวัดหลายรอบใน 1 วัน)
+            function generateDILotId() {
+              const d = new Date();
+              const yyyy = d.getFullYear();
+              const mm = String(d.getMonth() + 1).padStart(2, '0');
+              const dd = String(d.getDate()).padStart(2, '0');
+              const hh = String(d.getHours()).padStart(2, '0');
+              const min = String(d.getMinutes()).padStart(2, '0');
+              return `DI-${yyyy}${mm}${dd}-${hh}${min}`;
+            }
+
+            // ผูก Event เปิด/ปิด Modal
+            if($("btnOpenDIWaterModal")) {
+              $("btnOpenDIWaterModal").onclick = () => {
+                $("diWaterLot").value = generateDILotId();
+                $("diInstrument").value = "";
+                $("diCond").value = "";
+                $("diPh").value = "";
+                $("diRemark").value = "";
+
+                // Reset UI
+                hide("diActionBox");
+                $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-slate-100 border-slate-200";
+                $("diEvalResult").innerHTML = '<i class="fa-solid fa-spinner mr-2"></i>รอข้อมูล...';
+
+                // Reset Button
+                const btn = $("btnSaveDIWater");
+                btn.disabled = true;
+                btn.className = "w-full bg-slate-300 text-slate-500 font-bold py-3 rounded-xl shadow-sm transition-colors cursor-not-allowed";
+                btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>กรุณากรอกข้อมูลให้ครบ';
+
+                show("diWaterModal");
+              };
+            }
+
+            $("btnCloseDIWaterModal").onclick = () => hide("diWaterModal");
+
+            // 🧠 ระบบประมวลผลอัตโนมัติ (Poka-Yoke Auto Evaluation)
+            function evaluateDIQuality() {
+              const condVal = $("diCond").value;
+              const phVal = $("diPh").value;
+              const instVal = $("diInstrument").value.trim();
+              const btn = $("btnSaveDIWater");
+
+              if (!condVal || !phVal || !instVal) {
+                btn.disabled = true;
+                btn.className = "w-full bg-slate-300 text-slate-500 font-bold py-3 rounded-xl shadow-sm cursor-not-allowed";
+                btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>กรุณากรอกข้อมูลให้ครบ';
+                $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-slate-100 border-slate-200";
+                $("diEvalResult").innerHTML = '<i class="fa-solid fa-spinner mr-2"></i>รอข้อมูล...';
+                hide("diActionBox");
+                return;
+              }
+
+              const cond = parseFloat(condVal);
+              const ph = parseFloat(phVal);
+
+              // เช็คเกณฑ์ (Cond < 0.5, pH = 5.0 - 7.5)
+              const isCondPass = cond < 0.5;
+              const isPhPass = ph >= 5.0 && ph <= 7.5;
+              const isPass = isCondPass && isPhPass;
+
+              if (isPass) {
+                $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-green-50 border-green-200";
+                $("diEvalResult").innerHTML = '<span class="text-green-700"><i class="fa-solid fa-circle-check mr-2"></i>PASS (ผ่านเกณฑ์)</span>';
+                hide("diActionBox");
+
+                btn.disabled = false;
+                btn.className = "w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors active:scale-95";
+                btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>บันทึกคุณภาพน้ำ (ใช้งานได้)';
+              } else {
+                $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-red-50 border-red-200";
+                $("diEvalResult").innerHTML = '<span class="text-red-700"><i class="fa-solid fa-triangle-exclamation mr-2"></i>FAIL (ตกเกณฑ์)</span>';
+                show("diActionBox"); // โชว์กล่องให้กรอกสาเหตุ
+
+                btn.disabled = false;
+                btn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors active:scale-95";
+                btn.innerHTML = '<i class="fa-solid fa-shield-halved mr-2"></i>บันทึก OOS Log (ห้ามใช้งาน)';
+              }
+            }
+
+            // ผูก Event ให้คำนวณแบบ Real-time ทุกครั้งที่พิมพ์
+            $("diCond").addEventListener("input", evaluateDIQuality);
+            $("diPh").addEventListener("input", evaluateDIQuality);
+            $("diInstrument").addEventListener("input", evaluateDIQuality);
+
+
+            // 💾 ฟังก์ชันบันทึกลง Firestore
+            $("btnSaveDIWater").onclick = async () => {
+              const lotId = $("diWaterLot").value;
+              const cond = parseFloat($("diCond").value);
+              const ph = parseFloat($("diPh").value);
+              const inst = $("diInstrument").value.trim().toUpperCase();
+              const remark = $("diRemark").value.trim();
+
+              const isPass = (cond < 0.5) && (ph >= 5.0 && ph <= 7.5);
+              const finalStatus = isPass ? "Pass" : "Fail";
+
+              // Validate รอบสุดท้าย
+              if (!isPass && !remark) {
+                alert("ระบบตรวจพบผลตกเกณฑ์ (OOS)! ตามมาตรฐาน GMP กรุณาระบุการแก้ไขในช่อง Action Taken ด้วยครับ");
+                $("diRemark").focus();
+                return;
+              }
+
+              const btn = $("btnSaveDIWater");
+              btn.disabled = true;
+              btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึกและสร้าง Audit Trail...';
+
+              try {
+                await setDoc(doc(db, "DI_Water_Logs", lotId), {
+                  lot_id: lotId,
+                  instrument_id: inst,
+                  conductivity: cond,
+                  cond_limit: "< 0.5",
+                  ph: ph,
+                  ph_limit: "5.0 - 7.5",
+                  status: finalStatus,
+                  remark: remark || "Normal Operation",
+                  inspected_by: auth.currentUser.email,
+                  inspected_at: serverTimestamp()
+                });
+
+                if (isPass) {
+                  alert(`✅ บันทึกคุณภาพน้ำกลั่นสำเร็จ!\nรหัส: ${lotId}\nสามารถนำรหัสนี้ไปสแกนตอนผสม WS ได้เลย`);
+                } else {
+                  alert(`⚠️ บันทึกรายงานความผิดปกติ (OOS) เรียบร้อย\nห้ามนำน้ำกลั่น Lot นี้ไปใช้อย่างเด็ดขาดจนกว่าจะแก้ไขสำเร็จ`);
+                }
+
+                hide("diWaterModal");
+              } catch (err) {
+                alert("❌ บันทึกไม่สำเร็จ: " + err.message);
+              } finally {
+                btn.disabled = false;
+                evaluateDIQuality(); // Reset ปุ่มกลับตามสถานะล่าสุด
+              }
+            };
+            // =========================================================
+            // DI WATER VIEW & TREND CHART MODULE
+            // =========================================================
+            let diChartInstance = null;
+            let phChartInstance = null;
+
+            async function loadDIWaterLogUI() {
+              const tbody = $("diLogTableBody");
+              tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูล...</td></tr>`;
+
+              // คำนวณวันที่ย้อนหลัง 1 เดือน (Default สำหรับโชว์บนเว็บ)
+              const oneMonthAgo = new Date();
+              oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+              // เซ็ตค่า Default ให้ช่องวันที่ Export เป็นเมื่อ 1 เดือนที่แล้ว ถึง วันนี้
+              if(!$("exportDiStart").value) $("exportDiStart").value = ymd(oneMonthAgo);
+              if(!$("exportDiEnd").value) $("exportDiEnd").value = ymd(new Date());
+
+              try {
+                // ดึงเฉพาะข้อมูลย้อนหลัง 1 เดือน และเรียงลำดับเวลา
+                const q = query(collection(db, "DI_Water_Logs"), 
+                                where("inspected_at", ">=", oneMonthAgo), 
+                                orderBy("inspected_at", "desc"));
+                const snap = await getDocs(q);
+
+                let currentDiLogs = [];
+                let html = "";
+
+                if (snap.empty) {
+                  tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ไม่มีข้อมูลในช่วง 1 เดือนที่ผ่านมา</td></tr>`;
+                  if(diChartInstance) diChartInstance.destroy();
+                  if(phChartInstance) phChartInstance.destroy();
+                  return;
+                }
+
+                snap.forEach(docSnap => {
+                  const d = docSnap.data();
+                  currentDiLogs.push(d); 
+
+                  const dateObj = d.inspected_at ? d.inspected_at.toDate() : new Date();
+                  const dateStr = dateObj.toLocaleDateString("th-TH", { year: '2-digit', month: 'short', day: 'numeric' });
+                  const timeStr = dateObj.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' });
+
+                  const statusBadge = d.status === "Pass" 
+                    ? `<span class="badge badge-green"><i class="fa-solid fa-check"></i>Pass</span>`
+                    : `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>Fail</span>`;
+
+                  html += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
+                      <td class="p-4"><div class="font-bold text-slate-700">${dateStr}</div><div class="text-xs text-slate-400">${timeStr}</div></td>
+                      <td class="p-4"><div class="mono font-bold text-cyan-700">${d.lot_id}</div><div class="text-xs text-slate-500">Inst: ${safeText(d.instrument_id)}</div></td>
+                      <td class="p-4 text-center"><span class="font-bold ${d.conductivity >= 0.5 ? 'text-red-600' : 'text-slate-700'}">${d.conductivity}</span></td>
+                      <td class="p-4 text-center"><span class="font-bold ${(d.ph < 5.0 || d.ph > 7.5) && d.ph !== null ? 'text-red-600' : 'text-slate-700'}">${d.ph !== null ? d.ph : "-"}</span></td>
+                      <td class="p-4 text-center">${statusBadge}</td>
+                      <td class="p-4">
+                        <div class="text-xs font-semibold text-slate-700">${safeText(d.inspected_by).split('@')[0]}</div>
+                        <div class="text-[10px] text-slate-500 truncate max-w-[200px]" title="${safeText(d.remark)}">${safeText(d.remark)}</div>
+                      </td>
+                    </tr>`;
+                });
+
+                tbody.innerHTML = html;
+
+                // --- สร้างกราฟ Trend (ย้อนเวลาให้เก่าอยู่ซ้าย ใหม่อยู่ขวา) ---
+                const reversedLogs = [...currentDiLogs].reverse();
+                const chartLabels = reversedLogs.map(d => {
+                   const dt = d.inspected_at ? d.inspected_at.toDate() : new Date();
+                   return dt.toLocaleDateString("en-GB", { day: '2-digit', month: 'short' });
+                });
+
+                const dataCond = reversedLogs.map(d => d.conductivity);
+                const dataPh = reversedLogs.map(d => d.ph); // อาจมี null ถ้าไม่ได้กรอก
+
+                drawDITrendChart(chartLabels, dataCond);
+                drawPhTrendChart(chartLabels, dataPh);
+
+              } catch (err) {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</td></tr>`;
+              }
+            }
+
+            function drawDITrendChart(labels, dataCond) {
+              const ctx = document.getElementById('diTrendChart').getContext('2d');
+              if (diChartInstance) diChartInstance.destroy();
+
+              const pointColors = dataCond.map(val => val >= 0.5 ? '#ef4444' : '#0ea5e9');
+              const pointRadius = dataCond.map(val => val >= 0.5 ? 6 : 4);
+
+              diChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: 'Conductivity (µS/cm)',
+                    data: dataCond,
+                    borderColor: '#0ea5e9',
+                    backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: '#fff',
+                    pointRadius: pointRadius,
+                    fill: true,
+                    tension: 0.3
+                  }]
+                },
+                options: {
+                  responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                  scales: {
+                    y: { beginAtZero: true, suggestedMax: 0.6, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
+                  },
+                  plugins: {
+                    annotation: {
+                      annotations: {
+                        line1: {
+                          type: 'line', yMin: 0.5, yMax: 0.5, borderColor: 'rgb(239, 68, 68)',
+                          borderWidth: 2, borderDash: [5, 5], label: { content: 'Limit < 0.5', enabled: true, position: 'end' }
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            }
+
+            function drawPhTrendChart(labels, dataPh) {
+              const ctx = document.getElementById('phTrendChart').getContext('2d');
+              if (phChartInstance) phChartInstance.destroy();
+
+              // เช็คช่วง 5.0 - 7.5 ถ้าหลุดเกณฑ์ให้เป็นสีแดง
+              const pointColors = dataPh.map(val => (val !== null && (val < 5.0 || val > 7.5)) ? '#ef4444' : '#8b5cf6');
+              const pointRadius = dataPh.map(val => (val !== null && (val < 5.0 || val > 7.5)) ? 6 : 4);
+
+              phChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: 'pH',
+                    data: dataPh,
+                    spanGaps: true, // ลากเส้นข้ามจุดที่เป็น null ได้
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: '#fff',
+                    pointRadius: pointRadius,
+                    fill: true,
+                    tension: 0.3
+                  }]
+                },
+                options: {
+                  responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                  scales: {
+                    y: { suggestedMin: 4.5, suggestedMax: 8.0, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
+                  },
+                  plugins: {
+                    annotation: {
+                      annotations: {
+                        lineMin: {
+                          type: 'line', yMin: 5.0, yMax: 5.0, borderColor: 'rgb(245, 158, 11)',
+                          borderWidth: 1.5, borderDash: [4, 4], label: { content: 'Min 5.0', enabled: true, position: 'start' }
+                        },
+                        lineMax: {
+                          type: 'line', yMin: 7.5, yMax: 7.5, borderColor: 'rgb(245, 158, 11)',
+                          borderWidth: 1.5, borderDash: [4, 4], label: { content: 'Max 7.5', enabled: true, position: 'end' }
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            }
+
+            // =========================================================
+            // CUSTOM DATE EXPORT TO CSV
+            // =========================================================
+            $("btnExportDIWater").onclick = async () => {
+              const startDateStr = $("exportDiStart").value;
+              const endDateStr = $("exportDiEnd").value;
+
+              if (!startDateStr || !endDateStr) {
+                return alert("กรุณาเลือกช่วงวันที่ให้ครบถ้วนก่อนทำการ Export");
+              }
+
+              const btn = $("btnExportDIWater");
+              btn.disabled = true;
+              btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
+
+              try {
+                // แปลง Date String เป็น Date Object ของ JS เพื่อคิวรี่ Firebase
+                const startObj = new Date(startDateStr);
+                startObj.setHours(0, 0, 0, 0); // ตั้งเป็นเที่ยงคืนของวันเริ่มต้น
+
+                const endObj = new Date(endDateStr);
+                endObj.setHours(23, 59, 59, 999); // ตั้งเป็นนาทีสุดท้ายของวันสิ้นสุด
+
+                // ยิงคิวรี่ใหม่ดึงเฉพาะช่วงเวลาที่ต้องการ (ไม่จำกัดจำนวน)
+                const q = query(collection(db, "DI_Water_Logs"), 
+                                where("inspected_at", ">=", startObj), 
+                                where("inspected_at", "<=", endObj),
+                                orderBy("inspected_at", "asc"));
+                const snap = await getDocs(q);
+
+                if (snap.empty) {
+                  alert("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
+                  return;
+                }
+
+                // สร้าง CSV
+                let csvContent = "Date,Time,Lot ID,Instrument ID,Conductivity (< 0.5),pH (5.0-7.5),Status,Remark,Inspector\n";
+
+                snap.forEach(docSnap => {
+                  const d = docSnap.data();
+                  const dt = d.inspected_at ? d.inspected_at.toDate() : new Date();
+                  const dateStr = dt.toLocaleDateString("en-GB");
+                  const timeStr = dt.toLocaleTimeString("en-GB");
+                  const remark = safeText(d.remark).replace(/,/g, " "); // ตัดลูกน้ำทิ้งป้องกัน CSV พัง
+
+                  csvContent += `${dateStr},${timeStr},${d.lot_id},${safeText(d.instrument_id)},${d.conductivity},${d.ph !== null ? d.ph : ""},${d.status},${remark},${safeText(d.inspected_by)}\n`;
+                });
+
+                // ดาวน์โหลดไฟล์
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.setAttribute("download", `TRC_DI_Water_Log_${startDateStr}_to_${endDateStr}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+              } catch (error) {
+                console.error(error);
+                alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message);
+              } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-file-csv mr-2"></i>Export CSV';
+              }
+            };
 
             // 🌍 GLOBAL STORAGE FOR RM & AUTOCOMPLETE CACHE
             let storeChemicalsCache = []; 
             const chemCacheMap = new Map();
 
-            function initDropdowns() {
-              const selectWS = $("wsMasterSelect");
-              let optionsHtml = '<option value="">-- เลือกสูตรสารละลาย --</option>';
-              wsMasterData.forEach(item => { optionsHtml += `<option value="${item.id}">${item.name} (${item.conc})</option>`; });
-              if(selectWS) selectWS.innerHTML = optionsHtml;
+                function initDropdowns() {
+                  // 🛑 ก้อนที่ 1: ระบบดึง 7 ล็อตน้ำกลั่นล่าสุดที่สถานะ Pass มาใส่ Dropdown
+                  async function loadRecentDIWater() {
+                    try {
+                      const q = query(collection(db, "DI_Water_Logs"), where("status", "==", "Pass"), orderBy("inspected_at", "desc"), limit(7));
+                      const snap = await getDocs(q);
+                      let html = "";
+                      snap.forEach(d => { html += `<option value="${d.id}">`; });
+                      if($("recentDiList")) $("recentDiList").innerHTML = html;
+                    } catch(e) { console.error(e); }
+                  }
+                  // ให้โหลดน้ำกลั่นมารอไว้ตอนเปิด Modal เตรียมสาร
+                  $("btnOpenPrepWSModal").addEventListener("click", () => loadRecentDIWater());
 
-              // 🛑 NEW: Autocomplete Search Logic
-              $("recvChemName").addEventListener("input", (e) => {
+
+                  // 🛑 ก้อนที่ 2: ระบบ Smart Filter กรองชื่อสารเคมีตั้งต้นให้ตรงกับสูตร
+                  $("wsMasterSelect").addEventListener("change", (e) => {
+                    const masterSelect = e.target;
+                    const chemSelect = $("wsRawChemSelect");
+                    const lotSelect = $("wsRawLotSelect");
+
+                    // ถ้าไม่ได้เลือกสูตร ให้แสดง Raw Chemical ทั้งหมดตามปกติ
+                    if (!masterSelect.value) {
+                      chemSelect.querySelectorAll('option').forEach(opt => opt.hidden = false);
+                      chemSelect.value = "";
+                      lotSelect.innerHTML = '<option value="">-- กรุณาเลือกสารตั้งต้นก่อน --</option>';
+                      $("wsDeductUnit").value = "";
+                      return;
+                    }
+
+                    // ดึงชื่อสูตรที่เลือก เช่น "NaOH (Sodium Hydroxide) (1.0 N)" แปลงเป็นตัวพิมพ์เล็ก
+                    const masterText = masterSelect.options[masterSelect.selectedIndex].text.toLowerCase();
+                    // ดึงคำแรกสุดมาเป็นคีย์เวิร์ดหลัก (เช่น "naoh")
+                    const mainKeyword = masterText.split(" ")[0]; 
+
+                    let matchCount = 0;
+                    let firstMatchValue = "";
+
+                    // วนลูปเช็ค Raw Chemical ทุกตัวใน Dropdown
+                    chemSelect.querySelectorAll('option').forEach(opt => {
+                      if (opt.value === "") return; // ข้ามบรรทัด "-- เลือกสารตั้งต้น --"
+
+                      const rmName = opt.value.toLowerCase();
+
+                      // เช็คว่าชื่อสูตร มีคำของ Raw Chemical ไหม? หรือ Raw Chemical มีคำหลักของสูตรไหม?
+                      const isMatch = masterText.includes(rmName) || rmName.includes(mainKeyword);
+
+                      if (isMatch) {
+                        opt.hidden = false; // โชว์
+                        if(matchCount === 0) firstMatchValue = opt.value;
+                        matchCount++;
+                      } else {
+                        opt.hidden = true;  // ซ่อน
+                      }
+                    });
+
+                    // Reset ค่าที่เลือกอยู่
+                    chemSelect.value = "";
+                    lotSelect.innerHTML = '<option value="">-- กรุณาเลือกสารตั้งต้นก่อน --</option>';
+                    $("wsDeductUnit").value = "";
+
+                    // 🔥 UX เวทมนตร์: ถ้ากรองแล้วเหลือแมตช์แค่ 1 ตัวเป๊ะๆ ให้ "เลือกให้อัตโนมัติ" เลย!
+                    if (matchCount === 1) {
+                      chemSelect.value = firstMatchValue;
+                      chemSelect.dispatchEvent(new Event('change')); // สั่งให้โหลด Lot ต่ออัตโนมัติ
+                    } 
+                    // ถ้าหาไม่เจอเลยสักตัว (ชื่อตั้งไม่เหมือนกันเลย) ให้โชว์ทั้งหมดเผื่อไว้ให้ User เลือกเอง
+                    else if (matchCount === 0) {
+                      chemSelect.querySelectorAll('option').forEach(opt => opt.hidden = false);
+                    }
+                  });
+
+                // 🛑 NEW: Autocomplete Search Logic ให้เริ่มตรงนี้เลย
+                $("recvChemName").addEventListener("input", (e) => {
                  const val = e.target.value.toLowerCase();
                  const list = $("recvAutocompleteList"); list.innerHTML = "";
                  if (!val) { hide("recvAutocompleteList"); return; }
@@ -1083,23 +1752,43 @@
             }
             $("btnScanRecvLot").onclick = () => startModalScanner('LOT'); $("btnScanRecvShelf").onclick = () => startModalScanner('SHELF');
 
-            let wsModalScanner = null; let isWsModalScanning = false;
-            $("btnScanWsBottle").onclick = async () => {
+            // =========================================================
+            // WS MODAL SCANNER (ใช้ร่วมกันทั้งสแกนขวด และ สแกนน้ำกลั่น)
+            // =========================================================
+            let wsModalScanner = null; 
+            let isWsModalScanning = false;
+            let currentWsScanTarget = 'BOTTLE'; // ตัวแปรบอกว่ากำลังสแกนลงช่องไหน
+
+            // กดปุ่มกล้องที่ช่อง Bottle
+            $("btnScanWsBottle").onclick = (e) => { e.preventDefault(); currentWsScanTarget = 'BOTTLE'; startWsScanner(); };
+            // กดปุ่มกล้องที่ช่อง DI Water
+            if($("btnScanDiWater")) $("btnScanDiWater").onclick = (e) => { e.preventDefault(); currentWsScanTarget = 'DI'; startWsScanner(); };
+
+            async function startWsScanner() {
               if (isWsModalScanning) { if (wsModalScanner) await wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper"); return; }
-              show("ws-modal-qr-wrapper"); if (!wsModalScanner) wsModalScanner = new Html5Qrcode("ws-modal-qr-reader");
+              show("ws-modal-qr-wrapper"); 
+              if (!wsModalScanner) wsModalScanner = new Html5Qrcode("ws-modal-qr-reader");
+
               try {
                 isWsModalScanning = true;
                 await wsModalScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } },
                   async (decodedText) => {
-                     $("wsBottleQr").value = decodedText;
-                     const cleanScan = String(decodedText).trim().toLowerCase();
-                     const foundMaster = wsMasterData.find(m => m.id.toLowerCase() === cleanScan || cleanScan.includes(m.id.toLowerCase()));
-                     if (foundMaster) $("wsMasterSelect").value = foundMaster.id;
+                     if (currentWsScanTarget === 'BOTTLE') {
+                         $("wsBottleQr").value = decodedText;
+                         const cleanScan = String(decodedText).trim().toLowerCase();
+                         const foundMaster = globalMasterFormulas.find(m => m.id.toLowerCase() === cleanScan || cleanScan.includes(m.id.toLowerCase()));
+                         if (foundMaster) {
+                           $("wsMasterSelect").value = foundMaster.id;
+                           $("wsMasterSelect").dispatchEvent(new Event('change')); // กระตุ้นให้ระบบกรองสารเคมีทำงาน
+                         }
+                     } else if (currentWsScanTarget === 'DI') {
+                         $("wsDIWaterQr").value = decodedText;
+                     }
                      await wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper");
                   }, (err) => {}
                 );
               } catch (err) { alert("กล้องขัดข้อง"); isWsModalScanning = false; }
-            };
+            }
 
             $("btnOpenPrepWSModal").onclick = () => { populateWsDeductEngine(); show("prepWSModal"); };
             $("btnClosePrepWSModal").onclick = () => { hide("prepWSModal"); if (wsModalScanner && isWsModalScanning) { wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper"); } };
@@ -1181,13 +1870,15 @@
               const prepDate = prompt("ใส่วันที่เตรียม (YYYY-MM-DD):", ymd(new Date())); if (prepDate === null) return;
               const rawLot = prompt("ใส่ Raw Lot Ref (หรือเว้นว่างเพื่อใช้ค่าเดิม):", rawLotGuess); if (rawLot === null) return;
 
-              const m = wsMasterData.find(x => x.id === masterId) || wsMasterData.find(x => x.id === masterGuess);
+              // 🔥 ใช้ globalMasterFormulas แทน wsMasterData ที่ถูกลบทิ้งไปแล้ว
+              const m = globalMasterFormulas.find(x => x.id === masterId) || globalMasterFormulas.find(x => x.id === masterGuess);
               const usedMasterId = masterId.trim() || masterGuess;
 
               try {
                 await addDoc(collection(db, "WS_Batches"), {
-                  label_id: bottleId, master_id: usedMasterId, master_name: m?.name || usedMasterId, master_conc: m?.conc || "",
-                  hazard_class: classifyHazardByMaster(usedMasterId), prep_date: prepDate, exp_date: "", raw_lot_ref: (rawLot.trim() || rawLotGuess || "N/A"),
+                  label_id: bottleId, master_id: usedMasterId, master_name: m?.name || usedMasterId, master_conc: m?.concentration || "", // 🔥 ดึงความเข้มข้นให้ถูกต้อง
+                  ghs_classes: m?.ghs_classes || [], // 🔥 ดึง GHS มาด้วย
+                  prep_date: prepDate, exp_date: "", raw_lot_ref: (rawLot.trim() || rawLotGuess || "N/A"),
                   preparer: auth.currentUser.email, status: "Pending", timestamp: serverTimestamp()
                 });
                 alert("✅ Renew สำเร็จ: สร้างรายการ Pending แล้ว"); await showBottleScanResult(bottleId); await refreshDashboardOnly();
@@ -1378,8 +2069,41 @@
             }
 
             async function deleteStoreDoc(docId) {
-               if(!confirm("⚠️ ยืนยันการลบข้อมูลคลังสินค้านี้?")) return;
-               try { await deleteDoc(doc(db, "Store_Chemicals", docId)); alert("✅ ลบเรียบร้อย"); loadStoreTable(); populateWsDeductEngine(); } catch(e) { alert(e.message); }
+              if(!confirm("⚠️ ยืนยันการลบข้อมูลคลังสินค้านี้ทั้งหมด (รวมถึงประวัติรับเข้า)?")) return;
+              try {
+                // 1. ดึงข้อมูลก่อนลบ เพื่อเอาชื่อ Lot ไปหาในตารางอื่น
+                const docRef = doc(db, "Store_Chemicals", docId);
+                const snap = await getDoc(docRef);
+
+                if (snap.exists()) {
+                  const data = snap.data();
+                  const lot = data.manufacturer_lot || docId;
+                  const chemName = data.chemical_name;
+
+                  // 2. ค้นหาและลบใน Lab_Inventory_Placements
+                  const placeQ = query(collection(db, "Lab_Inventory_Placements"), where("manufacturer_lot_ref", "==", lot), where("chemical_name", "==", chemName));
+                  const placeSnap = await getDocs(placeQ);
+                  for (const d of placeSnap.docs) {
+                    await deleteDoc(doc(db, "Lab_Inventory_Placements", d.id));
+                  }
+                }
+
+                // 3. ค้นหาและลบประวัติใน Lab_Store_Transaction_Logs
+                const logQ = query(collection(db, "Lab_Store_Transaction_Logs"), where("document_id", "==", docId));
+                const logSnap = await getDocs(logQ);
+                for (const d of logSnap.docs) {
+                  await deleteDoc(doc(db, "Lab_Store_Transaction_Logs", d.id));
+                }
+
+                // 4. ลบข้อมูลหลักใน Store_Chemicals
+                await deleteDoc(docRef);
+
+                alert("✅ ลบข้อมูลและประวัติที่เกี่ยวข้องแบบถอนรากถอนโคนเรียบร้อย!");
+                loadStoreTable();
+                populateWsDeductEngine();
+              } catch(e) {
+                alert("❌ เกิดข้อผิดพลาด: " + e.message);
+              }
             }
 
             async function openEditStoreModal(docId) {
@@ -1535,7 +2259,7 @@
 
               if (rawDocId && deductAmt > maxRem) { alert(`ปริมาณสารที่เบิกใช้ (${deductAmt}) เกินกว่าปริมาณคงเหลือในขลังหลัก (${maxRem})!`); return; }
 
-              const master = wsMasterData.find(m => m.id === masterId);
+              const master = globalMasterFormulas.find(m => m.id === masterId);
               const btn = $("btnSaveWS");
               btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
 
@@ -1547,8 +2271,8 @@
                   }
 
                   const wsRef = doc(collection(db, "WS_Batches"));
-                  tx.set(wsRef, {
-                    label_id: qr, master_id: masterId, master_name: master?.name || masterId, master_conc: master?.conc || "",
+                    tx.set(wsRef, {
+                    label_id: qr, master_id: masterId, master_name: master?.name || masterId, master_conc: master?.concentration || "", // 🔥 แก้เป็น concentration
                     prep_date: prepDate, exp_date: "", raw_lot_ref: rawLotDisplay, deducted_amount: deductAmt, di_water_qr_ref: diQrRef,
                     preparer: auth.currentUser.email, status: "Pending", timestamp: serverTimestamp()
                   });
@@ -1702,11 +2426,169 @@
 
             async function refreshDashboardOnly() { await loadDashboardStatsFromSystemStats(); await loadDashboardStoreCount(); await loadAlertBoxSummary(); await loadNearExpiryWS(); await loadStoreAlerts(); }
             async function refreshAll() { 
+              await fetchMasterFormulasToCache();
               await refreshDashboardOnly(); 
               await loadStoreTable(); 
               await loadWSBatches(true); 
               await populateWsDeductEngine(); // 🔥 เพิ่มตรงนี้ เพื่อให้โหลดข้อมูลสารเคมีเข้า Cache ทันทีตั้งแต่เปิดเว็บ
             }
+            // =========================================================
+            // MASTER WS FORMULAS MODULE (ADMIN)
+            // =========================================================
+
+            // ฟังก์ชันโหลดข้อมูลเข้า Cache และยัดลง Dropdown หน้า WS
+            async function fetchMasterFormulasToCache() {
+              try {
+                const snap = await getDocs(collection(db, "Master_WS_Formulas"));
+                globalMasterFormulas = [];
+                let optionsHtml = '<option value="">-- เลือกสูตรสารละลาย --</option>';
+
+                snap.forEach(docSnap => {
+                  const data = docSnap.data();
+                  globalMasterFormulas.push({ id: docSnap.id, ...data });
+                  optionsHtml += `<option value="${docSnap.id}">${data.name} (${data.concentration})</option>`;
+                });
+
+                // อัปเดต Dropdown ในหน้าเตรียม Working Solution (หน้าเก่าของคุณ)
+                if($("wsMasterSelect")) $("wsMasterSelect").innerHTML = optionsHtml;
+              } catch (err) { console.error("Error loading master formulas:", err); }
+            }
+
+            // ฟังก์ชันวาดตารางหน้า Master Data
+            async function loadMasterDataUI() {
+              await fetchMasterFormulasToCache(); // รีโหลดล่าสุด
+              const tbody = $("masterTableBody");
+
+              if (globalMasterFormulas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400">ยังไม่มีข้อมูลสูตรในระบบ</td></tr>`;
+                return;
+              }
+
+              let html = "";
+              globalMasterFormulas.forEach(item => {
+                // ใช้งานฟังก์ชัน renderGHSPictograms ที่ทำไว้ในสเต็ป 1
+                const ghsHtml = renderGHSPictograms(item.ghs_classes);
+
+                html += `
+                  <tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-4">
+                      <div class="font-bold text-slate-800">${safeText(item.name)}</div>
+                      <div class="text-xs text-indigo-600 font-semibold bg-indigo-50 inline-block px-2 rounded mt-1">${safeText(item.concentration)}</div>
+                    </td>
+                    <td class="p-4"><div class="flex gap-1">${ghsHtml}</div></td>
+                    <td class="p-4 mono text-slate-500">${safeText(item.cas_no)}</td>
+                    <td class="p-4 text-center">
+                      ${isSuperAdmin ? `
+                        <button onclick="editMasterFormula('${item.id}')" class="text-blue-500 hover:bg-blue-50 p-2 rounded"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteMasterFormula('${item.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded ml-1"><i class="fa-solid fa-trash"></i></button>
+                      ` : `<span class="text-xs text-slate-400">View Only</span>`}
+                    </td>
+                  </tr>`;
+              });
+              tbody.innerHTML = html;
+            }
+
+            // ผูก Event เปิด/ปิดหน้าต่าง
+            $("btnOpenAddMasterModal").onclick = () => {
+              if(!isSuperAdmin) return alert("เฉพาะ Admin เท่านั้นที่เพิ่มสูตรได้");
+              $("masterDocId").value = ""; $("masterName").value = ""; $("masterConc").value = ""; $("masterCas").value = "";
+
+              // วาด Checkbox GHS
+              let cbHtml = "";
+              const standardGHS = ["Explosive", "Flammable", "Oxidizer", "Gas", "Corrosive", "Toxic", "Harmful", "Health Hazard", "Environmental"];
+
+              // ดึง itemGhs มาตรวจสอบ (สำหรับหน้า edit ถ้าหน้า add ให้ itemGhs = [])
+              const itemGhs = (typeof item !== 'undefined' && item.ghs_classes) ? item.ghs_classes : [];
+
+              for (const ghsName of standardGHS) {
+                const imgUrl = ghsImages[ghsName]; // ดึงรูปจากตัวแปรหลัก
+                const checked = itemGhs.includes(ghsName) ? "checked" : "";
+                cbHtml += `<label class="flex items-center gap-2 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" value="${ghsName}" class="master-ghs-cb w-4 h-4 text-indigo-600" ${checked}> 
+                  <img src="${imgUrl}" class="w-5 h-5"> <span class="text-[11px]">${ghsName}</span>
+                </label>`;
+              }
+              $("masterGhsList").innerHTML = cbHtml;
+              show("masterFormulaModal");
+            };
+
+            $("btnCloseMasterModal").onclick = () => hide("masterFormulaModal");
+
+            // บันทึกลง Firestore
+            $("btnSaveMasterFormula").onclick = async () => {
+              const id = $("masterDocId").value;
+              const name = $("masterName").value.trim();
+              const conc = $("masterConc").value.trim();
+              const cas = $("masterCas").value.trim();
+
+              let selectedGhs = [];
+              document.querySelectorAll(".master-ghs-cb:checked").forEach(cb => selectedGhs.push(cb.value));
+
+              if (!name || !conc) return alert("กรุณากรอกชื่อและปริมาณความเข้มข้นให้ครบ");
+
+              const btn = $("btnSaveMasterFormula");
+              btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...';
+
+              try {
+                const payload = {
+                  name: name,
+                  concentration: conc,
+                  cas_no: cas,
+                  ghs_classes: selectedGhs,
+                  last_updated: serverTimestamp()
+                };
+
+                if (id) {
+                  // แก้ไขของเดิม
+                  await updateDoc(doc(db, "Master_WS_Formulas", id), payload);
+                } else {
+                  // เพิ่มใหม่ (ให้ ID เป็นชื่อผสมความเข้มข้นไปเลย)
+                  const newId = `${name}_${conc}`.replace(/[^a-zA-Z0-9_]/g, "_");
+                  await setDoc(doc(db, "Master_WS_Formulas", newId), payload);
+                }
+
+                alert("✅ บันทึกสูตรสำเร็จ");
+                hide("masterFormulaModal");
+                await loadMasterDataUI(); // รีโหลดตาราง
+              } catch (err) { alert(err.message); }
+              finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>บันทึกสูตรสารเคมี'; }
+            };
+
+            // ทำให้ฟังก์ชัน Edit/Delete โดนเรียกจากปุ่ม HTML ได้ (Global scope)
+            window.editMasterFormula = (id) => {
+              const item = globalMasterFormulas.find(x => x.id === id);
+              if(!item) return;
+              $("masterDocId").value = item.id;
+              $("masterName").value = item.name || "";
+              $("masterConc").value = item.concentration || "";
+              $("masterCas").value = item.cas_no || "";
+
+              let cbHtml = "";
+              const standardGHS = ["Explosive", "Flammable", "Oxidizer", "Gas", "Corrosive", "Toxic", "Harmful", "Health Hazard", "Environmental"];
+
+              // ดึง itemGhs มาตรวจสอบ (สำหรับหน้า edit ถ้าหน้า add ให้ itemGhs = [])
+              const itemGhs = (typeof item !== 'undefined' && item.ghs_classes) ? item.ghs_classes : [];
+
+              for (const ghsName of standardGHS) {
+                const imgUrl = ghsImages[ghsName]; // ดึงรูปจากตัวแปรหลัก
+                const checked = itemGhs.includes(ghsName) ? "checked" : "";
+                cbHtml += `<label class="flex items-center gap-2 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" value="${ghsName}" class="master-ghs-cb w-4 h-4 text-indigo-600" ${checked}> 
+                  <img src="${imgUrl}" class="w-5 h-5"> <span class="text-[11px]">${ghsName}</span>
+                </label>`;
+              }
+              $("masterGhsList").innerHTML = cbHtml;
+              show("masterFormulaModal");
+            };
+
+            window.deleteMasterFormula = async (id) => {
+              if(!confirm("⚠️ ยืนยันการลบสูตรนี้? (จะไม่ลบประวัติการผสมในอดีต แต่จะไม่สามารถเลือกผสมใหม่ได้)")) return;
+              try {
+                await deleteDoc(doc(db, "Master_WS_Formulas", id));
+                alert("✅ ลบสูตรเรียบร้อย");
+                await loadMasterDataUI();
+              } catch(err) { alert(err.message); }
+            };
           </script>
 </body>
 </html>
