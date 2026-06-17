@@ -194,107 +194,114 @@
       <!-- =========================
            SCAN VIEW
       ========================== -->
-      <div id="scanView" class="p-6 space-y-6 hidden-module">
-        <div class="flex justify-between items-center">
-          <div>
-            <h3 class="text-lg font-bold text-slate-800">
-              <i class="fa-solid fa-qrcode text-teal-600 mr-2"></i>Scan / Quick Actions
-            </h3>
-            <p class="text-sm text-slate-500">สแกน QR หรือยิง USB Scanner เพื่อดูสถานะ “ขวด/ตู้/ชั้น” และทำงานแบบ Poka‑Yoke</p>
-          </div>
-          <button id="btnStartScan" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
-            <i class="fa-solid fa-camera mr-2"></i>Start Camera Scan
-          </button>
-          <button id="btnOpenDIWaterModal" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors ml-2">
-            <i class="fa-solid fa-droplet mr-2"></i>Daily DI Water
-          </button>
-        </div>
-        
+          <div id="scanView" class="p-4 md:p-6 space-y-6 hidden-module">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800">
+                  <i class="fa-solid fa-qrcode text-teal-600 mr-2"></i>Scan / Search / Quick Actions
+                </h3>
+                <p class="text-sm text-slate-500">สแกน QR / ค้นหาสารเคมี / ตรวจสอบพิกัดชั้นวาง (FEFO)</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button id="btnStartScan" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+                  <i class="fa-solid fa-camera mr-2"></i>Start Camera Scan
+                </button>
+                <button id="btnOpenDIWaterModal" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
+                  <i class="fa-solid fa-droplet mr-2"></i>Daily DI Water
+                </button>
+              </div>
+            </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Scanner Card -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <div class="grid grid-cols-1 gap-4">
-                <div>
-                  <p class="text-xs font-bold text-slate-500 uppercase mb-2">Camera QR Scan</p>
-                  <div id="qr-reader" class="w-full rounded-lg overflow-hidden border-2 border-dashed border-teal-300 bg-slate-50 flex items-center justify-center min-h-[250px]">
-                     <i class="fa-solid fa-camera text-4xl text-slate-300"></i>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-bold text-slate-500 uppercase mb-2">Camera QR Scan</p>
+                <div id="qr-reader" class="w-full rounded-lg overflow-hidden border-2 border-dashed border-teal-300 bg-slate-50 flex items-center justify-center min-h-[250px]">
+                  <i class="fa-solid fa-camera text-4xl text-slate-300"></i>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2 text-center">หากไม่ใช้กล้อง ให้ใช้ช่องค้นหาหรือ USB scanner</p>
+              </div>
+
+              <div class="space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-teal-500">
+                  <p class="text-xs font-bold text-slate-500 uppercase mb-2">Search Location (ค้นหาที่เก็บสารเคมี)</p>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <i class="fa-solid fa-magnifying-glass text-teal-500"></i>
+                    </div>
+                    <input id="searchChemInput" class="w-full p-4 pl-10 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 font-semibold text-slate-700 shadow-inner" placeholder="พิมพ์ชื่อสารเคมี (เช่น Sodium)..." autocomplete="off" />
+                    <div id="searchChemAutocomplete" class="absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl hidden-module max-h-48 overflow-y-auto mt-1"></div>
                   </div>
-                  <p class="text-xs text-slate-400 mt-2">หากไม่ใช้กล้อง ให้ใช้ช่อง USB scanner ด้านล่าง</p>
+                  <p class="text-[11px] text-teal-700 mt-2 font-medium bg-teal-50 p-2 rounded-lg">
+                    <i class="fa-solid fa-arrow-down-short-wide mr-1"></i>ระบบจะดึงข้อมูลตามหลัก FEFO (นำของเก่าและขวดที่เปิดแล้วมาใช้ก่อนเสมอ)
+                  </p>
                 </div>
 
-                <div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <p class="text-xs font-bold text-slate-500 uppercase mb-2">USB Scanner / Manual Input</p>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <i class="fa-solid fa-barcode text-slate-400"></i>
                     </div>
-                    <input id="usbScannerInput" class="w-full p-4 pl-10 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 mono text-center shadow-inner"
-                      placeholder="ยิงบาร์โค้ด/QR หรือพิมพ์รหัส แล้วกด Enter" autocomplete="off" />
+                    <input id="usbScannerInput" class="w-full p-4 pl-10 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 mono text-center shadow-inner" placeholder="ยิงบาร์โค้ดขวด / ชั้นวาง แล้วกด Enter" autocomplete="off" />
                   </div>
-                  <p class="text-[11px] text-slate-400 mt-2">
-                    รองรับ 2 ประเภท: (1) ขวดสาร (Bottle QR) และ (2) ชั้นวาง (Shelf QR)
-                  </p>
                 </div>
               </div>
             </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <div id="scanWaitingCard" class="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 min-h-[320px]">
-                <i class="fa-solid fa-flask text-5xl mb-3 text-slate-300"></i>
-                <p class="font-semibold text-slate-500">รอการสแกน...</p>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 w-full">
+              <div id="scanWaitingCard" class="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 min-h-[200px]">
+                <i class="fa-solid fa-flask-vial text-5xl mb-3 text-slate-300"></i>
+                <p class="font-semibold text-slate-500">รอการค้นหา หรือ สแกน...</p>
               </div>
 
               <div id="scanResultCard" class="hidden-module">
-                <div class="flex items-start justify-between gap-4">
+                <div class="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
                   <div>
                     <div class="badge badge-slate">
-                      <i class="fa-solid fa-id-card"></i>
-                      ID: <span id="resScanId" class="mono">--</span>
+                      <i class="fa-solid fa-id-card"></i> ID/Name: <span id="resScanId" class="mono">--</span>
                     </div>
                     <h2 id="resTitle" class="text-2xl font-bold text-slate-800 mt-3">--</h2>
-                    <p id="resSubtitle" class="text-sm text-slate-500 mt-1">--</p>
                   </div>
                   <div class="text-right">
-                    <div id="resTypeBadge" class="badge badge-green"><i class="fa-solid fa-circle-check"></i>--</div>
+                    <div id="resTypeBadge" class="badge badge-green">--</div>
                   </div>
                 </div>
 
-                <div class="mt-5 bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2">
-                  <div class="flex justify-between items-center text-sm">
-                    <span class="text-xs font-bold text-slate-500 uppercase">Last Status</span>
-                    <span id="resStatus" class="font-semibold text-slate-800">--</span>
+                <div id="resSubtitle" class="mt-4 text-sm text-slate-500 w-full">--</div>
+
+                <div id="wsSpecificDetails" class="hidden-module mt-4">
+                  <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2 max-w-lg mx-auto">
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-xs font-bold text-slate-500 uppercase">Last Status</span>
+                      <span id="resStatus" class="font-semibold text-slate-800">--</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-xs font-bold text-slate-500 uppercase">Prepared</span>
+                      <span id="resPrepDate" class="font-semibold text-slate-800">--</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-xs font-bold text-slate-500 uppercase">Expiry</span>
+                      <span id="resExpDate" class="font-bold text-slate-800">--</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-xs font-bold text-slate-500 uppercase">Trace Ref</span>
+                      <span id="resTraceRef" class="mono text-teal-700 font-bold">--</span>
+                    </div>
                   </div>
-                  <div class="flex justify-between items-center text-sm">
-                    <span class="text-xs font-bold text-slate-500 uppercase">Prepared / Updated</span>
-                    <span id="resPrepDate" class="font-semibold text-slate-800">--</span>
-                  </div>
-                  <div class="flex justify-between items-center text-sm">
-                    <span class="text-xs font-bold text-slate-500 uppercase">Expiry</span>
-                    <span id="resExpDate" class="font-bold text-slate-800">--</span>
-                  </div>
-                  <div class="flex justify-between items-center text-sm">
-                    <span class="text-xs font-bold text-slate-500 uppercase">Trace Ref</span>
-                    <span id="resTraceRef" class="mono text-teal-700 font-bold">--</span>
+
+                  <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg mx-auto">
+                    <button id="btnQuickRenew" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95">
+                      <i class="fa-solid fa-arrows-rotate mr-2"></i> Renew WS (Pending)
+                    </button>
+                    <button id="btnGoAudit" class="bg-slate-900 hover:bg-slate-950 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95">
+                      <i class="fa-solid fa-magnifying-glass mr-2"></i> Open Trace
+                    </button>
                   </div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <button id="btnQuickRenew" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center">
-                    <i class="fa-solid fa-arrows-rotate mr-2"></i> Renew WS (Pending)
-                  </button>
-                  <button id="btnGoAudit" class="bg-slate-900 hover:bg-slate-950 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center">
-                    <i class="fa-solid fa-magnifying-glass mr-2"></i> Open Trace
-                  </button>
-                </div>
-                <div class="mt-4 text-[11px] text-slate-400 leading-relaxed">
-                  <i class="fa-solid fa-circle-info mr-1"></i>
-                  Renew ที่นี่จะสร้างรายการใหม่ในสถานะ <b>Pending</b> ตาม GMP และต้องไปอนุมัติในหน้า Working Solutions
-                </div>
               </div>
             </div>
           </div>
-        </div>      
 
       <!-- =========================
            STORE VIEW
@@ -1802,43 +1809,79 @@
 
             // 🛑 NEW: ระบบแสดงรายละเอียดชั้นวาง + ปุ่มดาวน์โหลด MSDS 
             async function showShelfScanResult(shelfId) {
-              $("scanWaitingCard").classList.add("hidden-module"); $("scanResultCard").classList.remove("hidden-module");
-              $("resScanId").innerText = shelfId; $("resTitle").innerText = "Shelf Monitor (พิกัดชั้นวาง)"; $("resSubtitle").innerText = "กำลังโหลดข้อมูลในชั้น...";
-              $("resTypeBadge").className = "badge badge-slate"; $("resTypeBadge").innerHTML = '<i class="fa-solid fa-layer-group"></i>SHELF';
-              $("resStatus").innerText = "N/A"; $("resPrepDate").innerText = "-"; $("resExpDate").innerText = "-"; $("resTraceRef").innerText = "-";
+              $("scanWaitingCard").classList.add("hidden-module"); 
+              $("scanResultCard").classList.remove("hidden-module");
 
-              $("btnQuickRenew").disabled = true; $("btnQuickRenew").classList.add("opacity-50", "cursor-not-allowed");
+              // 🚨 ซ่อนข้อมูลที่ไม่เกี่ยวกับตู้สารเคมี
+              if($("wsSpecificDetails")) $("wsSpecificDetails").classList.add("hidden-module");
+
+              $("resScanId").innerText = shelfId; 
+              $("resTitle").innerText = "Shelf Monitor (พิกัดชั้นวาง)"; 
+              $("resSubtitle").innerHTML = `<div class="mt-2 text-blue-600 font-medium"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูลสารเคมีในชั้น...</div>`;
+              $("resTypeBadge").className = "badge badge-slate"; 
+              $("resTypeBadge").innerHTML = '<i class="fa-solid fa-layer-group"></i>SHELF';
+
               try {
                 const q = query(collection(db, "Store_Chemicals"), where("shelf_id", "==", shelfId));
                 const snap = await getDocs(q);
                 let itemHtml = '';
+                const now = new Date();
+
                 snap.forEach(d => {
                    const x = d.data();
                    const msdsBtn = x.msds_url ? `<a href="${x.msds_url}" target="_blank" class="ml-2 bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded shadow-sm text-[10px]"><i class="fa-solid fa-file-pdf mr-1"></i>MSDS</a>` : '';
-                  const ghsBadges = (x.ghs_classes || []).map(g => {
-                      const imgSrc = ghsImages[g];
-                      if (imgSrc) {
-                          // ถ้าระบบรู้จักคำนี้และมีรูป -> ให้แสดงรูป
-                          return `<img src="${imgSrc}" title="${g}" class="w-6 h-6 inline-block mr-1 shadow-sm bg-white border border-red-200 rounded-sm p-0.5" />`;
-                      } else {
-                          // ถ้าระบบหารูปไม่เจอ (เช่น คำว่า "General") -> ให้แสดงป้ายข้อความสีเทาแทนรูปแตก
-                          return `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[9px] mr-1 border border-slate-200 shadow-sm font-semibold">${g}</span>`;
-                      }
-                  }).join("");
-                   itemHtml += `<div class="p-3 border-b border-slate-100 text-sm">
-                      <div class="font-bold text-slate-800">${x.chemical_name} ${msdsBtn}</div>
-                      <div class="text-xs text-slate-500 mt-1">Lot: <span class="mono">${x.manufacturer_lot}</span> | CAS: ${x.cas_no || '-'}</div>
-                      <div class="mt-2 flex flex-wrap gap-1">${ghsBadges}</div>
+
+                   const ghsBadges = (x.ghs_classes || []).map(g => {
+                       const imgSrc = ghsImages[g];
+                       if (imgSrc) {
+                           return `<img src="${imgSrc}" title="${g}" class="w-5 h-5 inline-block mr-1 shadow-sm bg-white border border-red-200 rounded-sm p-0.5" />`;
+                       } else {
+                           return `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[9px] mr-1 border border-slate-200 shadow-sm font-semibold">${g}</span>`;
+                       }
+                   }).join("");
+
+                   // คำนวณวันหมดอายุเพื่อแสดงสี
+                   let expText = safeText(x.exp_date) || "-";
+                   let expCls = "text-slate-500";
+                   if (x.exp_date) {
+                     const days = Math.ceil((new Date(x.exp_date) - now) / (1000*60*60*24));
+                     if (days < 0) expCls = "text-red-600 font-bold";
+                     else if (days <= 30) expCls = "text-amber-600 font-bold";
+                   }
+
+                   itemHtml += `
+                   <div class="p-3 border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors flex justify-between items-start gap-2">
+                      <div>
+                        <div class="font-bold text-slate-800 text-sm">${x.chemical_name} ${msdsBtn}</div>
+                        <div class="text-[11px] text-slate-500 mt-1">Lot: <span class="mono text-blue-600">${x.manufacturer_lot}</span> | CAS: ${x.cas_no || '-'}</div>
+                        <div class="mt-2 flex flex-wrap gap-1">${ghsBadges}</div>
+                      </div>
+                      <div class="text-right text-xs">
+                        <div class="text-slate-400 uppercase font-bold text-[9px] mb-1">Expiry Date</div>
+                        <div class="${expCls}">${expText}</div>
+                      </div>
                    </div>`;
                 });
-                $("resSubtitle").innerHTML = `<div class="mt-4 bg-slate-50 rounded-xl border border-slate-200 max-h-60 overflow-y-auto">${itemHtml || '<div class="p-4 text-center text-slate-400">ไม่มีสารเคมีถูกจัดเก็บในชั้นนี้</div>'}</div>`;
-              } catch(err) { $("resSubtitle").innerText = "โหลดข้อมูลชั้นวางล้มเหลว"; }
+
+                // ใส่กรอบและ Scrollbar ให้สวยงาม
+                $("resSubtitle").innerHTML = `<div class="mt-4 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar shadow-inner">${itemHtml || '<div class="p-6 text-center text-slate-400"><i class="fa-solid fa-box-open text-2xl mb-2 block"></i>ชั้นวางนี้ว่างเปล่า</div>'}</div>`;
+              } catch(err) { 
+                $("resSubtitle").innerHTML = `<div class="text-red-500 mt-3 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i> โหลดข้อมูลชั้นวางล้มเหลว: ${err.message}</div>`; 
+              }
             }
 
             async function showBottleScanResult(bottleId) {
-              $("scanWaitingCard").classList.add("hidden-module"); $("scanResultCard").classList.remove("hidden-module");
-              $("resScanId").innerText = bottleId; $("resTitle").innerText = "Bottle / Working Solution"; $("resSubtitle").innerText = "ดึง Batch ล่าสุดจาก WS_Batches";
-              $("resTypeBadge").className = "badge badge-green"; $("resTypeBadge").innerHTML = '<i class="fa-solid fa-vial"></i>BOTTLE';
+              $("scanWaitingCard").classList.add("hidden-module"); 
+              $("scanResultCard").classList.remove("hidden-module");
+
+              // 🚨 แสดงข้อมูลของ WS กลับมาเวลาสแกนขวด
+              if($("wsSpecificDetails")) $("wsSpecificDetails").classList.remove("hidden-module");
+
+              $("resScanId").innerText = bottleId; 
+              $("resTitle").innerText = "Bottle / Working Solution"; 
+              $("resSubtitle").innerText = "ดึง Batch ล่าสุดจาก WS_Batches";
+              $("resTypeBadge").className = "badge badge-green"; 
+              $("resTypeBadge").innerHTML = '<i class="fa-solid fa-vial"></i>BOTTLE';
 
               try {
                 const q1 = query(collection(db, "WS_Batches"), where("label_id", "==", bottleId), orderBy("timestamp", "desc"), limit(1));
@@ -1851,7 +1894,8 @@
                   lastScanCache = { type: "BOTTLE", id: bottleId, latestDocId: null, latest: null };
                 } else {
                   const docSnap = snap.docs[0], x = docSnap.data(), expInfo = humanDaysLeft(x.exp_date);
-                  $("resStatus").innerText = safeText(x.status); $("resPrepDate").innerText = safeText(x.prep_date);
+                  $("resStatus").innerHTML = `<span class="badge ${x.status === 'Active' ? 'badge-green' : 'badge-amber'}">${safeText(x.status)}</span>`; 
+                  $("resPrepDate").innerText = safeText(x.prep_date);
                   $("resExpDate").innerText = (x.status === "Pending") ? "Waiting Approve" : expInfo.text;
                   $("resTraceRef").innerText = safeText(x.raw_lot_ref || "N/A");
                   $("btnQuickRenew").disabled = false; $("btnQuickRenew").classList.remove("opacity-50", "cursor-not-allowed");
@@ -1918,65 +1962,98 @@
               }
             }
 
-              async function loadNearExpiryWS() {
-                try {
-                  const q1 = query(collection(db, "WS_Batches"), where("status", "==", "Active"), orderBy("exp_date", "asc"), limit(12));
-                  const snap = await getDocs(q1);
-                  if (snap.empty) {
-                    $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry active working solutions</div>`;
-                    return;
-                  }
-                  let html = "", hasAny = false;
-                  snap.forEach(d => {
-                    const x = d.data();
-                    if (!x.exp_date) return;
-                    const left = humanDaysLeft(x.exp_date);
-                    if (left.days !== null && left.days <= 7) {
-                      hasAny = true;
-                      const cls = (left.days < 0) ? "bg-red-50 border-red-200 text-red-800" : (left.days <= 3 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-slate-50 border-slate-200 text-slate-700");
-                      html += `<div class="p-3 rounded-lg border ${cls}"><div class="flex justify-between items-start gap-3"><div><div class="mono font-bold text-teal-700">${safeText(x.label_id)}</div><div class="text-sm font-semibold">${safeText(x.master_name)} <span class="text-xs text-teal-600 font-bold">(${safeText(x.master_conc)})</span></div></div><div class="text-right text-xs font-bold">${left.text}</div></div></div>`;
-                    }
-                  });
-                  $("nearExpiryWS").innerHTML = hasAny ? html : `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry within 7 days</div>`;
-                } catch (err) { 
-                  console.error("loadNearExpiryWS Error:", err); 
-                  $("nearExpiryWS").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium text-[11px] break-words"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error: ${err.message}</div>`;
+            async function loadNearExpiryWS() {
+              try {
+                const q1 = query(collection(db, "WS_Batches"), where("status", "==", "Active"), orderBy("exp_date", "asc"), limit(30));
+                const snap = await getDocs(q1);
+                if (snap.empty) {
+                  $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry active working solutions</div>`;
+                  return;
                 }
-              }
 
-              async function loadStoreAlerts() {
-                try {
-                  const q1 = query(collection(db, "Store_Chemicals"), orderBy("exp_date", "asc"), limit(25));
-                  const snap = await getDocs(q1);
-                  if (snap.empty) { $("storeAlerts").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No store items</div>`; return; }
-                  const now = new Date(); let nearExp = [], lowStock = [];
-                  snap.forEach(d => {
-                    const x = d.data(), remaining = Math.max(0, Number(x.total_bottles || 0) - Number(x.opened_bottles || 0));
-                    const displayLot = safeText(x.manufacturer_lot) || d.id;
-                    if (remaining <= 1) lowStock.push({ lot: displayLot, name: x.chemical_name, remaining, exp: x.exp_date });
-                    if (x.exp_date) {
-                      const days = Math.ceil((new Date(x.exp_date) - now) / (1000*60*60*24));
-                      if (days <= 30) nearExp.push({ lot: displayLot, name: x.chemical_name, remaining, exp: x.exp_date, days });
-                    }
-                  });
-                  let html = "";
-                  if (nearExp.length === 0 && lowStock.length === 0) html = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No alerts</div>`;
-                  else {
-                    if (nearExp.length > 0) {
-                      html += `<div class="p-3 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 font-medium"><i class="fa-solid fa-hourglass-half mr-2"></i>Near Expiry (≤30 days): ${nearExp.length} lot(s)</div>`;
-                      nearExp.slice(0,6).forEach(x => { html += `<div class="p-3 bg-white rounded-lg border border-slate-200"><div class="flex justify-between gap-3"><div><div class="font-bold text-slate-800">${safeText(x.name)}</div><div class="text-xs text-slate-500">Lot: <span class="mono font-bold text-blue-700">${safeText(x.lot)}</span></div></div><div class="text-right text-xs font-bold ${(x.days < 0) ? "text-red-700" : "text-amber-700"}">${safeText(x.exp)} (${x.days} days)</div></div></div>`; });
-                    }
-                    if (lowStock.length > 0) {
-                      html += `<div class="p-3 bg-red-50 text-red-800 rounded-lg border border-red-200 font-medium mt-3"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Low Stock (≤1 bottle): ${lowStock.length} lot(s)</div>`;
-                      lowStock.slice(0,6).forEach(x => { html += `<div class="p-3 bg-white rounded-lg border border-slate-200"><div class="flex justify-between gap-3"><div><div class="font-bold text-slate-800">${safeText(x.name)}</div><div class="text-xs text-slate-500">Lot: <span class="mono font-bold text-blue-700">${safeText(x.lot)}</span></div></div><div class="text-right text-xs font-bold text-red-700">Remaining: ${x.remaining}</div></div></div>`; });
-                    }
+                let html = "", hasAny = false;
+                snap.forEach(d => {
+                  const x = d.data();
+                  if (!x.exp_date) return;
+                  const left = humanDaysLeft(x.exp_date);
+                  if (left.days !== null && left.days <= 7) {
+                    hasAny = true;
+                    const cls = (left.days < 0) ? "bg-red-50 border-red-200 text-red-800" : (left.days <= 3 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-slate-50 border-slate-200 text-slate-700");
+                    html += `<div class="p-3 rounded-lg border ${cls}"><div class="flex justify-between items-center gap-2"><div><div class="mono font-bold text-teal-700 text-xs">${safeText(x.label_id)}</div><div class="text-sm font-semibold truncate max-w-[200px]" title="${safeText(x.master_name)}">${safeText(x.master_name)}</div></div><div class="text-right text-xs font-bold leading-tight">${left.text.replace(' (', '<br><span class="text-[10px] font-normal">(')}</span></div></div></div>`;
                   }
-                  $("storeAlerts").innerHTML = html;
-                } catch (err) { 
-                  console.error("loadStoreAlerts Error:", err); 
-                  $("storeAlerts").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium text-[11px] break-words"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error: ${err.message}</div>`;
-                }
+                });
+
+                // ใส่ Scrollbar ให้ WS ด้วยเช่นกัน
+                $("nearExpiryWS").innerHTML = hasAny ? `<div class="max-h-80 overflow-y-auto pr-2 space-y-2 custom-scrollbar">${html}</div>` : `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry within 7 days</div>`;
+              } catch (err) { 
+                $("nearExpiryWS").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-xs"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error: ${err.message}</div>`;
               }
+            }
+
+            async function loadStoreAlerts() {
+              try {
+                const q1 = query(collection(db, "Store_Chemicals"), orderBy("exp_date", "asc"), limit(100)); 
+                const snap = await getDocs(q1);
+                if (snap.empty) { $("storeAlerts").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No store items</div>`; return; }
+
+                const now = new Date(); 
+                let nearExp = [], lowStock = [];
+
+                snap.forEach(d => {
+                  const x = d.data();
+                  const total = Number(x.total_bottles || 0);
+                  const opened = Number(x.opened_bottles || 0);
+                  const capacity = Number(x.capacity_per_bottle || 0);
+                  const remainingAmt = Number(x.current_opened_remaining || 0);
+                  const displayLot = safeText(x.manufacturer_lot) || d.id;
+
+                  // จำนวนขวดที่ยังไม่ได้เปิด
+                  const unopened = total - opened;
+
+                  // LOGIC ใหม่: เตือน Low Stock เมื่อ "เหลือขวดสุดท้ายในคลัง (ไม่มีขวดใหม่ให้เบิก) และ สารในขวดนั้นเหลือน้อยกว่า 50%"
+                  if (unopened <= 0 && remainingAmt < (capacity * 0.5)) { 
+                    lowStock.push({ 
+                      lot: displayLot, 
+                      name: x.chemical_name, 
+                      remaining: remainingAmt, 
+                      capacity: capacity,
+                      unit: x.unit 
+                    }); 
+                  }
+
+                  // LOGIC วันหมดอายุ (คงเดิม)
+                  if (x.exp_date) {
+                    const days = Math.ceil((new Date(x.exp_date) - now) / (1000*60*60*24));
+                    if (days <= 30) nearExp.push({ lot: displayLot, name: x.chemical_name, exp: x.exp_date, days });
+                  }
+                });
+
+                let html = "";
+                if (nearExp.length === 0 && lowStock.length === 0) {
+                  html = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No alerts (สต็อกและอายุปลอดภัย)</div>`;
+                } else {
+                  html += `<div class="max-h-80 overflow-y-auto pr-2 space-y-3 custom-scrollbar">`;
+
+                  if (nearExp.length > 0) {
+                    html += `<div class="sticky top-0 bg-white pb-1"><div class="p-2 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 text-xs font-bold"><i class="fa-solid fa-hourglass-half mr-2"></i>Near Expiry (≤30 days): ${nearExp.length} รายการ</div></div>`;
+                    nearExp.forEach(x => { 
+                      html += `<div class="p-3 bg-slate-50 hover:bg-white rounded-lg border border-slate-200 transition-colors"><div class="flex justify-between items-center gap-2"><div><div class="font-bold text-slate-800 text-sm truncate max-w-[200px]" title="${safeText(x.name)}">${safeText(x.name)}</div><div class="text-[10px] text-slate-500">Lot: <span class="mono text-blue-700">${safeText(x.lot)}</span></div></div><div class="text-right text-xs font-bold ${(x.days < 0) ? "text-red-600" : "text-amber-600"}">${safeText(x.exp)}<br><span class="text-[10px] font-normal">(${x.days} days)</span></div></div></div>`; 
+                    });
+                  }
+
+                  if (lowStock.length > 0) {
+                    html += `<div class="sticky top-0 bg-white pb-1 mt-2"><div class="p-2 bg-red-50 text-red-800 rounded-lg border border-red-200 text-xs font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Low Stock (ขวดสุดท้าย < 50%): ${lowStock.length} รายการ</div></div>`;
+                    lowStock.forEach(x => { 
+                      html += `<div class="p-3 bg-slate-50 hover:bg-white rounded-lg border border-slate-200 transition-colors"><div class="flex justify-between items-center gap-2"><div><div class="font-bold text-slate-800 text-sm truncate max-w-[200px]">${safeText(x.name)}</div><div class="text-[10px] text-slate-500">Lot: <span class="mono text-blue-700">${safeText(x.lot)}</span></div></div><div class="text-right text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100">เหลือ ${x.remaining} / ${x.capacity} ${x.unit}</div></div></div>`; 
+                    });
+                  }
+                  html += `</div>`;
+                }
+                $("storeAlerts").innerHTML = html;
+              } catch (err) { 
+                $("storeAlerts").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-xs"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error: ${err.message}</div>`;
+              }
+            }
 
               async function loadAlertBoxSummary() {
                 const pending = Number($("statPending").innerText || 0), expired = Number($("statExpired").innerText || 0);
@@ -2589,6 +2666,122 @@
                 await loadMasterDataUI();
               } catch(err) { alert(err.message); }
             };
+            // =========================================================
+            // SEARCH & FEFO LOGIC (ค้นหาสารเคมีหน้า Quick Actions)
+            // =========================================================
+            $("searchChemInput").addEventListener("input", (e) => {
+               const val = e.target.value.toLowerCase();
+               const list = $("searchChemAutocomplete"); 
+               list.innerHTML = "";
+               if (!val) { hide("searchChemAutocomplete"); return; }
+
+               let matches = 0;
+               chemCacheMap.forEach((data, name) => {
+                  if (name.toLowerCase().includes(val)) {
+                     matches++;
+                     const div = document.createElement("div");
+                     div.className = "p-3 hover:bg-teal-50 cursor-pointer border-b text-sm font-semibold text-slate-700 flex justify-between items-center";
+
+                     // คำนวณหา Lot ที่ยังไม่หมดเพื่อโชว์สรุป
+                     const availableLots = storeChemicalsCache.filter(x => x.chemical_name === name && (x.total_bottles > x.opened_bottles || x.current_opened_remaining > 0)).length;
+
+                     div.innerHTML = `<span><i class="fa-solid fa-flask mr-2 text-teal-500"></i>${name}</span> <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">${availableLots} Active Lots</span>`;
+
+                     div.onclick = () => {
+                        $("searchChemInput").value = name;
+                        hide("searchChemAutocomplete");
+                        showSearchResult(name); // สั่งแสดงผล
+                     };
+                     list.appendChild(div);
+                  }
+               });
+               if(matches > 0) show("searchChemAutocomplete"); else hide("searchChemAutocomplete");
+            });
+
+            // ซ่อน Autocomplete เมื่อคลิกที่อื่น
+            document.addEventListener("click", (e) => { if(e.target.id !== "searchChemInput") hide("searchChemAutocomplete"); });
+
+            // ฟังก์ชันวาดผลลัพธ์หลังเลือกชื่อสารเคมี (เรียง FEFO)
+            async function showSearchResult(chemName) {
+              $("scanWaitingCard").classList.add("hidden-module"); 
+              $("scanResultCard").classList.remove("hidden-module");
+              if($("wsSpecificDetails")) $("wsSpecificDetails").classList.add("hidden-module");
+
+              $("resScanId").innerText = chemName; 
+              $("resTitle").innerText = "FEFO Recommendation (ที่เก็บสารแนะนำ)"; 
+              $("resTypeBadge").className = "badge badge-amber"; 
+              $("resTypeBadge").innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>SEARCH';
+
+              // ดึงเฉพาะ Lot ที่ยังมีสารเหลือ
+              let lots = storeChemicalsCache.filter(x => x.chemical_name === chemName && (x.total_bottles - x.opened_bottles > 0 || x.current_opened_remaining > 0));
+
+              if(lots.length === 0) {
+                 $("resSubtitle").innerHTML = `<div class="p-8 text-center text-red-400 bg-red-50 rounded-xl"><i class="fa-solid fa-box-open text-3xl mb-2 block"></i>ไม่พบสต็อกของ ${chemName} ในคลังหลัก</div>`;
+                 return;
+              }
+
+              // 🧠 หัวใจสำคัญ: SORT ด้วย FEFO
+              // 1. ขวดเปิดแล้วต้องมาก่อน
+              // 2. ถ้าสถานะขวดเหมือนกัน ให้เรียงวันหมดอายุใกล้สุดขึ้นก่อน
+              lots.sort((a, b) => {
+                 const aOpened = a.opened_bottles > 0;
+                 const bOpened = b.opened_bottles > 0;
+
+                 if (aOpened && !bOpened) return -1;
+                 if (!aOpened && bOpened) return 1;
+
+                 let da = a.exp_date ? new Date(a.exp_date).getTime() : Infinity;
+                 let db = b.exp_date ? new Date(b.exp_date).getTime() : Infinity;
+                 return da - db;
+              });
+
+              let html = `<div class="mt-4 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar shadow-inner">`;
+
+              lots.forEach((x, index) => {
+                 const isOpened = x.opened_bottles > 0;
+                 // ป้ายสถานะขวด
+                 const badge = isOpened 
+                    ? `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200 inline-block mt-1">ขวดเปิดใช้งานแล้ว (เหลือ ${x.current_opened_remaining} ${x.unit})</span>` 
+                    : `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold border border-green-200 inline-block mt-1">ขวดใหม่ (ยังไม่เปิดซีล)</span>`;
+
+                 // คำนวณวันหมดอายุ
+                 let expText = safeText(x.exp_date) || "No Expiry";
+                 let expCls = "text-slate-500 font-bold";
+                 if (x.exp_date) {
+                    const days = Math.ceil((new Date(x.exp_date) - new Date()) / (1000*60*60*24));
+                    if (days < 0) expCls = "text-red-600 font-bold";
+                    else if (days <= 30) expCls = "text-amber-600 font-bold";
+                 }
+
+                 // แรเงารายการแรก (Recommend!)
+                 const highlight = index === 0 ? "border-l-4 border-l-teal-500 bg-teal-50/50" : "bg-white border-l-4 border-l-transparent";
+
+                 // 🔥 แก้ไขป้าย Recommend ไม่ให้ตกขอบ โดยเปลี่ยนจาก absolute เป็น inline-block ใส่ไว้เหนือ Location
+                 const recommendTag = index === 0 
+                    ? `<div class="inline-block bg-teal-500 text-white px-2 py-1 rounded shadow-sm text-[10px] font-bold mb-2"><i class="fa-solid fa-star mr-1"></i>RECOMMEND (ควรใช้ขวดนี้)</div><br>` 
+                    : "";
+
+                 html += `
+                 <div class="p-5 border-b border-slate-200 hover:bg-slate-50 transition-colors grid grid-cols-1 md:grid-cols-3 gap-4 items-start md:items-center ${highlight}">
+                    <div>
+                       ${recommendTag}
+                       <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">พิกัดชั้นวาง (Location)</div>
+                       <div class="font-bold text-slate-800 text-lg mono"><i class="fa-solid fa-location-dot text-red-500 mr-2"></i>${safeText(x.shelf_id)}</div>
+                    </div>
+                    <div>
+                       <div class="text-sm font-bold text-slate-700 mb-1">Lot: <span class="mono text-blue-600">${safeText(x.manufacturer_lot)}</span></div>
+                       ${badge}
+                    </div>
+                    <div class="text-left md:text-right">
+                       <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">วันหมดอายุ</div>
+                       <div class="${expCls}">${expText}</div>
+                    </div>
+                 </div>
+                 `;
+              });
+              html += `</div>`;
+              $("resSubtitle").innerHTML = html;
+            }
           </script>
 </body>
 </html>
