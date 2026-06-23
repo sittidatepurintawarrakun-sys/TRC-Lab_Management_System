@@ -484,10 +484,17 @@
                 <p class="text-sm text-slate-500">ข้อมูลบนหน้าเว็บแสดงย้อนหลัง 1 เดือน </p>
               </div>
 
-              <div class="flex flex-wrap items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-                <span class="text-xs font-bold text-slate-500 uppercase ml-2">Export:</span>
-                <input type="date" id="exportDiStart" class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
-                <span class="text-slate-400">-</span>
+                <div class="flex flex-wrap items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                  <span class="text-xs font-bold text-slate-500 uppercase ml-2"><i class="fa-solid fa-filter mr-1"></i>Filter:</span>
+                  <select id="diFilterInstrument" class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-slate-600">
+                    <option value="ALL">ดูทุกเครื่อง</option>
+                    <option value="LE 30/1">เฉพาะ LE 30/1 </option>
+                    <option value="LE 30/2">เฉพาะ LE 30/2 </option>
+                  </select>
+                  <span class="border-l border-slate-300 h-6 mx-1"></span>
+                  <span class="text-xs font-bold text-slate-500 uppercase">Export:</span>
+                  <input type="date" id="exportDiStart" class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                  <span class="text-slate-400">-</span>
                 <input type="date" id="exportDiEnd" class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
                 <button id="btnExportDIWater" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors flex items-center">
                   <i class="fa-solid fa-file-csv mr-2"></i>Export CSV
@@ -518,7 +525,7 @@
                     <tr>
                       <th class="p-4 font-medium">Date / Time</th>
                       <th class="p-4 font-medium">Lot ID & Instrument</th>
-                      <th class="p-4 font-medium text-center">Cond. (< 0.5)</th>
+                      <th id="diTableCondHeader" class="p-4 font-medium text-center">Cond. Limit</th>
                       <th class="p-4 font-medium text-center">pH (5.0-7.5)</th>
                       <th class="p-4 font-medium text-center">Status</th>
                       <th class="p-4 font-medium">Inspector & Remark</th>
@@ -851,7 +858,11 @@
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Instrument ID (รหัสเครื่องวัด) *</label>
-                  <input type="text" id="diInstrument" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 uppercase" placeholder="เช่น COND-01" />
+                  <select id="diInstrument" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-slate-700">
+                    <option value="">-- เลือกเครื่องวัด --</option>
+                    <option value="LE 30/1">LE 30/1 </option>
+                    <option value="LE 30/2">LE 30/2 </option>
+                  </select>
                 </div>
               </div>
 
@@ -860,7 +871,7 @@
                   <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Conductivity (TIS 1287-2538)<span class="text-red-500">*</span></label>
                     <input type="number" step="0.01" id="diCond" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-lg" placeholder="0.00" />
-                    <p class="text-[10px] font-semibold text-slate-500 mt-1">Limit: &lt; 0.5 µS/cm</p>
+                    <p id="diCondLimitLabel" class="text-[10px] font-bold text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded inline-block">เลือกรหัสเครื่องวัดก่อน</p>
                   </div>
                   <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">pH (TIS 1287-2538) <span class="text-red-500">*</span></label>
@@ -1209,8 +1220,21 @@
             function evaluateDIQuality() {
               const condVal = $("diCond").value;
               const phVal = $("diPh").value;
-              const instVal = $("diInstrument").value.trim();
+              const instVal = $("diInstrument").value;
               const btn = $("btnSaveDIWater");
+              const limitLabel = $("diCondLimitLabel");
+
+              // เปลี่ยนข้อความ Limit ตามเครื่องที่เลือก
+              let condLimitValue = 0.5; // ค่า Default
+              if(instVal === "LE 30/1") {
+                limitLabel.innerHTML = 'Limit: &lt; 0.5 µS/cm';
+                condLimitValue = 0.5;
+              } else if(instVal === "LE 30/2") {
+                limitLabel.innerHTML = 'Limit: &lt; 10 µS/cm';
+                condLimitValue = 10;
+              } else {
+                limitLabel.innerHTML = 'เลือกรหัสเครื่องวัดก่อน';
+              }
 
               if (!condVal || !phVal || !instVal) {
                 btn.disabled = true;
@@ -1225,8 +1249,8 @@
               const cond = parseFloat(condVal);
               const ph = parseFloat(phVal);
 
-              // เช็คเกณฑ์ (Cond < 0.5, pH = 5.0 - 7.5)
-              const isCondPass = cond < 0.5;
+              // เช็คเกณฑ์ (Cond < 0.5 หรือ 10, pH = 5.0 - 7.5)
+              const isCondPass = cond < condLimitValue;
               const isPhPass = ph >= 5.0 && ph <= 7.5;
               const isPass = isCondPass && isPhPass;
 
@@ -1234,36 +1258,35 @@
                 $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-green-50 border-green-200";
                 $("diEvalResult").innerHTML = '<span class="text-green-700"><i class="fa-solid fa-circle-check mr-2"></i>PASS (ผ่านเกณฑ์)</span>';
                 hide("diActionBox");
-
                 btn.disabled = false;
                 btn.className = "w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors active:scale-95";
                 btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>บันทึกคุณภาพน้ำ (ใช้งานได้)';
               } else {
                 $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-red-50 border-red-200";
                 $("diEvalResult").innerHTML = '<span class="text-red-700"><i class="fa-solid fa-triangle-exclamation mr-2"></i>FAIL (ตกเกณฑ์)</span>';
-                show("diActionBox"); // โชว์กล่องให้กรอกสาเหตุ
-
+                show("diActionBox"); 
                 btn.disabled = false;
                 btn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors active:scale-95";
                 btn.innerHTML = '<i class="fa-solid fa-shield-halved mr-2"></i>บันทึก OOS Log (ห้ามใช้งาน)';
               }
             }
 
-            // ผูก Event ให้คำนวณแบบ Real-time ทุกครั้งที่พิมพ์
             $("diCond").addEventListener("input", evaluateDIQuality);
             $("diPh").addEventListener("input", evaluateDIQuality);
-            $("diInstrument").addEventListener("input", evaluateDIQuality);
-
+            $("diInstrument").addEventListener("change", evaluateDIQuality);
 
             // 💾 ฟังก์ชันบันทึกลง Firestore
-            $("btnSaveDIWater").onclick = async () => {
+              $("btnSaveDIWater").onclick = async () => {
               const lotId = $("diWaterLot").value;
               const cond = parseFloat($("diCond").value);
               const ph = parseFloat($("diPh").value);
-              const inst = $("diInstrument").value.trim().toUpperCase();
+              const inst = $("diInstrument").value; // ไม่ต้อง toUpperCase() เพราะมาจาก Dropdown
               const remark = $("diRemark").value.trim();
 
-              const isPass = (cond < 0.5) && (ph >= 5.0 && ph <= 7.5);
+              const condLimitValue = (inst === "LE 30/2") ? 10 : 0.5;
+              const condLimitString = (inst === "LE 30/2") ? "< 10" : "< 0.5";
+
+              const isPass = (cond < condLimitValue) && (ph >= 5.0 && ph <= 7.5);
               const finalStatus = isPass ? "Pass" : "Fail";
 
               // Validate รอบสุดท้าย
@@ -1282,7 +1305,7 @@
                   lot_id: lotId,
                   instrument_id: inst,
                   conductivity: cond,
-                  cond_limit: "< 0.5",
+                  cond_limit: condLimitString,
                   ph: ph,
                   ph_limit: "5.0 - 7.5",
                   status: finalStatus,
@@ -1314,7 +1337,7 @@
             async function loadDIWaterLogUI() {
               const tbody = $("diLogTableBody");
               tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูล...</td></tr>`;
-
+             
               // คำนวณวันที่ย้อนหลัง 1 เดือน (Default สำหรับโชว์บนเว็บ)
               const oneMonthAgo = new Date();
               oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
@@ -1323,76 +1346,108 @@
               if(!$("exportDiStart").value) $("exportDiStart").value = ymd(oneMonthAgo);
               if(!$("exportDiEnd").value) $("exportDiEnd").value = ymd(new Date());
 
-              try {
-                // ดึงเฉพาะข้อมูลย้อนหลัง 1 เดือน และเรียงลำดับเวลา
-                const q = query(collection(db, "DI_Water_Logs"), 
-                                where("inspected_at", ">=", oneMonthAgo), 
-                                orderBy("inspected_at", "desc"));
-                const snap = await getDocs(q);
+                try {
+                  const selectedFilter = $("diFilterInstrument").value;
 
-                let currentDiLogs = [];
-                let html = "";
+                  // ดึงเฉพาะข้อมูลย้อนหลัง 1 เดือน 
+                  let q;
+                  if(selectedFilter === "ALL") {
+                    q = query(collection(db, "DI_Water_Logs"), where("inspected_at", ">=", oneMonthAgo), orderBy("inspected_at", "desc"));
+                    $("diTableCondHeader").innerText = "Cond. Limit (Mixed)";
+                  } else {
+                    q = query(collection(db, "DI_Water_Logs"), where("instrument_id", "==", selectedFilter), where("inspected_at", ">=", oneMonthAgo), orderBy("inspected_at", "desc"));
+                    $("diTableCondHeader").innerText = `Cond. Limit (${selectedFilter === 'LE 30/2' ? '< 10' : '< 0.5'})`;
+                  }
 
-                if (snap.empty) {
-                  tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ไม่มีข้อมูลในช่วง 1 เดือนที่ผ่านมา</td></tr>`;
-                  if(diChartInstance) diChartInstance.destroy();
-                  if(phChartInstance) phChartInstance.destroy();
-                  return;
-                }
+                  const snap = await getDocs(q);
 
-                snap.forEach(docSnap => {
-                  const d = docSnap.data();
-                  currentDiLogs.push(d); 
+                  let currentDiLogs = [];
+                  let html = "";
 
-                  const dateObj = d.inspected_at ? d.inspected_at.toDate() : new Date();
-                  const dateStr = dateObj.toLocaleDateString("th-TH", { year: '2-digit', month: 'short', day: 'numeric' });
-                  const timeStr = dateObj.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' });
+                  if (snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ไม่มีข้อมูลในช่วง 1 เดือนที่ผ่านมา</td></tr>`;
+                    if(diChartInstance) diChartInstance.destroy();
+                    if(phChartInstance) phChartInstance.destroy();
+                    return;
+                  }
 
-                  const statusBadge = d.status === "Pass" 
-                    ? `<span class="badge badge-green"><i class="fa-solid fa-check"></i>Pass</span>`
-                    : `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>Fail</span>`;
+                  snap.forEach(docSnap => {
+                    const d = docSnap.data();
+                    currentDiLogs.push(d); 
 
-                  html += `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100">
-                      <td class="p-4"><div class="font-bold text-slate-700">${dateStr}</div><div class="text-xs text-slate-400">${timeStr}</div></td>
-                      <td class="p-4"><div class="mono font-bold text-cyan-700">${d.lot_id}</div><div class="text-xs text-slate-500">Inst: ${safeText(d.instrument_id)}</div></td>
-                      <td class="p-4 text-center"><span class="font-bold ${d.conductivity >= 0.5 ? 'text-red-600' : 'text-slate-700'}">${d.conductivity}</span></td>
-                      <td class="p-4 text-center"><span class="font-bold ${(d.ph < 5.0 || d.ph > 7.5) && d.ph !== null ? 'text-red-600' : 'text-slate-700'}">${d.ph !== null ? d.ph : "-"}</span></td>
-                      <td class="p-4 text-center">${statusBadge}</td>
-                      <td class="p-4">
-                        <div class="text-xs font-semibold text-slate-700">${safeText(d.inspected_by).split('@')[0]}</div>
-                        <div class="text-[10px] text-slate-500 truncate max-w-[200px]" title="${safeText(d.remark)}">${safeText(d.remark)}</div>
-                      </td>
-                    </tr>`;
-                });
+                    const dateObj = d.inspected_at ? d.inspected_at.toDate() : new Date();
+                    const dateStr = dateObj.toLocaleDateString("th-TH", { year: '2-digit', month: 'short', day: 'numeric' });
+                    const timeStr = dateObj.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' });
 
-                tbody.innerHTML = html;
+                    const statusBadge = d.status === "Pass" 
+                      ? `<span class="badge badge-green"><i class="fa-solid fa-check"></i>Pass</span>`
+                      : `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>Fail</span>`;
 
-                // --- สร้างกราฟ Trend (ย้อนเวลาให้เก่าอยู่ซ้าย ใหม่อยู่ขวา) ---
-                const reversedLogs = [...currentDiLogs].reverse();
-                const chartLabels = reversedLogs.map(d => {
-                   const dt = d.inspected_at ? d.inspected_at.toDate() : new Date();
-                   return dt.toLocaleDateString("en-GB", { day: '2-digit', month: 'short' });
-                });
+                    // ประเมินผล Cond ตามแต่ละเครื่อง
+                    const localLimitVal = d.instrument_id === "LE 30/2" ? 10 : 0.5;
+                    const isCondFail = d.conductivity >= localLimitVal;
 
-                const dataCond = reversedLogs.map(d => d.conductivity);
-                const dataPh = reversedLogs.map(d => d.ph); // อาจมี null ถ้าไม่ได้กรอก
+                    html += `
+                      <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="p-4"><div class="font-bold text-slate-700">${dateStr}</div><div class="text-xs text-slate-400">${timeStr}</div></td>
+                        <td class="p-4"><div class="mono font-bold text-cyan-700">${d.lot_id}</div><div class="text-xs text-slate-500">Inst: ${safeText(d.instrument_id)}</div></td>
+                        <td class="p-4 text-center"><span class="font-bold ${isCondFail ? 'text-red-600' : 'text-slate-700'}">${d.conductivity}</span></td>
+                        <td class="p-4 text-center"><span class="font-bold ${(d.ph < 5.0 || d.ph > 7.5) && d.ph !== null ? 'text-red-600' : 'text-slate-700'}">${d.ph !== null ? d.ph : "-"}</span></td>
+                        <td class="p-4 text-center">${statusBadge}</td>
+                        <td class="p-4">
+                          <div class="text-xs font-semibold text-slate-700">${safeText(d.inspected_by).split('@')[0]}</div>
+                          <div class="text-[10px] text-slate-500 truncate max-w-[200px]" title="${safeText(d.remark)}">${safeText(d.remark)}</div>
+                        </td>
+                      </tr>`;
+                  });
 
-                drawDITrendChart(chartLabels, dataCond);
-                drawPhTrendChart(chartLabels, dataPh);
+                  tbody.innerHTML = html;
 
-              } catch (err) {
+                  // --- สร้างกราฟ Trend (ย้อนเวลาให้เก่าอยู่ซ้าย ใหม่อยู่ขวา) ---
+                  const reversedLogs = [...currentDiLogs].reverse();
+                  const chartLabels = reversedLogs.map(d => {
+                     const dt = d.inspected_at ? d.inspected_at.toDate() : new Date();
+                     return dt.toLocaleDateString("en-GB", { day: '2-digit', month: 'short' });
+                  });
+
+                  const dataCond = reversedLogs.map(d => d.conductivity);
+                  const dataPh = reversedLogs.map(d => d.ph); 
+
+                  drawDITrendChart(chartLabels, dataCond, reversedLogs, selectedFilter);
+                  drawPhTrendChart(chartLabels, dataPh);
+
+                } catch (err) {
                 console.error(err);
                 tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</td></tr>`;
               }
             }
+             $("diFilterInstrument").onchange = loadDIWaterLogUI;
 
-            function drawDITrendChart(labels, dataCond) {
+            function drawDITrendChart(labels, dataCond, logsObj, currentFilter) {
               const ctx = document.getElementById('diTrendChart').getContext('2d');
               if (diChartInstance) diChartInstance.destroy();
 
-              const pointColors = dataCond.map(val => val >= 0.5 ? '#ef4444' : '#0ea5e9');
-              const pointRadius = dataCond.map(val => val >= 0.5 ? 6 : 4);
+              // กำหนดสีจุดที่ตกเกณฑ์แบบแยกเครื่อง
+              const pointColors = logsObj.map(d => {
+                const limit = d.instrument_id === "LE 30/2" ? 10 : 0.5;
+                return d.conductivity >= limit ? '#ef4444' : '#0ea5e9';
+              });
+              const pointRadius = logsObj.map(d => {
+                const limit = d.instrument_id === "LE 30/2" ? 10 : 0.5;
+                return d.conductivity >= limit ? 6 : 4;
+              });
+
+              // ปรับเพดานกราฟตาม Filter ให้สวยงาม (ถ้า LE 30/2 กราฟต้องสูงเกิน 10)
+              const chartMaxY = currentFilter === "LE 30/2" ? 12 : (currentFilter === "LE 30/1" ? 0.6 : null);
+
+              // ตั้งค่าเส้น Limit Line บนกราฟ
+              let annotationObj = { annotations: {} };
+              if(currentFilter === "LE 30/1" || currentFilter === "ALL") {
+                annotationObj.annotations.line1 = { type: 'line', yMin: 0.5, yMax: 0.5, borderColor: 'rgb(239, 68, 68)', borderWidth: 2, borderDash: [5, 5], label: { content: 'Limit 0.5', enabled: true, position: 'end' } };
+              }
+              if(currentFilter === "LE 30/2" || currentFilter === "ALL") {
+                annotationObj.annotations.line2 = { type: 'line', yMin: 10, yMax: 10, borderColor: 'rgb(239, 68, 68)', borderWidth: 2, borderDash: [5, 5], label: { content: 'Limit 10', enabled: true, position: 'start' } };
+              }
 
               diChartInstance = new Chart(ctx, {
                 type: 'line',
@@ -1414,18 +1469,11 @@
                 options: {
                   responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                   scales: {
-                    y: { beginAtZero: true, suggestedMax: 0.6, grid: { color: '#f1f5f9' } },
+                    y: { beginAtZero: true, suggestedMax: chartMaxY, grid: { color: '#f1f5f9' } },
                     x: { grid: { display: false } }
                   },
                   plugins: {
-                    annotation: {
-                      annotations: {
-                        line1: {
-                          type: 'line', yMin: 0.5, yMax: 0.5, borderColor: 'rgb(239, 68, 68)',
-                          borderWidth: 2, borderDash: [5, 5], label: { content: 'Limit < 0.5', enabled: true, position: 'end' }
-                        }
-                      }
-                    }
+                    annotation: annotationObj
                   }
                 }
               });
