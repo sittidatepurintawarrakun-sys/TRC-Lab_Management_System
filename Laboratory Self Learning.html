@@ -270,11 +270,13 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[400px] lg:col-span-2 xl:col-span-1">
-                        <div class="bg-emerald-50 p-4 border-b border-emerald-100 flex justify-between items-center shrink-0">
-                            <h4 class="font-bold text-emerald-800"><i class="fa-solid fa-bolt text-emerald-500 mr-2"></i> Top 10 ผู้พิชิตความเร็ว</h4>
-                            <span class="text-[10px] bg-white px-2 py-1 rounded-full border border-emerald-200 text-emerald-600 shadow-sm truncate max-w-[100px]" id="lb-fastest-label">บทเรียนล่าสุด</span>
-                        </div>
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[400px] lg:col-span-2 xl:col-span-1">
+                            <div class="bg-emerald-50 p-4 border-b border-emerald-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
+                                <h4 class="font-bold text-emerald-800 shrink-0"><i class="fa-solid fa-bolt text-emerald-500 mr-2"></i> Top 10 ผู้พิชิตความเร็ว</h4>
+                                <select id="fastest-course-select" class="text-[11px] font-bold bg-white px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 shadow-sm outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-auto truncate cursor-pointer" onchange="changeFastestCourse()">
+                                    <option value="">กำลังโหลดบทเรียน...</option>
+                                </select>
+                            </div>
                         <div class="overflow-y-auto flex-1 p-2">
                             <table class="w-full text-sm text-left">
                                 <tbody id="lb-fastest-body" class="divide-y divide-slate-50">
@@ -318,8 +320,11 @@
                             <button onclick="exportTeamDataToCSV()" class="w-full md:w-auto text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 md:py-1.5 rounded-lg shadow-sm flex items-center justify-center gap-1 transition font-bold border border-slate-300">
                                 <i class="fa-solid fa-table"></i> สรุปคะแนน (Basic)
                             </button>
-                            <button onclick="exportISOMatrixCSV()" class="w-full md:w-auto text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 md:py-1.5 rounded-lg shadow-md flex items-center justify-center gap-1 transition font-bold">
+                        <button onclick="exportISOMatrixCSV()" class="w-full md:w-auto text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 md:py-1.5 rounded-lg shadow-md flex items-center justify-center gap-1 transition font-bold">
                                 <i class="fa-solid fa-file-excel"></i> Export ISO/GMP Matrix
+                            </button>
+                                                        <button onclick="openAuditViewerModal()" class="w-full md:w-auto text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 md:py-1.5 rounded-lg shadow-md flex items-center justify-center gap-1 transition font-bold">
+                                <i class="fa-solid fa-magnifying-glass"></i> ตรวจกระดาษคำตอบ (Audit)
                             </button>
                         </div>
                     </div>
@@ -508,7 +513,34 @@
             </div>
         </div>
     </div>
-
+    <div id="audit-viewer-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center z-[110] p-4">
+        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col transform transition-all relative max-h-[95vh]">
+            <div class="bg-slate-800 p-4 flex justify-between items-center text-white rounded-t-2xl shrink-0">
+                <h3 class="font-bold text-base md:text-lg"><i class="fa-solid fa-file-signature text-amber-400 mr-2"></i> Audit Exam Viewer</h3>
+                <button onclick="closeAuditViewerModal()" class="text-slate-400 hover:text-white w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-4 bg-slate-50 border-b border-slate-200 shrink-0 flex flex-col sm:flex-row gap-3 items-end">
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1">เลือกพนักงาน</label>
+                    <select id="audit-user-select" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white" onchange="loadAuditCourses()"></select>
+                </div>
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1">เลือกบทเรียนที่เคยสอบ</label>
+                    <select id="audit-course-select" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white">
+                        <option value="">-- กรุณาเลือกพนักงานก่อน --</option>
+                    </select>
+                </div>
+                <button onclick="fetchAuditPaper()" class="w-full sm:w-auto px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm shrink-0">
+                    ดึงข้อสอบ
+                </button>
+            </div>
+            <div id="audit-paper-container" class="p-4 md:p-6 overflow-y-auto flex-1 bg-white">
+                <div class="text-center text-slate-400 py-10">
+                    <i class="fa-solid fa-magnifying-glass text-4xl mb-3"></i><br>เลือกพนักงานและบทเรียน เพื่อดูกระดาษคำตอบ
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- เพิ่ม Toast Notification ตรงนี้ -->
     <div id="toast" class="fixed bottom-24 md:bottom-6 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
 
@@ -672,48 +704,100 @@
             document.body.removeChild(link);
         };
         // ==========================================
-        // 🌟 [EXPORT] ฟังก์ชัน Export ISO/GMP Training Matrix
+        // 🌟 [EXPORT] ฟังก์ชัน Export ISO/GMP Training Matrix + Summary Report
         // ==========================================
         window.exportISOMatrixCSV = async () => {
             const btn = document.querySelector('button[onclick="exportISOMatrixCSV()"]');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังประมวลผลข้อมูลทั้งหมด...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังดึงข้อมูล...';
             btn.disabled = true;
 
             try {
-                // 1. ดึงรายชื่อบทเรียนทั้งหมดในระบบ
+                // 1. อ่านค่าปี Financial Year (FY) ที่แอดมินเลือกอยู่
+                const selectedFY = parseInt(document.getElementById('slicer-fy').value) || getFY();
+
+                const getCourseFY = (monthStr) => {
+                    if (!monthStr) return 0;
+                    const parts = monthStr.split('-');
+                    const y = parseInt(parts[0]);
+                    const m = parseInt(parts[1]);
+                    return m >= 4 ? y + 1 : y;
+                };
+
+                // 2. ดึงเฉพาะ "บทเรียนที่อยู่ใน FY ที่เลือก"
                 const coursesSnap = await getDocs(query(collection(db, "Courses"), orderBy("createdAt", "desc")));
                 let courseList = [];
                 coursesSnap.forEach(c => {
-                    courseList.push({ id: c.id, title: c.data().title, month: c.data().monthStr, category: c.data().category });
+                    const data = c.data();
+                    if (getCourseFY(data.monthStr) === selectedFY) {
+                        courseList.push({ id: c.id, title: data.title, month: data.monthStr, category: data.category });
+                    }
                 });
 
-                // 2. ดึงรายชื่อพนักงานทั้งหมด และประวัติการสอบของแต่ละคน
-                const usersSnap = await getDocs(collection(db, "Users"));
-                let usersData = [];
+                if (courseList.length === 0) {
+                    showToast(`ยังไม่มีบทเรียนในปี FY${selectedFY.toString().slice(-2)}`, 'info');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return;
+                }
 
-                for (const u of usersSnap.docs) {
+                // 3. ดึงรายชื่อพนักงานและประวัติการสอบ (Parallel Fetching)
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังประมวลผลข้อมูล...';
+                const usersSnap = await getDocs(collection(db, "Users"));
+                const usersDataPromises = usersSnap.docs.map(async (u) => {
                     const uData = u.data();
-                    // วิ่งไปดึง Subcollection 'QuizHistory' ของพนักงานคนนี้
                     const historySnap = await getDocs(collection(db, `Users/${u.id}/QuizHistory`));
                     let history = {};
                     historySnap.forEach(h => { history[h.id] = h.data(); });
 
-                    usersData.push({
+                    return {
                         name: uData.displayName || uData.email.split('@')[0],
                         email: uData.email,
                         history: history
-                    });
-                }
+                    };
+                });
+                const usersData = await Promise.all(usersDataPromises);
 
-                // 3. ประกอบร่างไฟล์ CSV (Training Matrix)
-                let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM ป้องกันภาษาไทยเพี้ยน
+                // 4. สร้างโครงสร้างตาราง HTML สำหรับ Excel
+                let htmlTable = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        table { border-collapse: collapse; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; }
+                        th, td { border: 1px solid #94a3b8; padding: 8px; vertical-align: middle; }
+                        th { background-color: #1e293b; color: #ffffff; font-weight: bold; text-align: center; }
+                        .th-summary { background-color: #475569; }
+                        .th-title { font-size: 16px; background-color: #4f46e5; color: white; padding: 15px; }
+                        .status-pass { background-color: #dcfce7; color: #166534; text-align: center; }
+                        .status-fail { background-color: #fee2e2; color: #991b1b; text-align: center; }
+                        .status-pending { background-color: #fef08a; color: #854d0e; text-align: center; }
+                    </style>
+                </head>
+                <body>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th colspan="${6 + courseList.length}" class="th-title">ISO/GMP Training Matrix - FY${selectedFY.toString().slice(-2)}</th>
+                            </tr>
+                            <tr>
+                                <th rowspan="2">Employee Name</th>
+                                <th rowspan="2">Email</th>
+                                <th colspan="4" class="th-summary">FY${selectedFY.toString().slice(-2)} Summary</th>`;
 
-                // Header Row
-                csvContent += `"Employee Name","Email","Total Courses","Passed","Failed","Pending",`;
-                csvContent += courseList.map(c => `"(${c.category}) ${c.title} [${c.month}]"`).join(",") + "\n";
+                courseList.forEach(c => {
+                    htmlTable += `<th rowspan="2">(${c.category})<br/><b>${c.title}</b><br/>[${c.month}]</th>`;
+                });
 
-                // Data Rows
+                htmlTable += `</tr><tr>
+                                <th class="th-summary">Total</th>
+                                <th class="th-summary">Passed</th>
+                                <th class="th-summary">Failed</th>
+                                <th class="th-summary">Pending</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                // 5. วนลูปใส่ข้อมูลพนักงานลงตารางหลัก
                 usersData.forEach(user => {
                     let passed = 0, failed = 0, pending = 0;
                     let rowResult = [];
@@ -722,33 +806,90 @@
                         const record = user.history[course.id];
                         if (!record) {
                             pending++;
-                            rowResult.push(`"Pending (ยังไม่อบรม)"`);
+                            rowResult.push(`<td class="status-pending"><b>Pending</b><br/>(ยังไม่อบรม)</td>`);
                         } else {
                             const dateStr = record.lastAttemptAt ? record.lastAttemptAt.toDate().toLocaleDateString('en-GB') : "N/A";
                             if (record.isPassed) {
                                 passed++;
-                                rowResult.push(`"PASS (${record.highestScore} pts) - ${dateStr}"`);
+                                rowResult.push(`<td class="status-pass"><b>PASS</b><br/>(${record.highestScore} pts)<br/>${dateStr}</td>`);
                             } else {
                                 failed++;
-                                rowResult.push(`"FAIL (${record.highestScore} pts) - ${dateStr}"`);
+                                rowResult.push(`<td class="status-fail"><b>FAIL</b><br/>(${record.highestScore} pts)<br/>${dateStr}</td>`);
                             }
                         }
                     });
 
-                    csvContent += `"${user.name}","${user.email}","${courseList.length}","${passed}","${failed}","${pending}",`;
-                    csvContent += rowResult.join(",") + "\n";
+                    htmlTable += `<tr>
+                        <td><b>${user.name}</b></td>
+                        <td>${user.email}</td>
+                        <td style="text-align:center;"><b>${courseList.length}</b></td>
+                        <td style="text-align:center; color:#166534;"><b>${passed}</b></td>
+                        <td style="text-align:center; color:#991b1b;"><b>${failed}</b></td>
+                        <td style="text-align:center; color:#854d0e;"><b>${pending}</b></td>`;
+
+                    htmlTable += rowResult.join("") + `</tr>`;
                 });
 
-                // 4. สั่งดาวน์โหลด
-                const encodedUri = encodeURI(csvContent);
+                htmlTable += `</tbody></table>`; // ปิดตารางแรก
+
+                // ==========================================
+                // 🌟 6. สร้างตารางสรุปผลรายวิชา (Course Summary) ต่อไว้ด้านล่าง
+                // ==========================================
+                let summaryHtml = `
+                    <br><br>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th colspan="5" class="th-title" style="background-color: #0ea5e9;">Course Summary Report (สรุปผลรายวิชา)</th>
+                            </tr>
+                            <tr>
+                                <th class="th-summary">Course Name (ชื่อบทเรียน)</th>
+                                <th class="th-summary">Total Assigned (มอบหมายทั้งหมด)</th>
+                                <th class="th-summary">Passed (สอบผ่าน)</th>
+                                <th class="th-summary">Failed (สอบตก)</th>
+                                <th class="th-summary">Pending (ยังไม่อบรม)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // ประมวลผลและนับจำนวนพนักงานในแต่ละบทเรียน
+                courseList.forEach(course => {
+                    let cTotal = usersData.length;
+                    let cPassed = 0, cFailed = 0, cPending = 0;
+
+                    usersData.forEach(user => {
+                        const record = user.history[course.id];
+                        if (!record) cPending++;
+                        else if (record.isPassed) cPassed++;
+                        else cFailed++;
+                    });
+
+                    summaryHtml += `<tr>
+                        <td><b>(${course.category}) ${course.title} [${course.month}]</b></td>
+                        <td style="text-align:center;"><b>${cTotal}</b></td>
+                        <td class="status-pass"><b>${cPassed}</b></td>
+                        <td class="status-fail"><b>${cFailed}</b></td>
+                        <td class="status-pending"><b>${cPending}</b></td>
+                    </tr>`;
+                });
+
+                summaryHtml += `</tbody></table>`;
+
+                // 7. นำตารางสรุปไปต่อท้ายตารางหลัก แล้วปิดแท็ก HTML ให้สมบูรณ์
+                htmlTable += summaryHtml + `</body></html>`;
+
+                // 8. สั่งดาวน์โหลดไฟล์ .xls
+                const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", `ISO_Training_Matrix_${new Date().toISOString().split('T')[0]}.csv`);
+                link.href = url;
+                link.download = `ISO_Matrix_FY${selectedFY.toString().slice(-2)}_${new Date().toISOString().split('T')[0]}.xls`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
 
-                showToast("โหลด Training Matrix สำเร็จแล้ว!", 'success');
+                showToast("โหลด Training Matrix สรุปผลสำเร็จแล้ว!", 'success');
             } catch (error) {
                 console.error(error);
                 showToast("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message, 'error');
@@ -1022,12 +1163,11 @@
             } catch (error) { console.error("[Courses] Error:", error); }
         }
 
-        window.renderFastestBoard = (d, allUsers = []) => {
-            const b = document.getElementById('lb-fastest-body');
-            const label = document.getElementById('lb-fastest-label');
-            if(label) label.innerText = d.title || "ล่าสุด";
+                window.renderFastestBoard = (d, allUsers = []) => {
+                const b = document.getElementById('lb-fastest-body');
+                // ลบโค้ดจัดการ label เดิมออก เพราะเราเปลี่ยนไปใช้ Dropdown แล้ว
 
-            if(!d.fastestFinishers?.length) { 
+                if(!d.fastestFinishers?.length) { 
                 b.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-400 italic">ไม่มีข้อมูล</td></tr>'; 
                 return; 
             }
@@ -1283,12 +1423,14 @@
         });
 
         let activeQuestionIndex = 0, totalScore = 0, questionTimer = null, timeSpentOnCurrentQ = 0, totalTimeSpent = 0, correctAnswersCount = 0;
+        let currentUserAnswers = []; // 🌟 เพิ่มตัวแปรเก็บคำตอบ
 
         window.startQuiz = () => {
             document.getElementById('quiz-intro').classList.add('hidden');
             document.getElementById('quiz-active').classList.remove('hidden');
             document.getElementById('quiz-active').classList.add('flex');
             activeQuestionIndex = 0; totalScore = 0; totalTimeSpent = 0; correctAnswersCount = 0;
+            currentUserAnswers = []; // 🌟 ล้างคำตอบใหม่ทุกครั้งที่เริ่มสอบ
             renderQuestion();
         };
 
@@ -1319,9 +1461,10 @@
             startQuestionTimer();
         };
 
-        const handleAnswer = (selectedIndex, correctIndex) => {
-            clearInterval(questionTimer); totalTimeSpent += timeSpentOnCurrentQ;
-            if(selectedIndex === correctIndex) {
+                const handleAnswer = (selectedIndex, correctIndex) => {
+                clearInterval(questionTimer); totalTimeSpent += timeSpentOnCurrentQ;
+                currentUserAnswers.push(selectedIndex); // 🌟 แอบจดคำตอบที่พนักงานเลือกไว้
+                if(selectedIndex === correctIndex) {
                 correctAnswersCount++;
                 totalScore += 10 + (timeSpentOnCurrentQ <= 10 ? Math.floor((10 - timeSpentOnCurrentQ)/2) || 1 : 0);
             }
@@ -1459,7 +1602,8 @@
                         lastAttemptAt: serverTimestamp(),
                         isPassed: isPassedOverall,
                         engagementPoints: newEngagementPoints,
-                        rankBonus: accumulatedRankBonus 
+                        rankBonus: accumulatedRankBonus,
+                        lastAnswers: currentUserAnswers // 🌟 ส่งคำตอบเข้าไปอัปเดตด้วย (ไม่เปลือง Write เพิ่ม)
                     });
                     if(bonusMessage !== "") setTimeout(() => showToast(bonusMessage, 'success'), 1000);
 
@@ -1476,7 +1620,8 @@
                         lastAttemptAt: serverTimestamp(),
                         isPassed: isPassedCurrent,            
                         engagementPoints: 0,
-                        rankBonus: currentRankBonus 
+                        rankBonus: currentRankBonus,
+                        lastAnswers: currentUserAnswers
                     });
                 }
 
@@ -1746,32 +1891,55 @@
 
                 // 🌟 ค้นหา "Top 10 ผู้พิชิตความเร็ว" เฉพาะของเดือนที่เลือก
                 let targetYear = (parseInt(selectedMonth) >= 4) ? selectedFY - 1 : selectedFY;
-                let targetMonthStr = `${targetYear}-${selectedMonth.toString().padStart(2, '0')}`; // ทำให้อยู่ในฟอร์แมต YYYY-MM เช่น 2026-04
+                let targetMonthStr = `${targetYear}-${selectedMonth.toString().padStart(2, '0')}`; // ทำให้อยู่ในฟอร์แมต YYYY-MM
 
                 const qCourses = query(collection(db, "Courses"), orderBy("createdAt", "desc"));
                 const coursesSnap = await getDocs(qCourses);
-                let foundCourse = null;
+
+                // เก็บตัวแปรไว้ใช้ตอนเปลี่ยน Dropdown (ไม่ต้องคิวรี่ Database ซ้ำ)
+                window.currentDashboardCourses = [];
+                window.currentDashboardUsers = allUsers;
 
                 coursesSnap.forEach(docSnap => {
-                    if (foundCourse) return; // ถ้าเจอแล้วให้ข้ามไปเลย
                     const data = docSnap.data();
                     if (selectedMonth === 'all') {
-                        foundCourse = data; // ถ้าเลือก "ตลอดทั้งปี" ให้ดึงบทเรียนล่าสุดของปีมาโชว์
+                        window.currentDashboardCourses.push(data);
                     } else if (data.monthStr === targetMonthStr) {
-                        foundCourse = data; // ดึงบทเรียนล่าสุดของ "เดือนที่เลือก" มาโชว์
+                        window.currentDashboardCourses.push(data); // เก็บทุกเรื่องในเดือนนี้
                     }
                 });
 
-                // อัปเดตกระดานผู้พิชิตความเร็ว
-                if (foundCourse) {
-                    renderFastestBoard(foundCourse, allUsers); // 🌟 เพิ่ม , allUsers เข้าไป
+                const fastestSelect = document.getElementById('fastest-course-select');
+                fastestSelect.innerHTML = ''; // ล้างค่าเก่าเตรียมอัปเดต
+
+                if (window.currentDashboardCourses.length > 0) {
+                    // วนลูปสร้างตัวเลือกใน Dropdown
+                    window.currentDashboardCourses.forEach((c, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = idx; // เก็บ index ไว้อ้างอิง
+                        opt.innerText = c.title;
+                        fastestSelect.appendChild(opt);
+                    });
+
+                    // สั่งให้วาดกระดานของเรื่องแรกสุด (ล่าสุด) ทันทีที่โหลดเสร็จ
+                    renderFastestBoard(window.currentDashboardCourses[0], window.currentDashboardUsers);
+                    fastestSelect.disabled = false;
                 } else {
                     // ถ้าเดือนนั้นยังไม่มีบทเรียน
-                    renderFastestBoard({ 
-                        title: selectedMonth === 'all' ? "ยังไม่มีบทเรียน" : `ไม่มีบทเรียนในเดือน${monthNames[selectedMonth]}`, 
-                        fastestFinishers: [] 
-                    }, allUsers); // 🌟 เพิ่ม , allUsers เข้าไป
+                    fastestSelect.innerHTML = `<option value="">ไม่มีบทเรียนในเดือนที่เลือก</option>`;
+                    fastestSelect.disabled = true;
+                    renderFastestBoard({ fastestFinishers: [] }, window.currentDashboardUsers);
                 }
+
+                // 🌟 เพิ่มฟังก์ชันสำหรับสลับตารางตอนเปลี่ยน Dropdown ไว้ที่นี่
+                window.changeFastestCourse = () => {
+                    const select = document.getElementById('fastest-course-select');
+                    const selectedIdx = select.value;
+                    if (selectedIdx !== "" && window.currentDashboardCourses && window.currentDashboardUsers) {
+                        const courseData = window.currentDashboardCourses[selectedIdx];
+                        renderFastestBoard(courseData, window.currentDashboardUsers);
+                    }
+                };
 
                 // อัปเดต Team View (เฉพาะ Admin)
                 if (isAdmin) {
@@ -1838,6 +2006,133 @@
                 console.error("Error loading dashboard data:", error);
             }
         }
+        // ==========================================
+        // 🔍 [AUDITOR] ระบบดูกระดาษคำตอบรายบุคคล
+        // ==========================================
+        window.openAuditViewerModal = () => {
+            document.getElementById('audit-viewer-modal').classList.remove('hidden');
+            document.getElementById('audit-viewer-modal').classList.add('flex');
+
+            // ก็อปปี้ Dropdown พนักงานมาจากหน้า Dashboard มาใส่ให้ Auditor
+            const empSelect = document.getElementById('slicer-emp').cloneNode(true);
+            empSelect.id = 'audit-user-select';
+            empSelect.classList.remove('bg-amber-50', 'border-amber-200');
+            empSelect.querySelector('option[value="all"]')?.remove(); // ลบตัวเลือก "ทั้งหมด" ออก เพราะข้อสอบต้องดูทีละคน
+
+            document.getElementById('audit-user-select').replaceWith(empSelect);
+            document.getElementById('audit-user-select').addEventListener('change', loadAuditCourses);
+            document.getElementById('audit-paper-container').innerHTML = '<div class="text-center text-slate-400 py-10"><i class="fa-solid fa-magnifying-glass text-4xl mb-3"></i><br>เลือกพนักงานและบทเรียน เพื่อดูกระดาษคำตอบ</div>';
+
+            loadAuditCourses(); // โหลดวิชาของคนแรกทันที
+        };
+
+        window.closeAuditViewerModal = () => {
+            document.getElementById('audit-viewer-modal').classList.remove('flex');
+            document.getElementById('audit-viewer-modal').classList.add('hidden');
+        };
+
+        window.loadAuditCourses = async () => {
+            const userId = document.getElementById('audit-user-select').value;
+            const courseSelect = document.getElementById('audit-course-select');
+            if(!userId) return;
+
+            courseSelect.innerHTML = '<option value="">กำลังโหลดประวัติ...</option>';
+            try {
+                // ดึงประวัติการสอบแค่คนเดียว เบาเครื่องสุดๆ
+                const historySnap = await getDocs(collection(db, `Users/${userId}/QuizHistory`));
+                let html = '';
+                historySnap.forEach(doc => {
+                    const data = doc.data();
+                    html += `<option value="${doc.id}">${data.courseTitle} (คะแนน: ${data.highestScore})</option>`;
+                });
+
+                courseSelect.innerHTML = html || '<option value="">พนักงานคนนี้ยังไม่เคยสอบ</option>';
+            } catch (error) {
+                courseSelect.innerHTML = '<option value="">โหลดล้มเหลว</option>';
+            }
+        };
+
+        window.fetchAuditPaper = async () => {
+            const userId = document.getElementById('audit-user-select').value;
+            const courseId = document.getElementById('audit-course-select').value;
+            const container = document.getElementById('audit-paper-container');
+
+            if(!userId || !courseId) return showToast("กรุณาเลือกข้อมูลให้ครบ", "error");
+
+            container.innerHTML = '<div class="text-center text-indigo-500 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><br>กำลังดึงชุดข้อสอบและกระดาษคำตอบ...</div>';
+
+            try {
+                // ทำการอ่านแค่ 2 ก้อนจบ (ประหยัด Read มาก!)
+                const [courseSnap, historySnap] = await Promise.all([
+                    getDoc(doc(db, "Courses", courseId)),
+                    getDoc(doc(db, `Users/${userId}/QuizHistory`, courseId))
+                ]);
+
+                if (!courseSnap.exists() || !historySnap.exists()) {
+                    container.innerHTML = '<div class="text-center text-red-400 py-10">ไม่พบข้อมูลข้อสอบ กรุณาลองใหม่</div>'; return;
+                }
+
+                const courseData = courseSnap.data();
+                const historyData = historySnap.data();
+                const questions = courseData.quiz || [];
+                const userAnswers = historyData.lastAnswers || []; // ดึงคำตอบที่แอบจดไว้มาโชว์
+
+                if (userAnswers.length === 0) {
+                    container.innerHTML = '<div class="text-center text-amber-500 py-10"><i class="fa-solid fa-triangle-exclamation text-4xl mb-3"></i><br>พบประวัติการสอบ แต่ไม่พบชุดคำตอบย้อนหลัง (อาจเป็นข้อสอบเก่าก่อนอัปเดตระบบ)</div>'; return;
+                }
+
+                let html = `
+                    <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl mb-6">
+                        <h2 class="font-bold text-lg text-indigo-900">${courseData.title}</h2>
+                        <div class="flex gap-4 mt-2 text-sm">
+                            <span class="bg-white px-2 py-1 rounded text-slate-600 shadow-sm">คะแนน: <strong class="${historyData.isPassed ? 'text-emerald-600' : 'text-red-500'}">${historyData.highestScore}</strong></span>
+                            <span class="bg-white px-2 py-1 rounded text-slate-600 shadow-sm">วันที่สอบ: <strong>${historyData.lastAttemptAt ? historyData.lastAttemptAt.toDate().toLocaleString('th-TH') : 'N/A'}</strong></span>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                `;
+
+                questions.forEach((q, idx) => {
+                    const userAnswerIdx = userAnswers[idx];
+                    const isCorrect = userAnswerIdx === q.correctIndex;
+                    const badge = isCorrect ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs font-bold ml-2"><i class="fa-solid fa-check"></i> ถูกต้อง</span>' : '<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-xs font-bold ml-2"><i class="fa-solid fa-xmark"></i> ผิด</span>';
+
+                    html += `
+                        <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                            <div class="bg-slate-100 p-3 font-semibold text-slate-800 flex justify-between">
+                                <span>ข้อ ${idx + 1}. ${q.question}</span> ${badge}
+                            </div>
+                            <div class="p-4 flex flex-col gap-2 bg-white">
+                    `;
+
+                    q.options.forEach((opt, optIdx) => {
+                        let optStyle = "text-slate-500 pl-6 border-l-4 border-transparent";
+                        let prefix = "";
+
+                        if (optIdx === q.correctIndex) {
+                            optStyle = "text-emerald-700 font-bold bg-emerald-50 p-2 rounded-r-lg border-l-4 border-emerald-500";
+                            prefix = '<i class="fa-solid fa-check-circle mr-1"></i> (คำตอบที่ถูก) ';
+                        } else if (optIdx === userAnswerIdx && !isCorrect) {
+                            optStyle = "text-rose-700 font-bold bg-rose-50 p-2 rounded-r-lg border-l-4 border-rose-500 line-through";
+                            prefix = '<i class="fa-solid fa-xmark-circle mr-1"></i> (พนักงานเลือก) ';
+                        } else if (optIdx === userAnswerIdx && isCorrect) {
+                            prefix = '<i class="fa-solid fa-check-circle mr-1"></i> (พนักงานเลือกถูก) ';
+                        }
+
+                        html += `<div class="${optStyle}">${prefix}${opt}</div>`;
+                    });
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div>`; // End space-y-6
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = '<div class="text-center text-red-400 py-10">เกิดข้อผิดพลาดในการดึงข้อมูล</div>';
+            }
+        };
     </script>
 </body>
 </html>
