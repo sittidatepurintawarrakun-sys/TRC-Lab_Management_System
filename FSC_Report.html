@@ -228,6 +228,7 @@
                 const [lastUpdate, setLastUpdate] = useState(null);
                 const [tempStartDate, setTempStartDate] = useState("");
                 const [tempEndDate, setTempEndDate] = useState("");
+                const [openingStoreBalances, setOpeningStoreBalances] = useState({});
 
                 const loadEnterpriseData = async (filterStart = null, filterEnd = null) => {
                     if (!window.api) return;
@@ -253,7 +254,8 @@
                         });
 
                         if (mbRes.data.success) {
-                            const chartData = mbRes.data.data.map((d) => ({
+                                setOpeningStoreBalances(mbRes.data.openingStoreBalances || {});
+                                const chartData = mbRes.data.data.map((d) => ({
                                 name: d.period,
                                 Pulp_FSC_Input: (d.inputs_Pulp?.FSC_Mix || 0) + (d.inputs_Pulp?.FSC_CW || 0),
                                 Pulp_FSC_Mix_Input: d.inputs_Pulp?.FSC_Mix || 0,
@@ -351,20 +353,55 @@
                         if (cumFscMix < 0) { cumFscCw += cumFscMix; cumFscMix = 0; }
                     }
 
-                    const originalData = sortedForExport.map((d) => {
-                        let row = { "Period (เดือน/ปี/วัน)": d.name };
-                        if (d.storeData) {
-                            storeBrandsOrder.forEach((brandKey) => {
-                                row[`${brandKey} Receive (T)`] = d.storeData[brandKey]?.IN || 0;
-                                row[`${brandKey} Issued to Viscose (T)`] = d.storeData[brandKey]?.OUT || 0;
-                            });
-                            Object.keys(d.storeData).forEach((brandKey) => {
-                                if (!storeBrandsOrder.includes(brandKey)) {
-                                    row[`${brandKey} Receive (T)`] = d.storeData[brandKey]?.IN || 0;
-                                    row[`${brandKey} Issued to Viscose (T)`] = d.storeData[brandKey]?.OUT || 0;
-                                }
-                            });
-                        }
+                        // --- ระบุตัวแปรเก็บยอดยกมา (Balance) ของแต่ละ Brand นอกลูป ---
+                        let tracePulpBalances = {};
+
+                        // --- สร้างข้อมูลสำหรับ Sheet: Traceability_Audit_Data ---
+                        const originalData = sortedForExport.map((d) => {
+                            let row = { "Period (เดือน/ปี/วัน)": d.name };
+
+                            // ----- [เริ่มต้น] ส่วนที่แก้ไขเพื่อเพิ่ม Balance และแยก Grade ให้ Pulp -----
+                            if (d.storeData) {
+                                // สร้างฟังก์ชันช่วยย่อย เพื่อไม่ให้ต้องเขียนโค้ดซ้ำ
+                                const processStoreBrand = (brandKey) => {
+                                    // 1. ดึงข้อมูลแบบแยกเกรด (Fallback ไปหา IN/OUT รวม ถ้ายังไม่มีแยกเกรด)
+                                    let normalIn = d.storeData[brandKey]?.Normal_IN || d.storeData[brandKey]?.IN || 0;
+                                    let offIn = d.storeData[brandKey]?.OffGrade_IN || 0;
+                                    let normalOut = d.storeData[brandKey]?.Normal_OUT || d.storeData[brandKey]?.OUT || 0;
+                                    let offOut = d.storeData[brandKey]?.OffGrade_OUT || 0;
+
+                                    // 2. รวมยอด
+                                    let totalIn = normalIn + offIn;
+                                    let totalOut = normalOut + offOut;
+
+                                    // 3. คำนวณยอดยกมา และ ยอดคงเหลือ
+                                    let currentBal = tracePulpBalances[brandKey] || 0;
+                                    let newBal = currentBal + totalIn - totalOut;
+                                    tracePulpBalances[brandKey] = newBal; // อัปเดตกลับไปเก็บไว้ใช้รอบหน้า
+
+                                    // 4. ใส่ข้อมูลลงในคอลัมน์ของ Excel
+                                    row[`${brandKey} Opening Balance (T)`] = currentBal;
+                                    row[`${brandKey} Receive - Normal (T)`] = normalIn;
+                                    row[`${brandKey} Receive - Off Grade (T)`] = offIn;
+                                    row[`${brandKey} Total Receive (T)`] = totalIn;
+                                    row[`${brandKey} Issued - Normal (T)`] = normalOut;
+                                    row[`${brandKey} Issued - Off Grade (T)`] = offOut;
+                                    row[`${brandKey} Total Issued (T)`] = totalOut;
+                                    row[`${brandKey} Closing Balance (T)`] = newBal;
+                                };
+
+                                // จัดเรียง Brand หลักที่ระบุไว้
+                                storeBrandsOrder.forEach((brandKey) => {
+                                    processStoreBrand(brandKey);
+                                });
+
+                                // จัดเรียง Brand อื่นๆ ที่ไม่ได้อยู่ใน List หลัก (ถ้ามี)
+                                Object.keys(d.storeData).forEach((brandKey) => {
+                                    if (!storeBrandsOrder.includes(brandKey)) {
+                                        processStoreBrand(brandKey);
+                                    }
+                                });
+                            }
                         row["FSC Mix Pulp Consumed (Tons)"] = d.Pulp_FSC_Mix_Input || d.Pulp_FSC_Input;
                         row["Max Allowed FSC Mix Credit (Tons)"] = d.Theoretical_FSC_Mix;
                         row["FSC CW Pulp Consumed (Tons)"] = d.Pulp_FSC_CW_Input || 0;
@@ -441,21 +478,80 @@
                         });
                     });
 
+                    // --- [เริ่มต้น] ส่วนที่แก้ไข Fact_Store เพื่อเชื่อมกับยอดยกมาจาก Backend ---
                     let factStore = [];
-                    filteredData.forEach((d) => {
+
+                    // 1. เรียงข้อมูลจากเก่าไปใหม่ เพื่อไล่ยอด Balance ให้ถูกต้อง
+                    const chronologicalDataForStore = [...filteredData].sort((a, b) => a.name.localeCompare(b.name));
+
+                    // 2. โคลนยอดยกมาจาก Backend (ซึ่ง Backend คำนวณมาให้แล้วว่าต้องใช้ Baseline มี.ค. หรือยอดปิดของเดือนก่อนหน้า)
+                    let brandBalances = {};
+                    if (openingStoreBalances) {
+                        Object.keys(openingStoreBalances).forEach(brand => {
+                            brandBalances[brand] = { ...openingStoreBalances[brand] };
+                        });
+                    }
+
+                    // 3. วนลูปคำนวณรับ-จ่าย เพื่อหายอดคงเหลือของแต่ละเดือน
+                    chronologicalDataForStore.forEach((d) => {
                         if (d.storeData) {
                             Object.keys(d.storeData).forEach((brandKey) => {
                                 let standardTag = "Unknown";
                                 if(brandKey.includes("FSC Mix")) standardTag = "FSC Mix";
                                 else if(brandKey.includes("Control Wood") || brandKey.includes("CW")) standardTag = "FSC CW";
                                 else if(brandKey.includes("PEFC")) standardTag = "PEFC";
+
+                                // ดึงค่ายอดยกมาปัจจุบัน (ถ้ามียี่ห้อใหม่เพิ่มเข้ามานอกเหนือจาก Baseline ให้ตั้งต้นที่ 0)
+                                let currentBal = brandBalances[brandKey] || { Normal: 0, OffGrade: 0 };
+
+                                // แยกยอดยกมา (Opening Balance)
+                                let openingNormal = currentBal.Normal || 0;
+                                let openingOffGrade = currentBal.OffGrade || 0;
+                                let openingTotal = openingNormal + openingOffGrade;
+
+                                // ยอดรับเข้า (IN)
+                                let normalIn = d.storeData[brandKey]?.Normal_IN || d.storeData[brandKey]?.IN || 0;
+                                let offGradeIn = d.storeData[brandKey]?.OffGrade_IN || 0;
+                                let totalIn = normalIn + offGradeIn;
+
+                                // ยอดจ่ายออก (OUT)
+                                let normalOut = d.storeData[brandKey]?.Normal_OUT || d.storeData[brandKey]?.OUT || 0;
+                                let offGradeOut = d.storeData[brandKey]?.OffGrade_OUT || 0;
+                                let totalOut = normalOut + offGradeOut;
+
+                                // คำนวณยอดยกไป (Closing Balance) แยกเกรด
+                                let closingNormal = openingNormal + normalIn - normalOut;
+                                let closingOffGrade = openingOffGrade + offGradeIn - offGradeOut;
+                                let closingTotal = closingNormal + closingOffGrade;
+
+                                // อัปเดตยอดคงเหลือลงในหน่วยความจำ เพื่อใช้เป็นยอดยกมาในรอบวัน/เดือนถัดไป
+                                brandBalances[brandKey] = { 
+                                    Normal: closingNormal, 
+                                    OffGrade: closingOffGrade 
+                                };
+
+                                // นำข้อมูลจัดเรียงใส่ Array เพื่อเตรียม Export เป็น Excel พร้อมปัดทศนิยม 3 ตำแหน่ง
                                 factStore.push({
-                                    "Period": d.name, "Raw Material Profile": brandKey, "Standard": standardTag,
-                                    "Received (IN) Tons": d.storeData[brandKey]?.IN || 0, "Issued to Viscose (OUT) Tons": d.storeData[brandKey]?.OUT || 0
+                                    "Period (เดือน/ปี/วัน)": d.name, 
+                                    "Raw Material Profile": brandKey, 
+                                    "Standard": standardTag,
+                                    "Opening Balance - Normal (T)": Number(openingNormal.toFixed(3)),
+                                    "Opening Balance - Off Grade (T)": Number(openingOffGrade.toFixed(3)),
+                                    "Opening Balance - Total (T)": Number(openingTotal.toFixed(3)),
+                                    "Receive - Normal (T)": Number(normalIn.toFixed(3)),
+                                    "Receive - Off Grade (T)": Number(offGradeIn.toFixed(3)),
+                                    "Total Received (IN) (T)": Number(totalIn.toFixed(3)),
+                                    "Issued - Normal (T)": Number(normalOut.toFixed(3)),
+                                    "Issued - Off Grade (T)": Number(offGradeOut.toFixed(3)),
+                                    "Total Issued (OUT) (T)": Number(totalOut.toFixed(3)),
+                                    "Closing Balance - Normal (T)": Number(closingNormal.toFixed(3)),
+                                    "Closing Balance - Off Grade (T)": Number(closingOffGrade.toFixed(3)),
+                                    "Closing Balance - Total (T)": Number(closingTotal.toFixed(3))
                                 });
                             });
                         }
                     });
+                    // --- [สิ้นสุด] ส่วนที่แก้ไข Fact_Store ---
 
                     let factProduction = [];
                     filteredData.forEach((d) => {

@@ -354,6 +354,35 @@
       const end = document.getElementById("storeEndDate").value || "Data";
       window.exportToCSV(`Store_Report_${start}_to_${end}`, rows);
   };
+  // 🌟 ส่วนที่เพิ่มใหม่: ฟังก์ชันเรียก Cloud Function ปิดยอดรายเดือน
+  window.runMonthlyStoreClosing = async () => {
+      const monthStr = document.getElementById("storeClosingMonth").value;
+      if (!monthStr) return alert("กรุณาเลือกเดือนที่ต้องการปิดยอดครับ");
+      if (!confirm(`ยืนยันการคำนวณและบันทึกยอดปิดสต็อกของเดือน ${monthStr} ใช่หรือไม่?\n\n(ระบบจะคำนวณยอดรับ-จ่ายใหม่ทั้งหมดเพื่อหายอดคงเหลือที่ถูกต้อง)`)) return;
+
+      const btn = document.getElementById("btnClosingStore");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<span class="animate-spin inline-block mr-2">⏳</span> กำลังประมวลผล...`;
+      btn.disabled = true;
+
+      try {
+          // เรียกใช้งาน Cloud Function ชื่อ manualUpdateStoreMonthlyBalance (เดี๋ยวเราจะไปสร้างใน Part 3)
+          const closingFunc = httpsCallable(functions, "manualUpdateStoreMonthlyBalance");
+          const result = await closingFunc({ targetMonth: monthStr });
+
+          if (result.data.success) {
+              alert(`✅ สำเร็จ! อัปเดตยอดปิดเดือน ${monthStr} เรียบร้อยแล้ว\n${result.data.message}`);
+          } else {
+              alert(`⚠️ แจ้งเตือน: ${result.data.message}`);
+          }
+      } catch (error) {
+          console.error("Monthly Closing Error:", error);
+          alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+      } finally {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+      }
+  };
 
   window.uploadStoreData = async () => {
     const rawText = document.getElementById("storePasteArea").value;
@@ -2007,6 +2036,24 @@
           class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"
         ></div>
       </div>
+        <div class="bg-indigo-50 rounded-xl shadow border border-indigo-200 p-4 flex-none mb-2">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm font-bold text-indigo-800 flex items-center gap-2">
+              <i data-lucide="database" class="w-4 h-4"></i>
+              ประมวลผลยอดยกไปรายเดือน (Monthly Stock Closing)
+            </h3>
+          </div>
+          <div class="flex gap-4 items-end">
+            <div class="flex-1">
+              <label class="text-xs font-bold text-indigo-600 block mb-1">เลือกเดือนที่ต้องการอัปเดตยอดปิดสต็อก:</label>
+              <input type="month" id="storeClosingMonth" class="text-sm border border-indigo-300 rounded px-3 py-2 w-full outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <button id="btnClosingStore" onclick="runMonthlyStoreClosing()" class="px-6 py-2 h-[38px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i> คำนวณและบันทึกยอดปิด
+            </button>
+          </div>
+          <p class="text-xs text-indigo-500/80 mt-2">* ใช้สำหรับสรุปยอดยกไปของเดือนนั้นๆ และใช้กดอัปเดตใหม่หากมีการแก้ไขข้อมูล Log ย้อนหลัง</p>
+        </div>
         <div class="bg-white rounded-xl shadow border border-slate-200 p-4 flex-none mb-4">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
