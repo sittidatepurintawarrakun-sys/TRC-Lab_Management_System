@@ -336,28 +336,60 @@
                     let cumFscCw = auditBaseCw;
                     let cumPefc = auditBasePefc;
 
-                    if (sortedForExport.length > 0 && sortedForExport[0].name <= BASELINE_PERIOD) {
-                        const preBaselineData = sortedForExport.filter(d => d.name <= BASELINE_PERIOD);
-                        let totalMixEarned = 0, totalCwEarned = 0, totalPefcEarned = 0;
-                        let totalFscSales = 0, totalPefcSales = 0;
-                        preBaselineData.forEach(d => {
-                            totalMixEarned += (d.Theoretical_FSC_Mix || 0);
-                            totalCwEarned += (d.Theoretical_FSC_CW || 0);
-                            totalPefcEarned += (d.Theoretical_PEFC || 0);
-                            totalFscSales += (d.totalFSCSold || 0);
-                            totalPefcSales += (d.totalPEFCSold || 0);
-                        });
-                        cumPefc = auditBasePefc - totalPefcEarned + totalPefcSales;
-                        cumFscMix = auditBaseMix - totalMixEarned + totalFscSales;
-                        cumFscCw = auditBaseCw - totalCwEarned;
-                        if (cumFscMix < 0) { cumFscCw += cumFscMix; cumFscMix = 0; }
-                    }
+                            if (sortedForExport.length > 0 && sortedForExport[0].name <= BASELINE_PERIOD) {
+                                const preBaselineData = sortedForExport.filter(d => d.name <= BASELINE_PERIOD);
+                                let totalMixEarned = 0, totalCwEarned = 0, totalPefcEarned = 0;
+                                let totalFscSales = 0, totalPefcSales = 0;
+                                preBaselineData.forEach(d => {
+                                    totalMixEarned += (d.Theoretical_FSC_Mix || 0);
+                                    totalCwEarned += (d.Theoretical_FSC_CW || 0);
+                                    totalPefcEarned += (d.Theoretical_PEFC || 0);
+                                    totalFscSales += (d.totalFSCSold || 0);
+                                    totalPefcSales += (d.totalPEFCSold || 0);
+                                });
+                                cumPefc = auditBasePefc - totalPefcEarned + totalPefcSales;
+                                cumFscMix = auditBaseMix - totalMixEarned + totalFscSales;
+                                cumFscCw = auditBaseCw - totalCwEarned;
+                                if (cumFscMix < 0) { cumFscCw += cumFscMix; cumFscMix = 0; }
+                            }
 
-                        // --- ระบุตัวแปรเก็บยอดยกมา (Balance) ของแต่ละ Brand นอกลูป ---
-                        let tracePulpBalances = {};
+                            // 🌟 1. ย้าย BASELINE_MARCH_2026 ขึ้นมาประกาศตรงนี้ เพื่อให้ทุก Sheet เรียกใช้ได้
+                            const BASELINE_MARCH_2026 = {
+                                "ARAUCO FSC Mix Credit": { Normal: 7854.210, OffGrade: 0 },
+                                "ARAUCO FSC Control Wood": { Normal: 5101.403, OffGrade: 0 },
+                                "ARAUCO PEFC": { Normal: 1542.000, OffGrade: 0 },
+                                "AVN FSC Mix Credit": { Normal: 493.709, OffGrade: 0 },
+                                "AVN FSC Control Wood": { Normal: 375.156, OffGrade: 293.489 },
+                                "AVN PEFC": { Normal: 0, OffGrade: 0 },
+                                "AVC FSC Mix Credit": { Normal: 1527.189, OffGrade: 0 },
+                                "AVC FSC Control Wood": { Normal: 769.187, OffGrade: 341.240 },
+                                "AVC PEFC": { Normal: 647.665, OffGrade: 0 },
+                                "PHOENIX FSC Mix Credit": { Normal: 0, OffGrade: 0 },
+                                "PHOENIX FSC Control Wood": { Normal: 0, OffGrade: 0 },
+                                "PHOENIX PEFC": { Normal: 0, OffGrade: 0 },
+                                "SAICCOR FSC Mix Credit 70%": { Normal: 0, OffGrade: 0 },
+                                "TEL Pellita FSC Mix Credit": { Normal: 0, OffGrade: 0 },
+                                "TEL Pellita FSC Control Wood": { Normal: 188.748, OffGrade: 0 },
+                                "TEL Pellita PEFC": { Normal: 0, OffGrade: 0 }
+                            };
 
-                        // --- สร้างข้อมูลสำหรับ Sheet: Traceability_Audit_Data ---
-                        const originalData = sortedForExport.map((d) => {
+                            // --- ระบุตัวแปรเก็บยอดยกมา (Balance) ของแต่ละ Brand นอกลูป ---
+                            let tracePulpBalances = {};
+
+                            // 🌟 2. กำหนดค่ายอดยกมาเริ่มต้นให้ tracePulpBalances เพื่อป้องกันยอดติดลบ
+                            Object.keys(BASELINE_MARCH_2026).forEach(brand => {
+                                tracePulpBalances[brand] = (BASELINE_MARCH_2026[brand].Normal || 0) + (BASELINE_MARCH_2026[brand].OffGrade || 0);
+                            });
+
+                            // 🌟 3. ทับด้วยค่ายอดยกมาจาก Backend (กรณีค้นหาข้อมูลข้ามเดือน)
+                            if (openingStoreBalances && Object.keys(openingStoreBalances).length > 0) {
+                                Object.keys(openingStoreBalances).forEach(brand => {
+                                    tracePulpBalances[brand] = (openingStoreBalances[brand].Normal || 0) + (openingStoreBalances[brand].OffGrade || 0);
+                                });
+                            }
+
+                            // --- สร้างข้อมูลสำหรับ Sheet: Traceability_Audit_Data ---
+                            const originalData = sortedForExport.map((d) => {
                             let row = { "Period (เดือน/ปี/วัน)": d.name };
 
                             // ----- [เริ่มต้น] ส่วนที่แก้ไขเพื่อเพิ่ม Balance และแยก Grade ให้ Pulp -----
@@ -478,15 +510,22 @@
                         });
                     });
 
-                    // --- [เริ่มต้น] ส่วนที่แก้ไข Fact_Store เพื่อเชื่อมกับยอดยกมาจาก Backend ---
+                    // --- [เริ่มต้น] ส่วนที่แก้ไข Fact_Store เพื่อใส่ Base Line สิ้นเดือน March 2026 และแยก Grade ---
                     let factStore = [];
 
                     // 1. เรียงข้อมูลจากเก่าไปใหม่ เพื่อไล่ยอด Balance ให้ถูกต้อง
                     const chronologicalDataForStore = [...filteredData].sort((a, b) => a.name.localeCompare(b.name));
 
-                    // 2. โคลนยอดยกมาจาก Backend (ซึ่ง Backend คำนวณมาให้แล้วว่าต้องใช้ Baseline มี.ค. หรือยอดปิดของเดือนก่อนหน้า)
+                    // 🌟 ลบการประกาศ const BASELINE_MARCH_2026 ตรงนี้ออก เพราะเราย้ายไปประกาศด้านบนแล้ว
+
+                    // ตั้งต้นจาก Baseline ก่อนเป็นค่าเริ่มต้น (เผื่อดึงข้อมูลตั้งแต่เริ่มระบบ)
                     let brandBalances = {};
-                    if (openingStoreBalances) {
+                    Object.keys(BASELINE_MARCH_2026).forEach(brand => {
+                        brandBalances[brand] = { ...BASELINE_MARCH_2026[brand] };
+                    });
+
+                    // 🌟 ทับด้วยยอดยกมาจาก Backend ถ้ามี (ใช้กรณีดึงข้อมูลรายเดือน เช่น มิ.ย. ระบบจะดึงยอดปิด พ.ค. มาทับให้)
+                    if (openingStoreBalances && Object.keys(openingStoreBalances).length > 0) {
                         Object.keys(openingStoreBalances).forEach(brand => {
                             brandBalances[brand] = { ...openingStoreBalances[brand] };
                         });

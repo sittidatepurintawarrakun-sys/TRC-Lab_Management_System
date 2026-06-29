@@ -192,37 +192,48 @@
   // ==========================================
   let currentStoreSnapshot = []; // ตัวแปรเก็บข้อมูลสำหรับ Export
 
-  window.initStoreListeners = () => {
-    if (!dashboardListening) {
-      const balanceRef = collection(db, "store_inventory_balance");
-      onSnapshot(balanceRef, (snapshot) => {
-        const container = document.getElementById("inventoryDashboard");
-        if (!container) return;
-        let cardsHTML = "";
-        if (snapshot.empty) {
-          container.innerHTML =
-            '<div class="col-span-full text-center text-gray-400 py-4">ยังไม่มีข้อมูลสต็อก</div>';
-          return;
+    window.initStoreListeners = () => {
+        if (!dashboardListening) {
+          const balanceRef = collection(db, "store_inventory_balance");
+          onSnapshot(balanceRef, (snapshot) => {
+            const container = document.getElementById("inventoryDashboard");
+            if (!container) return;
+            let cardsHTML = "";
+            if (snapshot.empty) {
+              container.innerHTML =
+                '<div class="col-span-full text-center text-gray-400 py-4">ยังไม่มีข้อมูลสต็อก</div>';
+              return;
+            }
+
+            snapshot.forEach((doc) => {
+              const data = doc.data();
+              const balance = data.balance || 0;
+
+              // 🌟 เพิ่มเงื่อนไขตรงนี้: ถ้าค่าปัดเศษแล้วเท่ากับ 0 หรือเป็นเศษขยะติดลบ ให้ข้ามไปเลยไม่ต้องสร้าง Card
+              if (balance <= 0.001 && balance >= -0.001) return;
+
+              const [brand, grade] = doc.id.split("__");
+              const isLow = balance < 50;
+              const bgClass = isLow
+                ? "bg-red-50 border-red-200"
+                : "bg-white border-slate-200";
+              const textClass = isLow ? "text-red-700" : "text-slate-700";
+              cardsHTML += `
+    <div class="p-3 rounded-lg border shadow-sm flex flex-col justify-between ${bgClass}">
+    <div><div class="text-[10px] uppercase text-slate-500 font-bold">${grade}</div><div class="text-xs font-semibold text-slate-800 truncate" title="${brand}">${brand}</div></div>
+    <div class="text-right mt-2"><span class="text-xl font-bold ${textClass}">${balance.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span><span class="text-[10px] text-slate-400">Tons</span></div>
+    </div>`;
+            });
+
+            // 🌟 เพิ่มเงื่อนไขอีกชั้น: ถ้ากรองตัวที่เป็น 0 ออกหมดแล้วไม่มีการ์ดเหลือเลย ให้แสดงข้อความ
+            if (cardsHTML === "") {
+              container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">สถานะสต็อกปัจจุบันเป็น 0 ทั้งหมด</div>';
+            } else {
+              container.innerHTML = cardsHTML;
+            }
+          });
+          dashboardListening = true;
         }
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          const [brand, grade] = doc.id.split("__");
-          const balance = data.balance || 0;
-          const isLow = balance < 50;
-          const bgClass = isLow
-            ? "bg-red-50 border-red-200"
-            : "bg-white border-slate-200";
-          const textClass = isLow ? "text-red-700" : "text-slate-700";
-          cardsHTML += `
-<div class="p-3 rounded-lg border shadow-sm flex flex-col justify-between ${bgClass}">
-<div><div class="text-[10px] uppercase text-slate-500 font-bold">${grade}</div><div class="text-xs font-semibold text-slate-800 truncate" title="${brand}">${brand}</div></div>
-<div class="text-right mt-2"><span class="text-xl font-bold ${textClass}">${balance.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span><span class="text-[10px] text-slate-400">Tons</span></div>
-</div>`;
-        });
-        container.innerHTML = cardsHTML;
-      });
-      dashboardListening = true;
-    }
 
     if (historyUnsubscribe) historyUnsubscribe();
     const tbody = document.getElementById("storeHistoryTable");
@@ -664,11 +675,15 @@
         let finalBrand = `${base} ${cert}`;
         if (base === "SAICCOR" && cert === "FSC Mix Credit") finalBrand = "SAICCOR FSC Mix Credit 70%";
 
-        // จัดการน้ำหนัก (บังคับค่าบวกเสมอ เพื่อเข้าสู่ฟังก์ชันลดสต็อกของ Viscose)
+        // 🌟 แก้ไข: จัดการน้ำหนัก (อนุญาตให้มีค่าติดลบได้ สำหรับ Movement Type 262 / Reversal)
         let weightStr = (row[qtyIdx] || "0").replace(/,/g, '').trim();
+        // กรณี SAP ส่งเครื่องหมายลบไว้ด้านหลัง เช่น "1.670-" ให้ย้ายมาด้านหน้า
         if (weightStr.endsWith("-")) weightStr = "-" + weightStr.slice(0, -1);
-        let weight = Math.abs(parseFloat(weightStr)); 
-        if (isNaN(weight) || weight <= 0) { skippedCount++; continue; }
+
+        let weight = parseFloat(weightStr); // 🎯 เอา Math.abs() ออกเพื่อให้ค่าติดลบยังคงอยู่
+
+        // 🎯 แก้เงื่อนไข: ข้ามเฉพาะตัวที่เป็น NaN หรือเป็น 0 เป๊ะๆ เท่านั้น (ยอมให้ค่าน้อยกว่า 0 ผ่านได้)
+        if (isNaN(weight) || weight === 0) { skippedCount++; continue; }
 
         let standard = "None";
         if (finalBrand.includes("PEFC")) standard = "PEFC";
