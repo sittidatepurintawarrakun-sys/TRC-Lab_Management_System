@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Portal | TRC Management</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] },
+                    colors: {
+                        brand: { 500: '#0284c7', 600: '#0369a1', 700: '#075985' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%);
+        }
+        .matrix-point { transition: all 0.3s ease; cursor: pointer; }
+        .matrix-point:hover { transform: scale(1.5) translate(-33%, -33%); z-index: 50; }
+    </style>
+</head>
+<body class="font-sans text-slate-800 h-full flex flex-col antialiased">
+
+    <!-- Top Navigation -->
+    <header class="hero-gradient text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="app.navTo('portal')">
+                <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-sky-400 font-bold text-xl border border-white/20">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">TRC Assessment Center</h1>
+                    <p class="text-xs text-sky-200">ศูนย์รวมแบบทดสอบเพื่อการพัฒนาองค์กร</p>
+                </div>
+            </div>
+            <button onclick="app.openLoginModal()" class="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 hover:bg-white/20 border border-white/20 transition flex items-center space-x-2">
+                <i class="fa-solid fa-user-shield text-sky-300"></i>
+                <span id="nav-admin-text">Admin Dashboard</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- VIEW 1: PORTAL SELECTION -->
+        <section id="view-portal" class="space-y-8 fade-in">
+            <div class="text-center max-w-3xl mx-auto mb-10">
+                <h2 class="text-3xl font-bold text-slate-900">เลือกแบบทดสอบที่คุณต้องการ</h2>
+                <p class="text-slate-600 mt-3">กรุณาเลือกทำแบบประเมินด้านล่าง เพื่อค้นพบศักยภาพและวิเคราะห์บุคลิกภาพเชิงลึกในการทำงานของคุณ</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <!-- WIP-40 Card -->
+                <div class="glass-card rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex flex-col">
+                    <div class="h-48 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?auto=format&fit=crop&w=800&q=80" alt="Iceberg WIP-40" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
+                        <div class="absolute bottom-4 left-4 text-white">
+                            <span class="px-2.5 py-1 bg-sky-500/80 backdrop-blur text-xs font-bold rounded-md">40 Questions</span>
+                        </div>
+                    </div>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">WIP-40 Workplace Iceberg Profiler</h3>
+                        <p class="text-sm text-slate-600 mb-6 flex-grow">ถอดรหัสความเชื่อ (Beliefs), ค่านิยม (Values) และความต้องการเบื้องลึกใต้ผิวน้ำที่ส่งผลต่อพฤติกรรมการทำงานของคุณ</p>
+                        <a href="wip40.html" class="w-full text-center px-4 py-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl transition">
+                            เข้าสู่แบบทดสอบ <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ILMP-48 Card -->
+                <div class="glass-card rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex flex-col">
+                    <div class="h-48 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=800" alt="Leadership Brain ILMP-48" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
+                        <div class="absolute bottom-4 left-4 text-white">
+                            <span class="px-2.5 py-1 bg-emerald-500/80 backdrop-blur text-xs font-bold rounded-md">48 Questions</span>
+                        </div>
+                    </div>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">ILMP-48 Leadership & Mindset Profiler</h3>
+                        <p class="text-sm text-slate-600 mb-6 flex-grow">แบบประเมินและวิเคราะห์บุคลิกภาพ ภาวะผู้นำ และกรอบความคิดเชิงลึก (Mindset) เพื่อการพัฒนาองค์กรอย่างยั่งยืน</p>
+                        <a href="ilmp48.html" class="w-full text-center px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition">
+                            เข้าสู่แบบทดสอบ <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: UNIFIED ADMIN DASHBOARD -->
+        <section id="view-admin" class="hidden space-y-6 fade-in">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-slate-300 pb-4 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-900"><i class="fa-solid fa-chess-board text-brand-600 mr-2"></i>Executive Admin Dashboard</h2>
+                    <p class="text-slate-600 text-sm mt-1">วิเคราะห์ข้อมูลพนักงานแบบองค์รวม (GMP Standard Time-logged)</p>
+                </div>
+                <!-- แก้ไขเพิ่มปุ่มออกจากระบบที่นี่ -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="app.loadUnifiedData()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition flex items-center">
+                        <i class="fa-solid fa-arrows-rotate mr-2"></i> รีเฟรชข้อมูล
+                    </button>
+                    <button onclick="app.logoutAdmin()" class="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg text-sm font-medium transition flex items-center">
+                        <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> ออกจากระบบ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Content: Skill/Will Matrix (Source 4 Integration) -->
+            <div class="bg-slate-900 text-slate-100 rounded-2xl shadow-xl p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 border-b border-slate-700 pb-3">
+                        <i class="fa-solid fa-chart-scatter text-blue-400 mr-2"></i> Skill / Will Strategic Matrix (Combined WIP-40 & ILMP-48)
+                    </h3>
+                </div>
+
+                <!-- Matrix Plot Area -->
+                <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl relative mb-6">
+                    <div class="relative w-full h-[450px] border-2 border-slate-700 rounded-xl overflow-hidden bg-slate-900/50">
+                        <!-- Quadrants -->
+                        <div class="absolute inset-0 grid grid-cols-2 grid-rows-2">
+                            <div class="bg-amber-500/5 border-r border-b border-slate-800 p-3 flex flex-col justify-between"><span class="text-[10px] font-bold text-amber-400/70 bg-amber-950/60 px-2 py-1 rounded w-fit">HIGH SKILL / LOW WILL (DELEGATE)</span></div>
+                            <div class="bg-emerald-500/5 border-b border-slate-800 p-3 flex flex-col justify-between items-end"><span class="text-[10px] font-bold text-emerald-400/70 bg-emerald-950/60 px-2 py-1 rounded w-fit">HIGH SKILL / HIGH WILL (EMPOWER)</span></div>
+                            <div class="bg-rose-500/5 border-r border-slate-800 p-3 flex flex-col justify-between"><span class="text-[10px] font-bold text-rose-400/70 bg-rose-950/60 px-2 py-1 rounded w-fit mt-auto">LOW SKILL / LOW WILL (DIRECT)</span></div>
+                            <div class="bg-blue-500/5 p-3 flex flex-col justify-between items-end"><span class="text-[10px] font-bold text-blue-400/70 bg-blue-950/60 px-2 py-1 rounded w-fit mt-auto">LOW SKILL / HIGH WILL (GUIDE)</span></div>
+                        </div>
+                        <!-- Axes -->
+                        <div class="absolute left-1/2 top-0 bottom-0 border-l-2 border-dashed border-slate-600 z-10"></div>
+                        <div class="absolute top-1/2 left-0 right-0 border-t-2 border-dashed border-slate-600 z-10"></div>
+                        <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-slate-900 px-3 py-1 text-xs font-bold text-brand-400 border border-slate-700 rounded-full z-20">WILL (แรงจูงใจ) ➔</div>
+                        <div class="absolute -left-1 top-1/2 -translate-y-1/2 -rotate-90 bg-slate-900 px-3 py-1 text-xs font-bold text-brand-400 border border-slate-700 rounded-full z-20">SKILL (ทักษะ) ➔</div>
+
+                        <!-- Points Container -->
+                        <div id="matrix-points-container" class="absolute inset-0 z-30"></div>
+                    </div>
+                </div>
+
+                <!-- Combined Employee Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-800 text-slate-400 uppercase text-xs">
+                            <tr>
+                                <th class="p-3">ชื่อพนักงาน</th>
+                                <th class="p-3">แผนก</th>
+                                <th class="p-3">สถานะข้อมูล</th>
+                                <th class="p-3 text-center">Skill (Max 60)</th>
+                                <th class="p-3 text-center">Will (Max 50)</th>
+                                <th class="p-3">วันที่ทำล่าสุด (ปี-เดือน-วัน)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="combined-table-body" class="divide-y divide-slate-800">
+                            <tr><td colspan="6" class="p-6 text-center text-slate-500">กำลังโหลดข้อมูล...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Admin Login Modal -->
+    <div id="modal-admin-login" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
+            <div class="w-14 h-14 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto text-2xl mb-2">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-xl">Admin Authentication</h3>
+            <p class="text-xs text-slate-500">กรุณาล็อกอินด้วยบัญชีอีเมล Admin ที่ได้รับอนุญาต</p>
+
+            <div class="space-y-3 pt-2 text-left">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Email</label>
+                    <input type="email" id="admin-email" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="admin@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Password</label>
+                    <input type="password" id="admin-password" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="••••••••">
+                </div>
+            </div>
+
+            <div class="flex space-x-2 pt-4">
+                <button onclick="app.closeLoginModal()" class="w-1/2 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200 transition">ยกเลิก</button>
+                <button onclick="app.verifyAdmin()" id="btn-login" class="w-1/2 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 shadow transition flex justify-center items-center">
+                    เข้าสู่ระบบ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Firebase Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration (ตามที่คุณให้มา)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        const appFirebase = initializeApp(firebaseConfig);
+        const auth = getAuth(appFirebase);
+        // Force Long Polling to prevent connection drops in strict network environments
+        const db = getFirestore(appFirebase);
+
+        // 🛑 ระบบสิทธิ์ Admin เช็คจากอีเมลผู้ใช้งาน (อ้างอิงจากโค้ดเดิมของคุณ)
+        const ADMIN_EMAILS = ['sittidate.p@adityabirla.com', 'datejub@hotmail.com'];
+        let isSuperAdmin = false;
+
+        // Application State
+        const state = {
+            combinedData: {} // Map By Employee Name
+        };
+
+        window.app = {
+            navTo: (viewId) => {
+                document.getElementById('view-portal').classList.add('hidden');
+                document.getElementById('view-admin').classList.add('hidden');
+                document.getElementById(`view-${viewId}`).classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            showToast: (msg, type = 'info') => {
+                const toast = document.createElement('div');
+                toast.className = `p-3 px-4 rounded-xl text-sm font-medium text-white shadow-xl flex items-center space-x-2 transition duration-300 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800'}`;
+                toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-circle-info'}"></i> <span>${msg}</span>`;
+                document.getElementById('toast-container').appendChild(toast);
+                setTimeout(() => toast.remove(), 4000);
+            },
+            openLoginModal: () => {
+                if (isSuperAdmin) {
+                    app.loadUnifiedData();
+                    app.navTo('admin');
+                } else {
+                    document.getElementById('modal-admin-login').classList.remove('hidden');
+                }
+            },
+            closeLoginModal: () => {
+                document.getElementById('modal-admin-login').classList.add('hidden');
+                document.getElementById('admin-password').value = '';
+            },
+            verifyAdmin: async () => {
+                const email = document.getElementById('admin-email').value.trim();
+                const pass = document.getElementById('admin-password').value;
+                const btn = document.getElementById('btn-login');
+
+                if (!email || !pass) {
+                    app.showToast('กรุณากรอกอีเมลและรหัสผ่าน', 'error');
+                    return;
+                }
+
+                btn.innerText = 'Verifying...';
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+                    const user = userCredential.user;
+
+                    if (ADMIN_EMAILS.includes(user.email)) {
+                        isSuperAdmin = true;
+                        app.closeLoginModal();
+
+                        // คงข้อความให้เป็น Admin Dashboard เหมือนเดิม
+                        document.getElementById('nav-admin-text').innerText = 'Admin Dashboard';
+
+                        app.showToast(`ยินดีต้อนรับ Admin: ${user.email}`, 'success');
+                        app.loadUnifiedData();
+                        app.navTo('admin');
+                    } else {
+                        await signOut(auth);
+                        app.showToast('อีเมลนี้ไม่มีสิทธิ์เข้าถึง Admin Dashboard', 'error');
+                    }
+                } catch (error) {
+                    console.error("Auth Error:", error);
+                    app.showToast('อีเมลหรือรหัสผ่านไม่ถูกต้อง', 'error');
+                } finally {
+                    btn.innerHTML = 'เข้าสู่ระบบ';
+                }
+            },
+
+            logoutAdmin: async () => {
+                await signOut(auth);
+                isSuperAdmin = false;
+                document.getElementById('nav-admin-text').innerText = 'Admin Dashboard';
+                app.navTo('portal');
+                app.showToast('ออกจากระบบ Admin สำเร็จ', 'info');
+            },
+
+            // --- Core Logic: Load Both WIP-40 and ILMP-48 ---
+            loadUnifiedData: async () => {
+                app.showToast('กำลังซิงค์และประมวลผลข้อมูลล่าสุด...', 'info');
+                state.combinedData = {}; // Reset
+
+                try {
+                    // Fetch WIP-40
+                    const wipRef = collection(db, 'artifacts', 'wip40-profiler-app', 'public', 'data', 'wip40_results');
+                    const wipSnap = await getDocs(wipRef);
+
+                    wipSnap.forEach(doc => {
+                        const d = doc.data();
+                        const name = d.empName;
+                        if (!name) return;
+
+                        if (!state.combinedData[name]) state.combinedData[name] = app.createNewEmpRecord(d);
+                        state.combinedData[name].wip = d.scores;
+                        app.updateTimestamp(name, d.timestamp);
+                    });
+
+                    // Fetch ILMP-48[cite: 1]
+                    const ilmpRef = collection(db, 'artifacts', 'ilmp-assessment-app', 'public', 'data', 'ilmp_results');
+                    const ilmpSnap = await getDocs(ilmpRef);
+
+                    ilmpSnap.forEach(doc => {
+                        const d = doc.data();
+                        const name = d.empName;
+                        if (!name) return;
+
+                        if (!state.combinedData[name]) state.combinedData[name] = app.createNewEmpRecord(d);
+                        state.combinedData[name].ilmp = d.scores;
+                        app.updateTimestamp(name, d.timestamp);
+                    });
+
+                    app.renderMatrixAndTable();
+                } catch (err) {
+                    console.error("Fetch Data Error:", err);
+                    app.showToast('เกิดข้อผิดพลาดในการดึงข้อมูลจาก Cloud', 'error');
+                }
+            },
+            createNewEmpRecord: (d) => {
+                return { name: d.empName, dept: d.empDept, wip: null, ilmp: null, lastDate: d.timestamp };
+            },
+            updateTimestamp: (name, newStamp) => {
+                const currentStamp = state.combinedData[name].lastDate;
+                if (!currentStamp || new Date(newStamp) > new Date(currentStamp)) {
+                    state.combinedData[name].lastDate = newStamp;
+                }
+            },
+
+            // --- Calculation & Matrix Plotting (Adapted from Source 4) ---
+            renderMatrixAndTable: () => {
+                const container = document.getElementById('matrix-points-container');
+                const tbody = document.getElementById('combined-table-body');
+                container.innerHTML = '';
+                tbody.innerHTML = '';
+
+                const employees = Object.values(state.combinedData);
+                if (employees.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500">ยังไม่มีข้อมูลในระบบ</td></tr>`;
+                    return;
+                }
+
+                employees.forEach(emp => {
+                    // Check completion status
+                    let statusBadge = '';
+                    let skillScore = 0;
+                    let willScore = 0;
+                    let hasBoth = emp.wip && emp.ilmp;
+
+                    if (hasBoth) {
+                        statusBadge = '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded">ข้อมูลครบ (สมบูรณ์)</span>';
+                        // Logic from Source 4
+                        // Will = ((ILMP M4 + ILMP M6 + WIP D4) - ILMP M8) / 2
+                        let m4 = emp.ilmp.M4 || 0; let m6 = emp.ilmp.M6 || 0; let m8 = emp.ilmp.M8 || 0;
+                        let d4 = emp.wip.D4 || 0;
+                        let rawWill = ((m4 + m6 + d4) - m8) / 2;
+                        willScore = Math.max(0, Math.min(50, rawWill));
+
+                        // Skill = ((ILMP M3 + ILMP M5 + WIP D1 + WIP D2) / 2) + Seniority Bonus (0 for now)
+                        let m3 = emp.ilmp.M3 || 0; let m5 = emp.ilmp.M5 || 0;
+                        let d1 = emp.wip.D1 || 0; let d2 = emp.wip.D2 || 0;
+                        let rawSkill = ((m3 + m5 + d1 + d2) / 2);
+                        skillScore = Math.max(0, Math.min(60, rawSkill));
+
+                        // Plot on Matrix (X = Will %, Y = Skill %)
+                        const posX = Math.min(92, Math.max(8, (willScore / 50) * 100));
+                        const posY = Math.min(92, Math.max(8, 100 - ((skillScore / 60) * 100))); // Inverted Y-axis
+
+                        const point = document.createElement('div');
+                        point.className = 'absolute w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg matrix-point bg-indigo-500 ring-2 ring-indigo-300';
+                        point.style.left = `${posX}%`;
+                        point.style.top = `${posY}%`;
+                        point.title = `${emp.name}\nSkill: ${skillScore.toFixed(1)} | Will: ${willScore.toFixed(1)}`;
+                        point.innerText = emp.name.charAt(0);
+                        container.appendChild(point);
+                    } else if (emp.wip) {
+                        statusBadge = '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded">ขาด ILMP-48</span>';
+                    } else {
+                        statusBadge = '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded">ขาด WIP-40</span>';
+                    }
+
+                    // Append to Table
+                    const dateObj = new Date(emp.lastDate);
+                    const formattedDate = !isNaN(dateObj) ? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}` : '-';
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800 transition";
+                    tr.innerHTML = `
+                        <td class="p-3 font-medium text-slate-200">${emp.name}</td>
+                        <td class="p-3 text-slate-400">${emp.dept}</td>
+                        <td class="p-3">${statusBadge}</td>
+                        <td class="p-3 text-center font-mono ${hasBoth ? 'text-emerald-400' : 'text-slate-600'}">${hasBoth ? skillScore.toFixed(1) : '-'}</td>
+                        <td class="p-3 text-center font-mono ${hasBoth ? 'text-brand-400' : 'text-slate-600'}">${hasBoth ? willScore.toFixed(1) : '-'}</td>
+                        <td class="p-3 text-slate-400 font-mono text-xs">${formattedDate}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        };
+
+        // Persist Auth State automatically
+        // Persist Auth State automatically & Auto-Redirect
+        onAuthStateChanged(auth, (user) => {
+            if (user && ADMIN_EMAILS.includes(user.email)) {
+                isSuperAdmin = true;
+                document.getElementById('nav-admin-text').innerText = 'Admin Dashboard';
+
+                app.loadUnifiedData();
+                app.navTo('admin');
+            }
+        });
+    </script>
+</body>
+</html>

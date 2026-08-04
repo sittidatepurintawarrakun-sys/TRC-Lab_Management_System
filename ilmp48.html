@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ILMP-48 Online Leadership & Mindset Profiler</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Prompt & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for Radar and Analytics Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .gradient-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%);
+        }
+        @media print {
+            header, button, #toast-container, .no-print { display: none !important; }
+            body { background: white !important; }
+            .glass-card { border: none !important; box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800 h-full flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+    <!-- Top Navigation -->
+    <header class="gradient-header text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="window.location.href='Lab Assessment Center.html'">
+                <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-sky-400 font-bold text-xl border border-white/20">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide">ILMP-48 Profiler</h1>
+                    <p class="text-xs text-sky-200">Integrated Leadership & Mindset Assessment</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button id="nav-admin-btn" onclick="app.openAdminModal()" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 border border-white/20 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-user-shield text-sky-300"></i>
+                    <span>Admin Dashboard</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container Views -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- VIEW 1: WELCOME / START SCREEN -->
+        <section id="view-welcome" class="space-y-6 max-w-3xl mx-auto py-4">
+            <div class="glass-card rounded-2xl p-6 sm:p-10 shadow-xl border border-slate-200 text-center space-y-6">
+                <div class="w-20 h-20 bg-sky-100 text-brand-600 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-inner">
+                    <i class="fa-solid fa-chart-radar"></i>
+                </div>
+                <div>
+                    <span class="px-3 py-1 bg-sky-100 text-brand-700 text-xs font-semibold rounded-full uppercase tracking-wider">Executive Profiling Framework</span>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">แบบประเมินภาวะผู้นำและกรอบความคิดเชิงลึก (ILMP-48)</h2>
+                    <p class="text-slate-600 text-sm sm:text-base mt-3 leading-relaxed">
+                        วิเคราะห์บุคลิกภาพ สไตล์การทำงาน กระบวนการคิด ภาวะผู้นำ และปมความเชื่อใต้ผิวน้ำ (Behavioral Iceberg) ครอบคลุม 8 มิติหลักด้วยแบบทดสอบ 48 ข้อ
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-200">
+                        <div class="text-xs text-blue-600 font-bold"><i class="fa-solid fa-layer-group mr-1"></i> DISC & Birkman</div>
+                        <div class="font-semibold text-slate-800 text-sm mt-1">สไตล์พฤติกรรม</div>
+                    </div>
+                    <div class="bg-purple-50 p-3 rounded-xl border border-purple-200">
+                        <div class="text-xs text-purple-600 font-bold"><i class="fa-solid fa-brain mr-1"></i> HBDI & MBTI</div>
+                        <div class="font-semibold text-slate-800 text-sm mt-1">กระบวนการคิด</div>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200">
+                        <div class="text-xs text-emerald-600 font-bold"><i class="fa-solid fa-user-tie mr-1"></i> Goleman Styles</div>
+                        <div class="font-semibold text-slate-800 text-sm mt-1">สไตล์การนำทีม</div>
+                    </div>
+                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
+                        <div class="text-xs text-amber-600 font-bold"><i class="fa-solid fa-seedling mr-1"></i> Growth & ITC</div>
+                        <div class="font-semibold text-slate-800 text-sm mt-1">กรอบความคิด</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 text-left space-y-4">
+                    <h3 class="font-semibold text-slate-800 text-sm border-b pb-2"><i class="fa-solid fa-id-card text-brand-500 mr-2"></i>ข้อมูลผู้รับการประเมิน</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">รหัสพนักงาน *</label>
+                            <input type="text" id="input-emp-id" placeholder="เช่น 12345" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อ - นามสกุล *</label>
+                            <input type="text" id="input-emp-name" placeholder="ระบุชื่อ-นามสกุล" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">แผนก / ฝ่าย *</label>
+                            <input type="text" id="input-emp-dept" placeholder="เช่น ฝ่ายผลิต, วิศวกรรม" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="app.startAssessment()" id="btn-start" class="w-full sm:w-auto px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg transition transform hover:-translate-y-0.5">
+                        เริ่มทำแบบทดสอบ (48 ข้อ) <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: QUESTIONNAIRE SCREEN -->
+        <section id="view-quiz" class="hidden space-y-6 max-w-3xl mx-auto">
+            <div class="glass-card rounded-xl p-4 shadow-sm sticky top-20 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-200">
+                <div class="flex items-center space-x-3">
+                    <span id="quiz-part-badge" class="px-2.5 py-1 bg-brand-100 text-brand-700 text-xs font-bold rounded-md">Part 1</span>
+                    <span id="quiz-progress-text" class="text-xs sm:text-sm font-medium text-slate-600">ตอบแล้ว 0 จาก 48 ข้อ</span>
+                </div>
+                <div class="w-full sm:w-48 bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div id="quiz-progress-bar" class="bg-brand-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <form id="quiz-form" onsubmit="event.preventDefault();" class="space-y-6">
+                <div id="questions-list" class="space-y-6"></div>
+
+                <div class="flex justify-between items-center pt-4 border-t border-slate-200">
+                    <button type="button" id="btn-prev-part" onclick="app.prevPart()" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-xl text-sm transition hidden">
+                        <i class="fa-solid fa-chevron-left mr-1"></i> ส่วนก่อนหน้า
+                    </button>
+                    <div></div>
+                    <button type="button" id="btn-next-part" onclick="app.nextPart()" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl text-sm shadow-md transition">
+                        ส่วนถัดไป <i class="fa-solid fa-chevron-right ml-1"></i>
+                    </button>
+                    <button type="button" id="btn-submit-quiz" onclick="app.submitQuiz()" class="px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-lg transition hidden">
+                        ส่งคำตอบและบันทึกผล <i class="fa-solid fa-cloud-arrow-up ml-1"></i>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- VIEW 3: INDIVIDUAL REPORT VIEW -->
+        <section id="view-report" class="hidden space-y-6 max-w-4xl mx-auto">
+            <div class="glass-card rounded-2xl p-6 sm:p-8 shadow-xl border border-slate-200 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
+                    <div>
+                        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">บันทึกผลการประเมินลงระบบสำเร็จ</span>
+                        <h2 id="report-user-name" class="text-2xl font-bold text-slate-900 mt-1">ชื่อผู้รับการประเมิน</h2>
+                        <p id="report-user-dept" class="text-xs text-slate-500">รหัส | แผนก | วันที่ทำรายการ</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="window.print()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300 transition">
+                            <i class="fa-solid fa-print mr-1"></i> พิมพ์ / Save PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Primary Persona Profile Banner -->
+                <div class="mt-6 p-5 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md flex items-center gap-6">
+                    <div class="w-16 h-16 rounded-2xl bg-brand-500/20 text-brand-300 border border-brand-400/30 flex items-center justify-center text-3xl shrink-0">
+                        <i id="persona-icon" class="fa-solid fa-crown"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="text-xs text-brand-300 font-semibold uppercase tracking-wider">Primary Executive Profile</div>
+                        <h3 id="persona-title" class="text-xl font-bold text-white mt-0.5">Profile</h3>
+                        <p id="persona-desc" class="text-xs text-slate-300 mt-1 leading-relaxed">คำอธิบาย</p>
+                    </div>
+                </div>
+
+                <!-- Radar Chart & Dimension Scores -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 items-center">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-inner">
+                        <h4 class="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Radar Chart 8 มิติ (Max 30)</h4>
+                        <div class="w-full h-64 sm:h-80"><canvas id="radarChart"></canvas></div>
+                    </div>
+                    <div class="space-y-2">
+                        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">คะแนนแยกตามมิติ (Dimensions)</h4>
+                        <div id="dimension-score-list" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+
+                <!-- RESTORED: Deep Analysis Section -->
+                <div class="mt-8 space-y-4 border-t pt-6">
+                    <h3 class="text-lg font-bold text-slate-900 flex items-center">
+                        <i class="fa-solid fa-microscope text-brand-500 mr-2"></i> บทวิเคราะห์จิตวิทยาและกรอบความคิดเชิงลึก
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <h4 class="text-xs font-bold text-slate-700 uppercase flex items-center text-amber-600">
+                                <i class="fa-solid fa-lightbulb text-amber-500 mr-1.5"></i> ไดนามิกความเป็นผู้นำ (Leadership Dynamic)
+                            </h4>
+                            <p id="analysis-mindset" class="text-xs text-slate-600 mt-2 leading-relaxed"></p>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <h4 class="text-xs font-bold text-slate-700 uppercase flex items-center text-rose-600">
+                                <i class="fa-solid fa-triangle-exclamation text-rose-500 mr-1.5"></i> จุดบอดที่อาจถูกละเลย (Blindspots)
+                            </h4>
+                            <p id="analysis-caution" class="text-xs text-slate-600 mt-2 leading-relaxed"></p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-brand-50 rounded-xl border border-brand-200">
+                        <h4 class="text-xs font-bold text-brand-900 uppercase flex items-center">
+                            <i class="fa-solid fa-compass text-brand-600 mr-1.5"></i> แนวทางการพัฒนา และการมอบหมายงาน (Delegation & IDP)
+                        </h4>
+                        <p id="analysis-delegation" class="text-xs text-brand-900 mt-2 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <!-- NEW SECTION: Detailed Analysis of 4 Frameworks -->
+                <div class="mt-10 space-y-6 border-t pt-8">
+                    <h3 class="text-xl font-bold text-slate-900 flex items-center border-b pb-3">
+                        <i class="fa-solid fa-layer-group text-brand-600 mr-2"></i> เจาะลึก 4 องค์ประกอบสำคัญ (4 Core Frameworks)
+                    </h3>
+                    
+                    <div id="detailed-framework-analysis" class="space-y-4">
+                        <!-- Content Injected via JS -->
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center pt-6 border-t border-slate-200">
+                    <button onclick="window.location.href='Lab Assessment Center.html'" class="px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl shadow-lg transition">
+                        <i class="fa-solid fa-house mr-2"></i> กลับหน้าเลือกแบบทดสอบ
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: ADMIN DASHBOARD -->
+        <section id="view-admin" class="hidden space-y-6">
+            <div class="glass-card rounded-2xl p-6 shadow-xl border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
+                    <div>
+                        <span class="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">Admin Central Command</span>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 mt-1"><i class="fa-solid fa-users-gear text-purple-600 mr-2"></i>รายชื่อและผลการประเมินพนักงานทั้งหมด</h2>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="app.exportAllCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition flex items-center shadow">
+                            <i class="fa-solid fa-file-csv mr-1.5"></i> Export CSV ทั้งหมด
+                        </button>
+                        <button onclick="app.refreshAdminData()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition flex items-center">
+                            <i class="fa-solid fa-arrows-rotate mr-1"></i> รีเฟรชข้อมูล
+                        </button>
+                        <button onclick="window.location.href='Lab Assessment Center.html'" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-medium transition">
+                            กลับหน้าแรก
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="text-xs text-slate-500">จำนวนผู้ประเมินทั้งหมด</div>
+                        <div id="admin-stat-total" class="text-2xl font-bold text-slate-800 mt-1">0</div>
+                    </div>
+                    <div class="bg-rose-50 p-4 rounded-xl border border-rose-200">
+                        <div class="text-xs text-rose-700 font-medium">Profile A (Commanding)</div>
+                        <div id="admin-stat-profA" class="text-2xl font-bold text-rose-800 mt-1">0</div>
+                    </div>
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                        <div class="text-xs text-amber-700 font-medium">Profile B (Innovator)</div>
+                        <div id="admin-stat-profB" class="text-2xl font-bold text-amber-800 mt-1">0</div>
+                    </div>
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                        <div class="text-xs text-emerald-700 font-medium">Profile C (Mentor)</div>
+                        <div id="admin-stat-profC" class="text-2xl font-bold text-emerald-800 mt-1">0</div>
+                    </div>
+                    <div class="bg-sky-50 p-4 rounded-xl border border-sky-200">
+                        <div class="text-xs text-sky-700 font-medium">Profile D (Expert Advisor)</div>
+                        <div id="admin-stat-profD" class="text-2xl font-bold text-sky-800 mt-1">0</div>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-3">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div class="flex items-center space-x-2 w-full sm:w-auto">
+                            <input type="text" id="admin-search-input" onkeyup="app.filterAdminTable()" placeholder="ค้นหา รหัส, ชื่อ หรือ แผนก..." class="w-full sm:w-64 px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <select id="admin-filter-persona" onchange="app.filterAdminTable()" class="px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="ALL">ทุก Profile</option>
+                                <option value="A">Profile A (Commanding Executor)</option>
+                                <option value="B">Profile B (Strategic Innovator)</option>
+                                <option value="C">Profile C (Guardian Mentor)</option>
+                                <option value="D">Profile D (Expert Advisor)</option>
+                            </select>
+                        </div>
+                        <span class="text-xs text-slate-500">จัดเก็บข้อมูลเรียบร้อยในระบบ Cloud Storage</span>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">รหัสพนักงาน</th>
+                                    <th class="p-3">ชื่อ-นามสกุล</th>
+                                    <th class="p-3">แผนก</th>
+                                    <th class="p-3">Primary Profile</th>
+                                    <th class="p-3 text-center">สิทธิ์แบบทดสอบ</th>
+                                    <th class="p-3">วันที่ประเมินล่าสุด</th>
+                                    <th class="p-3 text-right">การจัดการ & Export</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-results-table-body" class="divide-y divide-slate-200 bg-white">
+                                <tr><td colspan="7" class="p-6 text-center text-slate-400">กำลังโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Admin Auth -->
+    <div id="modal-admin-auth" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div class="text-center">
+                <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto text-xl mb-2">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-lg">เข้าสู่ระบบ Admin</h3>
+                <p class="text-xs text-slate-500 mt-1">กรุณาล็อกอินด้วยอีเมลที่มีสิทธิ์</p>
+            </div>
+            <div class="space-y-3 pt-2 text-left">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Email</label>
+                    <input type="email" id="admin-email" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="admin@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Password</label>
+                    <input type="password" id="admin-password" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="••••••••">
+                </div>
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="app.closeAdminModal()" class="w-1/2 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-200 transition">ยกเลิก</button>
+                <button onclick="app.verifyAdmin()" id="btn-login" class="w-1/2 py-2 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 shadow transition">เข้าสู่ระบบ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Application Logic & Firebase Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+            authDomain: "lab-trc-management-system.firebaseapp.com",
+            projectId: "lab-trc-management-system",
+            storageBucket: "lab-trc-management-system.appspot.com",
+            messagingSenderId: "43919979160",
+            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+
+        const ADMIN_EMAILS = [
+            'sittidate.p@adityabirla.com', 'trc-qcl.laboratory@adityabirla.com',
+            'laboratory.trc@adityabirla.com', 'waraporn.jindanath@adityabirla.com', 'datejub@hotmail.com'
+        ];
+
+        let currentUser = null;
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (!user) signInAnonymously(auth).catch(err => console.warn("Anonymous auth failed:", err));
+        });
+
+        // Dataset (48 Questions) - Reverse coding integrated
+        const QUESTIONS = [
+            { id: 1, text: "ฉันชอบตัดสินใจอย่างรวดเร็ว มุ่งเน้นผลลัพธ์เป็นหลัก และพร้อมชนกับปัญหาตรงๆ โดยไม่ลังเล", part: 1, reverse: false },
+            { id: 2, text: "ฉันให้ความสำคัญกับการสร้างบรรยากาศที่ดี โน้มน้าวใจผู้คน และสร้างเครือข่ายความสัมพันธ์ในองค์กร", part: 1, reverse: false },
+            { id: 3, text: "ฉันชอบการทำงานที่มั่นคง เป็นระบบ สม่ำเสมอ และเน้นการสนับสนุนช่วยเหลือคนในทีมอย่างใจเย็น", part: 1, reverse: false },
+            { id: 4, text: "ฉันพิถีพิถันกับความถูกต้อง ข้อเท็จจริง ระเบียบขั้นตอน และการวิเคราะห์ความเสี่ยงก่อนลงมือทำ", part: 1, reverse: false },
+            { id: 5, text: "เมื่อตกอยู่ภายใต้ความกดดันสูง ฉันมักจะแสดงความใจร้อน รวบรัด หรือควบคุมผู้อื่นมากขึ้น", part: 1, reverse: false },
+            { id: 6, text: "เมื่อรู้สึกอึดอัดกับสถานการณ์ ฉันมักจะถอยออกมาเพื่อคิดวิเคราะห์คนเดียว และรักษาระยะห่างจากความวุ่นวาย", part: 1, reverse: false },
+            { id: 7, text: "สิ่งที่ฉันต้องการลึกๆ จากองค์กรคือความชัดเจน ความปลอดภัย และการเคารพในขอบเขตการทำงาน", part: 1, reverse: false },
+            { id: 8, text: "สิ่งที่ฉันต้องการลึกๆ คืออิสระในการตัดสินใจ และการได้รับการยอมรับในความเชี่ยวชาญของตนเอง", part: 1, reverse: false },
+            { id: 9, text: "ฉันได้รับพลังงานและแรงบันดาลใจเมื่อได้แลกเปลี่ยนความคิดเห็นและร่วมกิจกรรมกับผู้คนจำนวนมาก", part: 1, reverse: false },
+            { id: 10, text: "ฉันชาร์จพลังงานได้ดีที่สุดเมื่อได้ใช้เวลาเงียบๆ ตรองความคิด หรือทำงานในพื้นที่ส่วนตัว", part: 1, reverse: false },
+            { id: 11, text: "ฉันไม่ค่อยสนใจเรื่องการรักษาสัมพันธภาพในทีม หากมันทำให้งานเสร็จล่าช้าลง (คำถามประเมินแบบกลับด้าน)", part: 1, reverse: true },
+            { id: 12, text: "ฉันมักจะหลีกเลี่ยงการโต้แย้งหรือท้าทายความคิดผู้อื่น แม้จะเห็นว่างานนั้นไม่มีประสิทธิภาพ (คำถามประเมินแบบกลับด้าน)", part: 1, reverse: true },
+            { id: 13, text: "ฉันตัดสินใจเรื่องต่างๆ โดยอ้างอิงจากตัวเลข ข้อมูลสถิติ ตรรกะ และเหตุผลเชิงปริมาณเป็นหลัก", part: 2, reverse: false },
+            { id: 14, text: "ฉันอึดอัดกับงานที่ต้องทำตามแผนเป๊ะๆ และชอบการด้นสดแก้ปัญหาหน้างานมากกว่า (คำถามประเมินแบบกลับด้าน)", part: 2, reverse: true },
+            { id: 15, text: "ฉันใช้ความรู้สึก ความเข้าอกเข้าใจ และคุณค่าของมนุษย์ เป็นปัจจัยสำคัญในการตัดสินใจเรื่องงาน", part: 2, reverse: false },
+            { id: 16, text: "ฉันมองภาพรวม ค้นหานวัตกรรม ความเป็นไปได้ใหม่ๆ และชอบเชื่อมโยงคอนเซ็ปต์เชิงยุทธศาสตร์", part: 2, reverse: false },
+            { id: 17, text: "ฉันชอบทำงานกับข้อเท็จจริงและรายละเอียดหน้างานจริง (Sensing) มากกว่าทฤษฎีหรือมโนทัศน์", part: 2, reverse: false },
+            { id: 18, text: "ฉันชอบใช้วิธีการทำงานเดิมๆ ที่พิสูจน์แล้วว่าปลอดภัย มากกว่าการลองคิดค้นอะไรใหม่ๆ (คำถามประเมินแบบกลับด้าน)", part: 2, reverse: true },
+            { id: 19, text: "ฉันต้องการวางแผนทุกอย่างล่วงหน้า (Judging) และรู้สึกอึดอัดหากต้องรับมือกับความไม่แน่นอน", part: 2, reverse: false },
+            { id: 20, text: "ฉันชื่นชอบความยืดหยุ่น (Perceiving) สูง และพร้อมเปลี่ยนแผนกลางคันเสมอ (คำถามประเมินแบบกลับด้าน)", part: 2, reverse: true },
+            { id: 21, text: "ฉันมักใช้ความรู้สึกหรือสัญชาตญาณตัดสินใจแก้ปัญหา มากกว่าการนั่งวิเคราะห์ตรรกะเชิงลึก (คำถามประเมินแบบกลับด้าน)", part: 2, reverse: true },
+            { id: 22, text: "เมื่อแก้ปัญหาซับซ้อน ฉันจะดึงทุกฝ่ายมาพูดคุยเพื่อหาทางออกที่ทุกคนยอมรับร่วมกัน", part: 2, reverse: false },
+            { id: 23, text: "ฉันให้คุณค่ากับความถูกต้องแม่นยำของข้อมูล มากกว่าความรวดเร็วในการส่งมอบงาน", part: 2, reverse: false },
+            { id: 24, text: "ฉันยอมรับให้มีข้อผิดพลาดได้บ้าง หากนั่นทำให้เกิดการทดลองสิ่งใหม่และการเรียนรู้ที่รวดเร็ว", part: 2, reverse: false },
+            { id: 25, text: "ฉันนำทีมโดยการสื่อสารวิสัยทัศน์ ภาพใหญ่ และสร้างแรงบันดาลใจให้ทุกคนเห็นเป้าหมายร่วมกัน", part: 3, reverse: false },
+            { id: 26, text: "ฉันไม่มีเวลามานั่งโค้ชรายบุคคล ลูกทีมควรต้องเรียนรู้วิธีแก้ปัญหาและเอาตัวรอดด้วยตัวเอง (คำถามประเมินแบบกลับด้าน)", part: 3, reverse: true },
+            { id: 27, text: "ฉันเน้นการสร้างความผูกพัน ดูแลความรู้สึก และสร้างความสมานฉันท์ในทีมเป็นอันดับแรก", part: 3, reverse: false },
+            { id: 28, text: "ฉันเปิดโอกาสให้ทุกคนมีส่วนร่วมในการตัดสินใจ และรับฟังความคิดเห็นจากทีมก่อนสรุปงาน", part: 3, reverse: false },
+            { id: 29, text: "ฉันตั้งมาตรฐานไว้สูง มุ่งมั่นลุยงานเต็มที่ และคาดหวังให้ทีมทำผลงานได้เร็วและดีเท่าฉัน", part: 3, reverse: false },
+            { id: 30, text: "ฉันใช้อำนาจและการตัดสินใจที่เด็ดขาด สั่งการชัดเจนเพื่อให้งานสำเร็จตามแผนในสภาวะวิกฤต", part: 3, reverse: false },
+            { id: 31, text: "ฉันสามารถปรับเปลี่ยนสไตล์การนำทีมให้เข้ากับความเชี่ยวชาญและสถานการณ์ของลูกทีมแต่ละคนได้ยืดหยุ่น", part: 3, reverse: false },
+            { id: 32, text: "ฉันรู้ว่าเมื่อใดควรควบคุมรายละเอียด (How-to) และเมื่อใดควรกระจายอำนาจให้ทีมตัดสินใจเอง", part: 3, reverse: false },
+            { id: 33, text: "ฉันปล่อยวางและกระจายงานให้ลูกทีมทำเอง 100% โดยไม่เข้าไปควบคุมรายละเอียดเลย (คำถามประเมินแบบกลับด้าน)", part: 3, reverse: true },
+            { id: 34, text: "ฉันกล้าที่จะเปิดบทสนทนายากๆ (Difficult Conversations) เพื่อสื่อสารข้อปรับปรุงแก่ทีมอย่างตรงไปตรงมา", part: 3, reverse: false },
+            { id: 35, text: "ฉันใช้เวลารักษาสัมพันธภาพมากเกินไป จนบางครั้งละเลยการติดตามผลงานเชิงรุก", part: 3, reverse: false },
+            { id: 36, text: "ฉันบาลานซ์ระหว่างการขับเคลื่อนผลงานระยะยาวและการดูแลสุขภาวะของทีมได้อย่างเหมาะสม", part: 3, reverse: false },
+            { id: 37, text: "ฉันเชื่อว่าทักษะ ความฉลาด และความเชี่ยวชาญ สามารถพัฒนาได้เสมอผ่านความพยายามและการเรียนรู้ (Growth Mindset)", part: 4, reverse: false },
+            { id: 38, text: "ฉันมองว่าความผิดพลาดและอุปสรรค คือโอกาสสำคัญในการเรียนรู้ ไม่ใช่เครื่องบ่งชี้ความล้มเหลว", part: 4, reverse: false },
+            { id: 39, text: "แม้ฉันจะบอกว่าอยากเห็นการเปลี่ยนแปลง แต่มักมีพฤติกรรมเดิมๆ ที่ดึงรั้งไว้ไม่ให้เปลี่ยน (Immunity to Change)", part: 4, reverse: false },
+            { id: 40, text: "ฉันมีความกังวลซ่อนเร้นว่า หากปล่อยให้เกิดวิธีการทำงานใหม่ๆ อาจทำให้ฉันสูญเสียการควบคุมหรือความน่าเชื่อถือ", part: 4, reverse: false },
+            { id: 41, text: "ฉันยึดถือความเชื่อรากฐานว่า 'ประสบการณ์เดิมของฉันคือวิธีที่ดีที่สุดในการป้องกันความผิดพลาด'", part: 4, reverse: false },
+            { id: 42, text: "ฉันยินดีออกจาก Comfort Zone เพื่อทดลองใช้เทคโนโลยีหรือวิธีการทำงานใหม่ๆ แม้จะต้องเริ่มนับหนึ่งใหม่", part: 4, reverse: false },
+            { id: 43, text: "เมื่อเห็นผู้อื่นประสบความสำเร็จ ฉันรู้สึกได้รับแรงบันดาลใจและต้องการเรียนรู้เคล็ดลับจากเขา", part: 4, reverse: false },
+            { id: 44, text: "ฉันมักหลีกเลี่ยงงานที่ไม่ถนัด เพราะกังวลว่าจะทำได้ไม่ดีและเสียชื่อเสียงที่สะสมมา", part: 4, reverse: false },
+            { id: 45, text: "ฉันพร้อมเปลี่ยนความเชื่อหรือสมมติฐานของตนเอง เมื่อพบข้อเท็จจริงใหม่ที่โต้แย้งความคิดเดิม", part: 4, reverse: false },
+            { id: 46, text: "ฉันรู้สึกว่าการขอความช่วยเหลือหรือการยอมรับว่าไม่รู้ เป็นการแสดงความอ่อนแอในฐานะผู้นำ", part: 4, reverse: false },
+            { id: 47, text: "ฉันมุ่งเน้นการสร้างประโยชน์ที่ยั่งยืนให้องค์กร (Legacy) มากกว่าชัยชนะสั้นๆ หรือผลประโยชน์ส่วนตน", part: 4, reverse: false },
+            { id: 48, text: "ฉันเปิดรับ Feedback ที่ตรงไปตรงมาเกี่ยวกับจุดบกพร่องของตนเอง และนำมาปรับปรุงอย่างสม่ำเสมอ", part: 4, reverse: false }
+        ];
+
+        const DIMENSION_MAP = {
+            M1: [1, 5, 8, 12, 30, 34], M2: [2, 3, 9, 11, 15, 27], M3: [4, 7, 14, 17, 19, 23], M4: [16, 18, 24, 25, 37, 42],
+            M5: [13, 21, 31, 36, 43, 45], M6: [26, 28, 32, 38, 47, 48], M7: [6, 10, 29, 33, 35, 46], M8: [20, 22, 39, 40, 41, 44]
+        };
+
+        const DIMENSION_NAMES = {
+            M1: "M1: Driver & Dominance", M2: "M2: Relational & Harmony", M3: "M3: Structure & Precision",
+            M4: "M4: Vision & Innovation", M5: "M5: Analytical Logic", M6: "M6: Developer & Coach",
+            M7: "M7: Pacesetting & Control", M8: "M8: Immunity to Change (ITC)"
+        };
+
+        // Data Definitions for Detailed Analysis Section
+        const DIMENSION_DETAILS = {
+            M1: {
+                title: "M1: Driver & Dominance (ความมุ่งมั่นและกล้าตัดสินใจ)",
+                high: "มีความเป็นผู้นำสูง กล้าตัดสินใจเด็ดขาด มุ่งเน้นผลลัพธ์และความสำเร็จเป็นหลัก พร้อมชนกับปัญหาและไม่กลัวความขัดแย้ง",
+                med: "มีความเด็ดขาดในเวลาที่จำเป็น รู้จักประนีประนอมและรักษาสมดุลระหว่างความก้าวร้าวกับการรับฟัง",
+                low: "มักหลีกเลี่ยงการปะทะหรือการตัดสินใจเรื่องยากๆ ประนีประนอมสูงจนบางครั้งอาจทำให้งานล่าช้า"
+            },
+            M2: {
+                title: "M2: Relational & Harmony (สัมพันธภาพและการทำงานเป็นทีม)",
+                high: "ให้ความสำคัญกับการสร้างบรรยากาศที่ดีในทีม มีความเห็นอกเห็นใจสูง และเก่งในการโน้มน้าวใจผู้คน",
+                med: "ใส่ใจความรู้สึกของทีมในระดับที่เหมาะสม แต่ยังคงรักษามาตรฐานของงานไว้ได้",
+                low: "เน้นเนื้องานมากกว่าความรู้สึกของคน อาจถูกมองว่าเย็นชาหรือเข้าถึงยากในบางสถานการณ์"
+            },
+            M3: {
+                title: "M3: Structure & Precision (ความเป็นระบบและระเบียบขั้นตอน)",
+                high: "เจ้าระเบียบ ทำงานเป็นขั้นตอนเป๊ะๆ ให้ความสำคัญกับความถูกต้อง (QC) และการป้องกันความเสี่ยง",
+                med: "มีระบบการทำงานที่ดี แต่ยังมีความยืดหยุ่นปรับตัวตามสถานการณ์ได้บ้าง",
+                low: "ไม่ชอบกรอบหรือระเบียบปฏิบัติที่ซับซ้อน ชอบการด้นสดแก้ปัญหาหน้างานมากกว่าการวางแผนล่วงหน้า"
+            },
+            M4: {
+                title: "M4: Vision & Innovation (วิสัยทัศน์และความคิดสร้างสรรค์)",
+                high: "มองภาพใหญ่เก่ง คิดนอกกรอบเสมอ เป็นนักริเริ่มโครงการใหม่ๆ และไม่ยึดติดกับวิธีการเดิม",
+                med: "สามารถปรับปรุงต่อยอดสิ่งที่มีอยู่ได้ดี เปิดรับไอเดียใหม่แต่อาจจะไม่ได้เป็นคนริเริ่มเองทั้งหมด",
+                low: "ชอบทำตามแบบแผนเดิมที่พิสูจน์แล้วว่าปลอดภัย ไม่ถนัดการวางกลยุทธ์ภาพใหญ่หรือคิดค้นนวัตกรรม"
+            },
+            M5: {
+                title: "M5: Analytical Logic (ตรรกะและการวิเคราะห์ข้อมูล)",
+                high: "ตัดสินใจทุกอย่างด้วยข้อมูล (Data-driven) ตัวเลข และเหตุผลเชิงประจักษ์ ไม่ใช้อารมณ์ตัดสิน",
+                med: "ใช้ข้อมูลประกอบการตัดสินใจควบคู่ไปกับประสบการณ์และสัญชาตญาณ",
+                low: "มักใช้ความรู้สึก ประสบการณ์ส่วนตัว หรือสัญชาตญาณในการแก้ปัญหา มากกว่าการวิเคราะห์ข้อมูลเชิงลึก"
+            },
+            M6: {
+                title: "M6: Developer & Coach (การพัฒนาทีมและเป็นโค้ช)",
+                high: "สนุกกับการสอนงาน ให้อำนาจทีม (Empower) และมุ่งมั่นที่จะปั้นคนรุ่นใหม่ขึ้นมาแทนที่ตนเอง",
+                med: "ดูแลและสอนงานลูกทีมได้ดีในระดับมาตรฐาน มีการสั่งการสลับกับการเป็นโค้ช",
+                low: "ไม่ค่อยมีเวลาสอนงานลูกทีม คาดหวังให้ลูกทีมเรียนรู้และเอาตัวรอดด้วยตัวเอง"
+            },
+            M7: {
+                title: "M7: Pacesetting & Control (การกำหนดจังหวะงานและควบคุม)",
+                high: "ลงมือทำเองบ่อยครั้ง ตั้งมาตรฐานไว้สูงมาก คาดหวังให้ทุกคนทำเร็วและดีเท่าตนเอง (อาจเกิดการ Micro-manage)",
+                med: "สามารถควบคุมความก้าวหน้าของงานได้ดี โดยรู้จังหวะว่าเมื่อไหร่ควรลงไปคุม เมื่อไหร่ควรปล่อย",
+                low: "ปล่อยวางและกระจายงานให้ทีมทำเองมากเกินไป จนบางครั้งขาดการติดตามผลงานเชิงรุก (Follow-up)"
+            },
+            M8: {
+                title: "M8: Immunity to Change - ITC (ภูมิต้านทานการเปลี่ยนแปลง)",
+                high: "มีแรงต้านการเปลี่ยนแปลงสูง ยึดติดกับวิธีเดิมๆ (Comfort Zone) ลึกๆ แล้วกลัวสูญเสียการควบคุมหรือความน่าเชื่อถือ",
+                med: "มีความลังเลเมื่อต้องเจอกับสิ่งใหม่ๆ แต่หากเห็นประโยชน์ที่ชัดเจนก็พร้อมที่จะเปลี่ยนและเรียนรู้",
+                low: "มี Growth Mindset สูงมาก ไม่กลัวความล้มเหลว พร้อมเปิดรับเทคโนโลยีและวิธีการทำงานใหม่ๆ ตลอดเวลา"
+            }
+        };
+
+        const state = {
+            currentPart: 1, empId: "", empName: "", empDept: "", answers: {}, scores: {}, primaryProfile: null,
+            radarChartInstance: null, adminResults: [], permissionsMap: {}, currentActiveRecord: null,
+            appId: 'ilmp-assessment-app'
+        };
+
+        window.app = {
+            navTo: (viewId) => {
+                ['welcome', 'quiz', 'report', 'admin'].forEach(v => {
+                    const el = document.getElementById(`view-${v}`);
+                    if (el) el.classList.add('hidden');
+                });
+                document.getElementById(`view-${viewId}`).classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
+            showToast: (msg, type = 'info') => {
+                const toast = document.createElement('div');
+                toast.className = `p-3 px-4 rounded-xl text-xs font-medium text-white shadow-xl flex items-center space-x-2 transition duration-300 ${
+                    type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-brand-600'
+                }`;
+                toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${msg}</span>`;
+                document.getElementById('toast-container').appendChild(toast);
+                setTimeout(() => toast.remove(), 3500);
+            },
+
+            openAdminModal: () => {
+                if (currentUser && currentUser.email && ADMIN_EMAILS.includes(currentUser.email)) {
+                    app.loadAdminData(); app.navTo('admin');
+                } else {
+                    document.getElementById('modal-admin-auth').classList.remove('hidden');
+                }
+            },
+            closeAdminModal: () => {
+                document.getElementById('modal-admin-auth').classList.add('hidden');
+                document.getElementById('admin-password').value = '';
+            },
+
+            verifyAdmin: async () => {
+                const email = document.getElementById('admin-email').value.trim();
+                const pass = document.getElementById('admin-password').value;
+                const btn = document.getElementById('btn-login');
+
+                if (!email || !pass) return app.showToast('กรุณากรอกอีเมลและรหัสผ่าน', 'error');
+
+                btn.innerText = 'กำลังตรวจสอบสิทธิ์...';
+                try {
+                    const cred = await signInWithEmailAndPassword(auth, email, pass);
+                    if (ADMIN_EMAILS.includes(cred.user.email)) {
+                        app.closeAdminModal(); app.loadAdminData(); app.navTo('admin');
+                        app.showToast('เข้าสู่ระบบ Admin สำเร็จ', 'success');
+                    } else {
+                        await signOut(auth);
+                        app.showToast('บัญชีนี้ไม่มีสิทธิ์เข้าถึง Admin Dashboard', 'error');
+                    }
+                } catch (e) {
+                    app.showToast('อีเมลหรือรหัสผ่านไม่ถูกต้อง', 'error');
+                } finally { btn.innerText = 'เข้าสู่ระบบ'; }
+            },
+
+            startAssessment: async () => {
+                const id = document.getElementById('input-emp-id').value.trim();
+                const name = document.getElementById('input-emp-name').value.trim();
+                const dept = document.getElementById('input-emp-dept').value.trim();
+                const btn = document.getElementById('btn-start');
+
+                if (!id || !name || !dept) return app.showToast('กรุณาระบุข้อมูลให้ครบถ้วน', 'error');
+
+                btn.innerText = 'กำลังตรวจสอบสิทธิ์...';
+                btn.disabled = true;
+
+                try {
+                    const permRef = doc(db, 'assessment_permissions', id);
+                    const permSnap = await getDoc(permRef);
+                    if (permSnap.exists()) {
+                        const permData = permSnap.data();
+                        if (permData.ilmp48_completed && !permData.ilmp48_allow_retake) {
+                            app.showToast('คุณทำแบบทดสอบนี้ไปแล้ว โปรดติดต่อ Admin หากต้องการทำใหม่', 'error');
+                            btn.innerHTML = 'เริ่มทำแบบทดสอบ (48 ข้อ) <i class="fa-solid fa-arrow-right ml-2"></i>';
+                            btn.disabled = false;
+                            return;
+                        }
+                    }
+
+                    state.empId = id; state.empName = name; state.empDept = dept;
+                    state.answers = {}; state.currentPart = 1;
+                    app.renderPart(1); app.navTo('quiz');
+                } catch (err) {
+                    app.showToast('ตรวจสอบสิทธิ์ล้มเหลว', 'error');
+                } finally {
+                    btn.innerHTML = 'เริ่มทำแบบทดสอบ (48 ข้อ) <i class="fa-solid fa-arrow-right ml-2"></i>';
+                    btn.disabled = false;
+                }
+            },
+
+            renderPart: (partNum) => {
+                state.currentPart = partNum;
+                document.getElementById('quiz-part-badge').innerText = `Part ${partNum} จาก 4`;
+                const listEl = document.getElementById('questions-list');
+                listEl.innerHTML = '';
+
+                QUESTIONS.filter(q => q.part === partNum).forEach(q => {
+                    const qBox = document.createElement('div');
+                    qBox.className = 'bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3';
+                    qBox.innerHTML = `
+                        <div class="flex items-start space-x-3"><span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">${q.id}</span><p class="text-sm font-medium text-slate-800">${q.text}</p></div>
+                        <div class="grid grid-cols-5 gap-1 sm:gap-2 pt-2 border-t border-slate-100">
+                            ${[1, 2, 3, 4, 5].map(val => `<button type="button" onclick="app.selectScore(${q.id}, ${val})" id="btn-q-${q.id}-${val}" class="likert-btn p-2 rounded-lg border text-xs text-center transition font-medium ${state.answers[q.id] === val ? 'bg-brand-600 text-white border-brand-600 shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'}"><div class="font-bold text-sm">${val}</div><div class="text-[10px] hidden sm:block opacity-80">${val===1?'ไม่จริงเลย':val===2?'ไม่ค่อยจริง':val===3?'ปานกลาง':val===4?'ค่อนข้างจริง':'จริงที่สุด'}</div></button>`).join('')}
+                        </div>`;
+                    listEl.appendChild(qBox);
+                });
+
+                app.updateQuizProgress();
+                document.getElementById('btn-prev-part').classList.toggle('hidden', partNum === 1);
+                document.getElementById('btn-next-part').classList.toggle('hidden', partNum === 4);
+                document.getElementById('btn-submit-quiz').classList.toggle('hidden', partNum !== 4);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
+            selectScore: (qId, val) => {
+                state.answers[qId] = val;
+                [1, 2, 3, 4, 5].forEach(v => {
+                    const btn = document.getElementById(`btn-q-${qId}-${v}`);
+                    if (btn) btn.className = v === val ? 'likert-btn p-2 rounded-lg border text-xs text-center transition font-medium bg-brand-600 text-white border-brand-600 shadow-sm' : 'likert-btn p-2 rounded-lg border text-xs text-center transition font-medium bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200';
+                });
+                app.updateQuizProgress();
+            },
+
+            updateQuizProgress: () => {
+                const count = Object.keys(state.answers).length;
+                document.getElementById('quiz-progress-text').innerText = `ตอบแล้ว ${count} จาก 48 ข้อ`;
+                document.getElementById('quiz-progress-bar').style.width = `${Math.round((count / 48) * 100)}%`;
+            },
+
+            nextPart: () => {
+                if (QUESTIONS.filter(q => q.part === state.currentPart).some(q => !state.answers[q.id])) return app.showToast('กรุณาตอบคำถามให้ครบ', 'error');
+                app.renderPart(state.currentPart + 1);
+            },
+            prevPart: () => app.renderPart(state.currentPart - 1),
+
+            submitQuiz: async () => {
+                if (Object.keys(state.answers).length < 48) return app.showToast('กรุณาตอบคำถามให้ครบ 48 ข้อ', 'error');
+
+                const btn = document.getElementById('btn-submit-quiz');
+                btn.innerText = 'กำลังประมวลผลและบันทึก...'; btn.disabled = true;
+
+                const scores = {};
+                Object.keys(DIMENSION_MAP).forEach(dim => {
+                    let sum = 0;
+                    DIMENSION_MAP[dim].forEach(qId => {
+                        const question = QUESTIONS.find(q => q.id === qId);
+                        const val = state.answers[qId] || 0;
+                        if (val > 0) sum += question.reverse ? (6 - val) : val;
+                    });
+                    scores[dim] = sum;
+                });
+                
+                state.scores = scores;
+                const scoreA = scores.M1 + scores.M7 + scores.M5;
+                const scoreB = scores.M4 + scores.M6 + scores.M2;
+                const scoreC = scores.M2 + scores.M6 + scores.M3;
+                const scoreD = scores.M3 + scores.M5 + scores.M8;
+                const maxVal = Math.max(scoreA, scoreB, scoreC, scoreD);
+                state.primaryProfile = maxVal === scoreA ? 'A' : maxVal === scoreB ? 'B' : maxVal === scoreC ? 'C' : 'D';
+
+                const record = { empId: state.empId, empName: state.empName, empDept: state.empDept, primaryProfile: state.primaryProfile, scores: state.scores, answers: state.answers, timestamp: new Date().toISOString() };
+
+                try {
+                    const now = new Date();
+                    const formattedDate = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                    const customDocId = `${state.empId}_${formattedDate}`;
+
+                    await setDoc(doc(db, 'artifacts', state.appId, 'public', 'data', 'ilmp_results', customDocId), record);
+                    await setDoc(doc(db, 'assessment_permissions', state.empId), { empName: state.empName, ilmp48_completed: true, ilmp48_allow_retake: false }, { merge: true });
+
+                    app.showToast('บันทึกผลลงระบบ Cloud สำเร็จ', 'success');
+                    state.currentActiveRecord = record;
+                    app.renderReportUI(); app.navTo('report');
+                } catch (e) {
+                    app.showToast(`บันทึกผิดพลาด: ${e.message}`, 'error');
+                } finally {
+                    btn.innerHTML = 'ส่งคำตอบและบันทึกผล <i class="fa-solid fa-cloud-arrow-up ml-1"></i>'; btn.disabled = false;
+                }
+            },
+
+            analyzeDeepLeadership: (scores, primary) => {
+                const composites = {
+                    'A': scores.M1 + scores.M7 + scores.M5,
+                    'B': scores.M4 + scores.M6 + scores.M2,
+                    'C': scores.M2 + scores.M6 + scores.M3,
+                    'D': scores.M3 + scores.M5 + scores.M8
+                };
+                const sortedProf = Object.keys(composites).sort((a,b) => composites[b] - composites[a]);
+                const p1Key = sortedProf[0];
+                const p2Key = sortedProf[1];
+                const pLowestKey = sortedProf[3];
+
+                const profileDefs = {
+                    'A': { name: "The Commanding Executor", action: "ขับเคลื่อนผลลัพธ์ ตัดสินใจเด็ดขาด และคุมสถานการณ์หน้างานให้อยู่หมัด", shadow: "การรับฟังความรู้สึกและการประนีประนอม", icon: "fa-crown", desc: "มุ่งเป้าหมายสูง ตัดสินใจเร็ว ลุยทำเอง ลุยแก้ปัญหาวิกฤตได้ดี โดดเด่นด้วย Driver & Pacesetting" },
+                    'B': { name: "The Strategic Innovator", action: "สร้างสรรค์วิสัยทัศน์ใหม่ๆ และมองข้ามกรอบความเชื่อเดิมๆ", shadow: "ความละเอียดรอบคอบในงานรูทีนและการคุมระเบียบปฏิบัติ", icon: "fa-lightbulb", desc: "มองภาพใหญ่ ชอบการเปลี่ยนแปลง นำเสนอนวัตกรรม โค้ชทีม และเปิดรับสิ่งใหม่ๆ" },
+                    'C': { name: "The Guardian Mentor", action: "สร้างความผูกพันและสนับสนุนการเติบโตของบุคลากรในทีม", shadow: "การตัดสินใจเฉียบขาดในสภาวะวิกฤต หรือการกล้าตักเตือนขั้นเด็ดขาด", icon: "fa-hand-holding-heart", desc: "เน้นสัมพันธภาพ ความมั่นคง สมานฉันท์ มุ่งมั่นพัฒนาคนรุ่นใหม่และถ่ายทอดประสบการณ์" },
+                    'D': { name: "The Expert Advisor", action: "ยึดถือมาตรฐาน ความถูกต้องของระบบ และการลดความเสี่ยงอย่างเป็นขั้นตอน", shadow: "ความยืดหยุ่นต่อการเปลี่ยนแปลงที่ไม่คาดคิด หรือการทำอะไรนอกสคริปต์", icon: "fa-user-shield", desc: "เก๋าเกม ละเอียดรอบคอบ ยึดถือความถูกต้องเชิงเทคนิค และระวังความเสี่ยง" }
+                };
+
+                const p1 = profileDefs[p1Key];
+                const p2 = profileDefs[p2Key];
+                const pLowest = profileDefs[pLowestKey];
+
+                let dynamicMindset = `บุคลิกภาพผู้นำหลักของคุณคือ <strong>${p1.name}</strong> โดยมีจุดเด่นในการ${p1.action} `;
+                if (composites[p1Key] - composites[p2Key] <= 6) {
+                    dynamicMindset += `พร้อมกันนี้ คุณยังมีกลิ่นอายของ ${p2.name} ผสมอยู่อย่างชัดเจน ทำให้สไตล์การนำของคุณคือ "การผสมผสานระหว่างการ${p1.action} ควบคู่ไปกับการ${p2.action}" ซึ่งถือเป็นจุดแข็งที่ซับซ้อนและมีมิติ`;
+                } else {
+                    dynamicMindset += `ซึ่งสไตล์นี้มีความโดดเด่นและเป็นธรรมชาติที่ฝังรากลึกในตัวคุณอย่างชัดเจน`;
+                }
+
+                let blindspot = `คุณมักจะให้ความสำคัญกับสไตล์ของตนเองจนอาจเผลอละเลยมิติของ "${pLowest.shadow}" ไปโดยไม่รู้ตัว ซึ่งมิตินี้ถือเป็น 'จุดบอด (Blindspot)' หลักของคุณในการบริหารงาน `;
+                
+                if (scores.M8 >= 20) {
+                    blindspot += `<br><br><span class="text-rose-600 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ITC Alert (ภูมิต้านทานการเปลี่ยนแปลง):</span> คุณมีระดับ Immunity to Change ในจิตใต้สำนึกค่อนข้างสูง ซึ่งมักจะสร้างกำแพงป้องกันตนเองหรือข้ออ้างทางจิตวิทยาเมื่อต้องเจอกับวิธีทำงานแบบใหม่ (แม้ปากจะบอกว่าอยากพัฒนา) คุณควรระวังพฤติกรรมดึงรั้งนี้ไม่ให้กลายเป็นคอขวดของทีม`;
+                } else {
+                    blindspot += `<br><br><span class="text-emerald-600 font-bold"><i class="fa-solid fa-check"></i> Growth Mindset:</span> คุณมีระดับความยืดหยุ่นต่อการเปลี่ยนแปลงที่ดี (ITC ต่ำ) พร้อมเปิดรับและปรับตัวกับกระบวนการใหม่ๆ ได้โดยไม่อึดอัดมากนัก`;
+                }
+
+                let delegation = `กลยุทธ์ IDP (แผนพัฒนาส่วนบุคคล): ควรเสริมจุดแข็งด้าน ${p1.name} โดยหาโอกาสรับผิดชอบโครงการที่ตรงกับจริต แต่ในขณะเดียวกัน หัวหน้าหรือตัวคุณเองต้องตั้งเป้าท้าทาย (Stretch Goal) เพื่อฝึกฝนทักษะในส่วนของ "${pLowest.shadow}" เพิ่มเติม เพื่อปิดช่องโหว่ไม่ให้เกิดความผิดพลาดในการบริหารทีมระยะยาว`;
+
+                return { meta: p1, dynamicMindset: dynamicMindset, blindspot: blindspot, delegation: delegation };
+            },
+
+            // --- วิเคราะห์ภาพรวม (รวมถึง Radar) ---
+            renderReportUI: () => {
+                const rec = state.currentActiveRecord;
+                document.getElementById('report-user-name').innerText = rec.empName;
+                document.getElementById('report-user-dept').innerText = `รหัสพนักงาน: ${rec.empId} | แผนก: ${rec.empDept} | ${new Date(rec.timestamp).toLocaleDateString('th-TH')}`;
+
+                const profileDefs = {
+                    'A': { name: "The Commanding Executor", icon: "fa-crown", desc: "มุ่งเป้าหมายสูง ตัดสินใจเร็ว ลุยทำเอง ลุยแก้ปัญหาวิกฤตได้ดี" },
+                    'B': { name: "The Strategic Innovator", icon: "fa-lightbulb", desc: "มองภาพใหญ่ ชอบการเปลี่ยนแปลง นำเสนอนวัตกรรม โค้ชทีม" },
+                    'C': { name: "The Guardian Mentor", icon: "fa-hand-holding-heart", desc: "เน้นสัมพันธภาพ ความมั่นคง สมานฉันท์ มุ่งมั่นพัฒนาคนรุ่นใหม่" },
+                    'D': { name: "The Expert Advisor", icon: "fa-user-shield", desc: "เก๋าเกม ละเอียดรอบคอบ ยึดถือความถูกต้องเชิงเทคนิค และระวังความเสี่ยง" }
+                };
+                const pMeta = profileDefs[rec.primaryProfile];
+                document.getElementById('persona-title').innerText = pMeta.name;
+                document.getElementById('persona-icon').className = `fa-solid ${pMeta.icon}`;
+                document.getElementById('persona-desc').innerText = pMeta.desc;
+
+                // Dimension list
+                const listEl = document.getElementById('dimension-score-list');
+                listEl.innerHTML = '';
+                Object.keys(DIMENSION_NAMES).forEach(dim => {
+                    const score = rec.scores[dim];
+                    const colorClass = dim === 'M8' ? (score >= 20 ? 'bg-rose-500' : 'bg-slate-400') : (score >= 22 ? 'bg-brand-600' : 'bg-sky-500');
+                    const row = document.createElement('div');
+                    row.className = 'bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs space-y-1';
+                    row.innerHTML = `<div class="flex justify-between font-medium"><span>${DIMENSION_NAMES[dim]}</span><span class="font-bold">${score} / 30</span></div><div class="w-full bg-slate-200 rounded-full h-1.5"><div class="${colorClass} h-1.5 rounded-full" style="width: ${Math.round((score/30)*100)}%"></div></div>`;
+                    listEl.appendChild(row);
+                });
+
+                // Radar Chart
+                app.renderRadarChart(rec.scores);
+                
+                // RESTORED: Deep Leadership Analysis
+                const deepAnalysis = app.analyzeDeepLeadership(rec.scores, rec.primaryProfile);
+                document.getElementById('analysis-mindset').innerHTML = deepAnalysis.dynamicMindset;
+                document.getElementById('analysis-caution').innerHTML = deepAnalysis.blindspot;
+                document.getElementById('analysis-delegation').innerHTML = deepAnalysis.delegation;
+
+                // NEW: Render Detailed Analysis (4 Categories)
+                app.renderDetailedAnalysis(rec.scores);
+            },
+
+            // --- ระบบวิเคราะห์เจาะลึก 4 หมวดหมู่ (M1-M8) ---
+            renderDetailedAnalysis: (scores) => {
+                const getLevelText = (score, dimKey) => {
+                    // M8 เป็น Reverse (คะแนนสูง=แย่, คะแนนต่ำ=ดี)
+                    if (dimKey === 'M8') {
+                        return score >= 20 ? 'สูง (มีแรงต้าน)' : (score >= 12 ? 'ปานกลาง' : 'ต่ำ (เปิดรับ)');
+                    }
+                    return score >= 22 ? 'สูงโดดเด่น' : (score >= 12 ? 'ปานกลาง' : 'ควรพัฒนา');
+                };
+
+                const getColor = (score, dimKey) => {
+                    if (dimKey === 'M8') return score >= 20 ? 'text-rose-600' : 'text-emerald-600';
+                    return score >= 22 ? 'text-brand-600' : (score >= 12 ? 'text-amber-600' : 'text-slate-500');
+                };
+
+                const getDesc = (score, dimKey) => {
+                    let level = score >= 22 ? 'high' : (score >= 12 ? 'med' : 'low');
+                    return DIMENSION_DETAILS[dimKey][level];
+                };
+
+                const categories = [
+                    {
+                        title: "1. สไตล์พฤติกรรม (Behavioral Styles)", icon: "fa-layer-group text-blue-600", bg: "bg-blue-50 border-blue-200", dims: ['M1', 'M2']
+                    },
+                    {
+                        title: "2. กระบวนการคิด (Thinking Processes)", icon: "fa-brain text-purple-600", bg: "bg-purple-50 border-purple-200", dims: ['M3', 'M4', 'M5']
+                    },
+                    {
+                        title: "3. สไตล์การนำทีม (Leadership Styles)", icon: "fa-user-tie text-emerald-600", bg: "bg-emerald-50 border-emerald-200", dims: ['M6', 'M7']
+                    },
+                    {
+                        title: "4. กรอบความคิด (Mindset & Adaptation)", icon: "fa-seedling text-amber-600", bg: "bg-amber-50 border-amber-200", dims: ['M8']
+                    }
+                ];
+
+                const container = document.getElementById('detailed-framework-analysis');
+                container.innerHTML = '';
+
+                categories.forEach(cat => {
+                    let dimHTML = '';
+                    cat.dims.forEach(dim => {
+                        const score = scores[dim];
+                        dimHTML += `
+                            <div class="mt-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-sm text-slate-800">${DIMENSION_DETAILS[dim].title}</span>
+                                    <span class="text-xs font-bold ${getColor(score, dim)}">คะแนน: ${score}/30 (${getLevelText(score, dim)})</span>
+                                </div>
+                                <p class="text-xs text-slate-600 leading-relaxed">${getDesc(score, dim)}</p>
+                            </div>
+                        `;
+                    });
+
+                    const catBox = document.createElement('div');
+                    catBox.className = `p-4 rounded-xl border ${cat.bg}`;
+                    catBox.innerHTML = `
+                        <h4 class="font-bold text-slate-900 flex items-center text-sm">
+                            <i class="fa-solid ${cat.icon} mr-2"></i> ${cat.title}
+                        </h4>
+                        ${dimHTML}
+                    `;
+                    container.appendChild(catBox);
+                });
+            },
+
+            renderRadarChart: (scores) => {
+                const ctx = document.getElementById('radarChart').getContext('2d');
+                if (state.radarChartInstance) state.radarChartInstance.destroy();
+                state.radarChartInstance = new Chart(ctx, {
+                    type: 'radar',
+                    data: { labels: Object.keys(DIMENSION_NAMES).map(k => k), datasets: [{ data: Object.keys(DIMENSION_NAMES).map(k => scores[k]), backgroundColor: 'rgba(2, 132, 199, 0.2)', borderColor: '#0284c7', borderWidth: 2, pointBackgroundColor: '#0369a1' }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 30, ticks: { stepSize: 5 } } }, plugins: { legend: { display: false } } }
+                });
+            },
+
+            loadAdminData: async () => {
+                try {
+                    if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email)) return app.showToast('ไม่มีสิทธิ์เข้าถึง', 'error');
+
+                    const colRef = collection(db, 'artifacts', state.appId, 'public', 'data', 'ilmp_results');
+                    const snapshot = await getDocs(colRef);
+                    const resultsMap = {};
+                    snapshot.forEach(docSnap => {
+                        const d = docSnap.data();
+                        if (!resultsMap[d.empId] || new Date(d.timestamp) > new Date(resultsMap[d.empId].timestamp)) resultsMap[d.empId] = { id: docSnap.id, ...d };
+                    });
+
+                    const permSnap = await getDocs(collection(db, 'assessment_permissions'));
+                    const permMap = {};
+                    permSnap.forEach(doc => { permMap[doc.id] = doc.data(); });
+
+                    state.adminResults = Object.values(resultsMap);
+                    state.permissionsMap = permMap;
+                    app.renderAdminDashboard(state.adminResults);
+                } catch (e) {
+                    app.showToast(`ดึงข้อมูลล้มเหลว`, 'error');
+                }
+            },
+            refreshAdminData: () => { app.loadAdminData(); app.showToast('รีเฟรชข้อมูลเรียบร้อย', 'success'); },
+            renderAdminDashboard: (dataToRender) => {
+                const data = dataToRender || state.adminResults;
+                document.getElementById('admin-stat-total').innerText = data.length;
+                document.getElementById('admin-stat-profA').innerText = data.filter(d => d.primaryProfile === 'A').length;
+                document.getElementById('admin-stat-profB').innerText = data.filter(d => d.primaryProfile === 'B').length;
+                document.getElementById('admin-stat-profC').innerText = data.filter(d => d.primaryProfile === 'C').length;
+                document.getElementById('admin-stat-profD').innerText = data.filter(d => d.primaryProfile === 'D').length;
+
+                const tbody = document.getElementById('admin-results-table-body');
+                tbody.innerHTML = '';
+                if (data.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">ยังไม่มีข้อมูล</td></tr>`;
+
+                data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50 transition';
+                    const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleDateString('th-TH') : '-';
+                    const canRetake = (state.permissionsMap[item.empId] || {}).ilmp48_allow_retake;
+                    const statusBadge = canRetake ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded">✅ พร้อมทำใหม่</span>' : '<span class="px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded">🔒 ล็อคสิทธิ์</span>';
+                    
+                    const profileBadge = { 'A': '<span class="px-2 py-0.5 bg-rose-100 text-rose-700 font-bold rounded">A (Executor)</span>', 'B': '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 font-bold rounded">B (Innovator)</span>', 'C': '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded">C (Mentor)</span>', 'D': '<span class="px-2 py-0.5 bg-sky-100 text-sky-700 font-bold rounded">D (Advisor)</span>' }[item.primaryProfile] || item.primaryProfile;
+
+                    row.innerHTML = `
+                        <td class="p-3 font-mono font-semibold text-sky-700">${item.empId || '-'}</td>
+                        <td class="p-3 font-semibold text-slate-800">${item.empName || '-'}</td>
+                        <td class="p-3 text-slate-600">${item.empDept || '-'}</td>
+                        <td class="p-3">${profileBadge}</td>
+                        <td class="p-3 text-center">${statusBadge}</td>
+                        <td class="p-3 text-slate-500">${dateStr}</td>
+                        <td class="p-3 text-right space-x-1">
+                            <button onclick="app.assignRetake('${item.empId}')" class="px-2 py-1 bg-amber-100 text-amber-800 rounded text-[11px] font-medium" ${canRetake ? 'disabled style="opacity: 0.4"' : ''}><i class="fa-solid fa-key"></i> Assign</button>
+                            <button onclick="app.viewEmployeeReport('${item.id}')" class="px-2 py-1 bg-brand-100 text-brand-800 rounded text-[11px] font-medium"><i class="fa-solid fa-eye"></i> ผล</button>
+                            <button onclick="app.exportSingleUserCSV('${item.id}')" class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-[11px] font-medium"><i class="fa-solid fa-file-csv"></i></button>
+                            <button onclick="app.deleteResult('${item.id}')" class="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[11px]"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            },
+
+            filterAdminTable: () => {
+                const term = document.getElementById('admin-search-input').value.toLowerCase();
+                const selectedPersona = document.getElementById('admin-filter-persona').value;
+                const filtered = state.adminResults.filter(d => {
+                    const matchTerm = (d.empName && d.empName.toLowerCase().includes(term)) || (d.empId && String(d.empId).toLowerCase().includes(term)) || (d.empDept && d.empDept.toLowerCase().includes(term));
+                    const matchPersona = selectedPersona === 'ALL' || d.primaryProfile === selectedPersona;
+                    return matchTerm && matchPersona;
+                });
+                app.renderAdminDashboard(filtered);
+            },
+            assignRetake: async (empId) => {
+                if(confirm(`ปลดล็อคสิทธิ์ให้พนักงานรหัส ${empId} ทำประเมิน ILMP-48 รอบใหม่ใช่หรือไม่?`)) {
+                    try { await updateDoc(doc(db, 'assessment_permissions', empId), { ilmp48_allow_retake: true }); app.showToast(`อนุญาตสำเร็จ`, 'success'); app.loadAdminData(); } catch (e) { app.showToast('ผิดพลาด', 'error'); }
+                }
+            },
+            viewEmployeeReport: (id) => {
+                const item = state.adminResults.find(d => d.id === id);
+                if (!item) return;
+                state.currentActiveRecord = item;
+                app.renderReportUI(); app.navTo('report');
+            },
+            deleteResult: async (id) => {
+                if(confirm('แน่ใจหรือไม่ที่จะลบรายการประเมินนี้?')) {
+                    try { await deleteDoc(doc(db, 'artifacts', state.appId, 'public', 'data', 'ilmp_results', id)); state.adminResults = state.adminResults.filter(r => r.id !== id); app.renderAdminDashboard(); app.showToast('ลบรายการเรียบร้อย', 'info'); } catch (e) { app.showToast('ลบผิดพลาด', 'error'); }
+                }
+            },
+            exportAllCSV: () => {
+                if (state.adminResults.length === 0) return app.showToast('ไม่มีข้อมูล', 'error');
+                let csv = "\uFEFFEmployee ID,Name,Department,Primary Profile,M1,M2,M3,M4,M5,M6,M7,M8,Date," + Array.from({length:48}, (_,i)=>`Q${i+1}`).join(",") + "\n";
+                state.adminResults.forEach(item => {
+                    const qAns = Array.from({ length: 48 }, (_, i) => (item.answers || {})[i + 1] || 0);
+                    csv += `"${item.empId||''}","${item.empName||''}","${item.empDept||''}","${item.primaryProfile||''}",${item.scores?.M1||0},${item.scores?.M2||0},${item.scores?.M3||0},${item.scores?.M4||0},${item.scores?.M5||0},${item.scores?.M6||0},${item.scores?.M7||0},${item.scores?.M8||0},"${item.timestamp?new Date(item.timestamp).toLocaleDateString('th-TH'):''}",${qAns.join(",")}\n`;
+                });
+                app.downloadCSVFile(csv, `ILMP48_All_Employees_${new Date().toISOString().slice(0,10)}.csv`);
+            },
+            exportSingleUserCSV: (id) => {
+                const item = state.adminResults.find(d => d.id === id);
+                if (!item) return;
+                let csv = `\uFEFF=== ILMP-48 INDIVIDUAL ASSESSMENT REPORT ===\nEmployee ID,${item.empId}\nEmployee Name,${item.empName}\nDepartment,${item.empDept}\nPrimary Profile,${item.primaryProfile}\nDate,${new Date(item.timestamp).toLocaleDateString('th-TH')}\n\n=== DIMENSIONS ===\n`;
+                Object.keys(DIMENSION_NAMES).forEach(dim => csv += `${DIMENSION_NAMES[dim]},${item.scores?.[dim] || 0}\n`);
+                csv += `\n=== ANSWERS ===\n`;
+                QUESTIONS.forEach(q => csv += `${q.id},"${q.text}",${item.answers?.[q.id] || 0}\n`);
+                app.downloadCSVFile(csv, `ILMP48_Report_${item.empId}_${item.empName.replace(/\s+/g,'_')}.csv`);
+            },
+            downloadCSVFile: (csvContent, fileName) => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
+                a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+        };
+    </script>
+</body>
+</html>
