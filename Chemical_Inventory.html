@@ -721,11 +721,25 @@
        </label>
        <div class="flex gap-2">
          <input type="text" id="wsDIWaterQr" list="recentDiList" class="w-full p-3 border border-cyan-300 bg-white rounded-xl mono font-bold text-cyan-800 outline-none focus:ring-2 focus:ring-cyan-500" placeholder="คลิกเพื่อเลือก หรือ สแกน QR..." autocomplete="off" />
-         <datalist id="recentDiList">
-           </datalist>
+         <datalist id="recentDiList"></datalist>
          <button id="btnScanDiWater" type="button" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 rounded-xl shadow-md transition-all active:scale-95">
            <i class="fa-solid fa-camera text-lg"></i>
          </button>
+       </div>
+
+       <!-- ส่วนที่เพิ่มมาใหม่: ช่องกรอกปริมาตรและหน่วย -->
+       <div class="grid grid-cols-2 gap-3 mt-3">
+         <div>
+            <label class="block text-[10px] font-bold text-cyan-800 uppercase mb-1">ปริมาตรที่ใช้ (Volume)</label>
+            <input type="number" id="wsPrepVolume" class="w-full p-3 border border-cyan-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-center text-cyan-900" placeholder="เช่น 1000" />
+         </div>
+         <div>
+            <label class="block text-[10px] font-bold text-cyan-800 uppercase mb-1">หน่วย (Unit)</label>
+            <select id="wsPrepVolumeUnit" class="w-full p-3 border border-cyan-300 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-cyan-900">
+              <option value="ml">ml (มิลลิลิตร)</option>
+              <option value="L">L (ลิตร)</option>
+            </select>
+         </div>
        </div>
     </div>
 
@@ -759,7 +773,7 @@
   <div class="p-6 space-y-4">
   <input type="hidden" id="approveDocId" />
   <div>
-    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Actual Factor / Concentration</label>
+    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Actual Concentration</label>
     <input type="number" step="0.0001" id="approveFactor" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" placeholder="เช่น 0.1005" />
   </div>
   <div>
@@ -1615,7 +1629,7 @@
                   $("btnOpenPrepWSModal").addEventListener("click", () => loadRecentDIWater());
 
 
-                  // 🛑 ก้อนที่ 2: ระบบ Smart Filter กรองชื่อสารเคมีตั้งต้นให้ตรงกับสูตร
+                  // 🛑 ก้อนที่ 2: ระบบ Smart Filter กรองชื่อสารเคมีตั้งต้นให้ตรงกับสูตร (ปรับปรุงลอจิกใหม่ให้ฉลาดขึ้น)
                   $("wsMasterSelect").addEventListener("change", (e) => {
                     const masterSelect = e.target;
                     const chemSelect = $("wsRawChemSelect");
@@ -1630,10 +1644,12 @@
                       return;
                     }
 
-                    // ดึงชื่อสูตรที่เลือก เช่น "NaOH (Sodium Hydroxide) (1.0 N)" แปลงเป็นตัวพิมพ์เล็ก
+                    // ดึงชื่อสูตรที่เลือกมาแปลงเป็นตัวพิมพ์เล็ก (เช่น "agno3 (silver nitrate) (0.02 n)")
                     const masterText = masterSelect.options[masterSelect.selectedIndex].text.toLowerCase();
-                    // ดึงคำแรกสุดมาเป็นคีย์เวิร์ดหลัก (เช่น "naoh")
-                    const mainKeyword = masterText.split(" ")[0]; 
+
+                    // 🧠 [NEW LOGIC] สร้าง Keywords: เอาวงเล็บออก, แยกคำด้วยช่องว่าง, และเอาเฉพาะคำที่ยาวกว่า 2 ตัวอักษร
+                    // ผลลัพธ์จะได้ array แบบนี้: ["agno3", "silver", "nitrate", "0.02"]
+                    const masterKeywords = masterText.replace(/[()]/g, ' ').split(/\s+/).filter(word => word.length > 2);
 
                     let matchCount = 0;
                     let firstMatchValue = "";
@@ -1642,32 +1658,38 @@
                     chemSelect.querySelectorAll('option').forEach(opt => {
                       if (opt.value === "") return; // ข้ามบรรทัด "-- เลือกสารตั้งต้น --"
 
-                      const rmName = opt.value.toLowerCase();
+                      const rmName = opt.value.toLowerCase(); // ชื่อสารตั้งต้นในคลัง (เช่น "silver nitrate 99.8%")
 
-                      // เช็คว่าชื่อสูตร มีคำของ Raw Chemical ไหม? หรือ Raw Chemical มีคำหลักของสูตรไหม?
-                      const isMatch = masterText.includes(rmName) || rmName.includes(mainKeyword);
+                      // 🧠 [NEW LOGIC] เช็คว่า Keywords จากสูตร มีคำไหนไปโผล่ในชื่อสารตั้งต้นบ้างไหม?
+                      // ใช้ .some() ถ้าเจอแค่ 1 คำที่ตรงกัน (เช่น เจอ "silver") จะถือว่า Match ทันที
+                      const isMatch = masterKeywords.some(keyword => rmName.includes(keyword));
 
                       if (isMatch) {
-                        opt.hidden = false; // โชว์
-                        if(matchCount === 0) firstMatchValue = opt.value;
+                        opt.hidden = false; // โชว์ตัวเลือกนี้
+                        if (matchCount === 0) firstMatchValue = opt.value; // จำตัวแรกที่เจอไว้
                         matchCount++;
                       } else {
-                        opt.hidden = true;  // ซ่อน
+                        opt.hidden = true;  // ซ่อนตัวเลือกนี้ถ้าไม่เกี่ยว
                       }
                     });
 
-                    // Reset ค่าที่เลือกอยู่
+                    // Reset ค่า Dropdown สารตั้งต้นและ Lot ทุกครั้งที่เปลี่ยนสูตร
                     chemSelect.value = "";
                     lotSelect.innerHTML = '<option value="">-- กรุณาเลือกสารตั้งต้นก่อน --</option>';
                     $("wsDeductUnit").value = "";
 
-                    // 🔥 UX เวทมนตร์: ถ้ากรองแล้วเหลือแมตช์แค่ 1 ตัวเป๊ะๆ ให้ "เลือกให้อัตโนมัติ" เลย!
+                    // 🔥 UX เวทมนตร์: ตัดสินใจว่าจะให้ User ทำอะไรต่อ
                     if (matchCount === 1) {
+                      // 1. ถ้ากรองแล้วเหลือแมตช์แค่ "1 ตัวเป๊ะๆ" -> เลือกให้เลย! User ไม่ต้องกดเอง
                       chemSelect.value = firstMatchValue;
-                      chemSelect.dispatchEvent(new Event('change')); // สั่งให้โหลด Lot ต่ออัตโนมัติ
+                      chemSelect.dispatchEvent(new Event('change')); // สั่งให้ดึง Lot ต่ออัตโนมัติ
                     } 
-                    // ถ้าหาไม่เจอเลยสักตัว (ชื่อตั้งไม่เหมือนกันเลย) ให้โชว์ทั้งหมดเผื่อไว้ให้ User เลือกเอง
+                    else if (matchCount > 1) {
+                      // 2. ถ้าเจอหลายตัว (เช่น มี Silver Nitrate เกรด AR กับ เกรด LR) -> ให้ User เลือกเอง แต่ Dropdown จะโชว์แค่ตัวที่เกี่ยวข้องเท่านั้น
+                      // (ระบบจะซ่อนตัวที่ไม่เกี่ยวออกไปหมดแล้ว User จะเลื่อนหาแค่ไม่กี่ตัว)
+                    }
                     else if (matchCount === 0) {
+                      // 3. ถ้าดวงซวย ชื่อไม่ตรงกันเลยแม้แต่นิดเดียว -> โชว์ทั้งหมดให้ User ค้นหาเอง (Fail-safe)
                       chemSelect.querySelectorAll('option').forEach(opt => opt.hidden = false);
                     }
                   });
@@ -1758,14 +1780,54 @@
                 chemSelect.onchange = (e) => {
                   const selectedChem = e.target.value;
                   if (!selectedChem) { lotSelect.innerHTML = '<option value="">-- กรุณาเลือกสารตั้งต้นก่อน --</option>'; lotSelect.disabled = true; unitInput.value = ""; return; }
-                  const filteredLots = storeChemicalsCache.filter(item => item.chemical_name === selectedChem && item.opened_bottles > 0);
+
+                  // 🧠 1. ดึง Lot ทั้งหมดที่มีสต็อก (ขวดที่เปิดแล้วมีสารเหลือ หรือ ขวดที่ยังไม่ได้เปิด)
+                  let filteredLots = storeChemicalsCache.filter(item => 
+                     item.chemical_name === selectedChem && 
+                     (item.current_opened_remaining > 0 || item.total_bottles > item.opened_bottles)
+                  );
+
+                  // 🧠 2. เรียงลำดับ (Sort): เปิดแล้วขึ้นก่อน -> ตามด้วย FEFO (หมดอายุก่อนขึ้นก่อน)
+                  filteredLots.sort((a, b) => {
+                     const aOpened = a.current_opened_remaining > 0;
+                     const bOpened = b.current_opened_remaining > 0;
+
+                     if (aOpened && !bOpened) return -1; // a เปิดแล้ว ให้ขึ้นก่อน
+                     if (!aOpened && bOpened) return 1;  // b เปิดแล้ว ให้ขึ้นก่อน
+
+                     // ถ้าสถานะขวดเหมือนกัน (เปิดทั้งคู่ หรือ ปิดทั้งคู่) ให้เรียงตามวันหมดอายุ
+                     let da = a.exp_date ? new Date(a.exp_date).getTime() : Infinity;
+                     let db = b.exp_date ? new Date(b.exp_date).getTime() : Infinity;
+                     return da - db;
+                  });
+
                   let lotHtml = '<option value="">-- เลือกล็อตของสารเคมี --</option>';
+
                   filteredLots.forEach(lotObj => {
                     const shortLot = lotObj.manufacturer_lot || lotObj.id;
-                    lotHtml += `<option value="${lotObj.id}" data-unit="${lotObj.unit}" data-rem="${lotObj.current_opened_remaining}">Lot: ${shortLot} (เหลือ ${lotObj.current_opened_remaining} ${lotObj.unit})</option>`;
+                    const isOpened = lotObj.current_opened_remaining > 0;
+                    const statusText = isOpened ? "[เปิดแล้ว]" : "[ขวดใหม่]";
+                    const expText = lotObj.exp_date ? `Exp: ${lotObj.exp_date}` : "No Exp";
+
+                    // ถ้าขวดเปิดแล้วให้ใช้ current_opened_remaining ถ้ายังไม่เปิดให้ใช้ capacity_per_bottle เต็มๆ
+                    const currentRem = isOpened ? lotObj.current_opened_remaining : lotObj.capacity_per_bottle;
+
+                    // ซ่อน Data attributes ไว้เพื่อนำไปใช้คำนวณตอนกด Save
+                    lotHtml += `<option value="${lotObj.id}" 
+                        data-unit="${lotObj.unit}" 
+                        data-rem="${currentRem}" 
+                        data-is-new="${!isOpened}" 
+                        data-capacity="${lotObj.capacity_per_bottle}">
+                        ${statusText} Lot: ${shortLot} (เหลือ ${currentRem} ${lotObj.unit}) | ${expText}
+                    </option>`;
                   });
+
                   lotSelect.innerHTML = lotHtml; lotSelect.disabled = false;
-                  lotSelect.onchange = () => { const opt = lotSelect.options[lotSelect.selectedIndex]; unitInput.value = opt ? opt.getAttribute("data-unit") || "" : ""; };
+
+                  lotSelect.onchange = () => { 
+                      const opt = lotSelect.options[lotSelect.selectedIndex]; 
+                      unitInput.value = opt ? opt.getAttribute("data-unit") || "" : ""; 
+                  };
                 };
               } catch (err) { chemSelect.innerHTML = '<option value="">-- ระบบโหลดสต็อกผิดพลาด --</option>'; }
             }
@@ -2374,51 +2436,162 @@
               const rawDocId = $("wsRawLotSelect").value;
               const deductAmt = Number($("wsDeductAmt").value || 0);
 
+              // 1. ดึงค่าปริมาตรที่เพิ่มมาใหม่
+              const prepVolume = Number($("wsPrepVolume").value || 0);
+              const prepVolumeUnit = $("wsPrepVolumeUnit").value;
+
               if (!masterId || !prepDate) { alert("กรุณาเลือกสารที่จะเตรียมและวันที่เตรียม"); return; }
               if (rawDocId && deductAmt <= 0) { alert("กรุณาระบุปริมาณวัตถุดิบตั้งต้นที่ใช้เบิกจริง"); return; }
 
+              // 2. บังคับให้ต้องกรอกปริมาตรน้ำ/ปริมาตรสุทธิเสมอ เพื่อความสมบูรณ์ของข้อมูล GMP
+              if (prepVolume <= 0) { alert("กรุณาระบุปริมาตรที่ใช้ (Volume) ให้ถูกต้อง"); return; }
+
+              // 3. เตรียมข้อมูล Lot และตรวจสอบจำนวนคงเหลือ (ส่วนที่เคยหายไป)
               const selectObj = $("wsRawLotSelect");
               const selectedOption = selectObj.options[selectObj.selectedIndex];
               const maxRem = selectedOption && rawDocId ? Number(selectedOption.getAttribute("data-rem") || 0) : 0;
-              const rawLotDisplay = selectedOption && rawDocId ? selectedOption.text.split(" (เหลือ ")[0] : "N/A";
 
-              if (rawDocId && deductAmt > maxRem) { alert(`ปริมาณสารที่เบิกใช้ (${deductAmt}) เกินกว่าปริมาณคงเหลือในขลังหลัก (${maxRem})!`); return; }
+              // ดึงชื่อ Lot แบบตัดคำนำหน้า [เปิดแล้ว] หรือ [ขวดใหม่] ออก
+              const rawLotDisplay = selectedOption && rawDocId ? selectedOption.text.split(" (เหลือ ")[0].replace("[เปิดแล้ว] ", "").replace("[ขวดใหม่] ", "") : "N/A";
 
+              // ตรวจสอบว่าเป็นขวดใหม่หรือไม่และความจุเท่าไหร่
+              const isNewBottle = selectedOption && selectedOption.getAttribute("data-is-new") === "true";
+              const capacity = selectedOption && rawDocId ? Number(selectedOption.getAttribute("data-capacity") || 0) : 0;
+
+              if (rawDocId && deductAmt > maxRem) { 
+                  alert(`ปริมาณสารที่เบิกใช้ (${deductAmt}) เกินกว่าปริมาณคงเหลือในขวด (${maxRem})!`); 
+                  return; 
+              }
+
+              // 4. ดึงข้อมูลสูตรจาก Cache (ตัวแปร master ที่ Error เพราะหายไป)
               const master = globalMasterFormulas.find(m => m.id === masterId);
+
               const btn = $("btnSaveWS");
-              btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
+              btn.disabled = true; 
+              btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving & Deducting...';
 
               try {
                 await runTransaction(db, async (tx) => {
+
+                  // 5. ตัดสต็อกสารตั้งต้น (ถ้ามีการเลือก)
                   if (rawDocId) {
                      const storeRef = doc(db, "Store_Chemicals", rawDocId);
-                     tx.update(storeRef, { current_opened_remaining: increment(-deductAmt), lastUpdated: serverTimestamp() });
+
+                     if (isNewBottle) {
+                         // 🧠 ถ้าเป็นขวดใหม่: ให้หักลบจาก Capacity เต็มๆ และเพิ่มจำนวน opened_bottles ขึ้น 1
+                         const newRemaining = capacity - deductAmt;
+                         tx.update(storeRef, { 
+                             opened_bottles: increment(1), 
+                             current_opened_remaining: newRemaining,
+                             last_opened_date: serverTimestamp(),
+                             last_opened_by: auth.currentUser.email,
+                             lastUpdated: serverTimestamp() 
+                         });
+
+                         // 🧠 สร้างประวัติการ "เปิดขวด" ไปในตัว เพื่อให้ตรวจสอบย้อนหลังได้ (Audit Trail)
+                         const openLogRef = doc(collection(db, "Lab_Store_Transaction_Logs"));
+                         tx.set(openLogRef, { 
+                             action: "OPEN_BOTTLE", 
+                             document_id: rawDocId, 
+                             manufacturer_lot: rawLotDisplay, 
+                             operator: auth.currentUser.email, 
+                             timestamp: serverTimestamp() 
+                         });
+                     } else {
+                         // ถ้าเป็นขวดที่เปิดอยู่แล้ว: ตัดสต็อกตามปกติ
+                         tx.update(storeRef, { 
+                             current_opened_remaining: increment(-deductAmt), 
+                             lastUpdated: serverTimestamp() 
+                         });
+                     }
                   }
 
+                  // 6. สร้าง Batch สำหรับ Working Solution
                   const wsRef = doc(collection(db, "WS_Batches"));
-                    tx.set(wsRef, {
-                    label_id: qr, master_id: masterId, master_name: master?.name || masterId, master_conc: master?.concentration || "", // 🔥 แก้เป็น concentration
-                    prep_date: prepDate, exp_date: "", raw_lot_ref: rawLotDisplay, deducted_amount: deductAmt, di_water_qr_ref: diQrRef,
-                    preparer: auth.currentUser.email, status: "Pending", timestamp: serverTimestamp()
+                  tx.set(wsRef, {
+                    label_id: qr, 
+                    master_id: masterId, 
+                    master_name: master?.name || masterId, 
+                    master_conc: master?.concentration || "",
+                    ghs_classes: master?.ghs_classes || [],
+                    prep_date: prepDate, 
+                    exp_date: "", 
+                    raw_lot_ref: rawLotDisplay, 
+                    raw_doc_id: rawDocId || null,
+                    deducted_amount: deductAmt, 
+                    di_water_qr_ref: diQrRef,
+
+                    // บันทึกปริมาตรลงฐานข้อมูล
+                    prep_volume: prepVolume,
+                    prep_volume_unit: prepVolumeUnit,
+
+                    preparer: auth.currentUser.email, 
+                    status: "Pending", 
+                    timestamp: serverTimestamp()
                   });
                 });
 
                 alert("✅ ผสมสารสำเร็จ: หักยอดวัตถุดิบและส่งเข้าระบบทวนสอบ");
-                $("wsBottleQr").value = ""; $("wsMasterSelect").value = ""; $("wsPrepDate").value = ""; 
-                $("wsRawLotSelect").value = ""; $("wsDeductAmt").value = ""; $("wsDeductUnit").value = "";
-                $("wsRawChemSelect").value = ""; $("wsDIWaterLot").value = ""; $("wsDIWaterDate").value = "";
 
-                hide("prepWSModal"); await loadWSBatches(true); await refreshDashboardOnly(); await loadStoreTable();
-              } catch (err) { alert("❌ ตัดยอดไม่สำเร็จ: " + err.message); } 
-              finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>บันทึกข้อมูลและตัดยอดสต็อก (Save & Deduct)'; }
+                // 7. ล้างค่าในฟอร์มให้สะอาด
+                $("wsBottleQr").value = ""; 
+                $("wsMasterSelect").value = ""; 
+                $("wsPrepDate").value = ""; 
+                $("wsRawLotSelect").value = ""; 
+                $("wsDeductAmt").value = ""; 
+                $("wsDeductUnit").value = "";
+                $("wsRawChemSelect").value = ""; 
+                $("wsDIWaterQr").value = ""; 
+                $("wsPrepVolume").value = "";
+
+                hide("prepWSModal"); 
+                await loadWSBatches(true); 
+                await refreshDashboardOnly(); 
+                await loadStoreTable();
+              } catch (err) { 
+                  alert("❌ ตัดยอดไม่สำเร็จ: " + err.message); 
+              } 
+              finally { 
+                  btn.disabled = false; 
+                  btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>บันทึกข้อมูลและตัดยอดสต็อก (Save & Deduct)'; 
+              }
             });
 
             // 🛑 NEW: Admin Context Actions สำหรับ WS
             async function deleteWsDoc(docId) {
-               if(!confirm("⚠️ ยืนยันการลบประวัติสารเตรียมเองนี้?\n(ระบบจะคำนวณลดตัวเลขหน้า Dashboard อัตโนมัติด้วย)")) return;
-               try { await deleteDoc(doc(db, "WS_Batches", docId)); alert("✅ ลบเรียบร้อย"); loadWSBatches(true); } catch(e) { alert(e.message); }
-            }
+               if(!confirm("⚠️ ยืนยันการลบประวัติสารเตรียมเองนี้?\n(ระบบจะคำนวณลดตัวเลขหน้า Dashboard และ 'คืนปริมาณสารตั้งต้น' กลับเข้าคลังให้อัตโนมัติ)")) return;
 
+               try {
+                 await runTransaction(db, async (tx) => {
+                   // 1. ดึงข้อมูล WS_Batches ที่กำลังจะถูกลบ
+                   const wsRef = doc(db, "WS_Batches", docId);
+                   const wsSnap = await tx.get(wsRef);
+
+                   if (!wsSnap.exists()) throw new Error("ไม่พบข้อมูลรายการที่ต้องการลบ");
+                   const wsData = wsSnap.data();
+
+                   // 2. ตรวจสอบว่ามีการหักสารตั้งต้นไปหรือไม่ และมี ID ของขวดในคลังหรือไม่
+                   if (wsData.raw_doc_id && wsData.deducted_amount) {
+                     const storeRef = doc(db, "Store_Chemicals", wsData.raw_doc_id);
+
+                     // 3. สั่งบวกยอดที่เคยหักไป (deducted_amount) กลับคืนเข้าขวดเดิม
+                     tx.update(storeRef, {
+                       current_opened_remaining: increment(wsData.deducted_amount),
+                       lastUpdated: serverTimestamp()
+                     });
+                   }
+
+                   // 4. ลบรายการ WS นี้ทิ้ง
+                   tx.delete(wsRef);
+                 });
+
+                 alert("✅ ลบรายการและคืนสต็อกเข้าคลังเรียบร้อย");
+                 loadWSBatches(true);
+                 refreshDashboardOnly();
+               } catch(e) { 
+                 alert("❌ เกิดข้อผิดพลาดในการลบ: " + e.message); 
+               }
+            }
             async function openEditWsModal(docId) {
                const snap = await getDoc(doc(db, "WS_Batches", docId));
                if(!snap.exists()) return;
@@ -2436,7 +2609,10 @@
                     status: $("editWsStatus").value,
                     exp_date: $("editWsExpDate").value
                  });
-                 hide("editWsModal"); alert("✅ แก้ไขเรียบร้อย"); loadWSBatches(true); refreshDashboardOnly();
+                 hide("editWsModal"); 
+                 alert("✅ แก้ไขเรียบร้อย"); 
+                 loadWSBatches(true); 
+                 refreshDashboardOnly();
                } catch(e) { alert(e.message); }
             };
 
