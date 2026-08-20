@@ -299,7 +299,7 @@
                   <span class="text-xs font-bold text-slate-500 uppercase">DI Water Lot</span>
                   <span id="resDIWater" class="mono text-cyan-700 font-bold bg-cyan-50 px-2 py-0.5 rounded">--</span>
                 </div>
-                
+
                 <div class="mt-3 border-t border-slate-200 pt-3">
                   <span class="text-xs font-bold text-slate-500 uppercase block mb-2"><i class="fa-solid fa-flask-vial mr-1"></i>Raw Materials Used</span>
                   <div id="resRawMaterials" class="space-y-1.5 text-xs">
@@ -494,7 +494,7 @@
           </table>
         </div>
       </div>
-      
+
       <div id="diWaterView" class="p-6 space-y-6 hidden-module">
         <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
           <div>
@@ -706,7 +706,7 @@
 
         <div class="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200">
           <label class="block text-xs font-bold text-indigo-900 uppercase mb-2"><i class="fa-solid fa-link mr-1"></i>GMP Traceability Link (เชื่อมโยงและตัดสต็อกสารตั้งต้น)</label>
-          
+
           <!-- Container สำหรับใส่สารเคมีหลายรายการ -->
           <div id="rawMaterialsContainer" class="space-y-4">
               <!-- รายการจะถูกสร้างด้วย JavaScript -->
@@ -775,9 +775,25 @@
       </div>
       <div class="p-6 space-y-4">
         <input type="hidden" id="approveDocId" />
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Actual Concentration</label>
-          <input type="number" step="0.0001" id="approveFactor" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" placeholder="เช่น 0.1005" />
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Actual Concentration</label>
+            <input type="number" step="0.0001" id="approveFactor" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" placeholder="(เว้นว่างได้)" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Unit (หน่วย)</label>
+            <select id="approveUnit" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="">- ไม่มี -</option>
+              <option value="%">%</option>
+              <option value="ppm">ppm</option>
+              <option value="gpl">gpl</option>
+              <option value="g">g</option>
+              <option value="L">L</option>
+              <option value="ml">ml</option>
+              <option value="M">M</option>
+              <option value="N">N</option>
+            </select>
+          </div>
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Remark</label>
@@ -1313,7 +1329,7 @@
     async function loadDIWaterLogUI() {
       const tbody = $("diLogTableBody");
       tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูล...</td></tr>`;
-      
+
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
@@ -1562,21 +1578,25 @@
     const chemCacheMap = new Map();
     let uniqueChemsArray = []; 
     let rmRowCounter = 0;      
-    let currentFilteredChems = []; // เก็บค่า Filter ชื่อสารเคมีล่าสุด
 
     window.addRawMaterialRow = function() {
       rmRowCounter++;
       const container = document.getElementById("rawMaterialsContainer");
       const rowId = `rmRow_${rmRowCounter}`;
-      
+      const datalistId = `chemList_${rmRowCounter}`;
+
+      let optionsHtml = '';
+      uniqueChemsArray.forEach(cName => { 
+          optionsHtml += `<option value="${cName}">`; 
+      });
+
       const html = `
         <div id="${rowId}" class="rm-item p-3 bg-white border border-indigo-100 rounded-xl space-y-3 relative shadow-sm">
           ${rmRowCounter > 1 ? `<button type="button" onclick="document.getElementById('${rowId}').remove()" class="absolute top-2 right-2 text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>` : ''}
           <div>
             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">1. สารเคมีดิบ (Raw Chemical) #${rmRowCounter}</label>
-            <select class="rm-chem-select w-full p-2.5 border border-indigo-300 bg-white rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
-              <option value="">-- เลือกสารตั้งต้น --</option>
-            </select>
+            <input list="${datalistId}" class="rm-chem-input w-full p-2.5 border border-indigo-300 bg-white rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="พิมพ์หรือเลือกสารตั้งต้น...">
+            <datalist id="${datalistId}">${optionsHtml}</datalist>
           </div>
           <div>
             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">2. Lot วัตถุดิบในคลัง (Active Opened Lot)</label>
@@ -1597,29 +1617,23 @@
         </div>
       `;
       container.insertAdjacentHTML('beforeend', html);
-      
+
       const newRow = document.getElementById(rowId);
-      const chemSelect = newRow.querySelector('.rm-chem-select');
+      const chemInput = newRow.querySelector('.rm-chem-input');
       const lotSelect = newRow.querySelector('.rm-lot-select');
       const unitInput = newRow.querySelector('.rm-deduct-unit');
 
-      // กำหนดข้อมูล Dropdown โดยใช้ Filter ล่าสุด (ถ้ามี)
-      const listToUse = currentFilteredChems.length > 0 ? currentFilteredChems : uniqueChemsArray;
-      let chemHtml = '<option value="">-- เลือกสารเคมีตั้งต้น --</option>';
-      listToUse.forEach(cName => { chemHtml += `<option value="${cName}">${cName}</option>`; });
-      chemSelect.innerHTML = chemHtml;
-
-      if(currentFilteredChems.length === 1) {
-          chemSelect.value = currentFilteredChems[0];
-          setTimeout(() => chemSelect.dispatchEvent(new Event('change')), 50);
-      }
-
-      chemSelect.onchange = (e) => {
+      chemInput.addEventListener('input', (e) => {
         const selectedChem = e.target.value;
-        if (!selectedChem) { lotSelect.innerHTML = '<option value="">-- กรุณาเลือกสารตั้งต้นก่อน --</option>'; lotSelect.disabled = true; unitInput.value = ""; return; }
+        if (!selectedChem || !uniqueChemsArray.includes(selectedChem)) { 
+            lotSelect.innerHTML = '<option value="">-- กรุณาเลือกสารตั้งต้นก่อน --</option>'; 
+            lotSelect.disabled = true; 
+            unitInput.value = ""; 
+            return; 
+        }
 
         let filteredLots = storeChemicalsCache.filter(item => item.chemical_name === selectedChem && (item.current_opened_remaining > 0 || item.total_bottles > item.opened_bottles));
-        
+
         filteredLots.sort((a, b) => {
           const aOpened = a.current_opened_remaining > 0;
           const bOpened = b.current_opened_remaining > 0;
@@ -1645,12 +1659,12 @@
 
         lotSelect.innerHTML = lotHtml; 
         lotSelect.disabled = false;
-        
+
         if(filteredLots.length > 0) {
            lotSelect.selectedIndex = 1;
            lotSelect.dispatchEvent(new Event('change'));
         }
-      };
+      });
 
       lotSelect.onchange = () => { 
         const opt = lotSelect.options[lotSelect.selectedIndex]; 
@@ -1669,42 +1683,6 @@
         } catch(e) { console.error(e); }
       }
       if($("btnOpenPrepWSModal")) $("btnOpenPrepWSModal").addEventListener("click", () => loadRecentDIWater());
-
-      if($("wsMasterSelect")) {
-        $("wsMasterSelect").addEventListener("change", (e) => {
-          const masterSelect = e.target;
-
-          if (!masterSelect.value) {
-            currentFilteredChems = [];
-          } else {
-            const masterText = masterSelect.options[masterSelect.selectedIndex].text.toLowerCase();
-            const masterKeywords = masterText.replace(/[()]/g, ' ').split(/\s+/).filter(word => word.length > 2);
-
-            currentFilteredChems = uniqueChemsArray.filter(name => {
-              const rmName = name.toLowerCase();
-              return masterKeywords.some(keyword => rmName.includes(keyword));
-            });
-
-            if (currentFilteredChems.length === 0) currentFilteredChems = [...uniqueChemsArray];
-          }
-
-          document.querySelectorAll('.rm-chem-select').forEach(select => {
-             const currentVal = select.value;
-             const listToUse = currentFilteredChems.length > 0 ? currentFilteredChems : uniqueChemsArray;
-             
-             let chemHtml = '<option value="">-- เลือกสารเคมีตั้งต้น --</option>';
-             listToUse.forEach(cName => { chemHtml += `<option value="${cName}">${cName}</option>`; });
-             select.innerHTML = chemHtml;
-             
-             if (listToUse.includes(currentVal)) {
-                 select.value = currentVal;
-             } else if (listToUse.length === 1) {
-                 select.value = listToUse[0];
-                 select.dispatchEvent(new Event('change'));
-             }
-          });
-        });
-      }
 
       if($("recvChemName")) {
         $("recvChemName").addEventListener("input", (e) => {
@@ -1745,7 +1723,7 @@
           show("receiveChemicalModal"); 
         };
       }
-      
+
       if($("btnCloseReceiveModal")) $("btnCloseReceiveModal").onclick = () => { hide("receiveChemicalModal"); if (modalScanner && isModalScanning) { modalScanner.stop(); isModalScanning = false; hide("modal-qr-wrapper"); } };
       if($("btnCloseApproveModal")) $("btnCloseApproveModal").onclick = () => hide("approveModal");
       if($("btnCloseEditStoreModal")) $("btnCloseEditStoreModal").onclick = () => hide("editStoreModal");
@@ -1769,7 +1747,7 @@
         const snap = await getDocs(query(collection(db, "Store_Chemicals"), limit(500)));
         storeChemicalsCache = []; chemCacheMap.clear(); uniqueChemsArray = [];
         let uniqueChems = new Set();
-        
+
         snap.forEach(d => {
           const data = d.data();
           storeChemicalsCache.push({ id: d.id, ...data });
@@ -1782,23 +1760,14 @@
              }
           }
         });
-        
-        uniqueChemsArray = Array.from(uniqueChems);
 
-        document.querySelectorAll(".rm-chem-select").forEach(select => {
-           const currentVal = select.value;
-           let chemHtml = '<option value="">-- เลือกสารเคมีตั้งต้น --</option>';
-           uniqueChemsArray.forEach(cName => { chemHtml += `<option value="${cName}">${cName}</option>`; });
-           select.innerHTML = chemHtml;
-           select.value = currentVal;
-        });
+        uniqueChemsArray = Array.from(uniqueChems);
 
       } catch (err) { console.error("ระบบโหลดสต็อกผิดพลาด", err); }
     }
 
     if($("btnOpenPrepWSModal")) {
       $("btnOpenPrepWSModal").onclick = () => { 
-        currentFilteredChems = [];
         if($("wsMasterSelect")) $("wsMasterSelect").value = "";
         if($("rawMaterialsContainer")) $("rawMaterialsContainer").innerHTML = ""; 
         rmRowCounter = 0; 
@@ -1810,7 +1779,7 @@
     if($("btnAddRawMaterial")) {
       $("btnAddRawMaterial").addEventListener("click", window.addRawMaterialRow);
     }
-    
+
     // =========================================================
     // SCAN MODULE & POKA-YOKE SCANNER
     // =========================================================
@@ -1821,9 +1790,26 @@
       try {
         isScanning = true;
         await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: (w, h) => { return { width: Math.floor(Math.min(w, h) * 0.7), height: Math.floor(Math.min(w, h) * 0.7) }; }, aspectRatio: 1.0 },
-          async (decodedText) => { await stopScanner(); await processScannedId(decodedText); }, (err) => {}
+          async (decodedText) => { 
+            await stopScanner(); 
+            const cleanScan = String(decodedText).replace(/[\r\n]+/g, "").trim();
+            await processScannedId(cleanScan); 
+          }, (err) => {}
         );
-      } catch (err) { alert("ไม่สามารถเปิดกล้องได้"); isScanning = false; }
+      } catch (err) {
+        try {
+          await html5QrCode.start({ facingMode: "user" }, { fps: 10, qrbox: (w, h) => { return { width: Math.floor(Math.min(w, h) * 0.7), height: Math.floor(Math.min(w, h) * 0.7) }; }, aspectRatio: 1.0 },
+            async (decodedText) => { 
+              await stopScanner(); 
+              const cleanScan = String(decodedText).replace(/[\r\n]+/g, "").trim();
+              await processScannedId(cleanScan); 
+            }, (err) => {}
+          );
+        } catch (fallbackErr) {
+          alert("ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบการอนุญาตใช้งานกล้อง หรือแนะนำให้เปิดผ่าน Google Chrome / Safari"); 
+          isScanning = false; 
+        }
+      }
     }
     async function stopScanner() {
       if (html5QrCode && isScanning) { try { await html5QrCode.stop(); isScanning = false; $("qr-reader").innerHTML = '<i class="fa-solid fa-camera text-4xl text-slate-300"></i>'; } catch (e) { console.error(e); } }
@@ -1835,15 +1821,25 @@
       if (isModalScanning) { if (modalScanner) modalScanner.stop(); isModalScanning = false; hide("modal-qr-wrapper"); return; }
       show("modal-qr-wrapper");
       if (!modalScanner) modalScanner = new Html5Qrcode("modal-qr-reader");
+
+      const onScanSuccess = async (decodedText) => {
+         const cleanScan = String(decodedText).replace(/[\r\n]+/g, "").trim();
+         if(currentScanTarget === 'LOT') $("recvLotNo").value = cleanScan;
+         if(currentScanTarget === 'SHELF') $("recvShelfId").value = cleanScan;
+         await modalScanner.stop(); isModalScanning = false; hide("modal-qr-wrapper");
+      };
+
       try {
         isModalScanning = true;
         modalScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } },
-          async (decodedText) => {
-             if(currentScanTarget === 'LOT') $("recvLotNo").value = decodedText;
-             if(currentScanTarget === 'SHELF') $("recvShelfId").value = decodedText;
-             await modalScanner.stop(); isModalScanning = false; hide("modal-qr-wrapper");
-          }, (err) => {}
-        );
+          onScanSuccess, (err) => {}
+        ).catch(async (err) => {
+           try {
+             await modalScanner.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 250, height: 100 } }, onScanSuccess, (e)=>{});
+           } catch (fbErr) {
+             alert("ไม่สามารถเปิดกล้องได้"); isModalScanning = false; hide("modal-qr-wrapper");
+           }
+        });
       } catch (err) { alert("กล้องขัดข้อง"); isModalScanning = false; }
     }
     $("btnScanRecvLot").onclick = () => startModalScanner('LOT'); $("btnScanRecvShelf").onclick = () => startModalScanner('SHELF');
@@ -1863,24 +1859,32 @@
       show("ws-modal-qr-wrapper"); 
       if (!wsModalScanner) wsModalScanner = new Html5Qrcode("ws-modal-qr-reader");
 
+      const onWsScanSuccess = async (decodedText) => {
+          const cleanScan = String(decodedText).replace(/[\r\n]+/g, "").trim();
+          if (currentWsScanTarget === 'BOTTLE') {
+              $("wsBottleQr").value = cleanScan;
+              const foundMaster = globalMasterFormulas.find(m => m.id.toLowerCase() === cleanScan.toLowerCase() || cleanScan.toLowerCase().includes(m.id.toLowerCase()));
+              if (foundMaster) {
+                $("wsMasterSelect").value = foundMaster.id;
+                $("wsMasterSelect").dispatchEvent(new Event('change'));
+              }
+          } else if (currentWsScanTarget === 'DI') {
+              $("wsDIWaterQr").value = cleanScan;
+          }
+          await wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper");
+      };
+
       try {
         isWsModalScanning = true;
-        await wsModalScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } },
-          async (decodedText) => {
-             if (currentWsScanTarget === 'BOTTLE') {
-                 $("wsBottleQr").value = decodedText;
-                 const cleanScan = String(decodedText).trim().toLowerCase();
-                 const foundMaster = globalMasterFormulas.find(m => m.id.toLowerCase() === cleanScan || cleanScan.includes(m.id.toLowerCase()));
-                 if (foundMaster) {
-                   $("wsMasterSelect").value = foundMaster.id;
-                   $("wsMasterSelect").dispatchEvent(new Event('change'));
-                 }
-             } else if (currentWsScanTarget === 'DI') {
-                 $("wsDIWaterQr").value = decodedText;
-             }
-             await wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper");
-          }, (err) => {}
-        );
+        wsModalScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } },
+          onWsScanSuccess, (err) => {}
+        ).catch(async (err) => {
+          try {
+            await wsModalScanner.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 250, height: 100 } }, onWsScanSuccess, (e)=>{});
+          } catch(fbErr) {
+            alert("ไม่สามารถเปิดกล้องได้"); isWsModalScanning = false; hide("ws-modal-qr-wrapper");
+          }
+        });
       } catch (err) { alert("กล้องขัดข้อง"); isWsModalScanning = false; }
     }
 
@@ -2606,13 +2610,16 @@
       } catch (err) { console.error(err); }
     }
 
-    function openApproveModal(docId) { $("approveDocId").value = docId; $("approveFactor").value = ""; $("approveRemark").value = ""; show("approveModal"); }
+    function openApproveModal(docId) { $("approveDocId").value = docId; $("approveFactor").value = ""; $("approveUnit").value = ""; $("approveRemark").value = ""; show("approveModal"); }
     $("btnConfirmApprove").addEventListener("click", async () => {
-      const docId = $("approveDocId").value, factor = $("approveFactor").value, remark = $("approveRemark").value;
-      if (!docId || !factor) { alert("กรุณากรอก factor"); return; }
+      const docId = $("approveDocId").value, factor = $("approveFactor").value, unit = $("approveUnit").value, remark = $("approveRemark").value;
+      if (!docId) return; 
+
+      const factorDisplay = factor ? `${factor} ${unit}`.trim() : "N/A";
+
       const btn = $("btnConfirmApprove"); btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Approving...';
       try {
-        await updateDoc(doc(db, "WS_Batches", docId), { status: "Active", exp_date: addDaysToYMD(new Date(), 45), standardization: { factor: String(factor), remark: remark || "", verified_by: auth.currentUser.email, verified_at: new Date().toISOString() }, lastUpdated: serverTimestamp() });
+        await updateDoc(doc(db, "WS_Batches", docId), { status: "Active", exp_date: addDaysToYMD(new Date(), 45), standardization: { factor: factorDisplay, remark: remark || "", verified_by: auth.currentUser.email, verified_at: new Date().toISOString() }, lastUpdated: serverTimestamp() });
         hide("approveModal"); await loadWSBatches(true); await refreshDashboardOnly();
       } catch (err) { alert("❌ Approve ไม่สำเร็จ: " + err.message); } 
       finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i>Approve (Active)'; }
@@ -2745,7 +2752,7 @@
 
             const approver = x.standardization?.verified_by ? safeText(x.standardization.verified_by).split("@")[0] : "-";
 
-            // 🌟 ใหม่: คำนวณวันหมดอายุ และกำหนดสี (ถ้าเหลือวันน้อยจะเป็นสีแดง)
+            // 🌟 คำนวณวันหมดอายุ และกำหนดสี
             const expInfo = humanDaysLeft(x.exp_date);
             let expHtml = x.status === "Pending" 
                 ? `<span class="text-slate-400 italic">Waiting Approve</span>` 
@@ -2772,7 +2779,7 @@
                         <div class="mono font-bold text-teal-700 text-lg"><i class="fa-solid fa-qrcode mr-1"></i>${safeText(x.label_id)}</div>
                         <div class="font-bold text-slate-800 mt-1">${safeText(x.master_name)}</div>
                         <div class="text-xs text-slate-500 mt-2">Prep Date: <b>${safeText(x.prep_date)}</b> | By: <span class="mono">${safeText(x.preparer || "").split("@")[0]}</span></div>
-                        <div class="text-xs text-slate-500 mt-1">Expiry Date: ${expHtml}</div> <!-- 🌟 เพิ่มบรรทัดแสดงวันหมดอายุตรงนี้ -->
+                        <div class="text-xs text-slate-500 mt-1">Expiry Date: ${expHtml}</div>
                         <div class="text-xs text-slate-500 mt-1">Raw Lots Used: <span class="mono font-bold text-indigo-600">${rawMaterialsUsed || "N/A"}</span></div>
                         <div class="text-xs text-slate-500 mt-1 pr-4">DI Water: ${diWaterInfo}</div>
                     </div>
