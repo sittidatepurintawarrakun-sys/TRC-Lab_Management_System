@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TRC Smart Lab - Chemical & Inventory Control (GMP) - Updated</title>
-
+  <title>TRC Smart Lab - Chemical & Inventory Control (GMP) - Formula QR Final</title>
+ 
   <!-- UI Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+ 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Prompt', sans-serif; background-color: #f4f7f6; }
@@ -29,9 +29,9 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-
+ 
 <body class="bg-slate-100 flex h-screen overflow-hidden">
-
+ 
   <!-- =========================
        LOGIN PAGE
   ========================== -->
@@ -43,7 +43,7 @@
         </h1>
         <p class="text-slate-500 mt-2">Chemical Management System (GMP / ISO 17025)</p>
       </div>
-
+ 
       <div class="space-y-4">
         <input type="email" id="loginEmail" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
           placeholder="Email (เช่น admin@trc.com)" />
@@ -60,14 +60,14 @@
       </div>
     </div>
   </div>
-
+ 
   <!-- =========================
        MAIN APP LAYOUT
   ========================== -->
   <div id="mainContent" class="hidden-module flex w-full h-full relative">
-
+ 
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden-module lg:hidden"></div>
-
+ 
     <aside id="mainSidebar" class="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-40 fixed inset-y-0 left-0 transform -translate-x-full lg:relative lg:translate-x-0 transition-transform duration-300">
       <div class="p-6 border-b border-slate-700 flex justify-between items-center">
         <div>
@@ -78,7 +78,7 @@
         </div>
         <button id="btnCloseSidebar" class="lg:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
       </div>
-
+ 
       <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
         <button id="navDashboard" class="nav-item active w-full flex items-center p-3 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors">
           <i class="fa-solid fa-chart-line w-6 text-left"></i> Dashboard
@@ -102,7 +102,7 @@
           <i class="fa-solid fa-droplet w-6 text-left text-cyan-400"></i> DI Water Log
         </button>
       </nav>
-
+ 
       <div class="p-4 border-t border-slate-800">
         <div class="text-xs text-slate-400 mb-2">
           Logged in as: <span id="userInfo" class="font-bold text-slate-200">--</span>
@@ -112,7 +112,7 @@
         </button>
       </div>
     </aside>
-
+ 
     <!-- Main -->
     <main class="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative bg-slate-50 w-full">
       <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
@@ -131,7 +131,7 @@
           </button>
         </div>
       </header>
-
+ 
       <!-- =========================
            DASHBOARD VIEW
       ========================== -->
@@ -146,7 +146,7 @@
             </div>
           </div>
         </div>
-
+ 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
             <p class="text-xs font-bold text-slate-400 uppercase">WS Pending</p>
@@ -169,7 +169,7 @@
             <p class="text-xs text-slate-400 mt-1">จำนวน Lot ในคลังหลัก</p>
           </div>
         </div>
-
+ 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h3 class="text-lg font-bold text-slate-800 mb-4">
@@ -181,7 +181,7 @@
               </div>
             </div>
           </div>
-
+ 
           <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h3 class="text-lg font-bold text-slate-800 mb-4">
               <i class="fa-solid fa-truck-ramp-box text-blue-600 mr-2"></i>Near Expiry / Low Stock (Main Store)
@@ -194,7 +194,7 @@
           </div>
         </div>
       </div>
-
+ 
       <!-- =========================
            SCAN VIEW
       ========================== -->
@@ -215,7 +215,7 @@
             </button>
           </div>
         </div>
-
+ 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <p class="text-xs font-bold text-slate-500 uppercase mb-2">Camera QR Scan</p>
@@ -224,7 +224,7 @@
             </div>
             <p class="text-[11px] text-slate-400 mt-2 text-center">หากไม่ใช้กล้อง ให้ใช้ช่องค้นหาหรือ USB scanner</p>
           </div>
-
+ 
           <div class="space-y-6">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-teal-500">
               <p class="text-xs font-bold text-slate-500 uppercase mb-2">Search Location (ค้นหาที่เก็บสารเคมี)</p>
@@ -239,7 +239,7 @@
                 <i class="fa-solid fa-arrow-down-short-wide mr-1"></i>ระบบจะดึงข้อมูลตามหลัก FEFO (นำของเก่าและขวดที่เปิดแล้วมาใช้ก่อนเสมอ)
               </p>
             </div>
-
+ 
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
               <p class="text-xs font-bold text-slate-500 uppercase mb-2">USB Scanner / Manual Input</p>
               <div class="relative">
@@ -251,13 +251,13 @@
             </div>
           </div>
         </div>
-
+ 
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 w-full">
           <div id="scanWaitingCard" class="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 min-h-[200px]">
             <i class="fa-solid fa-flask-vial text-5xl mb-3 text-slate-300"></i>
             <p class="font-semibold text-slate-500">รอการค้นหา หรือ สแกน...</p>
           </div>
-
+ 
           <div id="scanResultCard" class="hidden-module">
             <div class="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
@@ -270,9 +270,9 @@
                 <div id="resTypeBadge" class="badge badge-green">--</div>
               </div>
             </div>
-
+ 
             <div id="resSubtitle" class="mt-4 text-sm text-slate-500 w-full">--</div>
-
+ 
             <div id="wsSpecificDetails" class="hidden-module mt-4">
               <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2 max-w-lg mx-auto shadow-inner">
                 <div class="flex justify-between items-center text-sm">
@@ -307,7 +307,7 @@
                   </div>
                 </div>
               </div>
-
+ 
               <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg mx-auto">
                 <button id="btnQuickRenew" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95">
                   <i class="fa-solid fa-arrows-rotate mr-2"></i> Renew WS (Pending)
@@ -317,11 +317,11 @@
                 </button>
               </div>
             </div>
-
+ 
           </div>
         </div>
       </div>
-
+ 
       <!-- =========================
            STORE VIEW
       ========================== -->
@@ -352,7 +352,7 @@
             </button>
           </div>
         </div>
-
+ 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full">
           <div class="overflow-x-auto w-full">
             <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
@@ -371,13 +371,13 @@
             </table>
           </div>
         </div>
-
+ 
         <div class="text-[11px] text-slate-400">
           <i class="fa-solid fa-circle-info mr-1"></i>
           ระบบจัดการสต็อกระดับ Gram/ML พร้อม Poka-Yoke Automation
         </div>
       </div>
-
+ 
       <!-- =========================
            WORKING SOLUTIONS VIEW
       ========================== -->
@@ -395,7 +395,7 @@
             </button>
           </div>
         </div>
-
+ 
         <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
           <div class="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div class="flex items-center gap-2">
@@ -406,18 +406,20 @@
                 <option value="Active">Active</option>
                 <option value="Expired">Expired</option>
                 <option value="Discarded">Discarded</option>
+            <option value="Superseded">Superseded</option>
+                <option value="Superseded">Superseded</option>
               </select>
               <button id="btnWSReload" class="bg-slate-900 hover:bg-slate-950 text-white text-xs font-bold px-3 py-2 rounded-xl">
                 <i class="fa-solid fa-rotate mr-2"></i>Reload
               </button>
             </div>
-
+ 
             <div class="flex items-center gap-2">
               <input id="wsSearch" class="p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500 w-full md:w-72"
                 placeholder="ค้นหา: QR, master, lot, preparer" />
             </div>
           </div>
-
+ 
           <table class="w-full text-left border-collapse text-sm">
             <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
               <tr>
@@ -433,10 +435,10 @@
               <tr><td colspan="6" class="p-8 text-center text-slate-400">กำลังโหลด...</td></tr>
             </tbody>
           </table>
-
+ 
         </div>
       </div>
-
+ 
       <!-- =========================
            AUDIT / TRACE VIEW
       ========================== -->
@@ -452,7 +454,7 @@
             <i class="fa-solid fa-file-export mr-2"></i>Export (JSON)
           </button>
         </div>
-
+ 
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div>
@@ -471,7 +473,7 @@
               </button>
             </div>
           </div>
-
+ 
           <div id="traceResult" class="mt-2 space-y-3">
             <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 text-sm">
               ยังไม่มีข้อมูล — ใส่ QR หรือ Lot แล้วกด Run Trace
@@ -479,7 +481,7 @@
           </div>
         </div>
       </div>
-
+ 
       <div id="masterView" class="p-6 space-y-6 hidden-module">
         <div class="flex justify-between items-center">
           <div>
@@ -492,7 +494,7 @@
             <i class="fa-solid fa-plus mr-2"></i>เพิ่มสูตรใหม่
           </button>
         </div>
-
+ 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
             <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
@@ -518,7 +520,7 @@
             </h3>
             <p class="text-sm text-slate-500">ข้อมูลบนหน้าเว็บแสดงย้อนหลัง 1 เดือน </p>
           </div>
-
+ 
           <div class="flex flex-wrap items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
             <span class="text-xs font-bold text-slate-500 uppercase ml-2"><i class="fa-solid fa-filter mr-1"></i>Filter:</span>
             <select id="diFilterInstrument" class="p-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-cyan-500 font-bold text-slate-600">
@@ -536,7 +538,7 @@
             </button>
           </div>
         </div>
-
+ 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h4 class="text-sm font-bold text-slate-700 mb-4 uppercase">Conductivity Trend (µS/cm)</h4>
@@ -544,7 +546,7 @@
               <canvas id="diTrendChart"></canvas>
             </div>
           </div>
-
+ 
           <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h4 class="text-sm font-bold text-slate-700 mb-4 uppercase">pH Trend</h4>
             <div class="relative h-64 w-full">
@@ -552,7 +554,7 @@
             </div>
           </div>
         </div>
-
+ 
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="overflow-x-auto w-full">
             <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
@@ -573,13 +575,13 @@
           </div>
         </div>
       </div>
-
+ 
     </main>
-
+ 
   <!-- =========================
        MODALS
   ========================== -->
-
+ 
   <!-- Receive Chemical Modal -->
   <div id="receiveChemicalModal" class="fixed inset-0 bg-black/60 hidden-module z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
@@ -587,7 +589,7 @@
         <h3 class="font-bold text-lg"><i class="fa-solid fa-dolly mr-2"></i>Receive Raw Material (รับวัตถุดิบเข้าคลัง)</h3>
         <button id="btnCloseReceiveModal" class="text-blue-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
       </div>
-
+ 
       <div class="p-4 md:p-6 space-y-4 overflow-y-auto custom-scrollbar">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="relative">
@@ -601,7 +603,7 @@
             <input type="text" id="recvCasNo" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 mono" placeholder="เช่น 1310-73-2" />
           </div>
         </div>
-
+ 
         <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
           <label class="block text-xs font-bold text-slate-700 uppercase mb-2"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i>GHS Pictograms (สัญลักษณ์ความปลอดภัย)</label>
           <div id="recvGhsList" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] font-semibold text-slate-600">
@@ -615,7 +617,7 @@
             <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600"><input type="checkbox" value="Health Hazard" class="ghs-cb w-4 h-4 text-blue-600"> <img src="https://firebasestorage.googleapis.com/v0/b/lab-trc-management-system.firebasestorage.app/o/GHS_Pictograms%2FGHS08_silhouete.width-1280.png?alt=media&token=6c4e9b8c-89d3-478c-baf5-551dec7cb116" class="w-5 h-5"> Health</label>
             <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600"><input type="checkbox" value="Environmental" class="ghs-cb w-4 h-4 text-blue-600"> <img src="https://firebasestorage.googleapis.com/v0/b/lab-trc-management-system.firebasestorage.app/o/GHS_Pictograms%2FGHS09_aq-pollut.width-1280.png?alt=media&token=cf164475-6d09-43d0-b8f6-1ee5bc12348f" class="w-5 h-5"> Environment</label>
           </div>
-
+ 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             <div>
               <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Signal Word</label>
@@ -635,7 +637,7 @@
             <input type="text" id="recvHazardStmt" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs" placeholder="เช่น H314 Causes severe skin burns..." />
           </div>
         </div>
-
+ 
         <div>
           <label class="block text-xs font-bold text-blue-600 uppercase mb-1">Manufacturer Lot No. *</label>
           <div class="flex gap-2">
@@ -643,7 +645,7 @@
             <button id="btnScanRecvLot" class="bg-blue-500 hover:bg-blue-600 text-white px-4 rounded-xl shadow-md transition-all active:scale-95"><i class="fa-solid fa-camera text-lg"></i></button>
           </div>
         </div>
-
+ 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="md:col-span-1">
             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Qty (ขวด)</label>
@@ -667,7 +669,7 @@
             <input type="date" id="recvExpDate" class="w-full p-3 border border-slate-300 rounded-xl outline-none" />
           </div>
         </div>
-
+ 
         <div class="p-4 bg-amber-50 rounded-xl border border-amber-200 mt-2">
           <label class="block text-xs font-bold text-amber-800 uppercase mb-1">Target Shelf (Scan QR)</label>
           <div class="flex gap-2 mb-2">
@@ -679,26 +681,26 @@
           </div>
           <p class="text-[10px] text-amber-700 mt-1"><i class="fa-solid fa-shield-halved mr-1"></i>ระบบ Poka-Yoke ประเมินความปลอดภัยตาม GHS ทันที</p>
         </div>
-
+ 
         <div id="recvCompatAlert" class="hidden-module p-3 rounded-lg border text-sm flex items-start">
           <i id="recvCompatIcon" class="fa-solid mt-0.5 mr-2"></i>
           <div id="recvCompatText" class="font-medium"></div>
         </div>
-
+ 
         <button id="btnSaveReceive" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors active:scale-95">
           <i class="fa-solid fa-save mr-2"></i>Verify & Save to Store
         </button>
       </div>
     </div>
   </div>
-
+ 
   <div id="prepWSModal" class="fixed inset-0 bg-black/60 hidden-module z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
       <div class="bg-teal-600 p-4 text-white flex justify-between items-center shrink-0">
         <h3 class="font-bold text-lg"><i class="fa-solid fa-flask text-teal-200 mr-2"></i>New Preparation / การเตรียมสารสารละลาย</h3>
         <button id="btnClosePrepWSModal" class="text-teal-100 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
       </div>
-
+ 
       <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
         <div>
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">สแกนขวดสารละลาย (Bottle / Identity QR)</label>
@@ -711,14 +713,14 @@
           </div>
           <p class="text-[10px] text-slate-400 mt-1">สแกน QR ถาวรบนขวด ระบบจะแมปเข้าสูตรมาตรฐานของขวดใบนั้นให้ทันที</p>
         </div>
-
+ 
         <div>
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Working Solution Profile (สูตรสารเคมีที่จะเตรียม)</label>
           <select id="wsMasterSelect" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 font-semibold text-slate-800">
             <option value="">-- พิมพ์หรือเลือกสูตรสารละลาย --</option>
           </select>
         </div>
-
+ 
         <div class="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200">
           <label class="block text-xs font-bold text-indigo-900 uppercase mb-2"><i class="fa-solid fa-link mr-1"></i>GMP Traceability Link (เชื่อมโยงและตัดสต็อกสารตั้งต้น)</label>
           
@@ -726,13 +728,13 @@
           <div id="rawMaterialsContainer" class="space-y-4">
               <!-- รายการจะถูกสร้างด้วย JavaScript -->
           </div>
-
+ 
           <!-- ปุ่มเพิ่มสารเคมี -->
           <button type="button" id="btnAddRawMaterial" class="mt-4 w-full border-2 border-dashed border-indigo-400 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-500 font-bold py-2 rounded-xl text-xs transition-all active:scale-95">
             <i class="fa-solid fa-plus mr-1"></i> เพิ่มสารเคมีตั้งต้น (Add another chemical)
           </button>
         </div>
-
+ 
         <div class="col-span-2 mb-4 p-4 bg-cyan-50 rounded-xl border border-cyan-200">
           <label class="block text-[10px] font-bold text-cyan-800 uppercase mb-2">
             <i class="fa-solid fa-droplet mr-1"></i>DI Water (คลิกเลือก 7 ล็อตล่าสุด หรือสแกน QR ขวดน้ำกลั่น)
@@ -744,7 +746,7 @@
               <i class="fa-solid fa-camera text-lg"></i>
             </button>
           </div>
-
+ 
           <!-- ช่องกรอกปริมาตรและหน่วย -->
           <div class="grid grid-cols-2 gap-3 mt-3">
             <div>
@@ -760,7 +762,7 @@
             </div>
           </div>
         </div>
-
+ 
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">วันที่เตรียม (Prep Date)</label>
@@ -771,7 +773,7 @@
             <input type="text" id="wsExpDate" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-400 cursor-not-allowed text-center" value="คำนวณอัตโนมัติหลัง Approve (+45 วัน)" readonly />
           </div>
         </div>
-
+ 
         <button id="btnSaveWS" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors active:scale-95">
           <i class="fa-solid fa-save mr-2"></i>บันทึกข้อมูลและตัดยอดสต็อก (Save & Deduct)
         </button>
@@ -781,7 +783,7 @@
       </div>
     </div>
   </div>
-
+ 
   <div id="approveModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
       <div class="bg-amber-500 p-4 text-white flex justify-between items-center">
@@ -820,7 +822,7 @@
       </div>
     </div>
   </div>
-
+ 
   <div id="editStoreModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
       <div class="bg-slate-800 p-4 text-white flex justify-between items-center">
@@ -829,7 +831,7 @@
       </div>
       <div class="p-6 space-y-4">
         <input type="hidden" id="editStoreDocId" />
-
+ 
         <div>
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Chemical Name</label>
           <input type="text" id="editStoreChemName" class="w-full p-3 border border-slate-300 rounded-xl outline-none" />
@@ -862,7 +864,7 @@
       </div>
     </div>
   </div>
-
+ 
   <div id="editWsModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
       <div class="bg-slate-800 p-4 text-white flex justify-between items-center">
@@ -890,14 +892,14 @@
       </div>
     </div>
   </div>
-
+ 
   <div id="diWaterModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
       <div class="bg-cyan-600 p-4 text-white flex justify-between items-center">
         <h3 class="font-bold text-lg"><i class="fa-solid fa-droplet mr-2"></i>Daily DI Water Log (GMP)</h3>
         <button id="btnCloseDIWaterModal" class="text-cyan-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
       </div>
-
+ 
       <div class="p-6 space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -913,7 +915,7 @@
             </select>
           </div>
         </div>
-
+ 
         <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -928,26 +930,26 @@
             </div>
           </div>
         </div>
-
+ 
         <div id="diEvalBox" class="p-3 rounded-xl border flex items-center justify-between bg-slate-100 border-slate-200">
           <span class="text-sm font-bold text-slate-600">System Evaluation:</span>
           <span id="diEvalResult" class="font-bold text-slate-500"><i class="fa-solid fa-spinner mr-2"></i>รอข้อมูล...</span>
         </div>
-
+ 
         <div id="diActionBox" class="hidden-module p-4 bg-red-50 border border-red-200 rounded-xl">
           <label class="block text-xs font-bold text-red-700 uppercase mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>OOS Action Taken (การแก้ไข) *</label>
           <input type="text" id="diRemark" class="w-full p-3 border border-red-300 rounded-xl outline-none focus:ring-2 focus:ring-red-500 text-sm" placeholder="เช่น ปล่อยน้ำทิ้ง 15 นาที / เปลี่ยนไส้กรอง" />
           <p class="text-[10px] text-red-600 mt-1">หมายเหตุ: Lot นี้จะไม่สามารถนำไปใช้เตรียม WS ได้ (บันทึกเพื่อเป็น Audit Trail เท่านั้น)</p>
         </div>
-
+ 
         <button id="btnSaveDIWater" class="w-full bg-slate-300 text-slate-500 font-bold py-3 rounded-xl shadow-sm transition-colors cursor-not-allowed" disabled>
           <i class="fa-solid fa-save mr-2"></i>กรุณากรอกข้อมูลให้ครบ
         </button>
-
+ 
       </div>
     </div>
   </div>
-
+ 
   <div id="masterFormulaModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
       <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
@@ -956,7 +958,7 @@
       </div>
       <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
         <input type="hidden" id="masterDocId" />
-
+ 
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Chemical Name *</label>
@@ -967,25 +969,25 @@
             <input type="text" id="masterConc" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="เช่น 1.0 N หรือ 5%" />
           </div>
         </div>
-
+ 
         <div>
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">CAS No.</label>
           <input type="text" id="masterCas" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 mono" placeholder="เช่น 1310-73-2" />
         </div>
-
+ 
         <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
           <label class="block text-xs font-bold text-slate-700 uppercase mb-2"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i>GHS Pictograms (เลือกได้มากกว่า 1)</label>
           <div id="masterGhsList" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] font-semibold text-slate-600">
           </div>
         </div>
-
+ 
         <button id="btnSaveMasterFormula" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors">
           <i class="fa-solid fa-save mr-2"></i>บันทึกสูตรสารเคมี
         </button>
       </div>
     </div>
   </div>
-
+ 
   <!-- =========================
        APP LOGIC (Firebase v10 Module)
   ========================== -->
@@ -998,7 +1000,7 @@
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-
+ 
     const firebaseConfig = {
       apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
       authDomain: "lab-trc-management-system.firebaseapp.com",
@@ -1007,33 +1009,33 @@
       messagingSenderId: "43919979160",
       appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
     };
-
+ 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = initializeFirestore(app, { experimentalForceLongPolling: true });
     const functions = getFunctions(app);
     const storage = getStorage(app); 
-
+ 
     const ADMIN_EMAILS = [
       'sittidate.p@adityabirla.com', 'trc-qcl.laboratory@adityabirla.com',
       'laboratory.trc@adityabirla.com', 'waraporn.jindanath@adityabirla.com', 'datejub@hotmail.com'
     ];
     let isSuperAdmin = false;
-
+ 
     function runLazyMaintenance() {
       const triggerDailyMaintenance = httpsCallable(functions, 'triggerDailyMaintenance');
       triggerDailyMaintenance().then((res) => {
           if (res.data?.updated > 0) { console.log(`[Maintenance] Expired ${res.data.updated}`); refreshDashboardOnly(); }
       }).catch(err => console.error(err));
     }
-
+ 
     // =========================================================
     // GLOBAL UI HELPERS
     // =========================================================
     const $ = (id) => document.getElementById(id);
     function show(id) { $(id).classList.remove("hidden-module"); }
     function hide(id) { $(id).classList.add("hidden-module"); }
-
+ 
     function setActiveNav(btnId) {
       const ids = [
         "navDashboard", "navScan", "navStore", "navWS", "navAudit",
@@ -1048,33 +1050,33 @@
       btn.classList.add("active", "bg-teal-600", "text-white");
       btn.classList.remove("text-slate-300");
     }
-
+ 
     function switchView(viewId, title, navBtnId) {
       const views = ["dashboardView", "scanView", "storeView", "wsView", "auditView", "masterView", "diWaterView"];
       views.forEach(v => hide(v));
       show(viewId);
       $("viewTitle").innerText = title;
       if (navBtnId) setActiveNav(navBtnId);
-
+ 
       if (viewId !== "scanView") {
         if (typeof stopScanner === "function") stopScanner();
       }
     }
-
+ 
     function safeText(v) { return (v === undefined || v === null) ? "" : String(v); }
-
+ 
     function ymd(dateObj) {
       const d = new Date(dateObj);
       if (Number.isNaN(d.getTime())) return "";
       return d.toISOString().split("T")[0];
     }
-
+ 
     function addDaysToYMD(baseDate, days) {
       const d = new Date(baseDate);
       d.setDate(d.getDate() + days);
       return ymd(d);
     }
-
+ 
     function humanDaysLeft(expYmd) {
       if (!expYmd) return { text: "N/A", days: null };
       const exp = new Date(expYmd);
@@ -1083,7 +1085,7 @@
       if (days < 0) return { text: `${expYmd} (Expired)`, days };
       return { text: `${expYmd} (${days} days)`, days };
     }
-
+ 
     // =========================================================
     // MASTER CHEMICAL & HAZARD LOGIC
     // =========================================================
@@ -1100,9 +1102,9 @@
       "Corrosive_Base": "https://firebasestorage.googleapis.com/v0/b/lab-trc-management-system.firebasestorage.app/o/GHS_Pictograms%2FGHS05_acid_red.width-1280.png?alt=media&token=25eef728-f5d2-4037-8a9d-b55b5b5b57c0",
       "Corrosive_Acid": "https://firebasestorage.googleapis.com/v0/b/lab-trc-management-system.firebasestorage.app/o/GHS_Pictograms%2FGHS05_acid_red.width-1280.png?alt=media&token=25eef728-f5d2-4037-8a9d-b55b5b5b57c0"
     };
-
+ 
     let globalMasterFormulas = []; 
-
+ 
     function renderGHSPictograms(ghsArray) {
       if (!ghsArray || ghsArray.length === 0) return `<span class="text-xs text-slate-400">No GHS</span>`;
       return ghsArray.map(g => {
@@ -1112,7 +1114,7 @@
           : `<span class="badge badge-slate mr-1">${g}</span>`;
       }).join("");
     }
-
+ 
     const compatibilityMatrix = {
       "Oxidizer": { cabBlock: ["Flammable"], shelfBlock: ["Corrosive_Acid", "Corrosive_Base"] },
       "Flammable": { cabBlock: ["Oxidizer"], shelfBlock: ["Corrosive_Acid", "Corrosive_Base"] },
@@ -1120,17 +1122,17 @@
       "Corrosive_Base": { cabBlock: [], shelfBlock: ["Flammable", "Oxidizer", "Corrosive_Acid"] },
       "General": { cabBlock: [], shelfBlock: [] }
     };
-
+ 
     function findCabinetByShelf(targetShelfId) {
       if (!targetShelfId || !targetShelfId.includes("-")) return null;
       const lastDashIndex = targetShelfId.lastIndexOf("-");
       const cabId = targetShelfId.substring(0, lastDashIndex);
       const cabinet = { name: cabId, shelves: {} };
-
+ 
       storeChemicalsCache.forEach(item => {
         if (!item.shelf_id) return;
         const itemCabId = item.shelf_id.substring(0, item.shelf_id.lastIndexOf("-"));
-
+ 
         if (itemCabId === cabId) {
           if (!cabinet.shelves[item.shelf_id]) {
             cabinet.shelves[item.shelf_id] = { id: item.shelf_id, currentHazards: [] };
@@ -1143,14 +1145,14 @@
           });
         }
       });
-
+ 
       if (!cabinet.shelves[targetShelfId]) {
         cabinet.shelves[targetShelfId] = { id: targetShelfId, currentHazards: [] };
       }
-
+ 
       return { cabId, cabinet, shelf: cabinet.shelves[targetShelfId] };
     }
-
+ 
     // =========================================================
     // AUTH & NAVIGATION
     // =========================================================
@@ -1163,9 +1165,9 @@
         btn.disabled = false; btn.innerText = "เข้าสู่ระบบ";
       }
     });
-
+ 
     $("btnLogout").addEventListener("click", () => signOut(auth));
-
+ 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         isSuperAdmin = ADMIN_EMAILS.includes(user.email); 
@@ -1173,13 +1175,13 @@
         initDropdowns(); wireNavigation(); await refreshAll(); runLazyMaintenance();
       } else { show("loginPage"); hide("mainContent"); }
     });
-
+ 
     function toggleSidebar() {
       const sb = $("mainSidebar"), ov = $("sidebarOverlay");
       if (sb.classList.contains("-translate-x-full")) { sb.classList.remove("-translate-x-full"); ov.classList.remove("hidden-module"); } 
       else { sb.classList.add("-translate-x-full"); ov.classList.add("hidden-module"); }
     }
-
+ 
     function wireNavigation() {
       $("btnOpenSidebar").onclick = toggleSidebar; $("btnCloseSidebar").onclick = toggleSidebar; $("sidebarOverlay").onclick = toggleSidebar;
       const navHandler = (viewId, title, btnId, action = null) => {
@@ -1196,7 +1198,7 @@
       $("navMaster").onclick = () => navHandler("masterView", "Master Data", "navMaster", loadMasterDataUI);
       $("navDIWaterLog").onclick = () => navHandler("diWaterView", "DI Water Log", "navDIWaterLog", loadDIWaterLogUI);
     }
-
+ 
     // =========================================================
     // 💧 DI WATER QUALITY MODULE
     // =========================================================
@@ -1209,7 +1211,7 @@
       const min = String(d.getMinutes()).padStart(2, '0');
       return `DI-${yyyy}${mm}${dd}-${hh}${min}`;
     }
-
+ 
     if($("btnOpenDIWaterModal")) {
       $("btnOpenDIWaterModal").onclick = () => {
         $("diWaterLot").value = generateDILotId();
@@ -1217,29 +1219,29 @@
         $("diCond").value = "";
         $("diPh").value = "";
         $("diRemark").value = "";
-
+ 
         hide("diActionBox");
         $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-slate-100 border-slate-200";
         $("diEvalResult").innerHTML = '<i class="fa-solid fa-spinner mr-2"></i>รอข้อมูล...';
-
+ 
         const btn = $("btnSaveDIWater");
         btn.disabled = true;
         btn.className = "w-full bg-slate-300 text-slate-500 font-bold py-3 rounded-xl shadow-sm transition-colors cursor-not-allowed";
         btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>กรุณากรอกข้อมูลให้ครบ';
-
+ 
         show("diWaterModal");
       };
     }
-
+ 
     $("btnCloseDIWaterModal").onclick = () => hide("diWaterModal");
-
+ 
     function evaluateDIQuality() {
       const condVal = $("diCond").value;
       const phVal = $("diPh").value;
       const instVal = $("diInstrument").value;
       const btn = $("btnSaveDIWater");
       const limitLabel = $("diCondLimitLabel");
-
+ 
       let condLimitValue = 0.5; 
       if(instVal === "LE 30/1") {
         limitLabel.innerHTML = 'Limit: &lt; 0.5 µS/cm';
@@ -1250,7 +1252,7 @@
       } else {
         limitLabel.innerHTML = 'เลือกรหัสเครื่องวัดก่อน';
       }
-
+ 
       if (!condVal || !phVal || !instVal) {
         btn.disabled = true;
         btn.className = "w-full bg-slate-300 text-slate-500 font-bold py-3 rounded-xl shadow-sm cursor-not-allowed";
@@ -1260,14 +1262,14 @@
         hide("diActionBox");
         return;
       }
-
+ 
       const cond = parseFloat(condVal);
       const ph = parseFloat(phVal);
-
+ 
       const isCondPass = cond < condLimitValue;
       const isPhPass = ph >= 5.0 && ph <= 7.5;
       const isPass = isCondPass && isPhPass;
-
+ 
       if (isPass) {
         $("diEvalBox").className = "p-3 rounded-xl border flex items-center justify-between bg-green-50 border-green-200";
         $("diEvalResult").innerHTML = '<span class="text-green-700"><i class="fa-solid fa-circle-check mr-2"></i>PASS (ผ่านเกณฑ์)</span>';
@@ -1284,34 +1286,34 @@
         btn.innerHTML = '<i class="fa-solid fa-shield-halved mr-2"></i>บันทึก OOS Log (ห้ามใช้งาน)';
       }
     }
-
+ 
     $("diCond").addEventListener("input", evaluateDIQuality);
     $("diPh").addEventListener("input", evaluateDIQuality);
     $("diInstrument").addEventListener("change", evaluateDIQuality);
-
+ 
     $("btnSaveDIWater").onclick = async () => {
       const lotId = $("diWaterLot").value;
       const cond = parseFloat($("diCond").value);
       const ph = parseFloat($("diPh").value);
       const inst = $("diInstrument").value; 
       const remark = $("diRemark").value.trim();
-
+ 
       const condLimitValue = (inst === "LE 30/2") ? 10 : 0.5;
       const condLimitString = (inst === "LE 30/2") ? "< 10" : "< 0.5";
-
+ 
       const isPass = (cond < condLimitValue) && (ph >= 5.0 && ph <= 7.5);
       const finalStatus = isPass ? "Pass" : "Fail";
-
+ 
       if (!isPass && !remark) {
         alert("ระบบตรวจพบผลตกเกณฑ์ (OOS)! ตามมาตรฐาน GMP กรุณาระบุการแก้ไขในช่อง Action Taken ด้วยครับ");
         $("diRemark").focus();
         return;
       }
-
+ 
       const btn = $("btnSaveDIWater");
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึกและสร้าง Audit Trail...';
-
+ 
       try {
         await setDoc(doc(db, "DI_Water_Logs", lotId), {
           lot_id: lotId,
@@ -1325,13 +1327,13 @@
           inspected_by: auth.currentUser.email,
           inspected_at: serverTimestamp()
         });
-
+ 
         if (isPass) {
           alert(`✅ บันทึกคุณภาพน้ำกลั่นสำเร็จ!\nรหัส: ${lotId}\nสามารถนำรหัสนี้ไปสแกนตอนผสม WS ได้เลย`);
         } else {
           alert(`⚠️ บันทึกรายงานความผิดปกติ (OOS) เรียบร้อย\nห้ามนำน้ำกลั่น Lot นี้ไปใช้อย่างเด็ดขาดจนกว่าจะแก้ไขสำเร็จ`);
         }
-
+ 
         hide("diWaterModal");
       } catch (err) {
         alert("❌ บันทึกไม่สำเร็จ: " + err.message);
@@ -1340,20 +1342,20 @@
         evaluateDIQuality();
       }
     };
-
+ 
     let diChartInstance = null;
     let phChartInstance = null;
-
+ 
     async function loadDIWaterLogUI() {
       const tbody = $("diLogTableBody");
       tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูล...</td></tr>`;
       
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
+ 
       if(!$("exportDiStart").value) $("exportDiStart").value = ymd(oneMonthAgo);
       if(!$("exportDiEnd").value) $("exportDiEnd").value = ymd(new Date());
-
+ 
       try {
         const selectedFilter = $("diFilterInstrument").value;
         let q;
@@ -1364,34 +1366,34 @@
           q = query(collection(db, "DI_Water_Logs"), where("instrument_id", "==", selectedFilter), where("inspected_at", ">=", oneMonthAgo), orderBy("inspected_at", "desc"));
           $("diTableCondHeader").innerText = `Cond. Limit (${selectedFilter === 'LE 30/2' ? '< 10' : '< 0.5'})`;
         }
-
+ 
         const snap = await getDocs(q);
-
+ 
         let currentDiLogs = [];
         let html = "";
-
+ 
         if (snap.empty) {
           tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ไม่มีข้อมูลในช่วง 1 เดือนที่ผ่านมา</td></tr>`;
           if(diChartInstance) diChartInstance.destroy();
           if(phChartInstance) phChartInstance.destroy();
           return;
         }
-
+ 
         snap.forEach(docSnap => {
           const d = docSnap.data();
           currentDiLogs.push(d); 
-
+ 
           const dateObj = d.inspected_at ? d.inspected_at.toDate() : new Date();
           const dateStr = dateObj.toLocaleDateString("th-TH", { year: '2-digit', month: 'short', day: 'numeric' });
           const timeStr = dateObj.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' });
-
+ 
           const statusBadge = d.status === "Pass" 
             ? `<span class="badge badge-green"><i class="fa-solid fa-check"></i>Pass</span>`
             : `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>Fail</span>`;
-
+ 
           const localLimitVal = d.instrument_id === "LE 30/2" ? 10 : 0.5;
           const isCondFail = d.conductivity >= localLimitVal;
-
+ 
           html += `
             <tr class="hover:bg-slate-50 border-b border-slate-100">
               <td class="p-4"><div class="font-bold text-slate-700">${dateStr}</div><div class="text-xs text-slate-400">${timeStr}</div></td>
@@ -1405,32 +1407,32 @@
               </td>
             </tr>`;
         });
-
+ 
         tbody.innerHTML = html;
-
+ 
         const reversedLogs = [...currentDiLogs].reverse();
         const chartLabels = reversedLogs.map(d => {
             const dt = d.inspected_at ? d.inspected_at.toDate() : new Date();
             return dt.toLocaleDateString("en-GB", { day: '2-digit', month: 'short' });
         });
-
+ 
         const dataCond = reversedLogs.map(d => d.conductivity);
         const dataPh = reversedLogs.map(d => d.ph); 
-
+ 
         drawDITrendChart(chartLabels, dataCond, reversedLogs, selectedFilter);
         drawPhTrendChart(chartLabels, dataPh);
-
+ 
       } catch (err) {
         console.error(err);
         tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</td></tr>`;
       }
     }
     $("diFilterInstrument").onchange = loadDIWaterLogUI;
-
+ 
     function drawDITrendChart(labels, dataCond, logsObj, currentFilter) {
       const ctx = document.getElementById('diTrendChart').getContext('2d');
       if (diChartInstance) diChartInstance.destroy();
-
+ 
       const pointColors = logsObj.map(d => {
         const limit = d.instrument_id === "LE 30/2" ? 10 : 0.5;
         return d.conductivity >= limit ? '#ef4444' : '#0ea5e9';
@@ -1439,9 +1441,9 @@
         const limit = d.instrument_id === "LE 30/2" ? 10 : 0.5;
         return d.conductivity >= limit ? 6 : 4;
       });
-
+ 
       const chartMaxY = currentFilter === "LE 30/2" ? 12 : (currentFilter === "LE 30/1" ? 0.6 : null);
-
+ 
       let annotationObj = { annotations: {} };
       if(currentFilter === "LE 30/1" || currentFilter === "ALL") {
         annotationObj.annotations.line1 = { type: 'line', yMin: 0.5, yMax: 0.5, borderColor: 'rgb(239, 68, 68)', borderWidth: 2, borderDash: [5, 5], label: { content: 'Limit 0.5', enabled: true, position: 'end' } };
@@ -1449,7 +1451,7 @@
       if(currentFilter === "LE 30/2" || currentFilter === "ALL") {
         annotationObj.annotations.line2 = { type: 'line', yMin: 10, yMax: 10, borderColor: 'rgb(239, 68, 68)', borderWidth: 2, borderDash: [5, 5], label: { content: 'Limit 10', enabled: true, position: 'start' } };
       }
-
+ 
       diChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1479,14 +1481,14 @@
         }
       });
     }
-
+ 
     function drawPhTrendChart(labels, dataPh) {
       const ctx = document.getElementById('phTrendChart').getContext('2d');
       if (phChartInstance) phChartInstance.destroy();
-
+ 
       const pointColors = dataPh.map(val => (val !== null && (val < 5.0 || val > 7.5)) ? '#ef4444' : '#8b5cf6');
       const pointRadius = dataPh.map(val => (val !== null && (val < 5.0 || val > 7.5)) ? 6 : 4);
-
+ 
       phChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1528,49 +1530,49 @@
         }
       });
     }
-
+ 
     $("btnExportDIWater").onclick = async () => {
       const startDateStr = $("exportDiStart").value;
       const endDateStr = $("exportDiEnd").value;
-
+ 
       if (!startDateStr || !endDateStr) {
         return alert("กรุณาเลือกช่วงวันที่ให้ครบถ้วนก่อนทำการ Export");
       }
-
+ 
       const btn = $("btnExportDIWater");
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
-
+ 
       try {
         const startObj = new Date(startDateStr);
         startObj.setHours(0, 0, 0, 0); 
-
+ 
         const endObj = new Date(endDateStr);
         endObj.setHours(23, 59, 59, 999); 
-
+ 
         const q = query(collection(db, "DI_Water_Logs"), 
                         where("inspected_at", ">=", startObj), 
                         where("inspected_at", "<=", endObj),
                         orderBy("inspected_at", "asc"));
         const snap = await getDocs(q);
-
+ 
         if (snap.empty) {
           alert("ไม่พบข้อมูลในช่วงเวลาที่เลือก");
           return;
         }
-
+ 
         let csvContent = "Date,Time,Lot ID,Instrument ID,Conductivity (< 0.5),pH (5.0-7.5),Status,Remark,Inspector\n";
-
+ 
         snap.forEach(docSnap => {
           const d = docSnap.data();
           const dt = d.inspected_at ? d.inspected_at.toDate() : new Date();
           const dateStr = dt.toLocaleDateString("en-GB");
           const timeStr = dt.toLocaleTimeString("en-GB");
           const remark = safeText(d.remark).replace(/,/g, " "); 
-
+ 
           csvContent += `${dateStr},${timeStr},${d.lot_id},${safeText(d.instrument_id)},${d.conductivity},${d.ph !== null ? d.ph : ""},${d.status},${remark},${safeText(d.inspected_by)}\n`;
         });
-
+ 
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -1579,7 +1581,7 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
+ 
       } catch (error) {
         console.error(error);
         alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message);
@@ -1588,7 +1590,7 @@
         btn.innerHTML = '<i class="fa-solid fa-file-csv mr-2"></i>Export CSV';
       }
     };
-
+ 
     // =========================================================
     // 🌍 GLOBAL STORAGE FOR RM & AUTOCOMPLETE CACHE
     // =========================================================
@@ -1640,7 +1642,7 @@
       const chemInput = newRow.querySelector('.rm-chem-input');
       const lotSelect = newRow.querySelector('.rm-lot-select');
       const unitInput = newRow.querySelector('.rm-deduct-unit');
-
+ 
       chemInput.addEventListener('input', (e) => {
         const selectedChem = e.target.value;
         if (!selectedChem || !uniqueChemsArray.includes(selectedChem)) { 
@@ -1649,7 +1651,7 @@
             unitInput.value = ""; 
             return; 
         }
-
+ 
         let filteredLots = storeChemicalsCache.filter(item => item.chemical_name === selectedChem && (item.current_opened_remaining > 0 || item.total_bottles > item.opened_bottles));
         
         filteredLots.sort((a, b) => {
@@ -1661,7 +1663,7 @@
           let db = b.exp_date ? new Date(b.exp_date).getTime() : Infinity;
           return da - db;
         });
-
+ 
         let lotHtml = '<option value="">-- เลือกล็อตของสารเคมี --</option>';
         filteredLots.forEach(lotObj => {
           const shortLot = lotObj.manufacturer_lot || lotObj.id;
@@ -1669,13 +1671,13 @@
           const statusText = isOpened ? "[เปิดแล้ว]" : "[ขวดใหม่]";
           const expText = lotObj.exp_date ? `Exp: ${lotObj.exp_date}` : "No Exp";
           const currentRem = isOpened ? lotObj.current_opened_remaining : lotObj.capacity_per_bottle;
-
+ 
           // สิ่งที่เพิ่มคือ data-source เข้าไปใน option ครับ
           lotHtml += `<option value="${lotObj.id}" data-unit="${lotObj.unit}" data-rem="${currentRem}" data-is-new="${!isOpened}" data-capacity="${lotObj.capacity_per_bottle}" data-source="${lotObj.source || 'STORE'}">
               ${statusText} Lot: ${shortLot} (เหลือ ${currentRem} ${lotObj.unit}) | ${expText}
           </option>`;
         });
-
+ 
         lotSelect.innerHTML = lotHtml; 
         lotSelect.disabled = false;
         
@@ -1684,13 +1686,13 @@
            lotSelect.dispatchEvent(new Event('change'));
         }
       });
-
+ 
       lotSelect.onchange = () => { 
         const opt = lotSelect.options[lotSelect.selectedIndex]; 
         unitInput.value = opt && opt.value !== "" ? opt.getAttribute("data-unit") || "" : ""; 
       };
     };
-
+ 
     function initDropdowns() {
       async function loadRecentDIWater() {
         try {
@@ -1702,7 +1704,7 @@
         } catch(e) { console.error(e); }
       }
       if($("btnOpenPrepWSModal")) $("btnOpenPrepWSModal").addEventListener("click", () => loadRecentDIWater());
-
+ 
       if($("recvChemName")) {
         $("recvChemName").addEventListener("input", (e) => {
            const val = e.target.value.toLowerCase();
@@ -1730,11 +1732,11 @@
         });
         document.addEventListener("click", (e) => { if(e.target.id !== "recvChemName") hide("recvAutocompleteList"); });
       }
-
+ 
       if($("wsStatusFilter")) $("wsStatusFilter").onchange = () => loadWSBatches(true);
       if($("btnWSReload")) $("btnWSReload").onclick = () => loadWSBatches(true);
       if($("wsSearch")) $("wsSearch").oninput = () => loadWSBatches(true);
-
+ 
       if($("btnOpenReceiveModal")) {
         $("btnOpenReceiveModal").onclick = async () => { 
           $("recvCompatAlert").classList.add("hidden-module"); 
@@ -1749,7 +1751,7 @@
       if($("btnCloseEditWsModal")) $("btnCloseEditWsModal").onclick = () => hide("editWsModal");
       if($("btnExportTrace")) $("btnExportTrace").onclick = () => exportTraceJSON();
       if($("btnRunTrace")) $("btnRunTrace").onclick = () => runTrace();
-
+ 
       if($("usbScannerInput")) {
         $("usbScannerInput").addEventListener("keypress", async (e) => {
           if (e.key === "Enter") {
@@ -1760,12 +1762,12 @@
       }
       if($("btnStartScan")) $("btnStartScan").onclick = () => startScannerIfNeeded();
     }
-
+ 
     async function populateWsDeductEngine() {
       try {
         storeChemicalsCache = []; chemCacheMap.clear(); uniqueChemsArray = [];
         let uniqueChems = new Set();
-
+ 
         // 1. ดึงสารเคมีดิบจาก Store_Chemicals
         const storeSnap = await getDocs(query(collection(db, "Store_Chemicals"), limit(500)));
         storeSnap.forEach(d => {
@@ -1781,7 +1783,7 @@
              }
           }
         });
-
+ 
         // 2. ดึงสารที่เตรียมแล้วจาก WS_Batches (เฉพาะ Active)
         const wsSnap = await getDocs(query(collection(db, "WS_Batches"), where("status", "==", "Active"), limit(500)));
         wsSnap.forEach(d => {
@@ -1790,7 +1792,7 @@
              // เติมคำว่า [WS] นำหน้าเพื่อให้ผู้ใช้รู้ว่าเป็นสารผสม
              const wsName = `[WS] ${data.master_name} ${data.master_conc || ''}`.trim();
              uniqueChems.add(wsName);
-
+ 
              // จำลองโครงสร้างข้อมูลให้เหมือน Store_Chemicals เพื่อให้ UI เก่าทำงานได้โดยไม่ต้องแก้
              storeChemicalsCache.push({
                 id: d.id,
@@ -1806,12 +1808,12 @@
              });
           }
         });
-
+ 
         uniqueChemsArray = Array.from(uniqueChems);
-
+ 
       } catch (err) { console.error("ระบบโหลดสต็อกผิดพลาด", err); }
     }
-
+ 
     if($("btnOpenPrepWSModal")) {
       $("btnOpenPrepWSModal").onclick = () => { 
         if($("wsMasterSelect")) $("wsMasterSelect").value = "";
@@ -1860,7 +1862,7 @@
     async function stopScanner() {
       if (html5QrCode && isScanning) { try { await html5QrCode.stop(); isScanning = false; $("qr-reader").innerHTML = '<i class="fa-solid fa-camera text-4xl text-slate-300"></i>'; } catch (e) { console.error(e); } }
     }
-
+ 
     let modalScanner = null; let isModalScanning = false; let currentScanTarget = null;
     function startModalScanner(target) {
       currentScanTarget = target;
@@ -1874,7 +1876,7 @@
          if(currentScanTarget === 'SHELF') $("recvShelfId").value = cleanScan;
          await modalScanner.stop(); isModalScanning = false; hide("modal-qr-wrapper");
       };
-
+ 
       try {
         isModalScanning = true;
         modalScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } },
@@ -1889,37 +1891,46 @@
       } catch (err) { alert("กล้องขัดข้อง"); isModalScanning = false; }
     }
     $("btnScanRecvLot").onclick = () => startModalScanner('LOT'); $("btnScanRecvShelf").onclick = () => startModalScanner('SHELF');
-
+ 
     // =========================================================
     // WS MODAL SCANNER
     // =========================================================
     let wsModalScanner = null; 
     let isWsModalScanning = false;
     let currentWsScanTarget = 'BOTTLE'; 
-
+ 
     $("btnScanWsBottle").onclick = (e) => { e.preventDefault(); currentWsScanTarget = 'BOTTLE'; startWsScanner(); };
     if($("btnScanDiWater")) $("btnScanDiWater").onclick = (e) => { e.preventDefault(); currentWsScanTarget = 'DI'; startWsScanner(); };
-
+ 
     async function startWsScanner() {
       if (isWsModalScanning) { if (wsModalScanner) await wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper"); return; }
       show("ws-modal-qr-wrapper"); 
       if (!wsModalScanner) wsModalScanner = new Html5Qrcode("ws-modal-qr-reader");
-
+ 
       const onWsScanSuccess = async (decodedText) => {
           const cleanScan = String(decodedText).replace(/[\r\n]+/g, "").trim();
           if (currentWsScanTarget === 'BOTTLE') {
               $("wsBottleQr").value = cleanScan;
-              const foundMaster = globalMasterFormulas.find(m => m.id.toLowerCase() === cleanScan.toLowerCase() || cleanScan.toLowerCase().includes(m.id.toLowerCase()));
+              const normalizedFormulaQr = normalizeWsScanIdentity(cleanScan);
+              const foundMaster = globalMasterFormulas.find(master => {
+                const masterFormulaIdentity = [
+                  safeText(master.name),
+                  safeText(master.concentration)
+                ].filter(Boolean).join(" ");
+                return normalizeWsScanIdentity(masterFormulaIdentity) === normalizedFormulaQr;
+              });
               if (foundMaster) {
                 $("wsMasterSelect").value = foundMaster.id;
-                $("wsMasterSelect").dispatchEvent(new Event('change'));
+                $("wsMasterSelect").dispatchEvent(new Event("change"));
+              } else {
+                alert(`ไม่พบสูตรใน Master Data ที่ตรงกับ QR:\n\n${cleanScan}`);
               }
           } else if (currentWsScanTarget === 'DI') {
               $("wsDIWaterQr").value = cleanScan;
           }
           await wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper");
       };
-
+ 
       try {
         isWsModalScanning = true;
         wsModalScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } },
@@ -1933,38 +1944,38 @@
         });
       } catch (err) { alert("กล้องขัดข้อง"); isWsModalScanning = false; }
     }
-
+ 
     $("btnClosePrepWSModal").onclick = () => { hide("prepWSModal"); if (wsModalScanner && isWsModalScanning) { wsModalScanner.stop(); isWsModalScanning = false; hide("ws-modal-qr-wrapper"); } };
-
+ 
     async function processScannedId(scanIdRaw) {
       const scanId = String(scanIdRaw || "").trim();
       if (!scanId) return;
       if (scanId.toUpperCase().includes("SHELF")) { await showShelfScanResult(scanId.toUpperCase()); } 
       else { await showBottleScanResult(scanId); }
     }
-
+ 
     async function showShelfScanResult(shelfId) {
       $("scanWaitingCard").classList.add("hidden-module"); 
       $("scanResultCard").classList.remove("hidden-module");
-
+ 
       if($("wsSpecificDetails")) $("wsSpecificDetails").classList.add("hidden-module");
-
+ 
       $("resScanId").innerText = shelfId; 
       $("resTitle").innerText = "Shelf Monitor (พิกัดชั้นวาง)"; 
       $("resSubtitle").innerHTML = `<div class="mt-2 text-blue-600 font-medium"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูลสารเคมีในชั้น...</div>`;
       $("resTypeBadge").className = "badge badge-slate"; 
       $("resTypeBadge").innerHTML = '<i class="fa-solid fa-layer-group"></i>SHELF';
-
+ 
       try {
         const q = query(collection(db, "Store_Chemicals"), where("shelf_id", "==", shelfId));
         const snap = await getDocs(q);
         let itemHtml = '';
         const now = new Date();
-
+ 
         snap.forEach(d => {
            const x = d.data();
            const msdsBtn = x.msds_url ? `<a href="${x.msds_url}" target="_blank" class="ml-2 bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded shadow-sm text-[10px]"><i class="fa-solid fa-file-pdf mr-1"></i>MSDS</a>` : '';
-
+ 
            const ghsBadges = (x.ghs_classes || []).map(g => {
                const imgSrc = ghsImages[g];
                if (imgSrc) {
@@ -1973,7 +1984,7 @@
                    return `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[9px] mr-1 border border-slate-200 shadow-sm font-semibold">${g}</span>`;
                }
            }).join("");
-
+ 
            let expText = safeText(x.exp_date) || "-";
            let expCls = "text-slate-500";
            if (x.exp_date) {
@@ -1981,7 +1992,7 @@
              if (days < 0) expCls = "text-red-600 font-bold";
              else if (days <= 30) expCls = "text-amber-600 font-bold";
            }
-
+ 
            itemHtml += `
            <div class="p-3 border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors flex justify-between items-start gap-2">
               <div>
@@ -1995,210 +2006,448 @@
               </div>
            </div>`;
         });
-
+ 
         $("resSubtitle").innerHTML = `<div class="mt-4 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar shadow-inner">${itemHtml || '<div class="p-6 text-center text-slate-400"><i class="fa-solid fa-box-open text-2xl mb-2 block"></i>ชั้นวางนี้ว่างเปล่า</div>'}</div>`;
       } catch(err) { 
         $("resSubtitle").innerHTML = `<div class="text-red-500 mt-3 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1"></i> โหลดข้อมูลชั้นวางล้มเหลว: ${err.message}</div>`; 
       }
     }
-
-    async function enrichRawMaterialsForScan(wsBatch) {
-      const rawMaterials = Array.isArray(wsBatch.raw_materials) ? wsBatch.raw_materials : [];
-
-      if (rawMaterials.length === 0) {
-        if (wsBatch.raw_doc_id) {
-          try {
-            const storeSnap = await getDoc(doc(db, "Store_Chemicals", wsBatch.raw_doc_id));
-            if (storeSnap.exists()) {
-              const storeData = storeSnap.data();
-              return [{
-                doc_id: wsBatch.raw_doc_id,
-                chemical_name: storeData.chemical_name || "Unknown Chemical",
-                lot_ref: storeData.manufacturer_lot || wsBatch.raw_lot_ref || wsBatch.raw_doc_id,
-                amount: wsBatch.deducted_amount ?? null,
-                unit: wsBatch.deducted_unit || storeData.unit || "",
-                source: "STORE",
-                found: true
-              }];
-            }
-          } catch (err) {
-            console.error("Legacy raw material lookup failed:", err);
-          }
+ 
+    function normalizeWsScanIdentity(value) {
+      return safeText(value).replace(/[\r\n\t]+/g, " ").replace(/^ID\s*\/\s*NAME\s*:\s*/i, "").replace(/\s+/g, " ").trim().toUpperCase().replace(/\s+/g, "");
+    }
+ 
+    function cleanWsScanValue(rawValue) {
+      let value = safeText(rawValue).replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+      try {
+        const parsedUrl = new URL(value);
+        value = parsedUrl.searchParams.get("qr") || parsedUrl.searchParams.get("id") || parsedUrl.searchParams.get("label_id") || parsedUrl.searchParams.get("formula") || value;
+      } catch (error) {}
+      return safeText(value).replace(/[\r\n\t]+/g, " ").replace(/^ID\s*\/\s*NAME\s*:\s*/i, "").replace(/\s+/g, " ").trim();
+    }
+ 
+    function getWsBatchSortTime(batchData) {
+      if (batchData.lastUpdated && typeof batchData.lastUpdated.toMillis === "function") return batchData.lastUpdated.toMillis();
+      if (batchData.timestamp && typeof batchData.timestamp.toMillis === "function") return batchData.timestamp.toMillis();
+      if (batchData.standardization && batchData.standardization.verified_at) {
+        const verifiedTime = new Date(batchData.standardization.verified_at).getTime();
+        if (!Number.isNaN(verifiedTime)) return verifiedTime;
+      }
+      if (batchData.prep_date) {
+        const prepTime = new Date(`${batchData.prep_date}T00:00:00`).getTime();
+        if (!Number.isNaN(prepTime)) return prepTime;
+      }
+      return 0;
+    }
+ 
+    function sortWsBatchDocumentsByLatest(documents) {
+      return [...documents].sort((docA, docB) => getWsBatchSortTime(docB.data()) - getWsBatchSortTime(docA.data()));
+    }
+ 
+    function isFormulaQrMatchedWithBatch(scannedValue, batchData) {
+      const normalizedScan = normalizeWsScanIdentity(scannedValue);
+      const combinedFormula = `${safeText(batchData.master_name)} ${safeText(batchData.master_conc)}`;
+      if (normalizedScan === normalizeWsScanIdentity(combinedFormula)) return true;
+      if (batchData.formula_qr_identity && normalizeWsScanIdentity(batchData.formula_qr_identity) === normalizedScan) return true;
+      if (batchData.qr_identity && normalizeWsScanIdentity(batchData.qr_identity) === normalizedScan) return true;
+      return false;
+    }
+ 
+    async function generateUniqueWsBatchLabel() {
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const randomNumber = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
+        const candidate = `WS-${String(randomNumber).padStart(6, "0")}`;
+        const existing = await getDocs(
+          query(
+            collection(db, "WS_Batches"),
+            where("label_id", "==", candidate),
+            limit(1)
+          )
+        );
+        if (existing.empty) return candidate;
+      }
+      throw new Error("ไม่สามารถสร้าง WS Batch Number ที่ไม่ซ้ำได้ กรุณาลองอีกครั้ง");
+    }
+ 
+    async function resolveCurrentWsBatch(scanValueRaw) {
+      const scannedValue = cleanWsScanValue(scanValueRaw);
+      if (!scannedValue) return { found: false, reason: "EMPTY_SCAN", scannedValue: "", docSnap: null, data: null, matchedDocuments: [] };
+ 
+      try {
+        const exactLabelSnapshot = await getDocs(query(collection(db, "WS_Batches"), where("label_id", "==", scannedValue), limit(20)));
+        if (!exactLabelSnapshot.empty) {
+          const sortedExactDocuments = sortWsBatchDocumentsByLatest(exactLabelSnapshot.docs);
+          const selectedDocument = sortedExactDocuments[0];
+          return { found: true, reason: "DIRECT_BATCH_LABEL", scanType: "BATCH", scannedValue, docSnap: selectedDocument, data: selectedDocument.data(), matchedDocuments: sortedExactDocuments };
         }
-        if (wsBatch.raw_lot_ref) {
+      } catch (error) { console.error("Direct label_id lookup failed:", error); }
+ 
+      let activeSnapshot = null;
+      try {
+        activeSnapshot = await getDocs(query(collection(db, "WS_Batches"), where("status", "==", "Active"), limit(500)));
+      } catch (error) {
+        console.error("Active Working Solution query failed:", error);
+        return { found: false, reason: "ACTIVE_QUERY_ERROR", scannedValue, docSnap: null, data: null, matchedDocuments: [], error };
+      }
+ 
+      const matchingActiveDocuments = activeSnapshot.docs.filter(docSnap => isFormulaQrMatchedWithBatch(scannedValue, docSnap.data()));
+      if (matchingActiveDocuments.length === 1) {
+        const selectedDocument = matchingActiveDocuments[0];
+        return {
+          found: true,
+          reason: "FORMULA_SINGLE_ACTIVE",
+          scanType: "FORMULA",
+          scannedValue,
+          docSnap: selectedDocument,
+          data: selectedDocument.data(),
+          matchedDocuments: matchingActiveDocuments
+        };
+      }
+      if (matchingActiveDocuments.length > 1) {
+        return {
+          found: false,
+          reason: "MULTIPLE_ACTIVE_BATCHES",
+          scanType: "FORMULA",
+          scannedValue,
+          docSnap: null,
+          data: null,
+          matchedDocuments: sortWsBatchDocumentsByLatest(matchingActiveDocuments)
+        };
+      }
+      let pendingSnapshot = null;
+      try {
+        pendingSnapshot = await getDocs(query(collection(db, "WS_Batches"), where("status", "==", "Pending"), limit(500)));
+      } catch (error) { console.error("Pending Working Solution query failed:", error); }
+ 
+      if (pendingSnapshot) {
+        const matchingPendingDocuments = pendingSnapshot.docs.filter(docSnap => isFormulaQrMatchedWithBatch(scannedValue, docSnap.data()));
+        if (matchingPendingDocuments.length > 0) {
+          const sortedPendingDocuments = sortWsBatchDocumentsByLatest(matchingPendingDocuments);
+          const selectedDocument = sortedPendingDocuments[0];
+          return { found: true, reason: "FORMULA_PENDING_NO_ACTIVE", scanType: "FORMULA", scannedValue, docSnap: selectedDocument, data: selectedDocument.data(), matchedDocuments: sortedPendingDocuments };
+        }
+      }
+ 
+      let historySnapshot = null;
+      try {
+        historySnapshot = await getDocs(query(collection(db, "WS_Batches"), orderBy("timestamp", "desc"), limit(500)));
+      } catch (orderedError) {
+        console.warn("Ordered WS history query failed. Using fallback query:", orderedError);
+        try {
+          historySnapshot = await getDocs(query(collection(db, "WS_Batches"), limit(500)));
+        } catch (fallbackError) { console.error("WS history fallback query failed:", fallbackError); }
+      }
+ 
+      if (historySnapshot) {
+        const normalizedDirectDocuments = historySnapshot.docs.filter(docSnap => normalizeWsScanIdentity(docSnap.data().label_id) === normalizeWsScanIdentity(scannedValue));
+        if (normalizedDirectDocuments.length > 0) {
+          const sortedDirectDocuments = sortWsBatchDocumentsByLatest(normalizedDirectDocuments);
+          const selectedDocument = sortedDirectDocuments[0];
+          return { found: true, reason: "NORMALIZED_BATCH_LABEL", scanType: "BATCH", scannedValue, docSnap: selectedDocument, data: selectedDocument.data(), matchedDocuments: sortedDirectDocuments };
+        }
+ 
+        const matchingHistoryDocuments = historySnapshot.docs.filter(docSnap => isFormulaQrMatchedWithBatch(scannedValue, docSnap.data()));
+        if (matchingHistoryDocuments.length > 0) {
+          const sortedHistoryDocuments = sortWsBatchDocumentsByLatest(matchingHistoryDocuments);
+          const selectedDocument = sortedHistoryDocuments[0];
+          return { found: true, reason: "FORMULA_HISTORY_NO_ACTIVE", scanType: "FORMULA", scannedValue, docSnap: selectedDocument, data: selectedDocument.data(), matchedDocuments: sortedHistoryDocuments };
+        }
+      }
+ 
+      return { found: false, reason: "NOT_FOUND", scannedValue, docSnap: null, data: null, matchedDocuments: [] };
+    }
+ 
+    async function enrichScanRawMaterials(wsBatch) {
+      const rawMaterials = Array.isArray(wsBatch.raw_materials) ? wsBatch.raw_materials : [];
+ 
+      if (rawMaterials.length === 0) {
+        if (wsBatch.raw_doc_id || wsBatch.raw_lot_ref) {
+          let storeData = null;
+          if (wsBatch.raw_doc_id) {
+            try {
+              const storeSnapshot = await getDoc(doc(db, "Store_Chemicals", wsBatch.raw_doc_id));
+              if (storeSnapshot.exists()) storeData = storeSnapshot.data();
+            } catch (error) { console.error("Legacy raw chemical lookup failed:", error); }
+          }
           return [{
             doc_id: wsBatch.raw_doc_id || "",
-            chemical_name: "Raw Material",
-            lot_ref: wsBatch.raw_lot_ref,
+            chemical_name: storeData?.chemical_name || "Raw Material",
+            lot_ref: storeData?.manufacturer_lot || wsBatch.raw_lot_ref || "N/A",
             amount: wsBatch.deducted_amount ?? null,
-            unit: wsBatch.deducted_unit || "",
-            source: "LEGACY",
-            found: false
+            unit: wsBatch.deducted_unit || storeData?.unit || "",
+            exp_date: storeData?.exp_date || "",
+            source: "STORE",
+            masterFound: Boolean(storeData)
           }];
         }
         return [];
       }
-
-      return await Promise.all(rawMaterials.map(async (rm) => {
-        const baseItem = {
-          ...rm,
-          chemical_name: rm.chemical_name || rm.name || "",
-          lot_ref: rm.lot_ref || rm.manufacturer_lot || rm.doc_id || "N/A",
-          source: rm.source || "STORE",
-          found: false
+ 
+      return await Promise.all(rawMaterials.map(async rawItem => {
+        const baseResult = {
+          doc_id: safeText(rawItem.doc_id),
+          chemical_name: safeText(rawItem.chemical_name || rawItem.name),
+          lot_ref: safeText(rawItem.lot_ref || rawItem.manufacturer_lot || rawItem.doc_id),
+          amount: rawItem.amount ?? null,
+          unit: safeText(rawItem.unit),
+          exp_date: safeText(rawItem.exp_date),
+          source: safeText(rawItem.source || "STORE"),
+          masterFound: false
         };
-        if (!rm.doc_id) return baseItem;
-
+        if (!rawItem.doc_id) return baseResult;
+ 
         try {
-          const storeSnap = await getDoc(doc(db, "Store_Chemicals", rm.doc_id));
-          if (storeSnap.exists()) {
-            const storeData = storeSnap.data();
-            return {
-              ...baseItem,
-              chemical_name: storeData.chemical_name || baseItem.chemical_name || "Unknown Chemical",
-              lot_ref: storeData.manufacturer_lot || baseItem.lot_ref,
-              unit: baseItem.unit || storeData.unit || "",
-              source: "STORE",
-              found: true
-            };
+          const storeSnapshot = await getDoc(doc(db, "Store_Chemicals", rawItem.doc_id));
+          if (storeSnapshot.exists()) {
+            const storeData = storeSnapshot.data();
+            return { ...baseResult, chemical_name: storeData.chemical_name || baseResult.chemical_name || "Unknown Chemical", lot_ref: storeData.manufacturer_lot || baseResult.lot_ref, unit: baseResult.unit || storeData.unit || "", exp_date: storeData.exp_date || baseResult.exp_date || "", source: "STORE", masterFound: true };
           }
-
-          const sourceWsSnap = await getDoc(doc(db, "WS_Batches", rm.doc_id));
-          if (sourceWsSnap.exists()) {
-            const sourceWs = sourceWsSnap.data();
-            return {
-              ...baseItem,
-              chemical_name: sourceWs.master_name || baseItem.chemical_name || "Working Solution",
-              lot_ref: sourceWs.label_id || baseItem.lot_ref,
-              unit: baseItem.unit || sourceWs.prep_volume_unit || "",
-              source: "WS",
-              found: true
-            };
+        } catch (error) { console.error(`Store Chemical lookup failed: ${rawItem.doc_id}`, error); }
+ 
+        try {
+          const sourceWsSnapshot = await getDoc(doc(db, "WS_Batches", rawItem.doc_id));
+          if (sourceWsSnapshot.exists()) {
+            const sourceWsData = sourceWsSnapshot.data();
+            const sourceFormula = [safeText(sourceWsData.master_name), safeText(sourceWsData.master_conc)].filter(Boolean).join(" ");
+            return { ...baseResult, chemical_name: sourceFormula || baseResult.chemical_name || "Working Solution", lot_ref: sourceWsData.label_id || baseResult.lot_ref, unit: baseResult.unit || sourceWsData.prep_volume_unit || "", exp_date: sourceWsData.exp_date || baseResult.exp_date || "", source: "WS", masterFound: true };
           }
-        } catch (err) {
-          console.error(`Raw material lookup failed for ${rm.doc_id}:`, err);
-        }
-        return baseItem;
+        } catch (error) { console.error(`Source WS lookup failed: ${rawItem.doc_id}`, error); }
+ 
+        return baseResult;
       }));
     }
-
-    function resetBottleScanFields() {
+ 
+    function resetBottleScanResultFields() {
       $("resStatus").innerText = "-";
       $("resPrepDate").innerText = "-";
       $("resExpDate").innerText = "-";
       $("resPreparer").innerText = "-";
       $("resVolume").innerText = "-";
       $("resDIWater").innerText = "-";
-      if ($("resRawMaterials")) {
-        $("resRawMaterials").innerHTML = `<div class="text-slate-400 text-center py-2">-</div>`;
-      }
+      if ($("resRawMaterials")) $("resRawMaterials").innerHTML = `<div class="text-center text-slate-400 py-3">-</div>`;
     }
-
+ 
     async function showBottleScanResult(bottleIdRaw) {
-      const bottleId = safeText(bottleIdRaw).replace(/[\r\n]+/g, "").trim();
+      const scannedValue = cleanWsScanValue(bottleIdRaw);
       $("scanWaitingCard").classList.add("hidden-module");
       $("scanResultCard").classList.remove("hidden-module");
       if ($("wsSpecificDetails")) $("wsSpecificDetails").classList.remove("hidden-module");
-      resetBottleScanFields();
-
-      $("resScanId").innerText = bottleId;
+ 
+      resetBottleScanResultFields();
+      $("resScanId").innerText = scannedValue || "-";
       $("resTitle").innerText = "กำลังค้นหาข้อมูล...";
-      $("resSubtitle").innerHTML = `<span class="text-blue-600"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึง Batch ล่าสุดและข้อมูลสารตั้งต้น...</span>`;
+      $("resSubtitle").innerHTML = `<div class="p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังค้นหา Current Working Solution Batch...</div>`;
       $("resTypeBadge").className = "badge badge-green";
       $("resTypeBadge").innerHTML = '<i class="fa-solid fa-vial"></i>BOTTLE';
-
+ 
       try {
-        let snap;
-        try {
-          snap = await getDocs(query(collection(db, "WS_Batches"), where("label_id", "==", bottleId), orderBy("timestamp", "desc"), limit(1)));
-        } catch (indexError) {
-          console.warn("Ordered scan query failed; fallback query used:", indexError);
-          snap = await getDocs(query(collection(db, "WS_Batches"), where("label_id", "==", bottleId), limit(20)));
-        }
-
-        if (snap.empty) {
-          $("resTitle").innerText = "Bottle Not Registered";
-          $("resSubtitle").innerHTML = `<div class="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl"><i class="fa-solid fa-circle-question mr-2"></i>ไม่พบ Working Solution Batch สำหรับ QR: <span class="mono font-bold">${safeText(bottleId)}</span></div>`;
+        const resolved = await resolveCurrentWsBatch(scannedValue);
+ 
+        if (!resolved.found) {
+          if (resolved.reason === "MULTIPLE_ACTIVE_BATCHES") {
+            $("resTitle").innerText = "Data Integrity Warning";
+            $("resStatus").innerText = "Multiple Active Batches";
+            $("resSubtitle").innerHTML = `
+              <div class="p-4 bg-red-50 border border-red-300 text-red-800 rounded-xl">
+                <div class="font-bold">
+                  <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                  พบ Active Batch มากกว่า 1 รายการสำหรับ Formula QR เดียวกัน
+                </div>
+                <div class="text-sm mt-2">
+                  ระบบไม่เลือก Batch แทนโดยอัตโนมัติ เพื่อป้องกัน Traceability ผิดรายการ
+                  กรุณาตรวจสอบและปิด Active Batch เก่าก่อนใช้งาน
+                </div>
+                <div class="mt-3 space-y-2">
+                  ${resolved.matchedDocuments.map(docSnap => {
+                    const batch = docSnap.data();
+                    return `
+                      <div class="p-2 bg-white border border-red-200 rounded-lg">
+                        <span class="mono font-bold">${safeText(batch.label_id)}</span>
+                        <span class="ml-2">Prep: ${safeText(batch.prep_date)}</span>
+                      </div>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+            `;
+            lastScanCache = null;
+            return;
+          }
+          $("resTitle").innerText = "Bottle / Formula Not Registered";
+          if (resolved.reason === "ACTIVE_QUERY_ERROR") {
+            $("resSubtitle").innerHTML = `<div class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl"><div class="font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Firestore Query Error</div><div class="text-sm mt-2">${safeText(resolved.error?.message)}</div></div>`;
+          } else {
+            $("resSubtitle").innerHTML = `<div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl"><div class="font-bold"><i class="fa-solid fa-circle-question mr-2"></i>ไม่พบ Working Solution</div><div class="text-sm mt-2">ระบบค้นหาแล้วทั้ง Batch QR และ Formula QR แต่ไม่พบข้อมูลที่ตรงกัน</div><div class="mono font-bold mt-3 p-2 bg-white border border-amber-200 rounded-lg break-words">${safeText(scannedValue)}</div></div>`;
+          }
           $("resStatus").innerText = "Not Registered";
           $("btnQuickRenew").disabled = false;
           $("btnQuickRenew").classList.remove("opacity-50", "cursor-not-allowed");
           $("btnQuickRenew").innerHTML = '<i class="fa-solid fa-arrows-rotate mr-2"></i>Renew WS (Pending)';
-          lastScanCache = { type: "BOTTLE", id: bottleId, latestDocId: null, latest: null };
-        } else {
-          const sortedDocs = [...snap.docs].sort((left, right) => {
-            const leftTime = left.data().timestamp?.toMillis?.() || 0;
-            const rightTime = right.data().timestamp?.toMillis?.() || 0;
-            return rightTime - leftTime;
-          });
-          const docSnap = sortedDocs[0];
-          const x = docSnap.data();
-          const expInfo = humanDaysLeft(x.exp_date);
-
-          $("resTitle").innerText = [safeText(x.master_name), safeText(x.master_conc)].filter(Boolean).join(" ") || safeText(x.master_id) || "Working Solution";
-          $("resSubtitle").innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-2"><div><span class="text-xs text-slate-400 uppercase">Batch Document</span><div class="mono font-semibold text-slate-700">${safeText(docSnap.id)}</div></div><div><span class="text-xs text-slate-400 uppercase">Master ID</span><div class="mono font-semibold text-indigo-700">${safeText(x.master_id) || "-"}</div></div></div>`;
-
-          const statusClass = x.status === "Active" ? "badge-green" : (x.status === "Pending" ? "badge-amber" : "badge-red");
-          $("resStatus").innerHTML = `<span class="badge ${statusClass}">${safeText(x.status) || "Unknown"}</span>`;
-          $("resPrepDate").innerText = safeText(x.prep_date) || "-";
-          $("resExpDate").innerText = x.status === "Pending" ? "Waiting Approve" : expInfo.text;
-          $("resPreparer").innerText = safeText(x.preparer || "N/A").split("@")[0];
-          $("resVolume").innerText = (x.prep_volume !== undefined && x.prep_volume !== null && x.prep_volume !== "") ? `${x.prep_volume} ${safeText(x.prep_volume_unit)}` : "N/A";
-          $("resDIWater").innerText = safeText(x.di_water_qr_ref) || "N/A";
-
-          const enrichedRawMaterials = await enrichRawMaterialsForScan(x);
-          if (enrichedRawMaterials.length > 0) {
-            $("resRawMaterials").innerHTML = enrichedRawMaterials.map(rm => {
-              const sourceBadge = rm.source === "WS"
-                ? `<span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[9px] font-bold border border-purple-200">WS</span>`
-                : `<span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[9px] font-bold border border-blue-200">STORE</span>`;
-              const lookupWarning = rm.found ? "" : `<div class="text-[9px] text-amber-600 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>ไม่พบ Master record ปัจจุบัน แสดงข้อมูลจาก Batch history</div>`;
-              const amountDisplay = (rm.amount !== undefined && rm.amount !== null && rm.amount !== "") ? `${rm.amount} ${safeText(rm.unit)}` : "-";
-              return `<div class="border-b border-slate-100 py-2.5 last:border-0"><div class="flex justify-between items-start gap-3"><div class="min-w-0"><div class="font-bold text-slate-800 break-words">${safeText(rm.chemical_name) || "Unknown Chemical"} ${sourceBadge}</div><div class="text-[10px] text-slate-500 mt-1">Lot: <span class="mono font-bold text-indigo-700">${safeText(rm.lot_ref) || "N/A"}</span></div>${lookupWarning}</div><div class="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded whitespace-nowrap">${amountDisplay}</div></div></div>`;
-            }).join("");
-          } else {
-            $("resRawMaterials").innerHTML = `<div class="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-center"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Batch นี้ไม่มีข้อมูล Raw Material Trace</div>`;
-          }
-
-          $("btnQuickRenew").disabled = false;
-          $("btnQuickRenew").classList.remove("opacity-50", "cursor-not-allowed");
-          $("btnQuickRenew").innerHTML = '<i class="fa-solid fa-arrows-rotate mr-2"></i>Renew WS (Pending)';
-          lastScanCache = { type: "BOTTLE", id: bottleId, latestDocId: docSnap.id, latest: x };
+          lastScanCache = { type: "FORMULA", id: scannedValue, formulaQr: scannedValue, latestDocId: null, latest: null };
+          return;
         }
-
-        if ($("btnQuickRenew")) $("btnQuickRenew").onclick = async () => { await quickRenewPendingFromScan(); };
-        if ($("btnGoAudit")) $("btnGoAudit").onclick = () => {
-          switchView("auditView", "Audit / Traceability", "navAudit");
-          $("auditSearchQr").value = bottleId;
-          $("auditSearchLot").value = "";
-          runTrace();
+ 
+        const docSnap = resolved.docSnap;
+        const wsData = resolved.data;
+        const expiryInfo = humanDaysLeft(wsData.exp_date);
+        const formulaDisplay = [safeText(wsData.master_name), safeText(wsData.master_conc)].filter(Boolean).join(" ");
+        $("resTitle").innerText = formulaDisplay || safeText(wsData.master_id) || "Working Solution";
+ 
+        let resolutionNotice = "";
+        if (resolved.reason === "FORMULA_PENDING_NO_ACTIVE") {
+          resolutionNotice = `<div class="mt-3 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl"><i class="fa-solid fa-hourglass-half mr-2"></i>สูตรนี้ยังไม่มี Active Batch ระบบกำลังแสดง Pending Batch ล่าสุด</div>`;
+        } else if (resolved.reason === "FORMULA_HISTORY_NO_ACTIVE") {
+          resolutionNotice = `<div class="mt-3 p-3 bg-slate-100 border border-slate-300 text-slate-700 rounded-xl"><i class="fa-solid fa-clock-rotate-left mr-2"></i>สูตรนี้ไม่มี Active หรือ Pending Batch ระบบกำลังแสดงประวัติ Batch ล่าสุด</div>`;
+        }
+ 
+        $("resSubtitle").innerHTML = `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl">
+              <div class="text-[10px] font-bold text-teal-600 uppercase">Current Batch</div>
+              <div class="mono text-lg font-bold text-teal-800 mt-1">${safeText(wsData.label_id) || "N/A"}</div>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div class="text-[10px] font-bold text-slate-500 uppercase">Formula QR Identity</div>
+              <div class="text-sm font-bold text-slate-700 mt-1 break-words">${safeText(scannedValue)}</div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-slate-400">Match method: <span class="mono font-bold">${safeText(resolved.reason)}</span></div>
+          ${resolutionNotice}`;
+ 
+        let statusClass = "badge-slate";
+        const normalizedStatus = safeText(wsData.status).trim().toUpperCase();
+        if (normalizedStatus === "ACTIVE") statusClass = "badge-green";
+        else if (normalizedStatus === "PENDING") statusClass = "badge-amber";
+        else if (["EXPIRED", "DISCARDED"].includes(normalizedStatus)) statusClass = "badge-red";
+ 
+        $("resStatus").innerHTML = `<span class="badge ${statusClass}">${safeText(wsData.status) || "Unknown"}</span>`;
+        $("resPrepDate").innerText = safeText(wsData.prep_date) || "-";
+        $("resExpDate").innerText = normalizedStatus === "PENDING" ? "Waiting Approve" : expiryInfo.text;
+        $("resPreparer").innerText = safeText(wsData.preparer || "N/A").split("@")[0];
+ 
+        $("resVolume").innerText = (wsData.prep_volume !== undefined && wsData.prep_volume !== null && wsData.prep_volume !== "") 
+          ? `${wsData.prep_volume} ${safeText(wsData.prep_volume_unit)}` 
+          : "N/A";
+        $("resDIWater").innerText = safeText(wsData.di_water_qr_ref) || "N/A";
+ 
+        const enrichedRawMaterials = await enrichScanRawMaterials(wsData);
+        if (enrichedRawMaterials.length > 0) {
+          $("resRawMaterials").innerHTML = enrichedRawMaterials.map(rawItem => {
+            const sourceBadge = rawItem.source === "WS"
+              ? `<span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[9px] font-bold border border-purple-200">WS</span>`
+              : `<span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[9px] font-bold border border-blue-200">MAIN STORE</span>`;
+            const amountDisplay = (rawItem.amount !== undefined && rawItem.amount !== null && rawItem.amount !== "") ? `${rawItem.amount} ${safeText(rawItem.unit)}` : "-";
+            const expDisplay = rawItem.exp_date ? `<div class="text-[10px] text-slate-500 mt-1">Exp: <span class="font-semibold">${safeText(rawItem.exp_date)}</span></div>` : "";
+            const lookupWarning = rawItem.masterFound ? "" : `<div class="text-[9px] text-amber-600 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>ไม่พบ Master record ปัจจุบัน ระบบกำลังแสดงข้อมูลที่บันทึกไว้ใน Batch</div>`;
+ 
+            return `
+              <div class="border-b border-slate-100 py-3 last:border-0">
+                <div class="flex justify-between items-start gap-3">
+                  <div class="min-w-0">
+                    <div class="font-bold text-slate-800 break-words">${safeText(rawItem.chemical_name) || "Raw Material"} ${sourceBadge}</div>
+                    <div class="text-[10px] text-slate-500 mt-1">Lot: <span class="mono font-bold text-indigo-700">${safeText(rawItem.lot_ref) || "N/A"}</span></div>
+                    ${expDisplay}
+                    ${lookupWarning}
+                  </div>
+                  <div class="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded whitespace-nowrap">${amountDisplay}</div>
+                </div>
+              </div>`;
+          }).join("");
+        } else {
+          $("resRawMaterials").innerHTML = `<div class="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-center"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Batch นี้ไม่มีข้อมูล Raw Material Trace</div>`;
+        }
+ 
+        $("btnQuickRenew").disabled = false;
+        $("btnQuickRenew").classList.remove("opacity-50", "cursor-not-allowed");
+        $("btnQuickRenew").innerHTML = '<i class="fa-solid fa-arrows-rotate mr-2"></i>Renew WS (Pending)';
+ 
+        lastScanCache = {
+          type: "BOTTLE",
+          id: scannedValue,
+          formulaQr: scannedValue,
+          currentBatchLabel: safeText(wsData.label_id),
+          latestDocId: docSnap.id,
+          latest: wsData
         };
-      } catch (err) {
-        console.error("showBottleScanResult error:", err);
+ 
+        if ($("btnQuickRenew")) {
+          $("btnQuickRenew").onclick = async () => { await quickRenewPendingFromScan(); };
+        }
+ 
+        if ($("btnGoAudit")) {
+          $("btnGoAudit").onclick = () => {
+            switchView("auditView", "Audit / Traceability", "navAudit");
+            $("auditSearchQr").value = safeText(wsData.label_id);
+            $("auditSearchLot").value = "";
+            runTrace();
+          };
+        }
+      } catch (error) {
+        console.error("showBottleScanResult error:", error);
+        resetBottleScanResultFields();
         $("resTitle").innerText = "Scan Error";
-        $("resSubtitle").innerHTML = `<div class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl"><i class="fa-solid fa-triangle-exclamation mr-2"></i>ไม่สามารถดึงข้อมูล QR นี้ได้: ${safeText(err.message)}</div>`;
+        $("resSubtitle").innerHTML = `<div class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl"><div class="font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>ไม่สามารถดึงข้อมูลได้</div><div class="text-sm mt-2">${safeText(error.message)}</div></div>`;
       }
     }
     async function quickRenewPendingFromScan() {
-      if (!lastScanCache || lastScanCache.type !== "BOTTLE") return;
-      const bottleId = lastScanCache.id, masterGuess = lastScanCache.latest?.master_id || "", rawLotGuess = lastScanCache.latest?.raw_lot_ref || "";
-      const masterId = prompt("ใส่ Master ID (หรือเว้นว่างเพื่อใช้ค่าเดิม):", masterGuess); if (masterId === null) return;
-      const prepDate = prompt("ใส่วันที่เตรียม (YYYY-MM-DD):", ymd(new Date())); if (prepDate === null) return;
-      const rawLot = prompt("ใส่ Raw Lot Ref (หรือเว้นว่างเพื่อใช้ค่าเดิม):", rawLotGuess); if (rawLot === null) return;
-
-      const m = globalMasterFormulas.find(x => x.id === masterId) || globalMasterFormulas.find(x => x.id === masterGuess);
+      if (!lastScanCache || !lastScanCache.latest) {
+        alert("ไม่พบข้อมูล Batch ปัจจุบันสำหรับ Renew");
+        return;
+      }
+ 
+      const formulaQrIdentity = cleanWsScanValue(lastScanCache.formulaQr || lastScanCache.id);
+      const currentBatch = lastScanCache.latest;
+      const masterGuess = currentBatch.master_id || "";
+      const rawLotGuess = currentBatch.raw_lot_ref || "";
+ 
+      const masterId = prompt("ใส่ Master ID (หรือใช้ค่าเดิม):", masterGuess);
+      if (masterId === null) return;
+ 
+      const prepDate = prompt("ใส่วันที่เตรียม (YYYY-MM-DD):", ymd(new Date()));
+      if (prepDate === null) return;
+ 
+      const rawLot = prompt("ใส่ Raw Lot Ref (หรือใช้ค่าเดิม):", rawLotGuess);
+      if (rawLot === null) return;
+ 
       const usedMasterId = masterId.trim() || masterGuess;
-
+      const master = globalMasterFormulas.find(item => item.id === usedMasterId);
+ 
+      if (!usedMasterId) {
+        alert("ไม่พบ Master ID สำหรับ Renew");
+        return;
+      }
+ 
       try {
+        const newBatchLabel = await generateUniqueWsBatchLabel();
+ 
         await addDoc(collection(db, "WS_Batches"), {
-          label_id: bottleId, master_id: usedMasterId, master_name: m?.name || usedMasterId, master_conc: m?.concentration || "", 
-          ghs_classes: m?.ghs_classes || [], 
-          prep_date: prepDate, exp_date: "", raw_lot_ref: (rawLot.trim() || rawLotGuess || "N/A"),
-          preparer: auth.currentUser.email, status: "Pending", timestamp: serverTimestamp()
+          label_id: newBatchLabel,
+          formula_qr_identity: formulaQrIdentity,
+          master_id: usedMasterId,
+          master_name: master?.name || currentBatch.master_name || usedMasterId,
+          master_conc: master?.concentration || currentBatch.master_conc || "",
+          ghs_classes: master?.ghs_classes || currentBatch.ghs_classes || [],
+          prep_date: prepDate,
+          exp_date: "",
+          raw_lot_ref: rawLot.trim() || rawLotGuess || "N/A",
+          raw_doc_id: currentBatch.raw_doc_id || null,
+          raw_materials: Array.isArray(currentBatch.raw_materials) ? currentBatch.raw_materials : [],
+          di_water_qr_ref: currentBatch.di_water_qr_ref || "",
+          prep_volume: currentBatch.prep_volume ?? null,
+          prep_volume_unit: currentBatch.prep_volume_unit || "",
+          preparer: auth.currentUser.email,
+          renewed_from: currentBatch.label_id || null,
+          status: "Pending",
+          timestamp: serverTimestamp()
         });
-        alert("✅ Renew สำเร็จ: สร้างรายการ Pending แล้ว"); await showBottleScanResult(bottleId); await refreshDashboardOnly();
-      } catch (err) { alert("❌ Renew ไม่สำเร็จ: " + err.message); }
+ 
+        alert(`✅ Renew สำเร็จ\nNew Batch: ${newBatchLabel}\nStatus: Pending`);
+        await showBottleScanResult(formulaQrIdentity);
+        await refreshDashboardOnly();
+      } catch (error) {
+        alert("❌ Renew ไม่สำเร็จ: " + error.message);
+      }
     }
-
     // =========================================================
     // DASHBOARD & ALERTS
     // =========================================================
@@ -2216,7 +2465,7 @@
           }
         } catch (err) { console.error(err); }
       }
-
+ 
     async function loadDashboardStoreCount() {
       try {
         const ref = doc(db, "System_Stats", "Lab_Chemical_Dashboard");
@@ -2231,7 +2480,7 @@
         $("statStoreLots").innerText = "--";
       }
     }
-
+ 
     async function loadNearExpiryWS() {
       try {
         const q1 = query(collection(db, "WS_Batches"), where("status", "==", "Active"), orderBy("exp_date", "asc"), limit(30));
@@ -2240,7 +2489,7 @@
           $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry active working solutions</div>`;
           return;
         }
-
+ 
         let html = "", hasAny = false;
         snap.forEach(d => {
           const x = d.data();
@@ -2252,22 +2501,22 @@
             html += `<div class="p-3 rounded-lg border ${cls}"><div class="flex justify-between items-center gap-2"><div><div class="mono font-bold text-teal-700 text-xs">${safeText(x.label_id)}</div><div class="text-sm font-semibold truncate max-w-[200px]" title="${safeText(x.master_name)}">${safeText(x.master_name)}</div></div><div class="text-right text-xs font-bold leading-tight">${left.text.replace(' (', '<br><span class="text-[10px] font-normal">(')}</span></div></div></div>`;
           }
         });
-
+ 
         $("nearExpiryWS").innerHTML = hasAny ? `<div class="max-h-80 overflow-y-auto pr-2 space-y-2 custom-scrollbar">${html}</div>` : `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry within 7 days</div>`;
       } catch (err) { 
         $("nearExpiryWS").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-xs"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error: ${err.message}</div>`;
       }
     }
-
+ 
     async function loadStoreAlerts() {
       try {
         const q1 = query(collection(db, "Store_Chemicals"), orderBy("exp_date", "asc"), limit(100)); 
         const snap = await getDocs(q1);
         if (snap.empty) { $("storeAlerts").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No store items</div>`; return; }
-
+ 
         const now = new Date(); 
         let nearExp = [], lowStock = [];
-
+ 
         snap.forEach(d => {
           const x = d.data();
           const total = Number(x.total_bottles || 0);
@@ -2275,9 +2524,9 @@
           const capacity = Number(x.capacity_per_bottle || 0);
           const remainingAmt = Number(x.current_opened_remaining || 0);
           const displayLot = safeText(x.manufacturer_lot) || d.id;
-
+ 
           const unopened = total - opened;
-
+ 
           if (unopened <= 0 && remainingAmt < (capacity * 0.5)) { 
             lowStock.push({ 
               lot: displayLot, 
@@ -2287,26 +2536,26 @@
               unit: x.unit 
             }); 
           }
-
+ 
           if (x.exp_date) {
             const days = Math.ceil((new Date(x.exp_date) - now) / (1000*60*60*24));
             if (days <= 30) nearExp.push({ lot: displayLot, name: x.chemical_name, exp: x.exp_date, days });
           }
         });
-
+ 
         let html = "";
         if (nearExp.length === 0 && lowStock.length === 0) {
           html = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No alerts (สต็อกและอายุปลอดภัย)</div>`;
         } else {
           html += `<div class="max-h-80 overflow-y-auto pr-2 space-y-3 custom-scrollbar">`;
-
+ 
           if (nearExp.length > 0) {
             html += `<div class="sticky top-0 bg-white pb-1"><div class="p-2 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 text-xs font-bold"><i class="fa-solid fa-hourglass-half mr-2"></i>Near Expiry (≤30 days): ${nearExp.length} รายการ</div></div>`;
             nearExp.forEach(x => { 
               html += `<div class="p-3 bg-slate-50 hover:bg-white rounded-lg border border-slate-200 transition-colors"><div class="flex justify-between items-center gap-2"><div><div class="font-bold text-slate-800 text-sm truncate max-w-[200px]" title="${safeText(x.name)}">${safeText(x.name)}</div><div class="text-[10px] text-slate-500">Lot: <span class="mono text-blue-700">${safeText(x.lot)}</span></div></div><div class="text-right text-xs font-bold ${(x.days < 0) ? "text-red-600" : "text-amber-600"}">${safeText(x.exp)}<br><span class="text-[10px] font-normal">(${x.days} days)</span></div></div></div>`; 
             });
           }
-
+ 
           if (lowStock.length > 0) {
             html += `<div class="sticky top-0 bg-white pb-1 mt-2"><div class="p-2 bg-red-50 text-red-800 rounded-lg border border-red-200 text-xs font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Low Stock (ขวดสุดท้าย < 50%): ${lowStock.length} รายการ</div></div>`;
             lowStock.forEach(x => { 
@@ -2320,7 +2569,7 @@
         $("storeAlerts").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-xs"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error: ${err.message}</div>`;
       }
     }
-
+ 
       async function loadAlertBoxSummary() {
         const pending = Number($("statPending").innerText || 0), expired = Number($("statExpired").innerText || 0);
         let html = "";
@@ -2329,12 +2578,12 @@
         if (!html) html = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>ไม่มีรายการเร่งด่วน ระบบอยู่ในสถานะปลอดภัย</div>`;
         $("alertList").innerHTML = html;
       }
-
+ 
     // =========================================================
     // STORE MODULE (Real Firestore Writes & Admin Controls)
     // =========================================================
     let storeTableRecords = [];
-
+ 
     async function loadStoreTable() {
       const tbody = $("storeTableBody");
       try {
@@ -2348,7 +2597,7 @@
         tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i>โหลดข้อมูล Main Store ไม่สำเร็จ: ${safeText(err.message)}</td></tr>`;
       }
     }
-
+ 
     function sortStoreRecordsAlphabetically() {
       storeTableRecords.sort((a, b) => {
         const chemCompare = safeText(a.chemical_name).trim().localeCompare(safeText(b.chemical_name).trim(), ["en", "th"], { sensitivity: "base", numeric: true, ignorePunctuation: true });
@@ -2356,7 +2605,7 @@
         return safeText(a.manufacturer_lot || a.id).trim().localeCompare(safeText(b.manufacturer_lot || b.id).trim(), ["en", "th"], { sensitivity: "base", numeric: true, ignorePunctuation: true });
       });
     }
-
+ 
     function getFilteredStoreRecords() {
       const keyword = safeText($("storeSearchInput")?.value).trim().toLowerCase();
       if (!keyword) return storeTableRecords;
@@ -2365,7 +2614,7 @@
         return searchText.includes(keyword);
       });
     }
-
+ 
     function renderStoreTable() {
       const tbody = $("storeTableBody");
       const records = getFilteredStoreRecords();
@@ -2373,7 +2622,7 @@
         tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400"><i class="fa-solid fa-magnifying-glass mr-2"></i>ไม่พบข้อมูลที่ตรงกับคำค้นหา</td></tr>`;
         return;
       }
-
+ 
       let html = "";
       records.forEach(x => {
         const lot = x.id;
@@ -2404,7 +2653,7 @@
       document.querySelectorAll(".btnAdminDelStore").forEach(btn => btn.addEventListener("click", async () => await deleteStoreDoc(btn.getAttribute("data-id"))));
       document.querySelectorAll(".btnAdminEditStore").forEach(btn => btn.addEventListener("click", () => openEditStoreModal(btn.getAttribute("data-id"))));
     }
-
+ 
     if ($("storeSearchInput")) {
       $("storeSearchInput").addEventListener("input", () => {
         const hasKeyword = $("storeSearchInput").value.trim() !== "";
@@ -2420,7 +2669,7 @@
         $("storeSearchInput").focus();
       };
     }
-
+ 
     async function openBottleClientTransaction(docId) {
       if (!docId) return;
       try {
@@ -2430,7 +2679,7 @@
           if (!snap.exists()) throw new Error("ไม่พบข้อมูลวัตถุดิบชิ้นนี้");
           const x = snap.data();
           if (Number(x.opened_bottles || 0) >= Number(x.total_bottles || 0)) throw new Error("ไม่มีขวดใหม่ให้เปิดแล้ว");
-
+ 
           tx.update(ref, { opened_bottles: increment(1), current_opened_remaining: Number(x.capacity_per_bottle || 0), last_opened_date: serverTimestamp(), last_opened_by: auth.currentUser.email, lastUpdated: serverTimestamp() });
           tx.set(doc(collection(db, "Lab_Store_Transaction_Logs")), { action: "OPEN_BOTTLE", document_id: docId, manufacturer_lot: x.manufacturer_lot || "N/A", operator: auth.currentUser.email, timestamp: serverTimestamp() });
         });
@@ -2438,33 +2687,33 @@
         await loadStoreTable(); await loadStoreAlerts(); populateWsDeductEngine();
       } catch (err) { alert("❌ ผิดพลาด: " + err.message); }
     }
-
+ 
     async function deleteStoreDoc(docId) {
       if(!confirm("⚠️ ยืนยันการลบข้อมูลคลังสินค้านี้ทั้งหมด (รวมถึงประวัติรับเข้า)?")) return;
       try {
         const docRef = doc(db, "Store_Chemicals", docId);
         const snap = await getDoc(docRef);
-
+ 
         if (snap.exists()) {
           const data = snap.data();
           const lot = data.manufacturer_lot || docId;
           const chemName = data.chemical_name;
-
+ 
           const placeQ = query(collection(db, "Lab_Inventory_Placements"), where("manufacturer_lot_ref", "==", lot), where("chemical_name", "==", chemName));
           const placeSnap = await getDocs(placeQ);
           for (const d of placeSnap.docs) {
             await deleteDoc(doc(db, "Lab_Inventory_Placements", d.id));
           }
         }
-
+ 
         const logQ = query(collection(db, "Lab_Store_Transaction_Logs"), where("document_id", "==", docId));
         const logSnap = await getDocs(logQ);
         for (const d of logSnap.docs) {
           await deleteDoc(doc(db, "Lab_Store_Transaction_Logs", d.id));
         }
-
+ 
         await deleteDoc(docRef);
-
+ 
         alert("✅ ลบข้อมูลและประวัติที่เกี่ยวข้องแบบถอนรากถอนโคนเรียบร้อย!");
         loadStoreTable();
         populateWsDeductEngine();
@@ -2472,7 +2721,7 @@
         alert("❌ เกิดข้อผิดพลาด: " + e.message);
       }
     }
-
+ 
     async function openEditStoreModal(docId) {
        const snap = await getDoc(doc(db, "Store_Chemicals", docId));
        if(!snap.exists()) return;
@@ -2486,7 +2735,7 @@
        $("editStoreShelf").value = d.shelf_id || "";
        show("editStoreModal");
     }
-
+ 
     $("btnConfirmEditStore").onclick = async () => {
        const id = $("editStoreDocId").value;
        try {
@@ -2501,7 +2750,7 @@
          hide("editStoreModal"); alert("✅ บันทึกการแก้ไขเรียบร้อย"); loadStoreTable();
        } catch(e) { alert(e.message); }
     };
-
+ 
     $("btnSaveReceive").addEventListener("click", async () => {
       const chemName = $("recvChemName").value.trim();
       const casNo = $("recvCasNo").value.trim();
@@ -2513,27 +2762,27 @@
       const unit = $("recvUnit").value;
       const expDate = $("recvExpDate").value;
       const shelfId = $("recvShelfId").value.trim().toUpperCase();
-
+ 
       let selectedGhs = [];
       document.querySelectorAll(".ghs-cb:checked").forEach(cb => { selectedGhs.push(cb.value); });
-
+ 
       if (!chemName || !lot || !qty || !capacity || !expDate || !shelfId) {
         alert("กรุณาระบุรายละเอียดวัตถุดิบ วันหมดอายุ และสแกนพิกัดชั้นวางให้ครบถ้วน"); return;
       }
-
+ 
       const alertBox = $("recvCompatAlert"), icon = $("recvCompatIcon"), text = $("recvCompatText");
       show("recvCompatAlert");
-
+ 
       const locationData = findCabinetByShelf(shelfId);
       if (!locationData) {
         alertBox.className = "p-3 rounded-lg border text-sm flex items-start bg-red-50 border-red-200 text-red-800";
         icon.className = "fa-solid fa-triangle-exclamation mt-0.5 mr-2";
         text.innerText = `ไม่พบ Shelf ID ในระบบ: ${shelfId}`; return;
       }
-
+ 
       const { cabId, cabinet, shelf } = locationData;
       let isSafe = true; let rejectReason = "";
-
+ 
       for (const ghs of selectedGhs) {
          const rules = compatibilityMatrix[ghs] || { cabBlock: [], shelfBlock: [] };
          for (const sId in cabinet.shelves) {
@@ -2544,19 +2793,19 @@
          const targetHaz = shelf.currentHazards || [];
          if (targetHaz.some(h => rules.shelfBlock.includes(h))) { isSafe = false; rejectReason = `ชั้น ${shelf.name} ห้ามวางร่วมกับกลุ่ม ${ghs}`; break; }
       }
-
+ 
       if (!isSafe) {
         alertBox.className = "p-3 rounded-lg border text-sm flex items-start bg-red-50 border-red-200 text-red-800 animate-pulse";
         icon.className = "fa-solid fa-ban mt-0.5 mr-2"; text.innerText = `Poka-Yoke Blocked: ${rejectReason}`; return;
       }
-
+ 
       alertBox.className = "p-3 rounded-lg border text-sm flex items-start bg-green-50 border-green-200 text-green-800";
       icon.className = "fa-solid fa-shield-check mt-0.5 mr-2"; text.innerText = `Compatible Pass: ปลอดภัย สามารถจัดเก็บได้`;
-
+ 
       const compositeDocId = `${chemName}_${lot}`.replace(/[^a-zA-Z0-9_]/g, "");
       const btn = $("btnSaveReceive");
       btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Uploading & Saving...';
-
+ 
       try {
         let msdsUrl = "";
         const fileInput = $("recvMsdsFile").files[0];
@@ -2565,17 +2814,17 @@
            await uploadBytes(storageRef, fileInput);
            msdsUrl = await getDownloadURL(storageRef);
         }
-
+ 
         await runTransaction(db, async (tx) => {
           const refDoc = doc(db, "Store_Chemicals", compositeDocId);
           const snap = await tx.get(refDoc);
-
+ 
           const baseData = {
              chemical_name: chemName, cas_no: casNo, ghs_classes: selectedGhs, signal_word: signalWord, hazard_statements: hazardStmt,
              manufacturer_lot: lot, capacity_per_bottle: capacity, unit: unit, exp_date: expDate, shelf_id: shelfId, lastUpdated: serverTimestamp()
           };
           if(msdsUrl) baseData.msds_url = msdsUrl;
-
+ 
           if (snap.exists()) {
             tx.update(refDoc, { ...baseData, total_bottles: increment(qty), status: "In Stock" });
           } else {
@@ -2584,57 +2833,57 @@
           tx.set(doc(collection(db, "Lab_Store_Transaction_Logs")), { action: "RECEIVE", document_id: compositeDocId, manufacturer_lot: lot, chemical_name: chemName, qty_changed: qty, operator: auth.currentUser.email, timestamp: serverTimestamp() });
           tx.set(doc(collection(db, "Lab_Inventory_Placements")), { shelf_id: shelfId, cabinet_id: cabId, chemical_name: chemName, manufacturer_lot_ref: lot, qty: qty, operator: auth.currentUser.email, placed_at: serverTimestamp() });
         });
-
+ 
         const arr = shelf.currentHazards || [];
         selectedGhs.forEach(g => { if(!arr.includes(g)) arr.push(g); });
         shelf.currentHazards = arr;
-
+ 
         alert("✅ รับเข้าและคัดแยกตำแหน่งสารเคมีสำเร็จ");
         $("recvChemName").value = ""; $("recvCasNo").value = ""; $("recvSignalWord").value = ""; $("recvHazardStmt").value = ""; $("recvMsdsFile").value = "";
         $("recvLotNo").value = ""; $("recvQty").value = 1; $("recvCapacity").value = ""; $("recvExpDate").value = ""; $("recvShelfId").value = "";
         document.querySelectorAll(".ghs-cb").forEach(cb => cb.checked = false);
         hide("receiveChemicalModal"); hide("recvCompatAlert");
-
+ 
         await loadStoreTable(); await loadStoreAlerts(); await loadDashboardStoreCount(); populateWsDeductEngine();
       } catch (err) { alert("❌ ล้มเหลว: " + err.message); } 
       finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Verify & Save to Store'; }
     });
-
+ 
     // =========================================================
     // WORKING SOLUTIONS MODULE (พร้อม Admin Config)
     // =========================================================
     $("btnSaveWS").addEventListener("click", async () => {
-      const qr = $("wsBottleQr").value.trim() || `WS-${Date.now().toString().slice(-6)}`;
+      const formulaQrIdentity = cleanWsScanValue($("wsBottleQr").value);
       const masterId = $("wsMasterSelect").value;
       const prepDate = $("wsPrepDate").value;
       const diQrRef = $("wsDIWaterQr").value.trim();
       const prepVolume = Number($("wsPrepVolume").value || 0);
       const prepVolumeUnit = $("wsPrepVolumeUnit").value;
-
-      if (!masterId || !prepDate) { alert("กรุณาเลือกสารที่จะเตรียมและวันที่เตรียม"); return; }
+ 
+      if (!formulaQrIdentity || !masterId || !prepDate) { alert("กรุณาสแกน Formula QR เลือกสูตร และระบุวันที่เตรียมให้ครบ"); return; }
       if (prepVolume <= 0) { alert("กรุณาระบุปริมาตรที่ใช้ (Volume) ให้ถูกต้องตามหลัก GMP"); return; }
-
+ 
       const rmItems = [];
       let isExceed = false;
-
+ 
       document.querySelectorAll('.rm-item').forEach(row => {
         const lotSelect = row.querySelector('.rm-lot-select');
         if(!lotSelect) return;
-
+ 
         const docId = lotSelect.value;
         const amt = Number(row.querySelector('.rm-deduct-amt').value || 0);
         const opt = lotSelect.selectedOptions[0];
-
+ 
         if (docId && amt > 0) {
           const maxRem = Number(opt.getAttribute("data-rem") || 0);
           const rawLotDisplay = opt.text.split(" (เหลือ ")[0].replace("[เปิดแล้ว] ", "").replace("[ขวดใหม่] ", "");
           const actualUnit = row.querySelector('.rm-deduct-unit').value.trim();
-
+ 
           if (amt > maxRem) {
              alert(`ปริมาณสารที่เบิกใช้ (${amt}) ของ Lot ${rawLotDisplay} เกินคงเหลือ (${maxRem})!`);
              isExceed = true;
           }
-
+ 
           rmItems.push({
             rawDocId: docId,
             deductAmt: amt,
@@ -2647,16 +2896,17 @@
           });
         }
       });
-
+ 
       if (isExceed) return;
-
+ 
       const master = globalMasterFormulas.find(m => m.id === masterId);
       const btn = $("btnSaveWS");
       btn.disabled = true; 
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving & Deducting...';
-
+ 
       try {
-          await runTransaction(db, async (tx) => {
+        const batchLabelId = await generateUniqueWsBatchLabel();
+        await runTransaction(db, async (tx) => {
           rmItems.forEach(rm => {
             if (rm.source === "WS") {
                // กรณีที่สารตั้งต้นคือ Working Solution ให้ไปตัดยอดที่ WS_Batches
@@ -2677,7 +2927,7 @@
                    last_opened_by: auth.currentUser.email,
                    lastUpdated: serverTimestamp() 
                  });
-
+ 
                  tx.set(doc(collection(db, "Lab_Store_Transaction_Logs")), { 
                    action: "OPEN_BOTTLE", document_id: rm.rawDocId, manufacturer_lot: rm.rawLotDisplay, 
                    operator: auth.currentUser.email, timestamp: serverTimestamp() 
@@ -2687,10 +2937,11 @@
                }
             }
           });
-
+ 
           const wsRef = doc(collection(db, "WS_Batches"));
           tx.set(wsRef, {
-            label_id: qr, 
+            label_id: batchLabelId,
+            formula_qr_identity: formulaQrIdentity,
             master_id: masterId, 
             master_name: master?.name || masterId, 
             master_conc: master?.concentration || "",
@@ -2708,13 +2959,16 @@
             timestamp: serverTimestamp()
           });
         });
-
-        alert("✅ ผสมสารสำเร็จ: หักยอดวัตถุดิบและส่งเข้าระบบทวนสอบ");
+ 
+        alert(`✅ ผสมสารสำเร็จ
+Batch: ${batchLabelId}
+Status: Pending
+ระบบหักยอดวัตถุดิบและส่งเข้าระบบทวนสอบแล้ว`);
         $("wsBottleQr").value = ""; $("wsMasterSelect").value = ""; $("wsPrepDate").value = ""; $("wsDIWaterQr").value = ""; $("wsPrepVolume").value = "";
-
+ 
         hide("prepWSModal"); 
         await loadWSBatches(true); await refreshDashboardOnly(); await loadStoreTable(); populateWsDeductEngine();
-
+ 
       } catch (err) { 
         alert("❌ ตัดยอดไม่สำเร็จ: " + err.message); 
       } finally { 
@@ -2722,18 +2976,18 @@
         btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>บันทึกข้อมูลและตัดยอดสต็อก (Save & Deduct)'; 
       }
     });
-
+ 
     async function deleteWsDoc(docId) {
        if(!confirm("⚠️ ยืนยันการลบประวัติสารเตรียมเองนี้?\n(ระบบจะคำนวณลดตัวเลขหน้า Dashboard และ 'คืนปริมาณสารตั้งต้น' กลับเข้าคลังให้อัตโนมัติ)")) return;
-
+ 
        try {
          await runTransaction(db, async (tx) => {
            const wsRef = doc(db, "WS_Batches", docId);
            const wsSnap = await tx.get(wsRef);
-
+ 
            if (!wsSnap.exists()) throw new Error("ไม่พบข้อมูลรายการที่ต้องการลบ");
            const wsData = wsSnap.data();
-
+ 
            if (wsData.raw_doc_id && wsData.deducted_amount) {
              const storeRef = doc(db, "Store_Chemicals", wsData.raw_doc_id);
              tx.update(storeRef, {
@@ -2741,10 +2995,10 @@
                lastUpdated: serverTimestamp()
              });
            }
-
+ 
            tx.delete(wsRef);
          });
-
+ 
          alert("✅ ลบรายการและคืนสต็อกเข้าคลังเรียบร้อย");
          loadWSBatches(true);
          refreshDashboardOnly();
@@ -2761,7 +3015,7 @@
        $("editWsExpDate").value = d.exp_date || "";
        show("editWsModal");
     }
-
+ 
     $("btnConfirmEditWs").onclick = async () => {
        const id = $("editWsDocId").value;
        try {
@@ -2775,7 +3029,7 @@
          refreshDashboardOnly();
        } catch(e) { alert(e.message); }
     };
-
+ 
     const WS_PAGE_SIZE = 80; let wsLastDoc = null;
     async function loadWSBatches(reset = false) {
       try {
@@ -2783,30 +3037,30 @@
         const statusFilter = $("wsStatusFilter")?.value || "ALL", keyword = $("wsSearch")?.value?.trim().toLowerCase() || "";
         let q1 = query(collection(db, "WS_Batches"), orderBy("timestamp", "desc"), limit(WS_PAGE_SIZE));
         if (!reset && wsLastDoc) q1 = query(collection(db, "WS_Batches"), orderBy("timestamp", "desc"), startAfter(wsLastDoc), limit(WS_PAGE_SIZE));
-
+ 
         const snap = await getDocs(q1); const tbody = $("wsTableBody");
         if (snap.empty) { tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ยังไม่มีข้อมูล</td></tr>`; return; }
-
+ 
         wsLastDoc = snap.docs[snap.docs.length - 1]; let rows = [];
         snap.forEach(docSnap => {
           const d = docSnap.data(), id = docSnap.id;
           if (statusFilter !== "ALL" && d.status !== statusFilter) return;
           const hay = [safeText(d.label_id), safeText(d.master_name), safeText(d.raw_lot_ref), safeText(d.preparer), safeText(d.status)].join(" ").toLowerCase();
           if (keyword && !hay.includes(keyword)) return;
-
+ 
           const expInfo = humanDaysLeft(d.exp_date);
           let expHtml = d.status === "Pending" ? `<span class="text-slate-400 italic">Waiting</span>` : `<span class="${(expInfo.days !== null && expInfo.days <= 3) ? "text-amber-600 font-bold" : "text-slate-700"}">${expInfo.text}</span>`;
           let statusBadge = d.status === "Pending" ? `<span class="badge badge-amber"><i class="fa-solid fa-clock"></i>Pending</span>` : (d.status === "Active" ? `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i>Active</span>` : `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>${safeText(d.status)}</span>`);
-
+ 
           let actionHtml = d.status === "Pending" ? `<button data-id="${id}" class="btnApprove bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm"><i class="fa-solid fa-check-double mr-1"></i>Approve</button>` : (d.status === "Active" ? `<div class="text-xs text-slate-500">Factor: <b class="text-green-700">${safeText(d.standardization?.factor)}</b><br/><button data-id="${id}" class="btnDiscard mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm"><i class="fa-solid fa-trash mr-1"></i>Discard</button></div>` : `<div class="text-xs text-slate-400">Locked</div>`);
-
+ 
           if (isSuperAdmin) {
              actionHtml += `<div class="flex gap-2 justify-center mt-2 border-t pt-2"><button data-id="${id}" class="btnAdminEditWs text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded w-full"><i class="fa-solid fa-pen"></i></button><button data-id="${id}" class="btnAdminDelWs text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded w-full"><i class="fa-solid fa-trash"></i></button></div>`;
           }
-
+ 
           rows.push(`<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="p-4 mono font-bold text-teal-700 text-xs"><i class="fa-solid fa-qrcode mr-1"></i>${safeText(d.label_id)}</td><td class="p-4"><p class="font-bold text-slate-800">${safeText(d.master_name)}</p><p class="text-xs text-teal-600 font-semibold bg-teal-50 inline-block px-2 rounded mt-1">${safeText(d.master_conc)}</p></td><td class="p-4 text-xs"><p class="text-slate-500 mb-1">Prep: ${safeText(d.prep_date)}</p><p class="text-slate-400">Raw Lot: <span class="mono">${safeText(d.raw_lot_ref)}</span></p></td><td class="p-4 text-sm">${expHtml}</td><td class="p-4 text-center">${statusBadge}</td><td class="p-4 text-center align-middle w-32">${actionHtml}</td></tr>`);
         });
-
+ 
         if (rows.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ไม่พบข้อมูล</td></tr>`; return; }
         tbody.innerHTML = rows.join("");
         document.querySelectorAll(".btnApprove").forEach(b => b.addEventListener("click", () => openApproveModal(b.getAttribute("data-id"))));
@@ -2815,27 +3069,80 @@
         document.querySelectorAll(".btnAdminEditWs").forEach(b => b.addEventListener("click", () => openEditWsModal(b.getAttribute("data-id"))));
       } catch (err) { console.error(err); }
     }
-
+ 
     function openApproveModal(docId) { $("approveDocId").value = docId; $("approveFactor").value = ""; $("approveUnit").value = ""; $("approveRemark").value = ""; show("approveModal"); }
     $("btnConfirmApprove").addEventListener("click", async () => {
-      const docId = $("approveDocId").value, factor = $("approveFactor").value, unit = $("approveUnit").value, remark = $("approveRemark").value;
-      if (!docId) return; 
-      
+      const docId = $("approveDocId").value;
+      const factor = $("approveFactor").value;
+      const unit = $("approveUnit").value;
+      const remark = $("approveRemark").value;
+      if (!docId) return;
+ 
       const factorDisplay = factor ? `${factor} ${unit}`.trim() : "N/A";
-      
-      const btn = $("btnConfirmApprove"); btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Approving...';
+      const btn = $("btnConfirmApprove");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Approving...';
+ 
       try {
-        await updateDoc(doc(db, "WS_Batches", docId), { status: "Active", exp_date: addDaysToYMD(new Date(), 45), standardization: { factor: factorDisplay, remark: remark || "", verified_by: auth.currentUser.email, verified_at: new Date().toISOString() }, lastUpdated: serverTimestamp() });
-        hide("approveModal"); await loadWSBatches(true); await refreshDashboardOnly();
-      } catch (err) { alert("❌ Approve ไม่สำเร็จ: " + err.message); } 
-      finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i>Approve (Active)'; }
+        const newBatchRef = doc(db, "WS_Batches", docId);
+        const newBatchSnap = await getDoc(newBatchRef);
+        if (!newBatchSnap.exists()) throw new Error("ไม่พบ Batch ที่ต้องการ Approve");
+ 
+        const newBatchData = newBatchSnap.data();
+        const sameMasterSnapshot = await getDocs(
+          query(
+            collection(db, "WS_Batches"),
+            where("master_id", "==", newBatchData.master_id),
+            limit(100)
+          )
+        );
+        const activeDocuments = sameMasterSnapshot.docs.filter(activeDoc =>
+          safeText(activeDoc.data().status).trim().toUpperCase() === "ACTIVE"
+        );
+ 
+        await runTransaction(db, async tx => {
+          for (const activeDoc of activeDocuments) {
+            if (activeDoc.id !== docId) {
+              tx.update(activeDoc.ref, {
+                status: "Superseded",
+                replaced_by: newBatchData.label_id,
+                replaced_at: serverTimestamp(),
+                replaced_by_user: auth.currentUser.email,
+                lastUpdated: serverTimestamp()
+              });
+            }
+          }
+ 
+          tx.update(newBatchRef, {
+            status: "Active",
+            exp_date: addDaysToYMD(new Date(), 45),
+            standardization: {
+              factor: factorDisplay,
+              remark: remark || "",
+              verified_by: auth.currentUser.email,
+              verified_at: new Date().toISOString()
+            },
+            approved_by: auth.currentUser.email,
+            approved_at: serverTimestamp(),
+            lastUpdated: serverTimestamp()
+          });
+        });
+ 
+        hide("approveModal");
+        await loadWSBatches(true);
+        await refreshDashboardOnly();
+      } catch (err) {
+        alert("❌ Approve ไม่สำเร็จ: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i>Approve (Active)';
+      }
     });
-
     async function discardWS(docId) {
       if (!docId) return; const reason = prompt("ใส่เหตุผลการ Discard (GMP):", "Expired / Contaminated"); if (reason === null) return;
       try { await updateDoc(doc(db, "WS_Batches", docId), { status: "Discarded", discard_reason: reason, discarded_by: auth.currentUser.email, discarded_at: new Date().toISOString(), lastUpdated: serverTimestamp() }); await loadWSBatches(true); await refreshDashboardOnly(); } catch (err) { alert(err.message); }
     }
-
+ 
     // =========================================================
     // AUDIT / TRACE
     // =========================================================
@@ -2843,18 +3150,18 @@
     async function runTrace() {
       const qr = $("auditSearchQr").value.trim();
       const lot = $("auditSearchLot").value.trim().toUpperCase();
-
+ 
       if (!qr && !lot) {
           alert("กรุณาใส่ QR หรือ Lot อย่างน้อย 1 ช่อง");
           return;
       }
-
+ 
       // แสดงสถานะกำลังโหลด
       $("traceResult").innerHTML = `<div class="p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 font-medium"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลัง Trace ข้อมูล GMP...</div>`;
-
+ 
       try {
         let wsRecords = [];
-
+ 
         // 1. ค้นหาประวัติจาก Working Solutions (WS_Batches)
         if (qr) {
           const qRef = query(collection(db, "WS_Batches"), where("label_id", "==", qr), limit(20));
@@ -2872,16 +3179,16 @@
              }
           });
         }
-
+ 
         // จัดเรียงลำดับจากใหม่ไปเก่า
         wsRecords.sort((a, b) => {
             const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
             const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
             return timeB - timeA;
         });
-
+ 
         let storeLots = [];
-
+ 
         // 2. ค้นหาข้อมูล Lot วัตถุดิบ (Store_Chemicals)
         if (lot) {
             const s = await getDoc(doc(db, "Store_Chemicals", lot));
@@ -2889,7 +3196,7 @@
         }
         else if (qr && wsRecords.length > 0) {
             const latestWs = wsRecords[0];
-
+ 
             if (latestWs.raw_materials && latestWs.raw_materials.length > 0) {
                 for (const rm of latestWs.raw_materials) {
                     if(rm.doc_id) {
@@ -2903,7 +3210,7 @@
                 if (s.exists()) storeLots.push({ id: latestWs.raw_doc_id, ...s.data() });
             }
         }
-
+ 
         // 3. ดึงข้อมูลผลการทดสอบ DI Water (DI_Water_Logs)
         let diWaterLogs = {};
         for (const ws of wsRecords) {
@@ -2916,15 +3223,15 @@
             }
           }
         }
-
+ 
         if (wsRecords.length === 0 && storeLots.length === 0) {
             $("traceResult").innerHTML = `<div class="p-3 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 font-medium"><i class="fa-solid fa-circle-question mr-2"></i>ไม่พบข้อมูล Trace สำหรับรหัสที่ค้นหา</div>`;
             lastTracePayload = null;
             return;
         }
-
+ 
         let html = "";
-
+ 
         // วาดส่วน Store Lots (สารเคมีดิบ)
         if (storeLots.length > 0) {
             html += `<div class="mb-2 text-xs font-bold text-slate-500 uppercase"><i class="fa-solid fa-boxes-stacked mr-1"></i> Raw Chemical Lots (วัตถุดิบที่ใช้ผสม)</div>`;
@@ -2945,25 +3252,25 @@
                 </div>`;
             });
         }
-
+ 
         // วาดส่วน Working Solution Records (ประวัติการเตรียม)
         if (wsRecords.length > 0) {
           html += `<div class="p-3 bg-slate-900 rounded-xl text-white border border-slate-800 mt-5 mb-3"><div class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-flask-vial mr-1"></i> Working Solution Trace Chain</div></div>`;
           wsRecords.forEach(x => {
             const badge = (x.status === "Active") ? "badge-green" : (x.status === "Pending" ? "badge-amber" : "badge-red");
-
+ 
             const rawMaterialsUsed = x.raw_materials && x.raw_materials.length > 0
                 ? x.raw_materials.map(rm => rm.lot_ref).join(", ")
                 : safeText(x.raw_lot_ref);
-
+ 
             const approver = x.standardization?.verified_by ? safeText(x.standardization.verified_by).split("@")[0] : "-";
-
+ 
             // 🌟 คำนวณวันหมดอายุ และกำหนดสี
             const expInfo = humanDaysLeft(x.exp_date);
             let expHtml = x.status === "Pending" 
                 ? `<span class="text-slate-400 italic">Waiting Approve</span>` 
                 : `<span class="${(expInfo.days !== null && expInfo.days <= 3) ? "text-red-600 font-bold" : "text-slate-800 font-bold"}">${expInfo.text}</span>`;
-
+ 
             // สร้าง UI แสดงผล DI Water
             let diWaterInfo = `<span class="mono font-bold text-cyan-600">${safeText(x.di_water_qr_ref || "-")}</span>`;
             if (x.di_water_qr_ref && diWaterLogs[x.di_water_qr_ref]) {
@@ -2977,7 +3284,7 @@
                   Status: <b class="${diStatusColor}">${diData.status}</b>
                </div>`;
             }
-
+ 
             html += `
             <div class="p-4 bg-white rounded-xl border border-slate-200 mb-3 shadow-sm border-l-4 border-l-teal-500">
                 <div class="flex justify-between items-start gap-4">
@@ -2998,22 +3305,22 @@
             </div>`;
           });
         }
-
+ 
         $("traceResult").innerHTML = html;
         lastTracePayload = { storeLots, wsRecords, diWaterLogs };
-
+ 
       } catch (err) {
         console.error(err);
         $("traceResult").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium"><i class="fa-solid fa-triangle-exclamation mr-2"></i>เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</div>`;
       }
     }
-
+ 
     function exportTraceJSON() {
       if (!lastTracePayload) return alert("ยังไม่มีผล Trace ให้ export");
       const blob = new Blob([JSON.stringify(lastTracePayload, null, 2)], { type: "application/json" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `TRC_Trace_${Date.now()}.json`; a.click();
     }
-
+ 
     async function refreshDashboardOnly() { await loadDashboardStatsFromSystemStats(); await loadDashboardStoreCount(); await loadAlertBoxSummary(); await loadNearExpiryWS(); await loadStoreAlerts(); }
     async function refreshAll() { 
       await fetchMasterFormulasToCache();
@@ -3025,36 +3332,36 @@
     // =========================================================
     // MASTER WS FORMULAS MODULE (ADMIN)
     // =========================================================
-
+ 
     async function fetchMasterFormulasToCache() {
       try {
         const snap = await getDocs(collection(db, "Master_WS_Formulas"));
         globalMasterFormulas = [];
         let optionsHtml = '<option value="">-- เลือกสูตรสารละลาย --</option>';
-
+ 
         snap.forEach(docSnap => {
           const data = docSnap.data();
           globalMasterFormulas.push({ id: docSnap.id, ...data });
           optionsHtml += `<option value="${docSnap.id}">${data.name} (${data.concentration})</option>`;
         });
-
+ 
         if($("wsMasterSelect")) $("wsMasterSelect").innerHTML = optionsHtml;
       } catch (err) { console.error("Error loading master formulas:", err); }
     }
-
+ 
     async function loadMasterDataUI() {
       await fetchMasterFormulasToCache(); 
       const tbody = $("masterTableBody");
-
+ 
       if (globalMasterFormulas.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400">ยังไม่มีข้อมูลสูตรในระบบ</td></tr>`;
         return;
       }
-
+ 
       let html = "";
       globalMasterFormulas.forEach(item => {
         const ghsHtml = renderGHSPictograms(item.ghs_classes);
-
+ 
         html += `
           <tr class="hover:bg-slate-50 border-b border-slate-100">
             <td class="p-4">
@@ -3073,7 +3380,7 @@
       });
       tbody.innerHTML = html;
     }
-
+ 
     $("btnOpenAddMasterModal").onclick = () => {
       $("masterDocId").value = "";
       $("masterName").value = "";
@@ -3089,7 +3396,7 @@
       show("masterFormulaModal");
     };
     $("btnCloseMasterModal").onclick = () => hide("masterFormulaModal");
-
+ 
     $("btnSaveMasterFormula").onclick = async () => {
       const id = $("masterDocId").value;
       const name = $("masterName").value.trim();
@@ -3098,7 +3405,7 @@
       const selectedGhs = [];
       document.querySelectorAll(".master-ghs-cb:checked").forEach(cb => selectedGhs.push(cb.value));
       if (!name || !conc) return alert("กรุณากรอกชื่อและปริมาณความเข้มข้นให้ครบ");
-
+ 
       const btn = $("btnSaveMasterFormula");
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...';
@@ -3111,7 +3418,7 @@
           last_updated: serverTimestamp(),
           last_updated_by: auth.currentUser.email
         };
-
+ 
         if (id) {
           if (!isSuperAdmin) throw new Error("เฉพาะ Admin เท่านั้นที่สามารถแก้ไขสูตรเดิมได้");
           await updateDoc(doc(db, "Master_WS_Formulas", id), payload);
@@ -3143,12 +3450,12 @@
       $("masterName").value = item.name || "";
       $("masterConc").value = item.concentration || "";
       $("masterCas").value = item.cas_no || "";
-
+ 
       let cbHtml = "";
       const standardGHS = ["Explosive", "Flammable", "Oxidizer", "Gas", "Corrosive", "Toxic", "Harmful", "Health Hazard", "Environmental"];
-
+ 
       const itemGhs = (typeof item !== 'undefined' && item.ghs_classes) ? item.ghs_classes : [];
-
+ 
       for (const ghsName of standardGHS) {
         const imgUrl = ghsImages[ghsName]; 
         const checked = itemGhs.includes(ghsName) ? "checked" : "";
@@ -3160,7 +3467,7 @@
       $("masterGhsList").innerHTML = cbHtml;
       show("masterFormulaModal");
     };
-
+ 
     window.deleteMasterFormula = async (id) => {
       if(!confirm("⚠️ ยืนยันการลบสูตรนี้? (จะไม่ลบประวัติการผสมในอดีต แต่จะไม่สามารถเลือกผสมใหม่ได้)")) return;
       try {
@@ -3177,18 +3484,18 @@
        const list = $("searchChemAutocomplete"); 
        list.innerHTML = "";
        if (!val) { hide("searchChemAutocomplete"); return; }
-
+ 
        let matches = 0;
        chemCacheMap.forEach((data, name) => {
           if (name.toLowerCase().includes(val)) {
              matches++;
              const div = document.createElement("div");
              div.className = "p-3 hover:bg-teal-50 cursor-pointer border-b text-sm font-semibold text-slate-700 flex justify-between items-center";
-
+ 
              const availableLots = storeChemicalsCache.filter(x => x.chemical_name === name && (x.total_bottles > x.opened_bottles || x.current_opened_remaining > 0)).length;
-
+ 
              div.innerHTML = `<span><i class="fa-solid fa-flask mr-2 text-teal-500"></i>${name}</span> <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">${availableLots} Active Lots</span>`;
-
+ 
              div.onclick = () => {
                 $("searchChemInput").value = name;
                 hide("searchChemAutocomplete");
@@ -3199,46 +3506,46 @@
        });
        if(matches > 0) show("searchChemAutocomplete"); else hide("searchChemAutocomplete");
     });
-
+ 
     document.addEventListener("click", (e) => { if(e.target.id !== "searchChemInput") hide("searchChemAutocomplete"); });
-
+ 
     async function showSearchResult(chemName) {
       $("scanWaitingCard").classList.add("hidden-module"); 
       $("scanResultCard").classList.remove("hidden-module");
       if($("wsSpecificDetails")) $("wsSpecificDetails").classList.add("hidden-module");
-
+ 
       $("resScanId").innerText = chemName; 
       $("resTitle").innerText = "FEFO Recommendation (ที่เก็บสารแนะนำ)"; 
       $("resTypeBadge").className = "badge badge-amber"; 
       $("resTypeBadge").innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>SEARCH';
-
+ 
       let lots = storeChemicalsCache.filter(x => x.chemical_name === chemName && (x.total_bottles - x.opened_bottles > 0 || x.current_opened_remaining > 0));
-
+ 
       if(lots.length === 0) {
          $("resSubtitle").innerHTML = `<div class="p-8 text-center text-red-400 bg-red-50 rounded-xl"><i class="fa-solid fa-box-open text-3xl mb-2 block"></i>ไม่พบสต็อกของ ${chemName} ในคลังหลัก</div>`;
          return;
       }
-
+ 
       lots.sort((a, b) => {
          const aOpened = a.opened_bottles > 0;
          const bOpened = b.opened_bottles > 0;
-
+ 
          if (aOpened && !bOpened) return -1;
          if (!aOpened && bOpened) return 1;
-
+ 
          let da = a.exp_date ? new Date(a.exp_date).getTime() : Infinity;
          let db = b.exp_date ? new Date(b.exp_date).getTime() : Infinity;
          return da - db;
       });
-
+ 
       let html = `<div class="mt-4 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar shadow-inner">`;
-
+ 
       lots.forEach((x, index) => {
          const isOpened = x.opened_bottles > 0;
          const badge = isOpened 
             ? `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200 inline-block mt-1">ขวดเปิดใช้งานแล้ว (เหลือ ${x.current_opened_remaining} ${x.unit})</span>` 
             : `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold border border-green-200 inline-block mt-1">ขวดใหม่ (ยังไม่เปิดซีล)</span>`;
-
+ 
          let expText = safeText(x.exp_date) || "No Expiry";
          let expCls = "text-slate-500 font-bold";
          if (x.exp_date) {
@@ -3246,13 +3553,13 @@
             if (days < 0) expCls = "text-red-600 font-bold";
             else if (days <= 30) expCls = "text-amber-600 font-bold";
          }
-
+ 
          const highlight = index === 0 ? "border-l-4 border-l-teal-500 bg-teal-50/50" : "bg-white border-l-4 border-l-transparent";
-
+ 
          const recommendTag = index === 0 
             ? `<div class="inline-block bg-teal-500 text-white px-2 py-1 rounded shadow-sm text-[10px] font-bold mb-2"><i class="fa-solid fa-star mr-1"></i>RECOMMEND (ควรใช้ขวดนี้)</div><br>` 
             : "";
-
+ 
          html += `
          <div class="p-5 border-b border-slate-200 hover:bg-slate-50 transition-colors grid grid-cols-1 md:grid-cols-3 gap-4 items-start md:items-center ${highlight}">
             <div>
