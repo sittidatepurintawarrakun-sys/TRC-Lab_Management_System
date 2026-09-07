@@ -1854,7 +1854,13 @@
             }, (err) => {}
           );
         } catch (fallbackErr) {
-          alert("ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบการอนุญาตใช้งานกล้อง หรือแนะนำให้เปิดผ่าน Google Chrome / Safari"); 
+          let errorMsg = "ไม่สามารถเปิดกล้องได้\nรหัสปัญหา: " + (fallbackErr.name || fallbackErr.message || "ไม่ทราบสาเหตุ");
+          if (fallbackErr.name === "NotAllowedError") errorMsg += "\n\nคำแนะนำ: ไปที่ตั้งค่าเบราว์เซอร์แล้วเลือก 'อนุญาต' (Allow Camera)";
+          else if (fallbackErr.name === "NotFoundError") errorMsg += "\n\nคำแนะนำ: ไม่พบฮาร์ดแวร์กล้อง";
+          else if (fallbackErr.name === "NotSupportedError" || fallbackErr.name === "SecurityError") errorMsg += "\n\nคำแนะนำ: ไม่ได้เข้าใช้งานผ่านลิงก์ที่ปลอดภัย (HTTPS)";
+          else if (fallbackErr.name === "NotReadableError") errorMsg += "\n\nคำแนะนำ: มีแอปอื่น (เช่น กล้องถ่ายรูป, LINE) กำลังใช้งานกล้องค้างอยู่";
+
+          alert(errorMsg + "\n\nแนะนำให้คัดลอกลิงก์ไปเปิดใน Google Chrome หรือ Safari โดยตรง");
           isScanning = false; 
         }
       }
@@ -1885,7 +1891,14 @@
            try {
              await modalScanner.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 250, height: 100 } }, onScanSuccess, (e)=>{});
            } catch (fbErr) {
-             alert("ไม่สามารถเปิดกล้องได้"); isModalScanning = false; hide("modal-qr-wrapper");
+             let errorMsg = "ไม่สามารถเปิดกล้องได้\nรหัสปัญหา: " + (fbErr.name || fbErr.message || "ไม่ทราบสาเหตุ");
+             if (fbErr.name === "NotAllowedError") errorMsg += "\n\nคำแนะนำ: ไปที่ตั้งค่าเบราว์เซอร์แล้วเลือก 'อนุญาต' (Allow Camera)";
+             else if (fbErr.name === "NotFoundError") errorMsg += "\n\nคำแนะนำ: ไม่พบฮาร์ดแวร์กล้อง";
+             else if (fbErr.name === "NotSupportedError" || fbErr.name === "SecurityError") errorMsg += "\n\nคำแนะนำ: ไม่ได้เข้าใช้งานผ่านลิงก์ที่ปลอดภัย (HTTPS)";
+             else if (fbErr.name === "NotReadableError") errorMsg += "\n\nคำแนะนำ: มีแอปอื่น (เช่น กล้องถ่ายรูป, LINE) กำลังใช้งานกล้องค้างอยู่";
+             alert(errorMsg);
+             isModalScanning = false; 
+             hide("modal-qr-wrapper");
            }
         });
       } catch (err) { alert("กล้องขัดข้อง"); isModalScanning = false; }
@@ -1939,7 +1952,14 @@
           try {
             await wsModalScanner.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 250, height: 100 } }, onWsScanSuccess, (e)=>{});
           } catch(fbErr) {
-            alert("ไม่สามารถเปิดกล้องได้"); isWsModalScanning = false; hide("ws-modal-qr-wrapper");
+             let errorMsg = "ไม่สามารถเปิดกล้องได้\nรหัสปัญหา: " + (fbErr.name || fbErr.message || "ไม่ทราบสาเหตุ");
+             if (fbErr.name === "NotAllowedError") errorMsg += "\n\nคำแนะนำ: ไปที่ตั้งค่าเบราว์เซอร์แล้วเลือก 'อนุญาต' (Allow Camera)";
+             else if (fbErr.name === "NotFoundError") errorMsg += "\n\nคำแนะนำ: ไม่พบฮาร์ดแวร์กล้อง";
+             else if (fbErr.name === "NotSupportedError" || fbErr.name === "SecurityError") errorMsg += "\n\nคำแนะนำ: ไม่ได้เข้าใช้งานผ่านลิงก์ที่ปลอดภัย (HTTPS)";
+             else if (fbErr.name === "NotReadableError") errorMsg += "\n\nคำแนะนำ: มีแอปอื่น (เช่น กล้องถ่ายรูป, LINE) กำลังใช้งานกล้องค้างอยู่";
+             alert(errorMsg);
+             isWsModalScanning = false; 
+             hide("ws-modal-qr-wrapper");
           }
         });
       } catch (err) { alert("กล้องขัดข้อง"); isWsModalScanning = false; }
@@ -2853,14 +2873,26 @@
     // WORKING SOLUTIONS MODULE (พร้อม Admin Config)
     // =========================================================
     $("btnSaveWS").addEventListener("click", async () => {
-      const formulaQrIdentity = cleanWsScanValue($("wsBottleQr").value);
+      let formulaQrIdentity = cleanWsScanValue($("wsBottleQr").value);
       const masterId = $("wsMasterSelect").value;
       const prepDate = $("wsPrepDate").value;
       const diQrRef = $("wsDIWaterQr").value.trim();
       const prepVolume = Number($("wsPrepVolume").value || 0);
       const prepVolumeUnit = $("wsPrepVolumeUnit").value;
- 
-      if (!formulaQrIdentity || !masterId || !prepDate) { alert("กรุณาสแกน Formula QR เลือกสูตร และระบุวันที่เตรียมให้ครบ"); return; }
+
+      // เปลี่ยนให้ตรวจสอบเฉพาะสูตร (Master ID) และ วันที่เตรียม (Prep Date)
+      if (!masterId || !prepDate) { 
+          alert("กรุณาเลือกสูตรสารเคมี (Working Solution Profile) และระบุวันที่เตรียมให้ครบถ้วน"); 
+          return; 
+      }
+
+      // 2. หากช่องสแกน QR ว่างเปล่า ให้ดึงชื่อจาก Dropdown มาใส่แทน
+      if (!formulaQrIdentity) {
+          const dropdown = $("wsMasterSelect");
+          // คำสั่ง dropdown.options[dropdown.selectedIndex].text จะดึงข้อความที่ผู้ใช้เห็นบนหน้าจอ 
+          // เช่น "NaOH (Sodium Hydroxide) (1.0 N)" มากำหนดให้ formulaQrIdentity
+          formulaQrIdentity = dropdown.options[dropdown.selectedIndex].text;
+      }
       if (prepVolume <= 0) { alert("กรุณาระบุปริมาตรที่ใช้ (Volume) ให้ถูกต้องตามหลัก GMP"); return; }
  
       const rmItems = [];
