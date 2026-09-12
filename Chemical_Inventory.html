@@ -355,15 +355,17 @@
  
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full">
           <div class="overflow-x-auto w-full">
-            <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
-              <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
-                <tr>
-                  <th class="p-4 font-medium">Chemical Name</th>
-                  <th class="p-4 font-medium">Manufacturer Lot</th>
-                  <th class="p-4 font-medium">Stock & Usage</th>
-                  <th class="p-4 font-medium">Exp Date</th>
-                  <th class="p-4 font-medium text-center">Action</th>
-                </tr>
+                <!-- ลบ whitespace-nowrap ออก เพื่ออนุญาตให้ข้อความตัดขึ้นบรรทัดใหม่ได้ -->
+                <table class="w-full text-left border-collapse text-sm">
+                  <thead class="bg-slate-50 text-slate-600 uppercase text-xs whitespace-nowrap">
+                    <tr>
+                      <th class="p-4 font-medium">Chemical Name</th>
+                      <th class="p-4 font-medium">Manufacturer Lot</th>
+                      <th class="p-4 font-medium">Stock & Usage</th>
+                      <th class="p-4 font-medium">Exp Date</th>
+                      <!-- กำหนดความกว้างขั้นต่ำให้คอลัมน์ Action เพื่อไม่ให้ปุ่มโดนบีบ -->
+                      <th class="p-4 font-medium text-center min-w-[120px]">Action</th>
+                    </tr>
               </thead>
               <tbody id="storeTableBody" class="divide-y divide-slate-100">
                 <tr><td colspan="5" class="p-8 text-center text-slate-400">กำลังโหลด...</td></tr>
@@ -1018,7 +1020,7 @@
  
     const ADMIN_EMAILS = [
       'sittidate.p@adityabirla.com', 'trc-qcl.laboratory@adityabirla.com',
-      'laboratory.trc@adityabirla.com', 'waraporn.jindanath@adityabirla.com', 'datejub@hotmail.com'
+      'laboratory.trc@adityabirla.com', 'waraporn.jindanath@adityabirla.com', 'datejub@hotmail.com', 'jamnanphon.n@adityabirla.com', 'suwanna.b@adityabirla.com', 'yaowaluk.s@adityabirla.com', 'benjawan.s@adityabirla.com'
     ];
     let isSuperAdmin = false;
  
@@ -1827,7 +1829,53 @@
     if($("btnAddRawMaterial")) {
       $("btnAddRawMaterial").addEventListener("click", window.addRawMaterialRow);
     }
-    
+
+    // --- ส่วนที่เพิ่มใหม่: Auto-fill สารตั้งต้นเมื่อเลือกสูตร ---
+    if ($("wsMasterSelect")) {
+      $("wsMasterSelect").addEventListener("change", async (e) => {
+        const masterId = e.target.value;
+        if (!masterId) return;
+
+        // 1. ดึงข้อมูลประวัติการเตรียมสูตรนี้ล่าสุด 1 รายการจาก Firestore
+        const q = query(collection(db, "WS_Batches"), where("master_id", "==", masterId), orderBy("timestamp", "desc"), limit(1));
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+          const prevBatch = snap.docs[0].data();
+          const prevRMs = prevBatch.raw_materials || [];
+
+          if (prevRMs.length > 0) {
+            // 2. ล้างช่องสารเคมีดิบเดิมออกให้หมดก่อน
+            $("rawMaterialsContainer").innerHTML = "";
+            rmRowCounter = 0;
+
+            // 3. วนลูปสร้างช่องกรอกและใส่ข้อมูลตามประวัติเดิม
+            for (const rm of prevRMs) {
+              window.addRawMaterialRow();
+              const currentRowId = `rmRow_${rmRowCounter}`;
+              const newRow = document.getElementById(currentRowId);
+              const chemInput = newRow.querySelector('.rm-chem-input');
+              const unitInput = newRow.querySelector('.rm-deduct-unit');
+
+              let chemName = "";
+              // 4. วิ่งไปหาชื่อสารเคมี (Chemical Name) จาก ID ในคลังหลัก
+              try {
+                const storeDoc = await getDoc(doc(db, "Store_Chemicals", rm.doc_id));
+                if (storeDoc.exists()) chemName = storeDoc.data().chemical_name;
+              } catch (err) {}
+
+              // 5. นำชื่อและหน่วยมากรอกให้พนักงานอัตโนมัติ
+              if (chemName) {
+                chemInput.value = chemName;
+                unitInput.value = rm.unit || "";
+                // สั่งให้ระบบกระตุ้นการโหลด Lot ปัจจุบันอัตโนมัติ
+                chemInput.dispatchEvent(new Event('input'));
+              }
+            }
+          }
+        }
+      });
+    }
     // =========================================================
     // SCAN MODULE & POKA-YOKE SCANNER
     // =========================================================
