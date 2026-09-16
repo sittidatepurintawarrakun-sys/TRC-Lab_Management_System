@@ -456,7 +456,7 @@
                     "MCL Conc. gpl%", "MCL Temp.", "Diss. Modal Vis BF", "Buffer Tank 5 Vis Temp",
                     "Buffer Tank 6 Vis Temp", "Buffer Tank 7 Vis Temp", "Modal Rec14 BF",
                     "Spinning Viscose Ball Fall", "Spinning Viscose Gamma no", "Spinning Viscose Alkali %",
-                    "Spinning Viscose Cellulose %", "MD 2 Vis Kw", "Flash Delta 6", "Flash Delta 7", "Vis Temp"
+                    "Spinning Viscose Cellulose %", "MD 2 Vis Kw", "Flash Delta 6", "Flash Delta 7", "Vis Temp", "Gel Count"
                 ],
                 auxiliary: [
                     "MD 2 Spin bath Na2SO4", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."
@@ -474,7 +474,7 @@
                     "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp",
                     "Buffer Tank 4 Vis Temp", "Rec Ball Fall", "Rec 1 KW", "Spinning Viscose Ball Fall",
                     "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %",
-                    "Spinning Viscose KW", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5"
+                    "Spinning Viscose KW", "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5", "Gel Count"
                 ],
                 auxiliary: [
                     "MC 3 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."
@@ -490,7 +490,7 @@
                     "MD G Exit End Total Alk.", "MD G Exit End Cell.", "MCL Conc. gpl%", "MCL Temp.",
                     "Churn Blender 1 Vis Temp", "Churn Blender 2 Vis Temp", "Spinning Viscose Ball Fall",
                     "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %",
-                    "Spinning Viscose KW", "Rec Ball Fall", "REC. TK. N3 CKW", "Flash Delta 8", "Flash Delta 9", "Vis Temp"
+                    "Spinning Viscose KW", "Rec Ball Fall", "REC. TK. N3 CKW", "Flash Delta 8", "Flash Delta 9", "Vis Temp", "Gel Count"
                 ],
                 auxiliary: [
                     "MC 5 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."
@@ -507,7 +507,7 @@
                     "Buffer Tank 1 Vis Temp", "Buffer Tank 2 Vis Temp", "Buffer Tank 3 Vis Temp",
                     "Buffer Tank 4 Vis Temp", "Rec 1 KW", "Rec Ball Fall", "Spinning Viscose Ball Fall",
                     "Machine Viscose RI", "Spinning Viscose Alkali %", "Spinning Viscose Cellulose %",
-                    "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5", "Spinning Viscose KW"
+                    "Vis Temp", "Flash Delta 2", "Flash Delta 4", "Flash Delta 5", "Spinning Viscose KW", "Gel Count"
                 ],
                 auxiliary: [
                     "MC 6 Spin bath Sp. Gr.", "Spin Bath Acid gpl", "Spin Bath ZnSO4 gpl", "Spin Bath Temp."
@@ -837,12 +837,45 @@
         // 4. DATA FETCHERS (OPTIMIZED WITH CACHE & AGGREGATION)
         // =========================================================
         
+        // =========================================================
+        // 4. DATA FETCHERS (OPTIMIZED WITH CACHE & AGGREGATION)
+        // =========================================================
+
+        // [เพิ่มใหม่] Dictionary สำหรับ Map ชื่อตัวแปรที่อาจเขียนต่างกันใน Database
+        const PARAM_DICTIONARY = {
+            "Gel Count": ["Gel Count", "gel_count", "Gel count", "Gel No.", "Gel Particle Count", "gelCount"],
+        };
+
+        // [เพิ่มใหม่] Helper function สำหรับดึงค่าจาก Object โดยรองรับชื่อหลายแบบ
+        function extractStatValue(statsObj, paramName) {
+            if (!statsObj) return null;
+
+            // 1. หาแบบตรงตัวเป๊ะๆ ก่อน
+            if (statsObj[paramName] !== undefined) return statsObj[paramName];
+
+            // 2. หาผ่าน Dictionary
+            if (PARAM_DICTIONARY[paramName]) {
+                for (let alias of PARAM_DICTIONARY[paramName]) {
+                    if (statsObj[alias] !== undefined) return statsObj[alias];
+                }
+            }
+
+            // 3. หาแบบ Case-Insensitive (สำรองเป็นทางเลือกสุดท้าย)
+            const lowerParam = paramName.toLowerCase();
+            const foundKey = Object.keys(statsObj).find(k => k.toLowerCase() === lowerParam);
+            if (foundKey) return statsObj[foundKey];
+
+            return null; // คืนค่า null หากหาไม่พบจริงๆ
+        }
+
         async function getCachedData(key, fetcher) {
             if (REQUEST_CACHE[key]) return REQUEST_CACHE[key];
             const data = await fetcher();
             REQUEST_CACHE[key] = data;
             return data;
         }
+
+        // Helper: สร้าง Array วันที่ทั้งหมดในช่วงที่เลือก (Master Timeline)
 
         // Helper: สร้าง Array วันที่ทั้งหมดในช่วงที่เลือก (Master Timeline)
         function generateDateLabels(startStr, endStr, mode) {
@@ -902,42 +935,76 @@
 
         // --- 1. DAILY FETCHERS (FIXED) ---
         async function fetchDailyProcessLogs(mc, paramName, start, end) {
-            const config = MACHINE_PROCESS_CONFIG[mc] || MACHINE_PROCESS_CONFIG["MC2"];
-            let category = "Viscose";
-            if ((config.auxiliary||[]).includes(paramName)) category = "Auxiliary";
-            else if ((config.spinning||[]).includes(paramName)) category = "Spinning";
-
-            const collectionName = DEPT_COLLECTION_MAP[category] || "stats_Viscose";
-
-            // 1. สร้าง Timeline มาตรฐาน
             const masterLabels = generateDateLabels(start, end, 'daily');
-            const dataMap = new Map(); // ใช้ Map เก็บค่าตามวันที่เพื่อความเร็ว
+            const dataMap = new Map();
 
-            try {
-                const snapshot = await db.collection(collectionName)
-                    .where('machineId', '==', mc)
-                    .where('date', '>=', start)
-                    .where('date', '<=', end)
-                    .get(); // ตัด orderBy ออกเล็กน้อยเพื่อ performance แล้วมา match ใน map แทน
+            // [ส่วนเพิ่มใหม่]: เช็คว่าเป็นข้อมูลจาก stats_Projector หรือไม่
+            if (paramName === "Gel Count") {
+                try {
+                    // หาเดือนทั้งหมดที่เกี่ยวข้องในช่วงวันที่ที่เลือก
+                    const monthsToFetch = [...new Set(masterLabels.map(dateStr => dateStr.substring(0, 7)))];
 
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    if(d.stats && d.stats[paramName]) {
-                        const s = d.stats[paramName];
-                        let avg = s.avg !== undefined ? s.avg : (s.count > 0 ? s.sum/s.count : 0);
-                        if(avg !== 0) {
-                            dataMap.set(d.date, avg);
+                    // ดึงข้อมูลรายเดือนทั้งหมดแบบ Parallel
+                    const promises = monthsToFetch.map(monthStr => db.collection("stats_Projector").doc(monthStr).get());
+                    const snapshots = await Promise.all(promises);
+
+                    const monthDataLookup = {};
+                    snapshots.forEach(snap => {
+                        if (snap.exists) monthDataLookup[snap.id] = snap.data();
+                    });
+
+                    // วนลูปรายวันเพื่อเจาะเอาค่า gel_avg ออกมา
+                    masterLabels.forEach(dateStr => {
+                        const monthStr = dateStr.substring(0, 7); // YYYY-MM
+                        const dayStr = dateStr.substring(8, 10);  // DD
+
+                        const monthDoc = monthDataLookup[monthStr];
+                        // โครงสร้าง: document -> MC2 -> daily -> 01 -> gel_avg
+                        if (monthDoc && monthDoc[mc] && monthDoc[mc].daily && monthDoc[mc].daily[dayStr]) {
+                            const dayData = monthDoc[mc].daily[dayStr];
+                            if (dayData.gel_avg !== undefined) {
+                                dataMap.set(dateStr, dayData.gel_avg);
+                            }
                         }
+                    });
+                } catch(e) { console.warn(`Fetch Daily Projector Error`, e); }
+            } else {
+                // [ส่วนข้อมูล Process ปกติ]
+                const config = MACHINE_PROCESS_CONFIG[mc] || MACHINE_PROCESS_CONFIG["MC2"];
+                let category = "Viscose";
+                if ((config.auxiliary||[]).includes(paramName)) category = "Auxiliary";
+                else if ((config.spinning||[]).includes(paramName)) category = "Spinning";
+                const collectionName = DEPT_COLLECTION_MAP[category] || "stats_Viscose";
+
+                try {
+                    const snapshot = await db.collection(collectionName)
+                        .where('machineId', '==', mc)
+                        .where('date', '>=', start)
+                        .where('date', '<=', end)
+                        .get();
+
+                    let dataFound = false;
+
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        const s = extractStatValue(d.stats, paramName);
+                        if(s) {
+                            dataFound = true;
+                            let avg = s.avg !== undefined ? s.avg : (s.count > 0 ? s.sum/s.count : 0);
+                            if(avg !== 0) {
+                                dataMap.set(d.date, avg);
+                            }
+                        }
+                    });
+
+                    if (!dataFound && snapshot.size > 0) {
+                        console.warn(`[Data Validation]: ไม่พบข้อมูลของ "${paramName}" บนเครื่อง ${mc} ในฐานข้อมูล`);
                     }
-                });
-            } catch(e) { console.warn(`Fetch Daily Process Error`, e); }
+                } catch(e) { console.warn(`Fetch Daily Process Error`, e); }
+            }
 
-            // 2. Map ข้อมูลกลับเข้า Timeline (ถ้าไม่มีใส่ null)
-            const finalData = masterLabels.map(dateLabel => {
-                return dataMap.has(dateLabel) ? dataMap.get(dateLabel) : null;
-            });
-
-            const stats = calculateStats(finalData.filter(v => v !== null)); // คำนวณ Stats เฉพาะที่มีค่า
+            const finalData = masterLabels.map(label => dataMap.has(label) ? dataMap.get(label) : null);
+            const stats = calculateStats(finalData.filter(v => v !== null));
             return { labels: masterLabels, data: finalData, avg: stats.avg, cv: stats.cv };
         }
 
@@ -1019,37 +1086,66 @@
         // --- 2. MONTHLY FETCHERS (เหมือนเดิมได้ เพราะเดือนมักจะต่อเนื่อง แต่ถ้าอยากชัวร์ก็ใช้ logic เดียวกันได้) ---
         // (ขอคงเดิมไว้ก่อนเพื่อไม่ให้ Code ยาวเกินไป เพราะปัญหาหลักคือ Daily)
         async function fetchMonthlyProcessStats(mc, paramName, start, end) {
-             // ... (ใช้ Code เดิมในส่วนนี้ได้เลยครับ) ...
-            const config = MACHINE_PROCESS_CONFIG[mc] || MACHINE_PROCESS_CONFIG["MC2"];
-            let category = "Viscose";
-            if ((config.auxiliary||[]).includes(paramName)) category = "Auxiliary";
-            else if ((config.spinning||[]).includes(paramName)) category = "Spinning";
-            const collectionName = `${DEPT_COLLECTION_MAP[category]}_Monthly`;
             const labels = [], dataPoints = [];
             let weightedCV = 0;
-            try {
-                const startM = start.substring(0,7); const endM = end.substring(0,7);
-                const snapshot = await db.collection(collectionName)
-                    .where('machineId', '==', mc)
-                    .where('month', '>=', startM)
-                    .where('month', '<=', endM)
-                    .orderBy('month', 'asc').get();
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    if(d.stats && d.stats[paramName]) {
-                        const s = d.stats[paramName];
-                        let avg = s.avg !== undefined ? s.avg : (s.count > 0 ? s.sum/s.count : 0);
-                        labels.push(d.month);
-                        dataPoints.push(avg);
-                        if(s.sumSq && s.count > 0) {
-                            const variance = (s.sumSq/s.count) - (avg*avg);
-                            const sd = Math.sqrt(Math.max(0, variance));
-                            const cv = avg !== 0 ? (sd/avg)*100 : 0;
-                            weightedCV = cv;
-                        }
+            const startM = start.substring(0,7); 
+            const endM = end.substring(0,7);
+
+            if (paramName === "Gel Count") {
+                try {
+                    // สร้าง List รายเดือนที่ต้องโหลด
+                    const monthsToFetch = [];
+                    let currD = new Date(`${startM}-01`);
+                    const endD = new Date(`${endM}-01`);
+                    while(currD <= endD) {
+                        monthsToFetch.push(currD.toISOString().substring(0,7));
+                        currD.setMonth(currD.getMonth() + 1);
                     }
-                });
-            } catch(e) { console.warn("Monthly Process Error", e); }
+
+                    const promises = monthsToFetch.map(m => db.collection("stats_Projector").doc(m).get());
+                    const snapshots = await Promise.all(promises);
+
+                    snapshots.forEach(snap => {
+                        if (snap.exists) {
+                            const d = snap.data();
+                            // โครงสร้าง: document -> MC2 -> projection -> gel_avg
+                            if (d[mc] && d[mc].projection && d[mc].projection.gel_avg !== undefined) {
+                                labels.push(snap.id);
+                                dataPoints.push(d[mc].projection.gel_avg);
+                            }
+                        }
+                    });
+                } catch (e) { console.warn("Monthly Projector Error", e); }
+            } else {
+                const config = MACHINE_PROCESS_CONFIG[mc] || MACHINE_PROCESS_CONFIG["MC2"];
+                let category = "Viscose";
+                if ((config.auxiliary||[]).includes(paramName)) category = "Auxiliary";
+                else if ((config.spinning||[]).includes(paramName)) category = "Spinning";
+                const collectionName = `${DEPT_COLLECTION_MAP[category]}_Monthly`;
+
+                try {
+                    const snapshot = await db.collection(collectionName)
+                        .where('machineId', '==', mc)
+                        .where('month', '>=', startM)
+                        .where('month', '<=', endM)
+                        .orderBy('month', 'asc').get();
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        const s = extractStatValue(d.stats, paramName);
+                        if(s) {
+                            let avg = s.avg !== undefined ? s.avg : (s.count > 0 ? s.sum/s.count : 0);
+                            labels.push(d.month);
+                            dataPoints.push(avg);
+                            if(s.sumSq && s.count > 0) {
+                                const variance = (s.sumSq/s.count) - (avg*avg);
+                                const sd = Math.sqrt(Math.max(0, variance));
+                                const cv = avg !== 0 ? (sd/avg)*100 : 0;
+                                weightedCV = cv;
+                            }
+                        }
+                    });
+                } catch(e) { console.warn("Monthly Process Error", e); }
+            }
             return { labels, data: dataPoints, cv: weightedCV };
         }
 
@@ -1166,30 +1262,34 @@
 
         // --- 3. HOURLY FETCHERS (FIXED) ---
         async function fetchHourlyProcessLogs(mc, paramName, start, end) {
+            const masterLabels = generateDateLabels(start, end, 'hourly');
+
+            // ข้อมูล Projector ไม่มีรายชั่วโมง ให้คืนค่า Null ได้เลย
+            if (paramName === "Gel Count") {
+                return { labels: masterLabels, data: masterLabels.map(() => null), avg: 0, cv: 0 };
+            }
+
             const config = MACHINE_PROCESS_CONFIG[mc] || MACHINE_PROCESS_CONFIG["MC2"];
             let category = "Viscose";
             if ((config.auxiliary||[]).includes(paramName)) category = "Auxiliary";
             else if ((config.spinning||[]).includes(paramName)) category = "Spinning";
 
-            const masterLabels = generateDateLabels(start, end, 'hourly');
             const dataMap = new Map();
-
             try {
                 const snapshot = await db.collection('process_raw_logs')
                     .where('machineId', '==', mc)
                     .where('date', '>=', start).where('date', '<=', end)
                     .get();
-
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     if(!d.data) return;
                     let target = d.data[category] || d.data[category.toLowerCase()];
-                    if(target && target[paramName]) {
-                        const valArr = target[paramName];
+
+                    const valArr = extractStatValue(target, paramName);
+                    if(valArr && Array.isArray(valArr)) {
                         for(let h=0; h<24; h++) {
                             const val = valArr[h];
                             if(val !== undefined && val !== null && val !== "") {
-                                // Key format: YYYY-MM-DD HH:00
                                 const key = `${d.date} ${String(h).padStart(2,'0')}:00`;
                                 dataMap.set(key, Number(val));
                             }
@@ -1197,7 +1297,6 @@
                     }
                 });
             } catch(e) { console.warn("Hourly Process Error", e); }
-
             const finalData = masterLabels.map(label => dataMap.has(label) ? dataMap.get(label) : null);
             const stats = calculateStats(finalData.filter(v => v !== null));
             return { labels: masterLabels, data: finalData, avg: stats.avg, cv: stats.cv };
@@ -1964,10 +2063,9 @@
                 const scatterData = [];
                 const map2 = new Map();
                 d2.labels.forEach((l, i) => map2.set(l, d2.data[i]));
-
                 d1.labels.forEach((l, i) => {
                     if (map2.has(l)) {
-                        scatterData.push({ x: d1.data[i], y: map2.get(l) });
+                        scatterData.push({ time: l, x: d1.data[i], y: map2.get(l) });
                     }
                 });
 
@@ -2047,10 +2145,10 @@
             let scatterPayload = null;
             if (currentScatterData) {
                     const points = currentScatterData.points.map(p => ({
+                    time: p.time,
                     x: Number(p.x.toFixed(2)),
                     y: Number(p.y.toFixed(2))
                 }));
-
                 scatterPayload = {
                     xName: currentScatterData.xName,
                     yName: currentScatterData.yName,
@@ -2234,7 +2332,6 @@
 
                 // เรียก Cloud Function (ชื่อฟังก์ชันต้องตรงกับ Backend)
                 const askAI = functions.httpsCallable('askProductChat');
-
                 // 5. ส่งข้อมูล
                 const response = await askAI({
                     question: msg,
@@ -2243,7 +2340,13 @@
                     analysisContext: latestAnalysisContext, 
                     uiContext: {
                         machine: currentMachineUI,
-                        timestamp: new Date().toISOString()
+                        startDate: document.getElementById('startDate')?.value || "",
+                        endDate: document.getElementById('endDate')?.value || "",
+                        viewMode: typeof getGranularity === 'function' ? getGranularity() : "daily",
+                        material: document.getElementById('materialFilter')?.value || "ALL",
+                        targetParameter: document.getElementById('corrTrendTarget')?.value || "",
+                        timestamp: new Date().toISOString(),
+                        investigationIntent: "Root Cause Investigation"
                     }
                 });
 
