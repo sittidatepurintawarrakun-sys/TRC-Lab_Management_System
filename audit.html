@@ -1,507 +1,312 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Audit Assistant (Secured)</title>
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-        // --- ตั้งค่า Firebase ---
-        // TODO: ใส่ค่า Config ของคุณที่นี่
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-            authDomain: "lab-trc-management-system.firebaseapp.com",
-            projectId: "lab-trc-management-system",
-            storageBucket: "lab-trc-management-system.appspot.com",
-            messagingSenderId: "43919979160",
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
-        };
-
-        // รายชื่อ Admin ตาม Rules ที่ให้มา
-        const ADMIN_EMAILS = [
-            'sittidate.p@adityabirla.com',
-            'trc-qcl.laboratory@adityabirla.com',
-            'laboratory.trc@adityabirla.com',
-            'waraporn.jindanath@adityabirla.com',
-            'datejub@hotmail.com' 
-        ];
-
-        let db, auth;
-        let currentUser = null;
-        let isAdmin = false;
-
-        // Initialize Firebase
-        if (firebaseConfig.apiKey) {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            // Listener ตรวจสอบสถานะ Login
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                    isAdmin = ADMIN_EMAILS.includes(user.email);
-                    window.updateUIForUser(user, isAdmin);
-                } else {
-                    currentUser = null;
-                    isAdmin = false;
-                    window.showLoginScreen();
-                }
-            });
-        } else {
-            console.log("Offline Mode: Firebase Config missing");
-        }
-
-        // Expose Functions to Window
-        window.handleLogin = async (email, password) => {
-            if (!auth) { alert("กรุณาใส่ Firebase Config ในโค้ดก่อนครับ"); return; }
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged จะทำงานต่อเอง
-            } catch (error) {
-                console.error(error);
-                alert("Login Failed: " + error.message);
-            }
-        };
-
-        window.handleLogout = async () => {
-            if (auth) await signOut(auth);
-            window.location.reload();
-        };
-
-        // ฟังก์ชันบันทึกข้อมูล (จะเช็คสิทธิ์จาก Rules ใน Backend อัตโนมัติ)
-        window.saveFindingToFirebase = async (data) => {
-            if (db && currentUser) {
-                try {
-                    // ตัวอย่าง: บันทึกลง non_conformance_records หรือ audit_findings
-                    await addDoc(collection(db, 'non_conformance_records'), {
-                        ...data,
-                        recordedBy: currentUser.email,
-                        recordedUid: currentUser.uid,
-                        timestamp: serverTimestamp()
-                    });
-                    console.log("Saved to Firestore successfully");
-                    return true;
-                } catch (e) {
-                    console.error("Error saving:", e);
-                    alert("บันทึกไม่สำเร็จ: คุณอาจไม่มีสิทธิ์ (Permission Denied)");
-                    return false;
-                }
-            }
-        };
-    </script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
-        body { font-family: 'Sarabun', sans-serif; }
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        /* Glass Effect for Login */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>TRC Integrated Internal Audit Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <style>
+    *{box-sizing:border-box} body{font-family:'Sarabun',sans-serif;background:#f8fafc;color:#0f172a}
+    .hidden{display:none!important}.nav-active{background:#2563eb;color:#fff}.card{background:white;border:1px solid #e2e8f0;border-radius:1rem}
+    .spinner{width:18px;height:18px;border:2px solid #cbd5e1;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .toast{animation:in .2s ease-out}@keyframes in{from{transform:translateY(8px);opacity:0}}
+    .modal-backdrop{background:rgba(15,23,42,.65);backdrop-filter:blur(2px)}
+    .status-NOT_EVALUATED{background:#f1f5f9;color:#475569}.status-CONFORMING{background:#dcfce7;color:#166534}.status-NC{background:#fee2e2;color:#991b1b}.status-OBSERVATION{background:#fef3c7;color:#92400e}.status-NA{background:#e0e7ff;color:#3730a3}
+    @media(max-width:900px){#sidebar{position:fixed;inset:0 auto 0 0;z-index:40;transform:translateX(-100%);transition:.2s}#sidebar.open{transform:translateX(0)}}
+    @media print{#sidebar,header,.no-print{display:none!important}main{margin:0!important}.card{break-inside:avoid}}
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen">
+<body class="min-h-screen">
+<div id="toastArea" class="fixed z-[100] right-4 bottom-4 space-y-2"></div>
 
-    <!-- App Container -->
-    <div id="app" class="max-w-5xl mx-auto p-4 md:p-6 pb-24 relative">
+<section id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-5">
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
+    <div class="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-3xl mx-auto"><i class="fa-solid fa-shield-halved"></i></div>
+    <h1 class="text-2xl font-bold text-center mt-5">TRC Internal Audit System</h1>
+    <p class="text-center text-slate-500 text-sm mt-1">Integrated Audit, Findings, CAPA and Management Review</p>
+    <form id="loginForm" class="mt-7 space-y-4">
+      <label class="block"><span class="text-sm font-semibold">Email</span><input id="loginEmail" type="email" required class="mt-1 w-full border rounded-xl px-4 py-3" placeholder="name@adityabirla.com"></label>
+      <label class="block"><span class="text-sm font-semibold">Password</span><input id="loginPassword" type="password" required class="mt-1 w-full border rounded-xl px-4 py-3" placeholder="Password"></label>
+      <button id="loginBtn" class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700"><i class="fa-solid fa-right-to-bracket mr-2"></i>เข้าสู่ระบบ</button>
+    </form>
+    <p class="text-xs text-slate-400 text-center mt-5">Access is controlled by Firebase Authentication and server-side role validation.</p>
+  </div>
+</section>
 
-        <!-- User Profile Badge (Top Right) -->
-        <div id="user-badge" class="hidden absolute top-4 right-4 z-50 flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-md border border-slate-200">
-            <div class="flex flex-col text-right leading-tight">
-                <span id="user-email" class="text-xs font-bold text-slate-700">user@example.com</span>
-                <span id="user-role" class="text-[10px] text-slate-500">Auditor</span>
-            </div>
-            <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 transition">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
-        </div>
-
-        <!-- STEP 1: Login Screen -->
-        <div id="login-screen" class="flex flex-col items-center justify-center min-h-[90vh] fade-in">
-            <div class="glass-panel p-8 rounded-2xl shadow-xl max-w-sm w-full border border-white/50 relative overflow-hidden">
-                <!-- Decoration -->
-                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-
-                <div class="text-center mb-8">
-                    <div class="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
-                        <i class="fas fa-fingerprint text-3xl text-blue-600"></i>
-                    </div>
-                    <h1 class="text-2xl font-bold text-slate-800">Smart Audit</h1>
-                    <p class="text-slate-500 text-sm">เข้าสู่ระบบเพื่อเริ่มการตรวจประเมิน</p>
-                </div>
-
-                <form onsubmit="event.preventDefault(); submitLogin();" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1 ml-1">EMAIL</label>
-                        <div class="relative">
-                            <i class="fas fa-envelope absolute left-3 top-3.5 text-slate-400 text-sm"></i>
-                            <input type="email" id="email-input" required 
-                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition focus:bg-white"
-                                placeholder="name@adityabirla.com">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1 ml-1">PASSWORD</label>
-                        <div class="relative">
-                            <i class="fas fa-lock absolute left-3 top-3.5 text-slate-400 text-sm"></i>
-                            <input type="password" id="password-input" required 
-                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition focus:bg-white"
-                                placeholder="••••••••">
-                        </div>
-                    </div>
-
-                    <button type="submit" 
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-4">
-                        เข้าสู่ระบบ <i class="fas fa-arrow-right"></i>
-                    </button>
-                </form>
-
-                <div class="mt-6 pt-4 border-t border-slate-100 text-center">
-                    <p class="text-xs text-slate-400">
-                        *สำหรับทดสอบ: ระบบจะตรวจสอบสิทธิ์ Admin ตามรายชื่อที่กำหนด
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- STEP 2: Department Selection (Hidden) -->
-        <div id="select-screen" class="hidden fade-in pt-12">
-            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
-                <i class="fas fa-layer-group text-blue-600"></i> เลือกพื้นที่เข้าตรวจ (Scope)
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="dept-grid">
-                <!-- Cards will be injected by JS -->
-            </div>
-        </div>
-
-        <!-- STEP 3: Loading (Hidden) -->
-        <div id="loading-screen" class="hidden flex-col items-center justify-center min-h-[60vh] fade-in">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-6"></div>
-            <h3 class="text-xl font-semibold text-slate-700">กำลังประมวลผล...</h3>
-            <p class="text-slate-500 mt-2 text-sm">จำลองการดึงข้อมูลความเสี่ยงและสร้าง Checklist</p>
-        </div>
-
-        <!-- STEP 4: Audit Interface (Hidden) -->
-        <div id="audit-screen" class="hidden fade-in pt-6">
-            <!-- Header -->
-            <div class="bg-white p-6 rounded-2xl mb-8 shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl" id="dept-icon">🏭</div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800" id="audit-title">Audit Room</h2>
-                        <p class="text-slate-500 text-sm">Checklist generated from Risk Assessment</p>
-                    </div>
-                </div>
-                <button onclick="resetApp()" class="px-4 py-2 text-slate-500 hover:text-slate-800 text-sm font-medium bg-slate-50 rounded-lg hover:bg-slate-100 transition">
-                    <i class="fas fa-arrow-left mr-1"></i> เปลี่ยนแผนก
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Checklist Column -->
-                <div class="lg:col-span-2 space-y-6" id="checklist-container">
-                    <!-- Questions will be injected here -->
-                </div>
-
-                <!-- Copilot Column -->
-                <div class="lg:col-span-1">
-                    <div class="sticky top-6 bg-white rounded-xl shadow-lg border border-slate-200 p-4 h-[calc(100vh-100px)] flex flex-col">
-                        <div class="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
-                            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            <h3 class="font-bold text-slate-800">AI Assistant (Backend)</h3>
-                        </div>
-
-                        <!-- Chat History -->
-                        <div id="chat-history" class="flex-1 overflow-y-auto space-y-3 mb-4 pr-2 custom-scrollbar p-2 bg-slate-50 rounded">
-                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 text-sm text-blue-800 shadow-sm">
-                                <i class="fas fa-robot mr-1"></i> ระบบเชื่อมต่อ Backend จำลองเรียบร้อยครับ <br>
-                                คุณสามารถถามคำถามหรือขอคำแนะนำเกี่ยวกับมาตรฐานได้เลย
-                            </div>
-                        </div>
-
-                        <!-- Chat Input -->
-                        <div class="relative">
-                            <input type="text" id="chat-input"
-                                placeholder="ถาม AI... (เช่น 'เจอถังสีวางอยู่ ผิดไหม?')"
-                                class="w-full border border-slate-300 rounded-full py-2 px-4 pr-10 text-sm focus:outline-none focus:border-blue-500 shadow-sm"
-                                onkeypress="handleChatEnter(event)">
-                            <button onclick="sendMessage()" class="absolute right-2 top-2 text-blue-600 hover:text-blue-800 p-1">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+<div id="app" class="hidden min-h-screen">
+  <aside id="sidebar" class="w-72 bg-slate-950 text-slate-300 min-h-screen fixed left-0 top-0 flex flex-col">
+    <div class="p-6 border-b border-slate-800"><div class="text-white text-xl font-bold"><i class="fa-solid fa-shield-halved text-blue-400 mr-2"></i>AI-IAMS</div><div class="text-xs text-slate-500 mt-1">Consolidated Enterprise v1.0</div></div>
+    <nav class="p-4 space-y-2 flex-1" id="nav"></nav>
+    <div class="p-4 border-t border-slate-800">
+      <div id="userName" class="text-white font-semibold truncate"></div><div id="userRole" class="text-xs text-blue-400"></div>
+      <button id="logoutBtn" class="mt-4 w-full rounded-lg py-2 bg-red-500/10 text-red-300 hover:bg-red-600 hover:text-white"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Logout</button>
     </div>
+  </aside>
+  <div class="lg:ml-72 min-h-screen">
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b px-4 md:px-8 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3"><button id="menuBtn" class="lg:hidden text-xl"><i class="fa-solid fa-bars"></i></button><div><h2 id="pageTitle" class="font-bold text-xl">Dashboard</h2><p id="pageSubtitle" class="text-xs text-slate-500">Internal Audit Management</p></div></div>
+      <div class="flex items-center gap-2"><span id="onlineBadge" class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">Online</span><button onclick="window.print()" class="no-print border rounded-lg px-3 py-2 text-sm"><i class="fa-solid fa-print"></i></button></div>
+    </header>
+    <main id="content" class="p-4 md:p-8"></main>
+  </div>
+</div>
 
-    <!-- MAIN JAVASCRIPT LOGIC -->
-    <script>
-        // --- MOCK DATA (ใช้แทน AI ชั่วคราว) ---
-        let CURRENT_DEPT = "";
+<div id="modal" class="hidden fixed inset-0 z-[80] modal-backdrop p-4 overflow-y-auto"><div id="modalBody" class="max-w-5xl mx-auto my-6 bg-white rounded-2xl shadow-2xl"></div></div>
+<input id="fileInput" type="file" accept="image/*,.pdf" class="hidden">
 
-        const DEPARTMENT_CONTEXT = {
-            "Maintenance": {
-                icon: "🔧",
-                riskLevel: "High",
-                color: "orange",
-                lastIssues: ["PM Record ไม่ตรงตามแผน", "พบน้ำมันรั่วไหล"],
-                kpiStatus: "Downtime เพิ่ม 5%",
-                standards: ["ISO 45001", "ISO 14001", "ISO 9001"],
-                // Mock Checklist สำหรับ Demo
-                mockChecklist: [
-                    { id: 1, question: "ตรวจสอบบันทึกการซ่อมบำรุง (PM) เครื่อง Mixer #3 ว่าตรงตามแผนหรือไม่?", requirement: "ISO 9001 Cl. 7.1.3", risk: "High", guidance: "ขอดูใบ Job Order เดือนล่าสุด เทียบกับ Master Plan" },
-                    { id: 2, question: "พื้นที่เก็บสารเคมี/น้ำมันหล่อลื่น มีถาดรอง (Secondary Containment) หรือไม่?", requirement: "ISO 14001 Cl. 8.1", risk: "High", guidance: "ตรวจสอบสภาพถาดรอง ต้องไม่มีรอยแตก และไม่มีคราบน้ำมันขัง" },
-                    { id: 3, question: "พนักงานสวมใส่อุปกรณ์ PPE ครบถ้วนขณะปฏิบัติงานซ่อมหรือไม่?", requirement: "ISO 45001 Cl. 8.1.2", risk: "Medium", guidance: "สังเกตการปฏิบัติงานจริง หน้างาน" }
-                ]
-            },
-            "Production-Food": {
-                icon: "🏭",
-                riskLevel: "Critical",
-                color: "red",
-                lastIssues: ["พนักงานไม่สวมหมวกคลุมผม", "เอกสาร CCP ย้อนหลัง"],
-                kpiStatus: "Customer Complaint 2 เคส",
-                standards: ["GMP", "HACCP", "Halal", "ISO 22000"],
-                mockChecklist: [
-                    { id: 1, question: "จุด CCP Metal Detector มีการทดสอบ Test Piece ครบทุกชั่วโมงหรือไม่?", requirement: "HACCP / ISO 22000", risk: "Critical", guidance: "สุ่มตรวจบันทึกย้อนหลัง 24 ชม. และสังเกตการทำจริง" },
-                    { id: 2, question: "พนักงานล้างมือและสวมหมวกคลุมผมถูกต้องก่อนเข้าไลน์ผลิตหรือไม่?", requirement: "GMP / Hygiene", risk: "High", guidance: "สังเกตจุดล้างมือก่อนเข้าไลน์" }
-                ]
-            },
-            "Warehouse": {
-                icon: "📦",
-                riskLevel: "Medium",
-                color: "green",
-                lastIssues: ["ไม้พาเลทปนกัน (FSC/Non-FSC)"],
-                kpiStatus: "Stock Accuracy 98%",
-                standards: ["FSC", "PEFC", "ISO 9001"],
-                mockChecklist: [
-                    { id: 1, question: "มีการแยกป้ายชี้บ่งชัดเจนระหว่างไม้ FSC และ Non-FSC หรือไม่?", requirement: "FSC-STD-40-004", risk: "Medium", guidance: "เดินสำรวจพื้นที่จัดเก็บไม้พาเลท" },
-                    { id: 2, question: "สุ่มนับสต็อกจริงเทียบกับในระบบ SAP ว่าตรงกันหรือไม่?", requirement: "ISO 9001 Cl. 8.5.1", risk: "Medium", guidance: "สุ่ม 3 รายการสินค้า" }
-                ]
-            }
-        };
+<script>
+'use strict';
+const firebaseConfig={
+  apiKey:"AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+  authDomain:"lab-trc-management-system.firebaseapp.com",
+  projectId:"lab-trc-management-system",
+  storageBucket:"lab-trc-management-system.appspot.com",
+  messagingSenderId:"43919979160",
+  appId:"1:43919979160:web:779cb9de75cd4b9fce56ed"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(), db=firebase.firestore(), functions=firebase.app().functions('asia-southeast1'), storage=firebase.storage();
+try{db.settings({experimentalForceLongPolling:true,merge:true})}catch(e){}
+const SV=firebase.firestore.FieldValue;
+const STANDARDS=['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements'];
+const DEPARTMENTS=['Top Management','Production','Quality Assurance','Quality Control Laboratory','Warehouse','Maintenance','Engineering','HR','Purchasing','Sales & Customer Service','Environment','Safety'];
+const NAV=[['dashboard','Dashboard','fa-chart-line'],['program','Annual Programme','fa-calendar-check'],['planner','Audit Planning & AI','fa-wand-magic-sparkles'],['execution','Audit Execution','fa-clipboard-check'],['findings','Findings Review','fa-triangle-exclamation'],['capa','CAPA Tracking','fa-list-check'],['mrm','MRM Dashboard','fa-chart-pie'],['admin','Master Data & Users','fa-users-gear']];
+const state={user:null,profile:null,view:'dashboard',audits:[],findings:[],selectedAudit:null,generated:[],unsubscribe:[]};
+const hasRole=(...r)=>state.profile&&r.includes(state.profile.role);
+const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const fmtDate=v=>{if(!v)return'-';const d=v.toDate?v.toDate():new Date(v);return isNaN(d)?'-':d.toLocaleDateString('th-TH')};
+const nowISO=()=>new Date().toISOString().slice(0,10);
+function toast(msg,type='ok'){const c=type==='error'?'bg-red-600':type==='warn'?'bg-amber-500':'bg-slate-900';const e=document.createElement('div');e.className=`toast ${c} text-white px-4 py-3 rounded-xl shadow-xl max-w-sm`;e.textContent=msg;document.getElementById('toastArea').appendChild(e);setTimeout(()=>e.remove(),4500)}
+function loading(on,msg='Processing...'){let e=document.getElementById('globalLoading');if(on){if(!e){e=document.createElement('div');e.id='globalLoading';e.className='fixed inset-0 z-[120] bg-slate-950/40 flex items-center justify-center';e.innerHTML=`<div class="bg-white rounded-xl p-5 shadow-xl flex gap-3 items-center"><div class="spinner"></div><span id="loadingText"></span></div>`;document.body.appendChild(e)}e.querySelector('#loadingText').textContent=msg}else e?.remove()}
+function closeModal(){document.getElementById('modal').classList.add('hidden');document.getElementById('modalBody').innerHTML=''}
+function showModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modal').classList.remove('hidden')}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+window.addEventListener('online',updateNetwork);window.addEventListener('offline',updateNetwork);function updateNetwork(){const b=document.getElementById('onlineBadge');b.textContent=navigator.onLine?'Online':'Offline';b.className=`text-xs px-3 py-1 rounded-full ${navigator.onLine?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}
 
-        // --- AUTH & NAVIGATION ---
+async function auditEvent(action,entityType,entityId,details={}){try{await db.collection('audit_events').add({action,entityType,entityId,details,userId:state.user.uid,userEmail:state.user.email,createdAt:SV.serverTimestamp()})}catch(e){console.warn('Audit event',e)}}
+async function loadProfile(user){const ref=db.collection('users').doc(user.uid);const s=await ref.get();if(s.exists)return s.data();const p={email:user.email,displayName:user.displayName||user.email,role:'Auditor',active:true,createdAt:SV.serverTimestamp()};await ref.set(p,{merge:true});return p}
+function setupLiveData(){state.unsubscribe.forEach(f=>f());state.unsubscribe=[];state.unsubscribe.push(db.collection('audit_campaigns').orderBy('createdAt','desc').limit(200).onSnapshot(s=>{state.audits=s.docs.map(d=>({id:d.id,...d.data()}));render()}));state.unsubscribe.push(db.collection('findings').orderBy('createdAt','desc').limit(500).onSnapshot(s=>{state.findings=s.docs.map(d=>({id:d.id,...d.data()}));render()}))}
+auth.onAuthStateChanged(async user=>{if(!user){state.user=null;document.getElementById('app').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');return}try{state.user=user;state.profile=await loadProfile(user);if(state.profile.active===false)throw new Error('Account disabled');document.getElementById('loginScreen').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('userName').textContent=state.profile.displayName||user.email;document.getElementById('userRole').textContent=state.profile.role||'Auditor';buildNav();setupLiveData();render()}catch(e){toast(e.message,'error');await auth.signOut()}});
+document.getElementById('loginForm').addEventListener('submit',async e=>{e.preventDefault();loading(true,'Authenticating...');try{await auth.signInWithEmailAndPassword(loginEmail.value,loginPassword.value)}catch(err){toast(err.message,'error')}finally{loading(false)}});
+document.getElementById('logoutBtn').onclick=()=>auth.signOut();document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
+function buildNav(){nav.innerHTML=NAV.filter(n=>n[0]!=='admin'||hasRole('Admin')).map(n=>`<button data-view="${n[0]}" class="nav-btn w-full text-left p-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 ${state.view===n[0]?'nav-active':''}"><i class="fa-solid ${n[2]} w-5"></i>${n[1]}</button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedAudit=null;buildNav();render();sidebar.classList.remove('open')})}
+function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view)||NAV[0];pageTitle.textContent=info[1];content.innerHTML=({dashboard:renderDashboard,program:renderProgram,planner:renderPlanner,execution:renderExecution,findings:renderFindings,capa:renderCAPA,mrm:renderMRM,admin:renderAdmin}[state.view]||renderDashboard)()}
+function kpi(label,value,icon,color){return `<div class="card p-5"><div class="flex justify-between"><div><p class="text-sm text-slate-500">${label}</p><p class="text-3xl font-bold mt-2">${value}</p></div><div class="w-11 h-11 rounded-xl ${color} flex items-center justify-center"><i class="fa-solid ${icon}"></i></div></div></div>`}
+function renderDashboard(){const open=state.findings.filter(f=>!['CLOSED','VOID'].includes(f.status)).length,over=state.findings.filter(f=>f.status!=='CLOSED'&&f.targetDate&&f.targetDate<nowISO()).length,closed=state.findings.filter(f=>f.status==='CLOSED').length;return `<div class="grid md:grid-cols-4 gap-4">${kpi('Total Audits',state.audits.length,'fa-clipboard-check','bg-blue-100 text-blue-700')}${kpi('Open Findings',open,'fa-triangle-exclamation','bg-amber-100 text-amber-700')}${kpi('Overdue CAPA',over,'fa-clock','bg-red-100 text-red-700')}${kpi('Closed Findings',closed,'fa-circle-check','bg-green-100 text-green-700')}</div><div class="grid lg:grid-cols-2 gap-6 mt-6"><section class="card p-5"><h3 class="font-bold mb-4">Recent Audits</h3>${state.audits.slice(0,6).map(a=>`<div class="border-b last:border-0 py-3 flex justify-between gap-4"><div><b>${esc(a.meta?.title||a.title||a.id)}</b><p class="text-xs text-slate-500">${esc(a.meta?.targetDepartment||a.department)} · ${esc((a.meta?.standards||a.standards||[]).join(', '))}</p></div><span class="text-xs bg-slate-100 rounded-full px-2 py-1 h-fit">${esc(a.meta?.status||a.status)}</span></div>`).join('')||'<p class="text-slate-400">No audit data</p>'}</section><section class="card p-5"><h3 class="font-bold mb-4">Management Attention</h3>${state.findings.filter(f=>f.status!=='CLOSED').slice(0,6).map(f=>`<div class="border-b last:border-0 py-3"><div class="flex justify-between"><b>${esc(f.findingNo||f.id)}</b><span class="text-xs ${f.classification==='Major NC'?'text-red-600':'text-amber-600'}">${esc(f.classification)}</span></div><p class="text-sm text-slate-600 line-clamp-2">${esc(f.condition||f.description)}</p></div>`).join('')||'<p class="text-slate-400">No open findings</p>'}</section></div>`}
+function renderProgram(){return `<div class="flex justify-between items-center mb-5"><div><h3 class="font-bold text-lg">Annual Audit Programme</h3><p class="text-sm text-slate-500">Risk-based schedule and assignment</p></div><button onclick="openProgramForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg"><i class="fa-solid fa-plus mr-2"></i>New Audit</button></div>${auditTable(state.audits)}`}
+  function auditTable(data){
+    return `<div class="card overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-3 text-left">Audit</th><th class="p-3 text-left">Department</th><th class="p-3 text-center">Date</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Progress</th><th class="p-3"></th></tr></thead><tbody>
+    ${data.map(a=>{
+      const q=a.checklist||[],done=q.filter(x=>x.result&&x.result!=='NOT_EVALUATED').length,p=q.length?Math.round(done/q.length*100):0;
 
-        function submitLogin() {
-            const email = document.getElementById('email-input').value;
-            const password = document.getElementById('password-input').value;
-            window.handleLogin(email, password);
-        }
+      // โค้ดสร้างปุ่มลบ (แสดงเฉพาะ Admin)
+      const deleteBtn = hasRole('Admin') ? `<button onclick="deleteAudit('${a.id}')" class="text-red-500 hover:text-red-700 ml-3" title="ลบข้อมูล (ทดสอบ)"><i class="fa-solid fa-trash"></i></button>` : '';
 
-        // Called by Firebase Listener
-        window.showLoginScreen = () => {
-            document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('select-screen').classList.add('hidden');
-            document.getElementById('user-badge').classList.add('hidden');
-            document.getElementById('audit-screen').classList.add('hidden');
-        };
+      return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-3"><b>${esc(a.meta?.title||a.title||a.id)}</b><div class="text-xs text-slate-400">${esc(a.auditId||a.id)}</div></td><td class="p-3">${esc(a.meta?.targetDepartment||a.department)}</td><td class="p-3 text-center">${esc(a.meta?.scheduledDate||a.scheduledDate||'-')}</td><td class="p-3 text-center"><span class="bg-slate-100 rounded-full px-2 py-1 text-xs">${esc(a.meta?.status||a.status||'PLANNED')}</span></td><td class="p-3 text-center">${p}%</td><td class="p-3 text-right whitespace-nowrap"><button onclick="openAudit('${a.id}')" class="text-blue-600 hover:underline font-semibold">Open</button> ${deleteBtn}</td></tr>`
+    }).join('')||'<tr><td class="p-8 text-center text-slate-400" colspan="6">No audits found</td></tr>'}</tbody></table></div>`
+  }
+function openProgramForm(){showModal(`<form id="programForm" class="p-6 space-y-4"><div class="flex justify-between"><h3 class="font-bold text-xl">Create Audit Campaign</h3><button type="button" onclick="closeModal()">✕</button></div><div class="grid md:grid-cols-2 gap-4"><label>Audit ID<input name="auditId" required value="AUD-${new Date().getFullYear()}-${String(state.audits.length+1).padStart(3,'0')}" class="w-full border rounded-lg p-2"></label><label>Title<input name="title" required class="w-full border rounded-lg p-2"></label><label>Department<select name="department" class="w-full border rounded-lg p-2">${DEPARTMENTS.map(x=>`<option>${x}</option>`)}</select></label><label>Scheduled Date<input name="date" type="date" required class="w-full border rounded-lg p-2"></label><label>Lead Auditor<input name="lead" value="${esc(state.profile.displayName||state.user.email)}" class="w-full border rounded-lg p-2"></label><label>Auditee / Process Owner<input name="auditee" class="w-full border rounded-lg p-2"></label></div><label class="block">Objective<textarea name="objective" class="w-full border rounded-lg p-2"></textarea></label><button class="bg-blue-600 text-white rounded-lg px-5 py-2">Create</button></form>`);programForm.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('auditId');loading(true,'Creating audit...');try{await db.collection('audit_campaigns').doc(id).set({auditId:id,meta:{title:f.get('title'),targetDepartment:f.get('department'),scheduledDate:f.get('date'),leadAuditor:f.get('lead'),auditee:f.get('auditee'),objective:f.get('objective'),standards:[],status:'PLANNED'},checklist:[],summary:{totalCheckpoints:0,conformingCount:0,majorNcCount:0,minorNcCount:0,observationCount:0},createdBy:state.user.email,createdAt:SV.serverTimestamp(),updatedAt:SV.serverTimestamp()});await auditEvent('CREATE','AUDIT',id);closeModal();toast('Audit campaign created')}catch(x){toast(x.message,'error')}finally{loading(false)}}}
+function renderPlanner(){return `<div class="grid lg:grid-cols-3 gap-6"><form id="plannerForm" class="card p-5 space-y-4"><h3 class="font-bold text-lg">Audit Scope & Risk Context</h3><label class="block text-sm">Audit Campaign<select id="planAudit" class="w-full border rounded-lg p-2">${state.audits.map(a=>`<option value="${a.id}">${esc(a.meta?.title||a.id)}</option>`)}</select></label><label class="block text-sm">Department<select id="planDept" class="w-full border rounded-lg p-2">${DEPARTMENTS.map(x=>`<option>${x}</option>`)}</select></label><div><span class="text-sm font-semibold">Applicable Standards</span><div class="mt-2 grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">${STANDARDS.map(s=>`<label class="flex gap-2 text-sm"><input type="checkbox" name="std" value="${s}">${s}</label>`).join('')}</div></div><label class="block text-sm">Key risks / KPI / complaints<textarea id="planRisk" rows="4" class="w-full border rounded-lg p-2" placeholder="Enter current risks, previous issues and performance context"></textarea></label><label class="flex gap-2 text-sm"><input id="includeHistory" type="checkbox" checked>Include previous NC follow-up</label><button class="w-full bg-indigo-600 text-white rounded-lg py-3 font-bold"><i class="fa-solid fa-robot mr-2"></i>Generate Integrated Checklist</button></form><section class="lg:col-span-2 card p-5"><div class="flex justify-between items-center"><h3 class="font-bold text-lg">Preview & Approval</h3><button id="saveChecklistBtn" onclick="saveGeneratedChecklist()" class="hidden bg-green-600 text-white px-4 py-2 rounded-lg">Approve & Save</button></div><div id="generatedList" class="mt-4 space-y-3">${state.generated.length?generatedHTML():'<div class="py-16 text-center text-slate-400">Configure scope and generate a checklist.</div>'}</div></section></div>`}
+function generatedHTML(){setTimeout(()=>document.getElementById('saveChecklistBtn')?.classList.remove('hidden'),0);return state.generated.map((q,i)=>`<div class="border rounded-xl p-4"><div class="flex gap-2 text-xs mb-2"><span class="bg-blue-50 text-blue-700 px-2 py-1 rounded">${esc(q.clause)}</span><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">${esc(q.standardsCovered||q.standard)}</span><span class="bg-amber-50 text-amber-700 px-2 py-1 rounded">${esc(q.riskFocus||'Risk-based')}</span></div><textarea data-i="${i}" class="gen-question w-full border-0 font-semibold resize-y">${esc(q.question)}</textarea><p class="text-sm text-slate-500 mt-2"><b>Evidence:</b> ${esc(q.expectedEvidence||q.requirement)}</p></div>`).join('')}
+document.addEventListener('submit',async e=>{if(e.target.id!=='plannerForm')return;e.preventDefault();const standards=[...document.querySelectorAll('[name=std]:checked')].map(x=>x.value);if(!standards.length)return toast('Select at least one standard','warn');loading(true,'AI is generating a risk-based checklist...');try{const fn=functions.httpsCallable('generateAuditChecklist');const r=await fn({auditId:planAudit.value,department:planDept.value,standards,performanceContext:planRisk.value,includeHistory:includeHistory.checked});state.generated=r.data.data||r.data.checklist||[];render()}catch(x){toast(x.message,'error')}finally{loading(false)}});
+async function saveGeneratedChecklist(){const auditId=document.getElementById('planAudit')?.value||state.audits[0]?.id;if(!auditId)return;document.querySelectorAll('.gen-question').forEach(x=>state.generated[+x.dataset.i].question=x.value);loading(true,'Saving approved checklist...');try{const fn=functions.httpsCallable('saveAuditPlan');await fn({auditId,department:document.getElementById('planDept')?.value,standards:[...document.querySelectorAll('[name=std]:checked')].map(x=>x.value),questions:state.generated});state.generated=[];toast('Checklist approved and saved');state.view='execution';buildNav();render()}catch(x){toast(x.message,'error')}finally{loading(false)}}
+function renderExecution(){if(state.selectedAudit)return renderAuditRoom();return `<div class="mb-5"><h3 class="font-bold text-lg">Audit Execution</h3><p class="text-sm text-slate-500">Open a campaign to record objective evidence and results.</p></div>${auditTable(state.audits)}`}
+function openAudit(id){state.selectedAudit=state.audits.find(a=>a.id===id);state.view='execution';buildNav();render()}
+function renderAuditRoom(){const a=state.selectedAudit,q=a.checklist||[];return `<div class="flex justify-between mb-5"><div><button onclick="state.selectedAudit=null;render()" class="text-blue-600 text-sm">← Back</button><h3 class="text-xl font-bold mt-2">${esc(a.meta?.title||a.id)}</h3><p class="text-sm text-slate-500">${esc(a.meta?.targetDepartment)} · ${esc((a.meta?.standards||[]).join(', '))}</p></div><button onclick="finalizeAudit('${a.id}')" class="h-fit bg-slate-900 text-white px-4 py-2 rounded-lg">Finalize Audit</button></div><div class="space-y-4">${q.map((x,i)=>`<article class="card p-5"><div class="flex flex-wrap justify-between gap-2"><div><span class="text-xs bg-slate-100 px-2 py-1 rounded">${esc(x.itemId||`CHK-${i+1}`)}</span><span class="text-xs text-blue-600 ml-2">${esc(x.clause)}</span></div><span class="status-${esc(x.result||'NOT_EVALUATED')} text-xs px-3 py-1 rounded-full">${esc(x.result||'NOT_EVALUATED')}</span></div><h4 class="font-semibold mt-3">${esc(x.question)}</h4><p class="text-sm text-slate-500 mt-2"><b>Expected evidence:</b> ${esc(x.expectedEvidence||x.requirement)}</p><div class="grid md:grid-cols-2 gap-3 mt-4"><label class="text-sm">Objective Evidence<textarea id="evi-${i}" rows="3" class="w-full border rounded-lg p-2">${esc(x.evidence)}</textarea></label><div><label class="text-sm">Result<select id="res-${i}" class="w-full border rounded-lg p-2"><option value="NOT_EVALUATED">Not Evaluated</option>${['CONFORMING','NC','OBSERVATION','NA'].map(v=>`<option ${x.result===v?'selected':''}>${v}</option>`)}</select></label><label class="text-sm block mt-2">N/A reason / comment<input id="com-${i}" value="${esc(x.comment)}" class="w-full border rounded-lg p-2"></label></div></div><div class="flex flex-wrap gap-2 mt-3"><button onclick="saveCheckpoint('${a.id}',${i})" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Save checkpoint</button><button onclick="attachEvidence('${a.id}',${i})" class="border px-4 py-2 rounded-lg"><i class="fa-solid fa-paperclip mr-2"></i>Attach evidence</button>${x.attachmentUrl?`<a class="text-blue-600 py-2" target="_blank" href="${esc(x.attachmentUrl)}">View attachment</a>`:''}</div></article>`).join('')||'<div class="card p-10 text-center text-slate-400">No checklist. Generate and approve a checklist first.</div>'}</div>`}
+async function saveCheckpoint(id,i){const a=state.audits.find(x=>x.id===id),q=[...(a.checklist||[])];q[i]={...q[i],evidence:document.getElementById(`evi-${i}`).value,result:document.getElementById(`res-${i}`).value,comment:document.getElementById(`com-${i}`).value,updatedBy:state.user.email,updatedAt:new Date().toISOString()};loading(true,'Saving checkpoint...');try{const fn=functions.httpsCallable('updateAuditCheckpoint');await fn({auditId:id,index:i,checkpoint:q[i]});if(q[i].result==='NC'||q[i].result==='OBSERVATION')await openFindingDraft(id,i,q[i]);toast('Checkpoint saved')}catch(x){toast(x.message,'error')}finally{loading(false)}}
+async function openFindingDraft(auditId,index,q){const exists=state.findings.find(f=>f.auditId===auditId&&f.checkpointIndex===index&&f.status!=='VOID');if(exists)return;const a=state.audits.find(x=>x.id===auditId);await db.collection('findings').add({auditId,checkpointIndex:index,department:a.meta?.targetDepartment,clause:q.clause,criteria:q.expectedEvidence||q.requirement,condition:q.evidence,objectiveEvidence:q.evidence,classification:q.result==='NC'?'Unclassified NC':'Observation',status:'DRAFT',createdBy:state.user.email,createdAt:SV.serverTimestamp(),updatedAt:SV.serverTimestamp()})}
+function attachEvidence(id,i){const input=document.getElementById('fileInput');input.value='';input.onchange=async()=>{if(!input.files[0])return;loading(true,'Uploading evidence...');try{const f=input.files[0],path=`audit-evidence/${id}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`,ref=storage.ref(path);await ref.put(f,{customMetadata:{uploadedBy:state.user.email,auditId:id}});const url=await ref.getDownloadURL();const fn=functions.httpsCallable('updateAuditCheckpoint');await fn({auditId:id,index:i,checkpoint:{...(state.selectedAudit.checklist[i]),attachmentUrl:url,attachmentPath:path}});toast('Evidence uploaded')}catch(x){toast(x.message,'error')}finally{loading(false)}};input.click()}
+async function finalizeAudit(id){if(!confirm('Finalize this audit and lock the execution record?'))return;loading(true,'Finalizing audit and metrics...');try{const fn=functions.httpsCallable('finalizeAuditCampaign');await fn({auditId:id});await auditEvent('FINALIZE','AUDIT',id);toast('Audit finalized');state.selectedAudit=null}catch(x){toast(x.message,'error')}finally{loading(false)}}
+  function renderFindings(){
+    return `<div class="card overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-3 text-left">Finding</th><th class="p-3 text-left">Department / Clause</th><th class="p-3 text-center">Classification</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Due</th><th class="p-3"></th></tr></thead><tbody>
+    ${state.findings.map(f=>{
+      // โค้ดสร้างปุ่มลบ (แสดงเฉพาะ Admin)
+      const deleteBtn = hasRole('Admin') ? `<button onclick="deleteFinding('${f.id}')" class="text-red-500 hover:text-red-700 ml-3" title="ลบข้อมูล (ทดสอบ)"><i class="fa-solid fa-trash"></i></button>` : '';
 
-        window.updateUIForUser = (user, isAdmin) => {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('select-screen').classList.remove('hidden');
+      return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-3 max-w-md"><b>${esc(f.findingNo||f.id.slice(0,8))}</b><p class="text-xs text-slate-500 line-clamp-2">${esc(f.condition||f.description)}</p></td><td class="p-3">${esc(f.department)}<div class="text-xs text-slate-400">${esc(f.clause)}</div></td><td class="p-3 text-center"><span class="${f.classification==='Major NC'?'text-red-600 bg-red-50':f.classification==='Minor NC'?'text-amber-600 bg-amber-50':'text-blue-600 bg-blue-50'} px-2 py-1 rounded text-xs">${esc(f.classification)}</span></td><td class="p-3 text-center">${esc(f.status)}</td><td class="p-3 text-center">${esc(f.targetDate||'-')}</td><td class="p-3 text-right whitespace-nowrap"><button onclick="editFinding('${f.id}')" class="text-blue-600 hover:underline font-semibold">Review</button> ${deleteBtn}</td></tr>`
+    }).join('')||'<tr><td colspan="6" class="p-8 text-center text-slate-400">No findings</td></tr>'}</tbody></table></div>`
+  }
+  function editFinding(id) {
+    const f = state.findings.find(x => x.id === id);
+    showModal(`
+      <form id="findingForm" class="p-6 space-y-4 relative">
+        <input type="hidden" name="id" value="${id}">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-xl">Finding Review & CAPA</h3>
+          <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-800 text-2xl">✕</button>
+        </div>
 
-            // Show User Badge
-            const userBadge = document.getElementById('user-badge');
-            userBadge.classList.remove('hidden');
-            document.getElementById('user-email').innerText = user.email;
-            document.getElementById('user-role').innerText = isAdmin ? "Lead Auditor (Admin)" : "Internal Auditor";
-            document.getElementById('user-role').className = isAdmin ? "text-[10px] text-blue-600 font-bold" : "text-[10px] text-slate-500";
+        <!-- ปุ่มสำหรับเรียก AI -->
+        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex justify-between items-center">
+          <div>
+            <h4 class="font-semibold text-indigo-800 text-sm">AI CAPA Advisor</h4>
+            <p class="text-xs text-indigo-600 mt-1">ให้ AI ช่วยวิเคราะห์สาเหตุ (Root Cause) และเสนอแนวทางแก้ไขจากหลักฐานที่พบ</p>
+          </div>
+          <button type="button" onclick="analyzeFindingWithAI('${id}')" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition">
+            <i class="fa-solid fa-robot mr-2"></i> วิเคราะห์ด้วย AI
+          </button>
+        </div>
 
-            renderDeptSelection();
-        };
+        <div class="grid md:grid-cols-2 gap-4">
+          <label>Classification
+            <select name="classification" id="finding-classification" class="w-full border p-2 rounded-lg">
+              ${['Unclassified NC','Major NC','Minor NC','Observation','Good Practice'].map(x => `<option ${f.classification === x ? 'selected' : ''}>${x}</option>`)}
+            </select>
+          </label>
+          <label>Status
+            <select name="status" class="w-full border p-2 rounded-lg">
+              ${['DRAFT','UNDER_REVIEW','ISSUED','CAPA_SUBMITTED','VERIFICATION','CLOSED','VOID'].map(x => `<option ${f.status === x ? 'selected' : ''}>${x}</option>`)}
+            </select>
+          </label>
+        </div>
 
-        function resetApp() {
-            document.getElementById('audit-screen').classList.add('hidden');
-            document.getElementById('select-screen').classList.remove('hidden');
-            document.getElementById('checklist-container').innerHTML = '';
-        }
+        ${['criteria','condition','objectiveEvidence','riskImpact'].map(k => `
+          <label class="block text-sm font-medium text-slate-700">${k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+            <textarea name="${k}" id="finding-${k}" rows="2" class="w-full border p-2 rounded-lg mt-1">${esc(f[k])}</textarea>
+          </label>
+        `).join('')}
 
-        // --- APP LOGIC ---
+        <hr class="my-4 border-slate-200">
+        <h4 class="font-semibold text-slate-800">Corrective and Preventive Action (CAPA)</h4>
 
-        function renderDeptSelection() {
-            const container = document.getElementById('dept-grid');
-            container.innerHTML = '';
+        ${['correction','rootCause','correctiveAction','effectivenessCriteria'].map(k => `
+          <label class="block text-sm font-medium text-slate-700">${k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+            <textarea name="${k}" id="finding-${k}" rows="2" class="w-full border p-2 rounded-lg mt-1">${esc(f[k])}</textarea>
+          </label>
+        `).join('')}
 
-            for (const [name, info] of Object.entries(DEPARTMENT_CONTEXT)) {
-                const riskColorClass = info.riskLevel === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' : 
-                                     info.riskLevel === 'High' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-green-50 text-green-700 border-green-200';
+        <div class="grid md:grid-cols-3 gap-4">
+          <label class="text-sm">Responsible Person
+            <input name="responsiblePerson" value="${esc(f.responsiblePerson)}" class="w-full border p-2 rounded-lg mt-1">
+          </label>
+          <label class="text-sm">Target Date
+            <input name="targetDate" type="date" value="${esc(f.targetDate)}" class="w-full border p-2 rounded-lg mt-1">
+          </label>
+          <label class="text-sm">Verification Date
+            <input name="verificationDate" type="date" value="${esc(f.verificationDate)}" class="w-full border p-2 rounded-lg mt-1">
+          </label>
+        </div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-bold mt-4 shadow-md transition">
+          Save Review
+        </button>
+      </form>
+    `);
 
-                const card = `
-                    <div onclick="selectDept('${name}')" class="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-lg transition cursor-pointer overflow-hidden group relative">
-                        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition">
-                            <span class="text-6xl">${info.icon}</span>
-                        </div>
-                        <div class="p-6 relative z-10">
-                            <div class="flex justify-between items-start mb-4">
-                                <h3 class="text-xl font-bold text-slate-800">${name}</h3>
-                            </div>
-                             <span class="text-xs px-2 py-1 rounded-full border ${riskColorClass} font-semibold mb-4 inline-block">${info.riskLevel} Risk</span>
+    document.getElementById('findingForm').onsubmit = async e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      delete data.id;
+      data.updatedAt = SV.serverTimestamp();
+      data.updatedBy = state.user.email;
+      loading(true, 'Saving finding...');
+      try {
+        await db.collection('findings').doc(id).update(data);
+        await auditEvent('UPDATE', 'FINDING', id, { status: data.status, classification: data.classification });
+        closeModal();
+        toast('Finding updated successfully', 'ok');
+      } catch (x) {
+        toast(x.message, 'error');
+      } finally {
+        loading(false);
+      }
+    };
+  }
 
-                            <div class="text-sm text-slate-600 mb-4 space-y-2">
-                                <p class="flex items-center gap-2"><i class="fas fa-exclamation-circle text-slate-400"></i> ${info.lastIssues[0]}</p>
-                            </div>
-                            <div class="flex flex-wrap gap-2 mt-4">
-                                ${info.standards.slice(0,3).map(s => `<span class="text-[10px] uppercase bg-slate-100 px-2 py-1 rounded text-slate-500 font-medium">${s}</span>`).join('')}
-                            </div>
-                            <div class="mt-6 pt-4 border-t border-slate-100 text-right">
-                                <span class="text-blue-600 font-medium text-sm group-hover:underline flex items-center justify-end gap-1">Start Audit <i class="fas fa-chevron-right text-xs"></i></span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += card;
-            }
-        }
+  // เพิ่มฟังก์ชันใหม่นี้ต่อท้ายฟังก์ชัน editFinding สำหรับเรียก AI
+  async function analyzeFindingWithAI(id) {
+    const f = state.findings.find(x => x.id === id);
+    const condition = document.getElementById('finding-condition').value || f.condition;
+    const criteria = document.getElementById('finding-criteria').value || f.criteria;
 
-        async function selectDept(deptName) {
-            CURRENT_DEPT = deptName;
-            document.getElementById('select-screen').classList.add('hidden');
-            document.getElementById('loading-screen').classList.remove('hidden');
-            document.getElementById('loading-screen').style.display = 'flex';
+    if (!condition) {
+      return toast('กรุณาระบุ Condition (สิ่งที่พบ) ก่อนให้ AI วิเคราะห์', 'warn');
+    }
 
-            // Simulate AI Delay
-            await new Promise(r => setTimeout(r, 1500));
+    loading(true, '🤖 AI กำลังวิเคราะห์รากเหง้าของปัญหาและสร้าง CAPA...');
+    try {
+      const fn = functions.httpsCallable('analyzeFindingAndCAPA');
+      const response = await fn({
+        findingId: id,
+        department: f.department || 'Unknown',
+        clause: f.clause || 'Unknown',
+        condition: condition,
+        criteria: criteria
+      });
 
-            const checklistData = DEPARTMENT_CONTEXT[deptName].mockChecklist;
-            renderChecklist(checklistData);
+      const aiResult = response.data.analysis;
 
-            document.getElementById('loading-screen').classList.add('hidden');
-            document.getElementById('loading-screen').style.display = '';
-            document.getElementById('audit-screen').classList.remove('hidden');
-            document.getElementById('audit-title').innerText = `${deptName} Audit`;
-            document.getElementById('dept-icon').innerText = DEPARTMENT_CONTEXT[deptName].icon;
-        }
+      // นำผลลัพธ์จาก AI มาเติมลงในช่องต่างๆ อัตโนมัติ
+      if (aiResult.proposedRootCause) {
+        document.getElementById('finding-rootCause').value = aiResult.proposedRootCause;
+      }
+      if (aiResult.correction) {
+        document.getElementById('finding-correction').value = aiResult.correction;
+      }
+      if (aiResult.correctiveAction) {
+        document.getElementById('finding-correctiveAction').value = aiResult.correctiveAction;
+      }
+      if (aiResult.effectivenessCriteria) {
+        document.getElementById('finding-effectivenessCriteria').value = aiResult.effectivenessCriteria;
+      }
 
-        function renderChecklist(data) {
-            const container = document.getElementById('checklist-container');
-            container.innerHTML = '';
+      toast('AI เติมข้อมูลวิเคราะห์ให้เรียบร้อยแล้ว กรุณาตรวจสอบก่อนบันทึก', 'ok');
+    } catch (x) {
+      console.error(x);
+      toast('การวิเคราะห์ด้วย AI ล้มเหลว: ' + x.message, 'error');
+    } finally {
+      loading(false);
+    }
+  }
+function renderCAPA(){const d=state.findings.filter(f=>!['DRAFT','VOID'].includes(f.status));return `<div class="grid md:grid-cols-3 gap-4 mb-5">${kpi('CAPA Records',d.length,'fa-list-check','bg-blue-100 text-blue-700')}${kpi('Pending Verification',d.filter(f=>f.status==='VERIFICATION').length,'fa-magnifying-glass','bg-purple-100 text-purple-700')}${kpi('Overdue',d.filter(f=>f.status!=='CLOSED'&&f.targetDate&&f.targetDate<nowISO()).length,'fa-clock','bg-red-100 text-red-700')}</div>${renderFindings()}`}
+function renderMRM(){const byDept={},byClass={};state.findings.forEach(f=>{byDept[f.department||'Unknown']=(byDept[f.department||'Unknown']||0)+1;byClass[f.classification||'Unclassified']=(byClass[f.classification||'Unclassified']||0)+1});const bar=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="mb-3"><div class="flex justify-between text-sm"><span>${esc(k)}</span><b>${v}</b></div><div class="h-2 bg-slate-100 rounded"><div class="h-2 bg-blue-600 rounded" style="width:${Math.min(100,v/Math.max(...Object.values(o),1)*100)}%"></div></div></div>`).join('');return `<div class="grid lg:grid-cols-2 gap-6"><section class="card p-5"><h3 class="font-bold mb-4">Findings by Department</h3>${bar(byDept)||'<p class="text-slate-400">No data</p>'}</section><section class="card p-5"><h3 class="font-bold mb-4">Findings by Classification</h3>${bar(byClass)||'<p class="text-slate-400">No data</p>'}</section><section class="card p-5 lg:col-span-2"><h3 class="font-bold mb-3">Management Review Inputs</h3><ul class="list-disc pl-5 text-sm space-y-2"><li>Audit programme completion: ${state.audits.filter(a=>a.meta?.status==='COMPLETED').length} completed of ${state.audits.length} recorded.</li><li>Open findings: ${state.findings.filter(f=>f.status!=='CLOSED').length}</li><li>Repeat and systemic issues require confirmation through approved classification and effectiveness review.</li></ul></section></div>`}
+function renderAdmin(){if(!hasRole('Admin'))return '<div class="card p-8">Access denied.</div>';return `<div class="card p-5"><h3 class="font-bold text-lg">Administration</h3><p class="text-sm text-slate-500 mt-1">Create users in Firebase Authentication, then maintain their role document under users/{uid}.</p><div class="mt-4 bg-slate-50 rounded-xl p-4 text-sm"><b>Supported roles</b><div class="mt-2 flex gap-2 flex-wrap">${['Admin','Lead Auditor','Auditor','Auditee','Management Viewer'].map(x=>`<span class="bg-white border rounded-full px-3 py-1">${x}</span>`).join('')}</div></div></div>`}
+window.closeModal=closeModal;window.openProgramForm=openProgramForm;window.openAudit=openAudit;window.saveGeneratedChecklist=saveGeneratedChecklist;window.saveCheckpoint=saveCheckpoint;window.attachEvidence=attachEvidence;window.finalizeAudit=finalizeAudit;window.editFinding=editFinding;window.state=state;
+updateNetwork();
+  // ฟังก์ชันสำหรับลบ Audit Campaign
+  async function deleteAudit(id) {
+    if (!confirm('ยืนยันการลบ Audit Campaign นี้? ข้อมูลทั้งหมดที่เกี่ยวข้องจะถูกลบทิ้งอย่างถาวร (สำหรับ Admin เท่านั้น)')) return;
 
-            data.forEach((item, index) => {
-                const html = `
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in" style="animation-delay: ${index * 0.1}s">
-                        <div class="bg-slate-50 p-4 border-b border-slate-200 flex gap-3 items-start">
-                            <span class="bg-slate-800 text-white font-bold rounded-lg w-8 h-8 flex items-center justify-center shrink-0 text-sm">${index + 1}</span>
-                            <div class="flex-1">
-                                <h3 class="font-semibold text-slate-800 text-lg leading-snug">${item.question}</h3>
-                                <div class="flex flex-wrap items-center gap-2 mt-2">
-                                    <span class="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100"><i class="fas fa-book mr-1"></i>${item.requirement}</span>
-                                    <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">${item.risk} Risk</span>
-                                </div>
-                            </div>
-                        </div>
+    loading(true, 'กำลังลบข้อมูล Audit...');
+    try {
+      // ลบเอกสารหลักใน Collection
+      await db.collection('audit_campaigns').doc(id).delete();
+      // บันทึกประวัติการลบ (Audit Trail)
+      await auditEvent('DELETE', 'AUDIT', id);
 
-                        <!-- AI Guidance Block -->
-                        <div class="p-3 bg-amber-50/50 border-b border-amber-100 text-sm text-slate-700 flex gap-3">
-                            <i class="fas fa-lightbulb text-amber-500 mt-0.5"></i> 
-                            <div><strong class="text-amber-700">คำแนะนำ:</strong> ${item.guidance}</div>
-                        </div>
+      toast('ลบข้อมูล Audit เรียบร้อยแล้ว', 'ok');
+    } catch (error) {
+      console.error(error);
+      toast('ไม่สามารถลบได้: ' + error.message, 'error');
+    } finally {
+      loading(false);
+    }
+  }
 
-                        <div class="p-4 space-y-3">
-                            <textarea id="finding-${item.id}" class="w-full border border-slate-200 bg-slate-50 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition" rows="2" placeholder="บันทึกสิ่งที่พบ... (เช่น 'ปกติดี' หรือ 'พบรอยรั่ว')"></textarea>
+  // ฟังก์ชันสำหรับลบ Finding (ข้อบกพร่อง)
+  async function deleteFinding(id) {
+    if (!confirm('ยืนยันการลบ Finding นี้? ข้อมูลจะหายไปอย่างถาวร (สำหรับ Admin เท่านั้น)')) return;
 
-                            <div class="flex justify-between items-center pt-2">
-                                <button class="text-slate-400 hover:text-slate-600 text-sm flex items-center gap-1 transition">
-                                    <i class="fas fa-camera"></i> <span class="hidden sm:inline">แนบรูปถ่าย</span>
-                                </button>
-                                <button onclick="analyzeFinding(${item.id})" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm font-medium">
-                                    <i class="fas fa-gavel text-slate-400"></i> ประเมินผล
-                                </button>
-                            </div>
-                            <div id="result-${item.id}" class="hidden mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200 text-sm animate-pulse"></div>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += html;
-            });
-        }
+    loading(true, 'กำลังลบข้อมูล Finding...');
+    try {
+      await db.collection('findings').doc(id).delete();
+      await auditEvent('DELETE', 'FINDING', id);
 
-        async function analyzeFinding(id) {
-            const findingText = document.getElementById(`finding-${id}`).value;
-            if (!findingText) { alert("กรุณากรอกสิ่งที่พบก่อนครับ"); return; }
-
-            const resultDiv = document.getElementById(`result-${id}`);
-            resultDiv.classList.remove('hidden');
-            resultDiv.innerHTML = '<span class="flex items-center gap-2 text-slate-500"><i class="fas fa-circle-notch fa-spin"></i> ส่งข้อมูลไป Backend...</span>';
-
-            // Simulate Backend Processing
-            await new Promise(r => setTimeout(r, 1000));
-            resultDiv.classList.remove('animate-pulse');
-
-            // Mock Logic
-            let mockAnalysis = "";
-            let statusColor = "";
-            if (findingText.includes("ปกติ") || findingText.includes("เรียบร้อย") || findingText.includes("ครบ")) {
-                mockAnalysis = "ผลการประเมิน: <strong>Conform (ผ่าน)</strong><br>สอดคล้องตามมาตรฐาน ไม่พบข้อบกพร่อง";
-                statusColor = "border-green-200 bg-green-50 text-green-800";
-            } else {
-                mockAnalysis = "ผลการประเมิน: <strong>Potential NC (มีความเสี่ยง)</strong><br>อาจไม่สอดคล้องตามข้อกำหนด กรุณารวบรวมหลักฐานเพิ่มเติมและออกใบ CAR";
-                statusColor = "border-red-200 bg-red-50 text-red-800";
-            }
-
-            resultDiv.className = `mt-3 p-3 rounded-lg border text-sm ${statusColor}`;
-            resultDiv.innerHTML = `<div class="flex gap-2"><i class="fas fa-robot mt-1"></i> <div>${mockAnalysis}</div></div>`;
-
-            // Try saving to Firestore
-            if (window.saveFindingToFirebase) {
-                window.saveFindingToFirebase({
-                    dept: CURRENT_DEPT,
-                    questionId: id,
-                    finding: findingText,
-                    analysis: mockAnalysis
-                });
-            }
-        }
-
-        // --- MOCK CHAT ---
-
-        function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text) return;
-
-            addChatMessage('user', text);
-            input.value = '';
-
-            setTimeout(() => {
-                const reply = "รับทราบครับ ข้อมูลนี้จะถูกบันทึกไว้ในระบบเพื่อใช้ในการ Audit ครั้งถัดไป (Demo Response)";
-                addChatMessage('ai', reply);
-            }, 800);
-        }
-
-        function addChatMessage(role, text) {
-            const history = document.getElementById('chat-history');
-            const isUser = role === 'user';
-            const html = `
-                <div class="flex ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2">
-                    <div class="${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'} p-3 rounded-lg text-sm max-w-[85%] shadow-sm">
-                        ${text}
-                    </div>
-                </div>
-            `;
-            history.innerHTML += html;
-            history.scrollTop = history.scrollHeight;
-        }
-
-        function handleChatEnter(e) {
-            if (e.key === 'Enter') sendMessage();
-        }
-
-    </script>
+      toast('ลบข้อมูล Finding เรียบร้อยแล้ว', 'ok');
+    } catch (error) {
+      console.error(error);
+      toast('ไม่สามารถลบได้: ' + error.message, 'error');
+    } finally {
+      loading(false);
+    }
+  }
+</script>
 </body>
 </html>
