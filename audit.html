@@ -13,6 +13,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     *{box-sizing:border-box} body{font-family:'Sarabun',sans-serif;background:#f8fafc;color:#0f172a}
     .hidden{display:none!important}.nav-active{background:#2563eb;color:#fff}.card{background:white;border:1px solid #e2e8f0;border-radius:1rem}
@@ -25,7 +26,7 @@
   </style>
 </head>
 <body class="min-h-screen">
-<div id="toastArea" class="fixed z-[100] right-4 bottom-4 space-y-2"></div>
+<div id="toastArea" class="fixed z-[150] right-4 bottom-4 space-y-2"></div>
 
 <section id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-5">
   <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
@@ -42,9 +43,9 @@
 </section>
 
 <div id="app" class="hidden min-h-screen">
-  <aside id="sidebar" class="w-72 bg-slate-950 text-slate-300 min-h-screen fixed left-0 top-0 flex flex-col">
+  <aside id="sidebar" class="w-72 bg-slate-950 text-slate-300 min-h-screen fixed left-0 top-0 flex flex-col z-[60]">
     <div class="p-6 border-b border-slate-800"><div class="text-white text-xl font-bold"><i class="fa-solid fa-shield-halved text-blue-400 mr-2"></i>AI-IAMS</div><div class="text-xs text-slate-500 mt-1">Consolidated Enterprise v1.0</div></div>
-    <nav class="p-4 space-y-2 flex-1" id="nav"></nav>
+    <nav class="p-4 space-y-2 flex-1 overflow-y-auto" id="nav"></nav>
     <div class="p-4 border-t border-slate-800">
       <div id="userName" class="text-white font-semibold truncate"></div><div id="userRole" class="text-xs text-blue-400"></div>
       <button id="logoutBtn" class="mt-4 w-full rounded-lg py-2 bg-red-500/10 text-red-300 hover:bg-red-600 hover:text-white"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Logout</button>
@@ -53,7 +54,7 @@
   <div class="lg:ml-72 min-h-screen">
     <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b px-4 md:px-8 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3"><button id="menuBtn" class="lg:hidden text-xl"><i class="fa-solid fa-bars"></i></button><div><h2 id="pageTitle" class="font-bold text-xl">Dashboard</h2><p id="pageSubtitle" class="text-xs text-slate-500">Internal Audit Management</p></div></div>
-      <div class="flex items-center gap-2"><span id="onlineBadge" class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">Online</span><button onclick="window.print()" class="no-print border rounded-lg px-3 py-2 text-sm"><i class="fa-solid fa-print"></i></button></div>
+      <div class="flex items-center gap-2"><span id="onlineBadge" class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">Online</span><button onclick="window.print()" class="no-print border rounded-lg px-3 py-2 text-sm hover:bg-slate-50"><i class="fa-solid fa-print"></i></button></div>
     </header>
     <main id="content" class="p-4 md:p-8"></main>
   </div>
@@ -74,308 +75,1004 @@ const firebaseConfig={
 };
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(), db=firebase.firestore(), functions=firebase.app().functions('asia-southeast1'), storage=firebase.storage();
-try{db.settings({experimentalForceLongPolling:true,merge:true})}catch(e){}
+  try {
+    db.settings({ experimentalForceLongPolling: true, merge: true });
+    // เปิดใช้งาน Local Cache: ช่วยให้การ Refresh หน้าจอไม่ต้องดึงข้อมูลจาก Server ใหม่ (ลด Read ฟรีๆ)
+    db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+      console.warn("Firebase Cache Error:", err.code);
+    });
+  } catch(e) {}
 const SV=firebase.firestore.FieldValue;
 const STANDARDS=['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements'];
 const DEPARTMENTS=['Top Management','Production','Quality Assurance','Quality Control Laboratory','Warehouse','Maintenance','Engineering','HR','Purchasing','Sales & Customer Service','Environment','Safety'];
 const NAV=[['dashboard','Dashboard','fa-chart-line'],['program','Annual Programme','fa-calendar-check'],['planner','Audit Planning & AI','fa-wand-magic-sparkles'],['execution','Audit Execution','fa-clipboard-check'],['findings','Findings Review','fa-triangle-exclamation'],['capa','CAPA Tracking','fa-list-check'],['mrm','MRM Dashboard','fa-chart-pie'],['admin','Master Data & Users','fa-users-gear']];
-const state={user:null,profile:null,view:'dashboard',audits:[],findings:[],selectedAudit:null,generated:[],unsubscribe:[]};
+
+// 🟢 State รวมที่ใช้จัดการตัวแปรทั้งหมดในระบบ
+const state = {
+  user: null, profile: null, view: 'dashboard', audits: [], findings: [], selectedAudit: null, generated: [], unsubscribe: [], 
+  globalFilter: { year: 'All', department: 'All', status: 'All' }, 
+  systemicInsights: null,
+  pages: { program: 1, execution: 1, findings: 1, capa: 1 }
+};
+
+// Helpers การแบ่งหน้า
+function paginateArray(array, pageSize, pageNumber) {
+  return array.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+}
+
+function renderPaginationBar(totalItems, pageSize, currentPage, viewName) {
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if (totalPages <= 1) return ''; 
+  return `
+    <div class="flex justify-between items-center mt-4 bg-white p-3 rounded-xl border shadow-sm">
+      <span class="text-sm font-medium text-slate-500">Showing ${(currentPage-1)*pageSize + 1} to ${Math.min(currentPage*pageSize, totalItems)} of ${totalItems} entries</span>
+      <div class="flex gap-1">
+        <button onclick="state.pages.${viewName} = ${Math.max(1, currentPage-1)}; render()" class="px-4 py-1.5 border rounded-lg hover:bg-slate-50 disabled:opacity-50 text-sm font-semibold transition" ${currentPage===1?'disabled':''}>Prev</button>
+        <span class="px-4 py-1.5 font-bold text-blue-700 bg-blue-50 rounded-lg text-sm">${currentPage} / ${totalPages}</span>
+        <button onclick="state.pages.${viewName} = ${Math.min(totalPages, currentPage+1)}; render()" class="px-4 py-1.5 border rounded-lg hover:bg-slate-50 disabled:opacity-50 text-sm font-semibold transition" ${currentPage===totalPages?'disabled':''}>Next</button>
+      </div>
+    </div>
+  `;
+}
+
 const hasRole=(...r)=>state.profile&&r.includes(state.profile.role);
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const fmtDate=v=>{if(!v)return'-';const d=v.toDate?v.toDate():new Date(v);return isNaN(d)?'-':d.toLocaleDateString('th-TH')};
 const nowISO=()=>new Date().toISOString().slice(0,10);
-function toast(msg,type='ok'){const c=type==='error'?'bg-red-600':type==='warn'?'bg-amber-500':'bg-slate-900';const e=document.createElement('div');e.className=`toast ${c} text-white px-4 py-3 rounded-xl shadow-xl max-w-sm`;e.textContent=msg;document.getElementById('toastArea').appendChild(e);setTimeout(()=>e.remove(),4500)}
-function loading(on,msg='Processing...'){let e=document.getElementById('globalLoading');if(on){if(!e){e=document.createElement('div');e.id='globalLoading';e.className='fixed inset-0 z-[120] bg-slate-950/40 flex items-center justify-center';e.innerHTML=`<div class="bg-white rounded-xl p-5 shadow-xl flex gap-3 items-center"><div class="spinner"></div><span id="loadingText"></span></div>`;document.body.appendChild(e)}e.querySelector('#loadingText').textContent=msg}else e?.remove()}
+
+function getFindingDisplayRef(finding) { if (finding.findingNo) return finding.findingNo; const idx = Number(finding.checkpointIndex); if (finding.auditId && Number.isInteger(idx) && idx >= 0) return `${finding.auditId}-CHK-${String(idx + 1).padStart(3, '0')}`; return finding.auditId ? `${finding.auditId}-FINDING` : 'Pending'; }
+function getFindingDisplayTitle(finding) { return (finding.title || finding.question || finding.clause || 'Audit finding'); }
+function toast(msg,type='ok'){const c=type==='error'?'bg-red-600':type==='warn'?'bg-amber-500':'bg-slate-900';const e=document.createElement('div');e.className=`toast ${c} text-white px-4 py-3 rounded-xl shadow-xl max-w-sm z-[150] relative`;e.textContent=msg;document.getElementById('toastArea').appendChild(e);setTimeout(()=>e.remove(),4500)}
+function loading(on,msg='Processing...'){let e=document.getElementById('globalLoading');if(on){if(!e){e=document.createElement('div');e.id='globalLoading';e.className='fixed inset-0 z-[120] bg-slate-950/40 flex items-center justify-center';e.innerHTML=`<div class="bg-white rounded-xl p-5 shadow-xl flex gap-3 items-center"><div class="spinner"></div><span id="loadingText" class="font-semibold text-slate-700"></span></div>`;document.body.appendChild(e)}e.querySelector('#loadingText').textContent=msg}else e?.remove()}
 function closeModal(){document.getElementById('modal').classList.add('hidden');document.getElementById('modalBody').innerHTML=''}
 function showModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modal').classList.remove('hidden')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
-window.addEventListener('online',updateNetwork);window.addEventListener('offline',updateNetwork);function updateNetwork(){const b=document.getElementById('onlineBadge');b.textContent=navigator.onLine?'Online':'Offline';b.className=`text-xs px-3 py-1 rounded-full ${navigator.onLine?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}
+window.addEventListener('online',updateNetwork);window.addEventListener('offline',updateNetwork);function updateNetwork(){const b=document.getElementById('onlineBadge');b.textContent=navigator.onLine?'Online':'Offline';b.className=`text-xs px-3 py-1 rounded-full font-semibold ${navigator.onLine?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}
 
 async function auditEvent(action,entityType,entityId,details={}){try{await db.collection('audit_events').add({action,entityType,entityId,details,userId:state.user.uid,userEmail:state.user.email,createdAt:SV.serverTimestamp()})}catch(e){console.warn('Audit event',e)}}
 async function loadProfile(user){const ref=db.collection('users').doc(user.uid);const s=await ref.get();if(s.exists)return s.data();const p={email:user.email,displayName:user.displayName||user.email,role:'Auditor',active:true,createdAt:SV.serverTimestamp()};await ref.set(p,{merge:true});return p}
-function setupLiveData(){state.unsubscribe.forEach(f=>f());state.unsubscribe=[];state.unsubscribe.push(db.collection('audit_campaigns').orderBy('createdAt','desc').limit(200).onSnapshot(s=>{state.audits=s.docs.map(d=>({id:d.id,...d.data()}));render()}));state.unsubscribe.push(db.collection('findings').orderBy('createdAt','desc').limit(500).onSnapshot(s=>{state.findings=s.docs.map(d=>({id:d.id,...d.data()}));render()}))}
+
+  function setupLiveData() {
+    // 1. เคลียร์ Listener เก่าทิ้งทุกครั้งที่มีการเปลี่ยนเงื่อนไข (ประหยัดหน่วยความจำ)
+    state.unsubscribe.forEach(f => f());
+    state.unsubscribe = [];
+
+    const fYear = state.globalFilter.year;
+
+    // 2. ตั้งค่า Query พื้นฐาน ให้ดึงจากล่าสุดลงไปเก่าสุด
+    let auditQuery = db.collection('audit_campaigns').orderBy('createdAt', 'desc');
+    let findingQuery = db.collection('findings').orderBy('createdAt', 'desc');
+
+    // 3. ถ้ามีการเลือก "ปี" จาก Filter ให้เพิ่มเงื่อนไขเข้าไป
+    if (fYear !== 'All') {
+      findingQuery = db.collection('findings').where('auditYear', '==', fYear).orderBy('createdAt', 'desc');
+      auditQuery = db.collection('audit_campaigns').where('auditId', '>=', `AUD-${fYear}`).where('auditId', '<=', `AUD-${fYear}\uf8ff`).orderBy('createdAt', 'desc');
+    }
+
+    // 4. ดึงข้อมูล Audit และ Finding แบบจำกัดจำนวน 50 รายการ (Lazy Loading ประหยัด Read)
+    state.unsubscribe.push(auditQuery.limit(50).onSnapshot(s => {
+      state.audits = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }));
+
+    state.unsubscribe.push(findingQuery.limit(50).onSnapshot(s => {
+      state.findings = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }));
+
+    // 5. [เพิ่มใหม่] ดึงข้อมูลสถิติตัวเลขสรุปยอด สำหรับแสดงกราฟใน Dashboard
+    state.unsubscribe.push(db.collection('System_Stats').doc('Audit_Dashboard_Summary').onSnapshot(s => {
+      state.dashboardStats = s.exists ? s.data() : null;
+      if (state.view === 'dashboard') render();
+    }));
+
+    // 6. [ของเดิมที่ห้ามหาย] ดึงข้อมูล AI Insights เพื่อนำข้อความวิเคราะห์มาแสดงใน Dashboard
+    state.unsubscribe.push(db.collection('System_Stats').doc('Global_Systemic_Insights').onSnapshot(s => {
+      state.systemicInsights = s.exists ? s.data() : null;
+      if (state.view === 'dashboard') render();
+    }));
+  }
+
 auth.onAuthStateChanged(async user=>{if(!user){state.user=null;document.getElementById('app').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');return}try{state.user=user;state.profile=await loadProfile(user);if(state.profile.active===false)throw new Error('Account disabled');document.getElementById('loginScreen').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('userName').textContent=state.profile.displayName||user.email;document.getElementById('userRole').textContent=state.profile.role||'Auditor';buildNav();setupLiveData();render()}catch(e){toast(e.message,'error');await auth.signOut()}});
 document.getElementById('loginForm').addEventListener('submit',async e=>{e.preventDefault();loading(true,'Authenticating...');try{await auth.signInWithEmailAndPassword(loginEmail.value,loginPassword.value)}catch(err){toast(err.message,'error')}finally{loading(false)}});
 document.getElementById('logoutBtn').onclick=()=>auth.signOut();document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
-function buildNav(){nav.innerHTML=NAV.filter(n=>n[0]!=='admin'||hasRole('Admin')).map(n=>`<button data-view="${n[0]}" class="nav-btn w-full text-left p-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 ${state.view===n[0]?'nav-active':''}"><i class="fa-solid ${n[2]} w-5"></i>${n[1]}</button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedAudit=null;buildNav();render();sidebar.classList.remove('open')})}
+
+  function buildNav() {
+    nav.innerHTML = NAV.filter(n => n[0] !== 'admin' || hasRole('Admin')).map(n => `<button data-view="${n[0]}" class="nav-btn w-full text-left p-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition ${state.view === n[0] ? 'nav-active' : ''}"><i class="fa-solid ${n[2]} w-5"></i>${n[1]}</button>`).join('');
+    nav.querySelectorAll('button').forEach(b => b.onclick = () => {
+      state.view = b.dataset.view;
+      state.selectedAudit = null;
+      state.globalFilter.status = 'All'; // ป้องกันสถานะ Filter ค้างตอนสลับเมนู
+      buildNav();
+      render();
+      sidebar.classList.remove('open');
+    });
+  }
 function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view)||NAV[0];pageTitle.textContent=info[1];content.innerHTML=({dashboard:renderDashboard,program:renderProgram,planner:renderPlanner,execution:renderExecution,findings:renderFindings,capa:renderCAPA,mrm:renderMRM,admin:renderAdmin}[state.view]||renderDashboard)()}
-function kpi(label,value,icon,color){return `<div class="card p-5"><div class="flex justify-between"><div><p class="text-sm text-slate-500">${label}</p><p class="text-3xl font-bold mt-2">${value}</p></div><div class="w-11 h-11 rounded-xl ${color} flex items-center justify-center"><i class="fa-solid ${icon}"></i></div></div></div>`}
-function renderDashboard(){const open=state.findings.filter(f=>!['CLOSED','VOID'].includes(f.status)).length,over=state.findings.filter(f=>f.status!=='CLOSED'&&f.targetDate&&f.targetDate<nowISO()).length,closed=state.findings.filter(f=>f.status==='CLOSED').length;return `<div class="grid md:grid-cols-4 gap-4">${kpi('Total Audits',state.audits.length,'fa-clipboard-check','bg-blue-100 text-blue-700')}${kpi('Open Findings',open,'fa-triangle-exclamation','bg-amber-100 text-amber-700')}${kpi('Overdue CAPA',over,'fa-clock','bg-red-100 text-red-700')}${kpi('Closed Findings',closed,'fa-circle-check','bg-green-100 text-green-700')}</div><div class="grid lg:grid-cols-2 gap-6 mt-6"><section class="card p-5"><h3 class="font-bold mb-4">Recent Audits</h3>${state.audits.slice(0,6).map(a=>`<div class="border-b last:border-0 py-3 flex justify-between gap-4"><div><b>${esc(a.meta?.title||a.title||a.id)}</b><p class="text-xs text-slate-500">${esc(a.meta?.targetDepartment||a.department)} · ${esc((a.meta?.standards||a.standards||[]).join(', '))}</p></div><span class="text-xs bg-slate-100 rounded-full px-2 py-1 h-fit">${esc(a.meta?.status||a.status)}</span></div>`).join('')||'<p class="text-slate-400">No audit data</p>'}</section><section class="card p-5"><h3 class="font-bold mb-4">Management Attention</h3>${state.findings.filter(f=>f.status!=='CLOSED').slice(0,6).map(f=>`<div class="border-b last:border-0 py-3"><div class="flex justify-between"><b>${esc(f.findingNo||f.id)}</b><span class="text-xs ${f.classification==='Major NC'?'text-red-600':'text-amber-600'}">${esc(f.classification)}</span></div><p class="text-sm text-slate-600 line-clamp-2">${esc(f.condition||f.description)}</p></div>`).join('')||'<p class="text-slate-400">No open findings</p>'}</section></div>`}
-function renderProgram(){return `<div class="flex justify-between items-center mb-5"><div><h3 class="font-bold text-lg">Annual Audit Programme</h3><p class="text-sm text-slate-500">Risk-based schedule and assignment</p></div><button onclick="openProgramForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg"><i class="fa-solid fa-plus mr-2"></i>New Audit</button></div>${auditTable(state.audits)}`}
-  function auditTable(data){
-    return `<div class="card overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-3 text-left">Audit</th><th class="p-3 text-left">Department</th><th class="p-3 text-center">Date</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Progress</th><th class="p-3"></th></tr></thead><tbody>
-    ${data.map(a=>{
-      const q=a.checklist||[],done=q.filter(x=>x.result&&x.result!=='NOT_EVALUATED').length,p=q.length?Math.round(done/q.length*100):0;
 
-      // โค้ดสร้างปุ่มลบ (แสดงเฉพาะ Admin)
-      const deleteBtn = hasRole('Admin') ? `<button onclick="deleteAudit('${a.id}')" class="text-red-500 hover:text-red-700 ml-3" title="ลบข้อมูล (ทดสอบ)"><i class="fa-solid fa-trash"></i></button>` : '';
-
-      return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-3"><b>${esc(a.meta?.title||a.title||a.id)}</b><div class="text-xs text-slate-400">${esc(a.auditId||a.id)}</div></td><td class="p-3">${esc(a.meta?.targetDepartment||a.department)}</td><td class="p-3 text-center">${esc(a.meta?.scheduledDate||a.scheduledDate||'-')}</td><td class="p-3 text-center"><span class="bg-slate-100 rounded-full px-2 py-1 text-xs">${esc(a.meta?.status||a.status||'PLANNED')}</span></td><td class="p-3 text-center">${p}%</td><td class="p-3 text-right whitespace-nowrap"><button onclick="openAudit('${a.id}')" class="text-blue-600 hover:underline font-semibold">Open</button> ${deleteBtn}</td></tr>`
-    }).join('')||'<tr><td class="p-8 text-center text-slate-400" colspan="6">No audits found</td></tr>'}</tbody></table></div>`
-  }
-function openProgramForm(){showModal(`<form id="programForm" class="p-6 space-y-4"><div class="flex justify-between"><h3 class="font-bold text-xl">Create Audit Campaign</h3><button type="button" onclick="closeModal()">✕</button></div><div class="grid md:grid-cols-2 gap-4"><label>Audit ID<input name="auditId" required value="AUD-${new Date().getFullYear()}-${String(state.audits.length+1).padStart(3,'0')}" class="w-full border rounded-lg p-2"></label><label>Title<input name="title" required class="w-full border rounded-lg p-2"></label><label>Department<select name="department" class="w-full border rounded-lg p-2">${DEPARTMENTS.map(x=>`<option>${x}</option>`)}</select></label><label>Scheduled Date<input name="date" type="date" required class="w-full border rounded-lg p-2"></label><label>Lead Auditor (Email ID)<input name="lead" value="${esc(state.profile.displayName||state.user.email)}" class="w-full border rounded-lg p-2"></label><label>Auditee / Process Owner (Email ID)<input name="auditee" class="w-full border rounded-lg p-2"></label></div><label class="block">Objective<textarea name="objective" class="w-full border rounded-lg p-2"></textarea></label><button class="bg-blue-600 text-white rounded-lg px-5 py-2">Create</button></form>`);programForm.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('auditId');loading(true,'Creating audit...');try{await db.collection('audit_campaigns').doc(id).set({auditId:id,meta:{title:f.get('title'),targetDepartment:f.get('department'),scheduledDate:f.get('date'),leadAuditor:f.get('lead'),auditee:f.get('auditee'),objective:f.get('objective'),standards:[],status:'PLANNED'},checklist:[],summary:{totalCheckpoints:0,conformingCount:0,majorNcCount:0,minorNcCount:0,observationCount:0},createdBy:state.user.email,createdAt:SV.serverTimestamp(),updatedAt:SV.serverTimestamp()});await auditEvent('CREATE','AUDIT',id);closeModal();toast('Audit campaign created')}catch(x){toast(x.message,'error')}finally{loading(false)}}}
-  function renderPlanner(){
-    setTimeout(updatePlannerDept, 100);
-    return `<div class="grid lg:grid-cols-3 gap-6"><form id="plannerForm" class="card p-5 space-y-4"><h3 class="font-bold text-lg">Audit Scope & Risk Context</h3><label class="block text-sm">Audit Campaign<select id="planAudit" onchange="updatePlannerDept()" class="w-full border rounded-lg p-2">${state.audits.map(a=>`<option value="${a.id}">${esc(a.meta?.title||a.id)}</option>`)}</select></label><label class="block text-sm">Department<select id="planDept" class="w-full border rounded-lg p-2">${DEPARTMENTS.map(x=>`<option>${x}</option>`)}</select></label><div><span class="text-sm font-semibold">Applicable Standards</span><div class="mt-2 grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">${STANDARDS.map(s=>`<label class="flex gap-2 text-sm"><input type="checkbox" name="std" value="${s}">${s}</label>`).join('')}</div></div><label class="block text-sm">Key risks / KPI / complaints<textarea id="planRisk" rows="4" class="w-full border rounded-lg p-2" placeholder="Enter current risks, previous issues and performance context"></textarea></label><label class="flex gap-2 text-sm"><input id="includeHistory" type="checkbox" checked>Include previous NC follow-up</label><button class="w-full bg-indigo-600 text-white rounded-lg py-3 font-bold"><i class="fa-solid fa-robot mr-2"></i>Generate Integrated Checklist</button></form><section class="lg:col-span-2 card p-5"><div class="flex justify-between items-center"><h3 class="font-bold text-lg">Preview & Approval</h3><button id="saveChecklistBtn" onclick="saveGeneratedChecklist()" class="${state.generated.length?'':'hidden'} bg-green-600 text-white px-4 py-2 rounded-lg shadow">Approve & Save</button></div><div id="generatedList" class="mt-4 space-y-3">${state.generated.length?generatedHTML():'<div class="py-16 text-center text-slate-400">Configure scope and generate a checklist.</div>'}</div>${state.generated.length?`<button type="button" onclick="addGeneratedItem()" class="mt-4 w-full border-2 border-dashed border-slate-300 text-slate-500 py-3 rounded-xl hover:bg-slate-50"><i class="fa-solid fa-plus mr-2"></i>เพิ่มข้อกำหนดด้วยตนเอง (Add Item)</button>`:''}</section></div>`
-  }
-  function updatePlannerDept() {
-    const auditId = document.getElementById('planAudit')?.value;
-    const audit = state.audits.find(a => a.id === auditId);
-    if (audit && audit.meta && audit.meta.targetDepartment) {
-      document.getElementById('planDept').value = audit.meta.targetDepartment;
+// Reusable Filter Bar
+  function renderGlobalFilterBar() {
+    let statusOptions = '';
+    // เลือกรายการสถานะให้เหมาะสมกับหน้าที่กำลังเปิดอยู่
+    if (state.view === 'findings' || state.view === 'capa') {
+      statusOptions = ['DRAFT','ISSUED','CAPA_SUBMITTED','VERIFICATION','CLOSED'];
+    } else if (state.view === 'program' || state.view === 'execution') {
+      statusOptions = ['PLANNED','READY','IN_PROGRESS','COMPLETED','LOCKED'];
     }
-  }
-  function generatedHTML(){setTimeout(()=>document.getElementById('saveChecklistBtn')?.classList.remove('hidden'),0);return state.generated.map((q,i)=>`<div class="border rounded-xl p-4"><div class="flex justify-between items-start mb-2"><div class="flex flex-wrap gap-2 text-xs"><span class="bg-blue-50 text-blue-700 px-2 py-1 rounded">${esc(q.clause)}</span><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">${esc(q.standardsCovered||q.standard)}</span><span class="bg-amber-50 text-amber-700 px-2 py-1 rounded">${esc(q.riskFocus||'Risk-based')}</span></div><button onclick="deleteGeneratedItem(${i})" class="text-red-400 hover:text-red-600" title="ลบรายการนี้"><i class="fa-solid fa-trash"></i></button></div><textarea data-i="${i}" class="gen-question w-full border border-transparent hover:border-slate-200 focus:border-blue-400 rounded p-1 font-semibold resize-y" placeholder="พิมพ์คำถามที่นี่...">${esc(q.question)}</textarea><textarea data-e="${i}" class="gen-evidence w-full text-sm text-slate-600 mt-2 border border-transparent hover:border-slate-200 focus:border-blue-400 rounded p-1 resize-y" placeholder="ระบุหลักฐานที่คาดหวัง...">${esc(q.expectedEvidence||q.requirement)}</textarea></div>`).join('')}
-  function deleteGeneratedItem(i) {
-    if(!confirm('ยืนยันลบรายการนี้ออกจาก Checklist?')) return;
-    state.generated.splice(i, 1);
-    renderPlanner();
-  }
-  function addGeneratedItem() {
-    state.generated.push({ clause: "Manual", standardsCovered: "General", question: "", expectedEvidence: "", riskFocus: "Manual Addition", questionType: "Open" });
-    renderPlanner();
-  }
-document.addEventListener('submit',async e=>{if(e.target.id!=='plannerForm')return;e.preventDefault();const standards=[...document.querySelectorAll('[name=std]:checked')].map(x=>x.value);if(!standards.length)return toast('Select at least one standard','warn');loading(true,'AI is generating a risk-based checklist...');try{const fn=functions.httpsCallable('generateAuditChecklist');const r=await fn({auditId:planAudit.value,department:planDept.value,standards,performanceContext:planRisk.value,includeHistory:includeHistory.checked});state.generated=r.data.data||r.data.checklist||[];render()}catch(x){toast(x.message,'error')}finally{loading(false)}});
-async function saveGeneratedChecklist(){const auditId=document.getElementById('planAudit')?.value||state.audits[0]?.id;if(!auditId)return;document.querySelectorAll('.gen-question').forEach(x=>state.generated[+x.dataset.i].question=x.value);loading(true,'Saving approved checklist...');try{const fn=functions.httpsCallable('saveAuditPlan');await fn({auditId,department:document.getElementById('planDept')?.value,standards:[...document.querySelectorAll('[name=std]:checked')].map(x=>x.value),questions:state.generated});state.generated=[];toast('Checklist approved and saved');state.view='execution';buildNav();render()}catch(x){toast(x.message,'error')}finally{loading(false)}}
-function renderExecution(){if(state.selectedAudit)return renderAuditRoom();return `<div class="mb-5"><h3 class="font-bold text-lg">Audit Execution</h3><p class="text-sm text-slate-500">Open a campaign to record objective evidence and results.</p></div>${auditTable(state.audits)}`}
-function openAudit(id){state.selectedAudit=state.audits.find(a=>a.id===id);state.view='execution';buildNav();render()}
-  function renderAuditRoom(){const a=state.audits.find(x=>x.id===state.selectedAudit?.id)||state.selectedAudit,q=a.checklist||[];state.selectedAudit=a;return `<div class="flex flex-wrap justify-between gap-4 mb-5"><div><button onclick="state.selectedAudit=null;render()" class="text-blue-600 text-sm hover:underline">← Back</button><h3 class="text-xl font-bold mt-2">${esc(a.meta?.title||a.id)}</h3><p class="text-sm text-slate-500">${esc(a.meta?.targetDepartment)} · ${esc((a.meta?.standards||[]).join(', '))}</p></div><div class="flex gap-2 h-fit"><button onclick="openAICoach('${a.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow transition flex items-center"><i class="fa-solid fa-robot mr-2"></i> AI Coach</button><button onclick="finalizeAudit('${a.id}')" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg shadow transition">Finalize Audit</button></div></div><div class="space-y-4">${q.map((x,i)=>`<article class="card p-5"><div class="flex flex-wrap justify-between gap-2"><div><span class="text-xs bg-slate-100 px-2 py-1 rounded font-mono">${esc(x.itemId||`CHK-${i+1}`)}</span><span class="text-xs text-blue-600 ml-2 font-semibold">${esc(x.clause)}</span></div><span class="status-${esc(x.result||'NOT_EVALUATED').replace(/\s/g,'_')} text-xs px-3 py-1 rounded-full font-semibold tracking-wide">${esc(x.result||'NOT_EVALUATED')}</span></div><h4 class="font-semibold mt-3 text-lg">${esc(x.question)}</h4><p class="text-sm text-slate-600 mt-2 bg-slate-50 p-2 rounded"><b>Expected evidence:</b> ${esc(x.expectedEvidence||x.requirement)}</p><div class="grid md:grid-cols-2 gap-4 mt-4"><label class="text-sm font-semibold">Objective Evidence (สิ่งที่พบ)<textarea id="evi-${i}" rows="3" class="w-full border border-slate-300 rounded-lg p-3 mt-1 font-normal focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">${esc(x.evidence)}</textarea></label><div><label class="text-sm font-semibold">Result (ผลประเมิน)<select id="res-${i}" class="w-full border border-slate-300 rounded-lg p-3 mt-1 font-normal focus:border-blue-500 outline-none"><option value="NOT_EVALUATED">Not Evaluated</option>${['CONFORMING','Major NC','Minor NC','OBSERVATION','NA'].map(v=>`<option ${x.result===v?'selected':''}>${v}</option>`)}</select></label><label class="text-sm font-semibold block mt-3">N/A reason / Comment<input id="com-${i}" value="${esc(x.comment)}" class="w-full border border-slate-300 rounded-lg p-3 mt-1 font-normal outline-none focus:border-blue-500"></label></div></div><div class="flex flex-wrap gap-3 mt-5"><button onclick="saveCheckpoint('${a.id}',${i})" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm transition">Save checkpoint</button><button onclick="attachEvidence('${a.id}',${i})" class="border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-lg font-medium transition"><i class="fa-solid fa-paperclip mr-2"></i>Attach evidence</button>${x.attachmentUrl?`<a class="text-blue-600 hover:underline py-2.5 font-medium flex items-center" target="_blank" href="${esc(x.attachmentUrl)}"><i class="fa-solid fa-arrow-up-right-from-square mr-2"></i>View attachment</a>`:''}</div></article>`).join('')||'<div class="card p-10 text-center text-slate-400">No checklist available.</div>'}<button onclick="addExecutionItem('${a.id}')" class="w-full border-2 border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 py-4 rounded-xl hover:bg-blue-50 transition mt-4 font-semibold"><i class="fa-solid fa-plus mr-2"></i>เพิ่มรายการตรวจเพิ่มเติม (Add Audit Checkpoint)</button></div>`}
-  async function addExecutionItem(id) {
-    loading(true, 'Adding custom checkpoint...');
-    try {
-      const fn = functions.httpsCallable('addExecutionCheckpoint');
-      await fn({ auditId: id });
-      toast('เพิ่มรายการตรวจใหม่เรียบร้อยแล้ว', 'ok');
-    } catch (x) { toast(x.message, 'error'); } finally { loading(false); }
-  }
-  function openAICoach(auditId) {
-    const a = state.audits.find(x => x.id === auditId);
-    showModal(`
-      <div class="p-2 sm:p-4">
-        <div class="flex justify-between items-center mb-4 border-b pb-3">
-          <h3 class="font-bold text-xl text-indigo-800"><i class="fa-solid fa-robot mr-2"></i>AI Coach (Lead Auditor)</h3>
-          <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-800 text-2xl">✕</button>
-        </div>
-        <div class="bg-slate-100 p-4 rounded-xl mb-4 h-[60vh] overflow-y-auto text-sm space-y-4" id="coachChatBox">
-          <div class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-200 flex items-center justify-center shadow-sm"><i class="fa-solid fa-user-tie text-indigo-700 text-lg"></i></div><div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-1 leading-relaxed">สวัสดีครับคู่หู! ผมคือ <b>AI Coach</b> ผู้เชี่ยวชาญด้าน ISO 9001, 14001, 45001, 50001, GMP, Halal, FSC และ PEFC<br><br>มีอะไรให้ผมช่วยแนะนำในการเข้าตรวจแผนก <b>${esc(a.meta?.targetDepartment)}</b> ไหมครับ? พิมพ์ถามมาได้เลย ไม่ว่าจะเป็นวิธีการตั้งคำถาม การประเมินหลักฐาน หรือปรึกษาว่าสิ่งที่เจอควรให้ NC หรือไม่ครับ</div></div>
-        </div>
-        <form id="coachForm" class="flex gap-2 mt-4 relative">
-          <input type="text" id="coachInput" required class="flex-1 border-2 border-indigo-100 focus:border-indigo-500 rounded-xl p-4 pr-16 outline-none shadow-sm" placeholder="พิมพ์คำปรึกษาที่นี่... (เช่น Auditee ไม่มีบันทึก PM ควรให้ NC ไหม?)">
-          <button type="submit" class="absolute right-2 top-2 bottom-2 bg-indigo-600 text-white px-5 rounded-lg hover:bg-indigo-700 shadow transition"><i class="fa-solid fa-paper-plane"></i></button>
-        </form>
+
+    return `
+      <div class="flex flex-wrap gap-3 mb-5 bg-white p-3 rounded-xl border shadow-sm items-center border-l-4 border-l-blue-500">
+        <span class="text-sm font-bold text-slate-700 ml-2"><i class="fa-solid fa-filter text-blue-500 mr-2"></i>Filters:</span>
+        <select class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-slate-50 outline-none focus:border-blue-500 transition" onchange="state.globalFilter.year=this.value; state.pages['${state.view}'] = 1; render()">
+          <option value="All">All Years</option>
+          ${[...new Set(state.audits.map(a => a.auditId?.substring(4,8)||''))].filter(Boolean).sort().reverse().map(y => `<option value="${y}" ${state.globalFilter.year===y?'selected':''}>${y}</option>`).join('')}
+        </select>
+        <select class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-slate-50 outline-none focus:border-blue-500 transition" onchange="state.globalFilter.department=this.value; state.pages['${state.view}'] = 1; render()">
+          <option value="All">All Departments</option>
+          ${DEPARTMENTS.map(d => `<option value="${d}" ${state.globalFilter.department===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+        ${statusOptions ? `
+        <select class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-slate-50 outline-none focus:border-blue-500 transition" onchange="state.globalFilter.status=this.value; state.pages['${state.view}'] = 1; render()">
+          <option value="All">All Statuses</option>
+          ${statusOptions.map(s => `<option value="${s}" ${state.globalFilter.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        ` : ''}
       </div>
-    `);
-    document.getElementById('coachForm').onsubmit = async e => {
-      e.preventDefault();
-      const inputEl = document.getElementById('coachInput');
-      const q = inputEl.value;
-      inputEl.value = '';
-      const chatBox = document.getElementById('coachChatBox');
-      chatBox.innerHTML += `<div class="flex gap-3 items-start flex-row-reverse"><div class="w-10 h-10 shrink-0 rounded-full bg-slate-300 flex items-center justify-center shadow-sm"><i class="fa-solid fa-user text-slate-600"></i></div><div class="bg-blue-600 text-white p-4 rounded-2xl shadow-sm flex-1 text-right leading-relaxed">${esc(q)}</div></div>`;
-      chatBox.scrollTop = chatBox.scrollHeight;
-      const loadingId = 'loading-' + Date.now();
-      chatBox.innerHTML += `<div id="${loadingId}" class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-200 flex items-center justify-center shadow-sm"><i class="fa-solid fa-user-tie text-indigo-700 text-lg"></i></div><div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200"><div class="spinner border-indigo-600"></div></div></div>`;
-      chatBox.scrollTop = chatBox.scrollHeight;
-      try {
-        const fn = functions.httpsCallable('askAuditAICoach');
-        const res = await fn({ auditId, question: q });
-        document.getElementById(loadingId).remove();
-        // Use innerHTML safely with basic markdown to HTML for bolding and bullets
-        const formattedAns = esc(res.data.answer).replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n\*/g, '<br>•').replace(/\n/g, '<br>');
-        chatBox.innerHTML += `<div class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-200 flex items-center justify-center shadow-sm"><i class="fa-solid fa-user-tie text-indigo-700 text-lg"></i></div><div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-1 leading-relaxed">${formattedAns}</div></div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-      } catch(err) {
-        document.getElementById(loadingId).remove();
-        toast(err.message, 'error');
-      }
-    };
-  }
-  async function saveCheckpoint(id,i){const a=state.audits.find(x=>x.id===id),q=[...(a.checklist||[])];q[i]={...q[i],evidence:document.getElementById(`evi-${i}`).value,result:document.getElementById(`res-${i}`).value,comment:document.getElementById(`com-${i}`).value,updatedBy:state.user.email,updatedAt:new Date().toISOString()};loading(true,'Saving checkpoint...');try{const fn=functions.httpsCallable('updateAuditCheckpoint');await fn({auditId:id,index:i,checkpoint:q[i]});if(q[i].result.includes('NC')||q[i].result==='OBSERVATION')await openFindingDraft(id,i,q[i]);if(state.selectedAudit&&state.selectedAudit.id===id){state.selectedAudit.checklist[i]=q[i];}render();toast('Checkpoint saved')}catch(x){toast(x.message,'error')}finally{loading(false)}}
-  async function openFindingDraft(auditId,index,q){const exists=state.findings.find(f=>f.auditId===auditId&&f.checkpointIndex===index&&f.status!=='VOID');if(exists)return;const a=state.audits.find(x=>x.id===auditId);await db.collection('findings').add({auditId,checkpointIndex:index,department:a.meta?.targetDepartment,clause:q.clause,criteria:q.expectedEvidence||q.requirement,condition:q.evidence,objectiveEvidence:q.evidence,classification:q.result.includes('NC')?q.result:'Observation',status:'DRAFT',createdBy:state.user.email,createdAt:SV.serverTimestamp(),updatedAt:SV.serverTimestamp()})}
-function attachEvidence(id,i){const input=document.getElementById('fileInput');input.value='';input.onchange=async()=>{if(!input.files[0])return;loading(true,'Uploading evidence...');try{const f=input.files[0],path=`audit-evidence/${id}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`,ref=storage.ref(path);await ref.put(f,{customMetadata:{uploadedBy:state.user.email,auditId:id}});const url=await ref.getDownloadURL();const fn=functions.httpsCallable('updateAuditCheckpoint');await fn({auditId:id,index:i,checkpoint:{...(state.selectedAudit.checklist[i]),attachmentUrl:url,attachmentPath:path}});toast('Evidence uploaded')}catch(x){toast(x.message,'error')}finally{loading(false)}};input.click()}
-async function finalizeAudit(id){if(!confirm('Finalize this audit and lock the execution record?'))return;loading(true,'Finalizing audit and metrics...');try{const fn=functions.httpsCallable('finalizeAuditCampaign');await fn({auditId:id});await auditEvent('FINALIZE','AUDIT',id);toast('Audit finalized');state.selectedAudit=null}catch(x){toast(x.message,'error')}finally{loading(false)}}
-  function renderFindings(){
-    return `<div class="card overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-3 text-left">Finding</th><th class="p-3 text-left">Department / Clause</th><th class="p-3 text-center">Classification</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Due</th><th class="p-3"></th></tr></thead><tbody>
-    ${state.findings.map(f=>{
-      // โค้ดสร้างปุ่มลบ (แสดงเฉพาะ Admin)
-      const deleteBtn = hasRole('Admin') ? `<button onclick="deleteFinding('${f.id}')" class="text-red-500 hover:text-red-700 ml-3" title="ลบข้อมูล (ทดสอบ)"><i class="fa-solid fa-trash"></i></button>` : '';
-
-      return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-3 max-w-md"><b>${esc(f.findingNo||f.id.slice(0,8))}</b><p class="text-xs text-slate-500 line-clamp-2">${esc(f.condition||f.description)}</p></td><td class="p-3">${esc(f.department)}<div class="text-xs text-slate-400">${esc(f.clause)}</div></td><td class="p-3 text-center"><span class="${f.classification==='Major NC'?'text-red-600 bg-red-50':f.classification==='Minor NC'?'text-amber-600 bg-amber-50':'text-blue-600 bg-blue-50'} px-2 py-1 rounded text-xs">${esc(f.classification)}</span></td><td class="p-3 text-center">${esc(f.status)}</td><td class="p-3 text-center">${esc(f.targetDate||'-')}</td><td class="p-3 text-right whitespace-nowrap"><button onclick="editFinding('${f.id}')" class="text-blue-600 hover:underline font-semibold">Review</button> ${deleteBtn}</td></tr>`
-    }).join('')||'<tr><td colspan="6" class="p-8 text-center text-slate-400">No findings</td></tr>'}</tbody></table></div>`
-  }
-  function editFinding(id) {
-    const f = state.findings.find(x => x.id === id);
-    showModal(`
-      <form id="findingForm" class="p-6 space-y-4 relative">
-        <input type="hidden" name="id" value="${id}">
-        <div class="flex justify-between items-center">
-          <h3 class="font-bold text-xl">Finding Review & CAPA</h3>
-          <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-800 text-2xl">✕</button>
-        </div>
-
-        <!-- ปุ่มสำหรับเรียก AI -->
-        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex justify-between items-center">
-          <div>
-            <h4 class="font-semibold text-indigo-800 text-sm">AI CAPA Advisor</h4>
-            <p class="text-xs text-indigo-600 mt-1">ให้ AI ช่วยวิเคราะห์สาเหตุ (Root Cause) และเสนอแนวทางแก้ไขจากหลักฐานที่พบ</p>
-          </div>
-          <button type="button" onclick="analyzeFindingWithAI('${id}')" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition">
-            <i class="fa-solid fa-robot mr-2"></i> วิเคราะห์ด้วย AI
-          </button>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-          <label>Classification
-            <select name="classification" id="finding-classification" class="w-full border p-2 rounded-lg">
-              ${['Unclassified NC','Major NC','Minor NC','Observation','Good Practice'].map(x => `<option ${f.classification === x ? 'selected' : ''}>${x}</option>`)}
-            </select>
-          </label>
-          <label>Status
-            <select name="status" class="w-full border p-2 rounded-lg">
-              ${['DRAFT','UNDER_REVIEW','ISSUED','CAPA_SUBMITTED','VERIFICATION','CLOSED','VOID'].map(x => `<option ${f.status === x ? 'selected' : ''}>${x}</option>`)}
-            </select>
-          </label>
-        </div>
-
-        ${['criteria','condition','objectiveEvidence','riskImpact'].map(k => `
-          <label class="block text-sm font-medium text-slate-700">${k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-            <textarea name="${k}" id="finding-${k}" rows="2" class="w-full border p-2 rounded-lg mt-1">${esc(f[k])}</textarea>
-          </label>
-        `).join('')}
-
-        <hr class="my-4 border-slate-200">
-        <h4 class="font-semibold text-slate-800">Corrective and Preventive Action (CAPA)</h4>
-
-        ${['correction','rootCause','correctiveAction','effectivenessCriteria'].map(k => `
-          <label class="block text-sm font-medium text-slate-700">${k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-            <textarea name="${k}" id="finding-${k}" rows="2" class="w-full border p-2 rounded-lg mt-1">${esc(f[k])}</textarea>
-          </label>
-        `).join('')}
-
-        <div class="grid md:grid-cols-3 gap-4">
-          <label class="text-sm">Responsible Person
-            <input name="responsiblePerson" value="${esc(f.responsiblePerson)}" class="w-full border p-2 rounded-lg mt-1">
-          </label>
-          <label class="text-sm">Target Date
-            <input name="targetDate" type="date" value="${esc(f.targetDate)}" class="w-full border p-2 rounded-lg mt-1">
-          </label>
-          <label class="text-sm">Verification Date
-            <input name="verificationDate" type="date" value="${esc(f.verificationDate)}" class="w-full border p-2 rounded-lg mt-1">
-          </label>
-        </div>
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-bold mt-4 shadow-md transition">
-          Save Review
-        </button>
-      </form>
-    `);
-
-    document.getElementById('findingForm').onsubmit = async e => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target));
-      delete data.id;
-      data.updatedAt = SV.serverTimestamp();
-      data.updatedBy = state.user.email;
-      loading(true, 'Saving finding...');
-      try {
-        await db.collection('findings').doc(id).update(data);
-        await auditEvent('UPDATE', 'FINDING', id, { status: data.status, classification: data.classification });
-        closeModal();
-        toast('Finding updated successfully', 'ok');
-      } catch (x) {
-        toast(x.message, 'error');
-      } finally {
-        loading(false);
-      }
-    };
+    `;
   }
 
-  // เพิ่มฟังก์ชันใหม่นี้ต่อท้ายฟังก์ชัน editFinding สำหรับเรียก AI
-  async function analyzeFindingWithAI(id) {
-    const f = state.findings.find(x => x.id === id);
-    const condition = document.getElementById('finding-condition').value || f.condition;
-    const criteria = document.getElementById('finding-criteria').value || f.criteria;
+// =========================================================================
+// หน้า Dashboard
+// =========================================================================
+function renderDashboard() {
+  const fYear = state.globalFilter.year;
+  const fDept = state.globalFilter.department;
 
-    if (!condition) {
-      return toast('กรุณาระบุ Condition (สิ่งที่พบ) ก่อนให้ AI วิเคราะห์', 'warn');
-    }
+  const filteredAudits = state.audits.filter(a => {
+    const matchYear = fYear === 'All' || (a.auditId && a.auditId.includes(fYear));
+    const matchDept = fDept === 'All' || (a.meta?.targetDepartment === fDept);
+    return matchYear && matchDept;
+  });
 
-    loading(true, '🤖 AI กำลังวิเคราะห์รากเหง้าของปัญหาและสร้าง CAPA...');
-    try {
-      const fn = functions.httpsCallable('analyzeFindingAndCAPA');
-      const response = await fn({
-        findingId: id,
-        department: f.department || 'Unknown',
-        clause: f.clause || 'Unknown',
-        condition: condition,
-        criteria: criteria
+  const filteredFindings = state.findings.filter(f => {
+    const matchYear = fYear === 'All' || (f.auditYear === fYear) || (f.findingNo && f.findingNo.includes(fYear));
+    const matchDept = fDept === 'All' || f.department === fDept;
+    return matchYear && matchDept;
+  });
+
+  const completedAudits = filteredAudits.filter(a => a.meta?.status === 'COMPLETED').length;
+  const auditPercent = filteredAudits.length ? Math.round((completedAudits / filteredAudits.length) * 100) : 0;
+
+  const openFindingsList = filteredFindings.filter(f => !['CLOSED','VOID'].includes(f.status));
+  const minorCount = openFindingsList.filter(f => f.classification === 'Minor NC').length;
+  const majorCount = openFindingsList.filter(f => f.classification === 'Major NC').length;
+  const totalOpenFindings = minorCount + majorCount;
+
+  const overCapaCount = openFindingsList.filter(f => f.targetDate && f.targetDate < nowISO()).length;
+  const dueSoonCount = openFindingsList.filter(f => f.targetDate && f.targetDate >= nowISO() && f.targetDate <= new Date(Date.now() + 7*86400000).toISOString().slice(0,10)).length;
+
+  let totalCheckpoints = 0;
+  let conformingCount = 0;
+  let observationCount = 0;
+  let minorNCCountTotal = 0;
+  let majorNCCountTotal = 0;
+  let standardScores = {}; 
+
+  filteredAudits.forEach(audit => {
+    if (audit.checklist && audit.checklist.length > 0) {
+      audit.checklist.forEach(chk => {
+        if (chk.result === 'NA' || chk.result === 'NOT_EVALUATED') return;
+        totalCheckpoints++;
+        if (chk.result === 'CONFORMING') conformingCount++;
+        else if (chk.result === 'OBSERVATION') observationCount++;
+        else if (chk.result === 'Minor NC') minorNCCountTotal++;
+        else if (chk.result === 'Major NC') majorNCCountTotal++;
+
+        let std = chk.standardsCovered || 'General';
+        if (!standardScores[std]) standardScores[std] = { total: 0, pass: 0 };
+        standardScores[std].total++;
+        if (chk.result === 'CONFORMING' || chk.result === 'OBSERVATION') standardScores[std].pass++;
       });
-
-      const aiResult = response.data.analysis;
-
-      // นำผลลัพธ์จาก AI มาเติมลงในช่องต่างๆ อัตโนมัติ
-      if (aiResult.proposedRootCause) {
-        document.getElementById('finding-rootCause').value = aiResult.proposedRootCause;
-      }
-      if (aiResult.correction) {
-        document.getElementById('finding-correction').value = aiResult.correction;
-      }
-      if (aiResult.correctiveAction) {
-        document.getElementById('finding-correctiveAction').value = aiResult.correctiveAction;
-      }
-      if (aiResult.effectivenessCriteria) {
-        document.getElementById('finding-effectivenessCriteria').value = aiResult.effectivenessCriteria;
-      }
-
-      toast('AI เติมข้อมูลวิเคราะห์ให้เรียบร้อยแล้ว กรุณาตรวจสอบก่อนบันทึก', 'ok');
-    } catch (x) {
-      console.error(x);
-      toast('การวิเคราะห์ด้วย AI ล้มเหลว: ' + x.message, 'error');
-    } finally {
-      loading(false);
     }
+  });
+
+  const complianceScore = totalCheckpoints > 0 ? Math.round(((conformingCount + observationCount) / totalCheckpoints) * 100) : 0;
+  const chartData = { conform: conformingCount, obs: observationCount, minor: minorNCCountTotal, major: majorNCCountTotal, total: totalCheckpoints };
+
+  // คำนวณ % สำหรับแสดงในรายการด้านล่างกราฟ
+  const pctConform = totalCheckpoints > 0 ? Math.round((conformingCount / totalCheckpoints) * 100) : 0;
+  const pctObs = totalCheckpoints > 0 ? Math.round((observationCount / totalCheckpoints) * 100) : 0;
+  const pctMinor = totalCheckpoints > 0 ? Math.round((minorNCCountTotal / totalCheckpoints) * 100) : 0;
+  const pctMajor = totalCheckpoints > 0 ? Math.round((majorNCCountTotal / totalCheckpoints) * 100) : 0;
+
+  const deptRiskScores = {};
+  filteredFindings.forEach(f => {
+    if (f.status === 'VOID') return;
+    const dept = f.department || 'Unknown';
+    if (!deptRiskScores[dept]) deptRiskScores[dept] = 0;
+    if (f.classification === 'Major NC') deptRiskScores[dept] += 10;
+    else if (f.classification === 'Minor NC') deptRiskScores[dept] += 5;
+    else if (f.classification === 'OBSERVATION') deptRiskScores[dept] += 1;
+  });
+  const topRisks = Object.entries(deptRiskScores).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  setTimeout(() => initNewDashboardCharts(chartData), 100);
+
+  // 🟢 HTML สำหรับ Systemic AI Insights
+  let aiInsightsHtml = `<div class="py-12 text-center text-slate-400 font-medium"><i class="fa-regular fa-lightbulb text-4xl mb-3 text-slate-200 block"></i>ยังไม่มีข้อมูลการวิเคราะห์เชิงระบบ<br>กดปุ่มด้านบนเพื่อให้ AI เริ่มประมวลผล</div>`;
+  if (state.systemicInsights && state.systemicInsights.insights && state.systemicInsights.insights.length > 0) {
+    aiInsightsHtml = state.systemicInsights.insights.map(insight => {
+      let icon = 'fa-lightbulb'; let color = 'blue';
+      if(insight.type === 'warning' || insight.type === 'risk' || insight.title.includes('ความเสี่ยง') || insight.title.includes('แนวโน้ม')) { 
+        icon = 'fa-triangle-exclamation'; color = 'red'; 
+      }
+      return `
+      <div class="bg-white p-4 rounded-xl border shadow-sm mb-3 hover:shadow-md transition">
+        <div class="flex gap-4">
+          <div class="w-10 h-10 rounded-full bg-${color}-50 text-${color}-500 flex items-center justify-center shrink-0 border border-${color}-100"><i class="fa-solid ${icon}"></i></div>
+          <div>
+            <p class="text-sm font-bold text-slate-800">${esc(insight.title)}</p>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">${esc(insight.description)}</p>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }
-function renderCAPA(){const d=state.findings.filter(f=>!['DRAFT','VOID'].includes(f.status));return `<div class="grid md:grid-cols-3 gap-4 mb-5">${kpi('CAPA Records',d.length,'fa-list-check','bg-blue-100 text-blue-700')}${kpi('Pending Verification',d.filter(f=>f.status==='VERIFICATION').length,'fa-magnifying-glass','bg-purple-100 text-purple-700')}${kpi('Overdue',d.filter(f=>f.status!=='CLOSED'&&f.targetDate&&f.targetDate<nowISO()).length,'fa-clock','bg-red-100 text-red-700')}</div>${renderFindings()}`}
+
+  let lastUpdatedText = state.systemicInsights?.lastUpdated ? `อัปเดตล่าสุด: ${fmtDate(state.systemicInsights.lastUpdated)}` : 'ยังไม่เคยประมวลผล';
+
+  // 🟢 ประกอบ AI Section
+  const aiSectionHtml = `
+    <div class="card p-6 bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100 shadow-sm flex flex-col h-full">
+      <div class="flex justify-between items-center mb-5 pb-3 border-b border-indigo-100/50">
+        <div>
+          <h3 class="font-bold text-indigo-900 flex items-center text-lg">
+            <i class="fa-solid fa-network-wired text-indigo-500 mr-2"></i>Systemic AI Insights
+          </h3>
+          <p class="text-[10px] text-indigo-400 mt-1 font-semibold">${lastUpdatedText}</p>
+        </div>
+        <button onclick="triggerSystemicAnalysis()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center">
+          <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Analyze
+        </button>
+      </div>
+      <div class="space-y-4 overflow-y-auto max-h-[320px] pr-2 custom-scrollbar flex-1">
+        ${aiInsightsHtml}
+      </div>
+    </div>
+  `;
+
+  return `
+    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-filter"></i></div>
+        <div><h2 class="text-lg font-bold text-slate-800">Dashboard Filter</h2></div>
+      </div>
+      <div class="flex gap-3">
+        <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.year=this.value; render()">
+          <option value="All">🗓️ All Years</option>
+          ${[...new Set(state.audits.map(a => a.auditId?.substring(4,8)||''))].filter(Boolean).sort().reverse().map(y => `<option value="${y}" ${fYear===y?'selected':''}>Year: ${y}</option>`).join('')}
+        </select>
+        <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.department=this.value; render()">
+          <option value="All">🏢 All Departments</option>
+          ${DEPARTMENTS.map(d => `<option value="${d}" ${fDept===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-4 gap-4 mb-6">
+      <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-4">
+          <div class="w-14 h-14 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-regular fa-calendar-check"></i></div>
+          <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Audits</p><p class="text-4xl font-extrabold text-slate-800 mt-1">${filteredAudits.length}</p></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5 uppercase"><span>Planned ${filteredAudits.length}</span><span>Completed ${completedAudits}</span></div>
+          <div class="w-full bg-slate-100 rounded-full h-2.5 flex items-center overflow-hidden"><div class="bg-blue-600 h-2.5 rounded-r-full" style="width: ${auditPercent}%"></div></div>
+          <div class="text-right text-xs font-extrabold text-blue-700 mt-1.5">${auditPercent}%</div>
+        </div>
+      </div>
+
+      <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-4">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-solid fa-check-double"></i></div>
+          <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Open Findings</p><p class="text-4xl font-extrabold text-slate-800 mt-1">${totalOpenFindings}</p></div>
+        </div>
+        <div>
+          <div class="flex justify-center gap-4 text-[11px] font-bold text-slate-500 mb-1.5 uppercase">
+            <span>Minor <b class="text-emerald-600 text-sm ml-1">${minorCount}</b></span>
+            <span class="border-l pl-4 border-slate-200">Major <b class="text-orange-500 text-sm ml-1">${majorCount}</b></span>
+          </div>
+          <div class="flex h-2.5 w-full rounded-full overflow-hidden mt-2">
+            <div class="bg-emerald-500" style="width: ${totalOpenFindings? (minorCount/totalOpenFindings)*100 : 0}%"></div>
+            <div class="bg-orange-500" style="width: ${totalOpenFindings? (majorCount/totalOpenFindings)*100 : 0}%"></div>
+            ${totalOpenFindings === 0 ? '<div class="bg-slate-100 w-full"></div>' : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-4">
+          <div class="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-regular fa-clock"></i></div>
+          <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Overdue CAPA</p><p class="text-4xl font-extrabold text-orange-600 mt-1">${overCapaCount}</p></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5 uppercase"><span class="text-orange-600">Overdue ${overCapaCount}</span><span>Due Soon ${dueSoonCount}</span></div>
+          <div class="flex h-2.5 w-full rounded-full overflow-hidden mt-2">
+            <div class="bg-orange-500" style="width: ${(overCapaCount/(overCapaCount+dueSoonCount||1))*100}%"></div>
+            <div class="bg-orange-200" style="width: ${(dueSoonCount/(overCapaCount+dueSoonCount||1))*100}%"></div>
+            ${(overCapaCount+dueSoonCount) === 0 ? '<div class="bg-slate-100 w-full"></div>' : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-5 border border-purple-200 shadow-sm bg-gradient-to-br from-white to-purple-50 flex flex-col justify-center relative hover:shadow-md transition">
+        <div class="absolute top-4 right-4 w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl shadow-inner"><i class="fa-solid fa-ranking-star"></i></div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Avg. Compliance Score</p>
+        <h2 class="text-6xl font-black text-purple-700 mt-2 tracking-tighter">${complianceScore}<span class="text-3xl text-purple-400">%</span></h2>
+        <p class="text-[11px] text-slate-500 mt-3 font-semibold">Across selected filters</p>
+      </div>
+    </div>
+
+    <!-- แถวกลาง: กราฟโดนัท, ความเสี่ยง, AI -->
+    <div class="grid lg:grid-cols-3 gap-6 mb-6">
+      <div class="card p-6 flex flex-col items-center shadow-sm">
+        <h3 class="font-bold text-slate-800 text-lg w-full text-left">Audit Results <span class="text-sm font-normal text-slate-400">(All Findings)</span></h3>
+        <div class="relative w-full h-[220px] mt-6 flex items-center justify-center">
+          <canvas id="resultsDonutChart"></canvas>
+        </div>
+        <div class="mt-8 w-full text-sm font-semibold text-slate-600 space-y-3 px-2">
+          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-emerald-500 mr-3 shadow-inner"></span>Conformity</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${conformingCount}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctConform}%)</span></div></div>
+          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-amber-400 mr-3 shadow-inner"></span>Observation</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${observationCount}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctObs}%)</span></div></div>
+          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-orange-500 mr-3 shadow-inner"></span>Minor NC</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${minorNCCountTotal}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctMinor}%)</span></div></div>
+          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-500 mr-3 shadow-inner"></span>Major NC</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${majorNCCountTotal}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctMajor}%)</span></div></div>
+        </div>
+      </div>
+
+      <div class="card p-6 shadow-sm flex flex-col">
+        <h3 class="font-bold text-slate-800 text-lg mb-6">Top 5 Risk Areas</h3>
+        <div class="flex-1">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
+              <tr><th class="py-3 px-3 text-left font-bold w-12">No.</th><th class="py-3 px-3 text-left font-bold">Department</th><th class="py-3 px-3 text-center font-bold">Risk Score</th></tr>
+            </thead>
+            <tbody>
+              ${topRisks.length > 0 ? topRisks.map((risk, idx) => {
+                let scoreColor = idx === 0 ? 'bg-red-100 text-red-700 font-extrabold' : (idx < 3 ? 'bg-orange-100 text-orange-700 font-bold' : 'bg-amber-50 text-amber-700 font-bold');
+                return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"><td class="py-4 px-3 text-slate-400 font-bold">${idx + 1}</td><td class="py-4 px-3 font-bold text-slate-700">${esc(risk[0])}</td><td class="py-4 px-3 text-center"><span class="px-4 py-1.5 rounded-full ${scoreColor} shadow-sm">${risk[1]}</span></td></tr>`;
+              }).join('') : `<tr><td colspan="3" class="py-12 text-center text-slate-400"><i class="fa-solid fa-check-circle text-3xl mb-2 text-slate-200 block"></i>No risk data available</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- เรียกใช้ AI Section ตรงนี้ -->
+      ${aiSectionHtml}
+    </div>
+
+    <!-- แถวล่างสุด -->
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="card p-6 lg:col-span-1 shadow-sm">
+        <h3 class="font-bold text-slate-800 text-lg mb-6">Audit by Standard</h3>
+        <div class="space-y-5">
+          ${Object.keys(standardScores).length > 0 ? Object.entries(standardScores).sort((a,b) => b[1].total - a[1].total).map(([std, score]) => {
+            let pct = Math.round((score.pass / score.total) * 100);
+            let color = pct >= 80 ? 'bg-blue-500' : (pct >= 60 ? 'bg-emerald-500' : 'bg-red-400');
+            return `<div><div class="flex justify-between items-end mb-2"><span class="text-sm font-bold text-slate-700">${esc(std)}</span><div class="text-right"><span class="text-xs text-slate-400 font-bold mr-2">${score.pass}/${score.total}</span><span class="text-base font-black text-slate-800">${pct}%</span></div></div><div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"><div class="${color} h-2.5 rounded-r-full" style="width: ${pct}%"></div></div></div>`;
+          }).join('') : '<p class="text-sm text-slate-400 text-center mt-8"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>ไม่มีข้อมูลมาตรฐาน</p>'}
+        </div>
+      </div>
+
+      <div class="card p-6 lg:col-span-2 shadow-sm flex flex-col">
+        <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-slate-800 text-lg">Recent Findings</h3><button onclick="state.view='findings'; buildNav(); render()" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded-lg font-bold transition">View All</button></div>
+        <div class="overflow-x-auto flex-1">
+          <table class="w-full text-sm text-left"><thead class="text-xs text-slate-500 bg-slate-50 border-y border-slate-200"><tr><th class="py-3 px-4 font-bold uppercase tracking-wider">Date</th><th class="py-3 px-4 font-bold uppercase tracking-wider">Clause</th><th class="py-3 px-4 font-bold uppercase tracking-wider">Department</th><th class="py-3 px-4 font-bold uppercase tracking-wider text-center">Severity</th><th class="py-3 px-4 font-bold uppercase tracking-wider text-center">Status</th></tr></thead>
+            <tbody>
+              ${filteredFindings.slice(0, 5).map(f => {
+                let badge = f.classification === 'Major NC' ? 'bg-red-100 text-red-700' : (f.classification === 'Minor NC' ? 'bg-amber-100 text-amber-700' : (f.classification === 'OBSERVATION' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'));
+                let statusBadge = f.status === 'CLOSED' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-50 border border-slate-200 text-slate-600';
+                return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"><td class="py-4 px-4 text-xs font-semibold text-slate-500">${fmtDate(f.createdAt)}</td><td class="py-4 px-4 font-bold text-blue-600 cursor-pointer hover:underline" onclick="editFinding('${f.id}')" title="${esc(f.title)}">${esc(f.clause || '-')}</td><td class="py-4 px-4 font-bold text-slate-700">${esc(f.department)}</td><td class="py-4 px-4 text-center"><span class="px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide shadow-sm ${badge}">${esc(f.classification)}</span></td><td class="py-4 px-4 text-center"><span class="px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide shadow-sm ${statusBadge}">${esc(f.status)}</span></td></tr>`
+              }).join('') || '<tr><td colspan="5" class="py-12 text-center text-slate-400"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>No recent findings</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+  let dashDonutChart = null;
+  const centerTextPlugin = {
+    id: 'centerText',
+    beforeDraw: function(chart) {
+      if (chart.config.type !== 'doughnut') return;
+      const ctx = chart.ctx;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta.data || !meta.data.length) return;
+
+      // หาจุดกึ่งกลางของวงกลมโดนัทแบบเป๊ะๆ (ไม่ต้องกะระยะด้วยตา)
+      const centerX = meta.data[0].x;
+      const centerY = meta.data[0].y;
+      const total = chart.config.data.datasets[0].data.reduce((a, b) => a + b, 0);
+
+      ctx.restore();
+
+      // วาดตัวเลขตรงกลาง (ปรับขนาดให้เล็กลงเป็น 3.5rem)
+      ctx.font = "900 3.5rem Sarabun";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#1e293b"; 
+      const text = total.toString();
+      const textX = centerX - (ctx.measureText(text).width / 2);
+      const textY = centerY - 12;
+      ctx.fillText(text, textX, textY);
+
+      // วาดข้อความ TOTAL FINDINGS
+      ctx.font = "bold 0.7rem Sarabun";
+      ctx.fillStyle = "#64748b"; 
+      const text2 = "TOTAL FINDINGS";
+      const text2X = centerX - (ctx.measureText(text2).width / 2);
+      const text2Y = centerY + 22;
+      ctx.fillText(text2, text2X, text2Y);
+      ctx.save();
+    }
+  };
+
+  function initNewDashboardCharts(data) {
+    const donutCtx = document.getElementById('resultsDonutChart');
+    if (!donutCtx) return;
+    if (dashDonutChart) dashDonutChart.destroy();
+
+    dashDonutChart = new Chart(donutCtx, {
+      type: 'doughnut',
+      data: {
+        // เอา % ออกจาก Legend เพื่อกันข้อความยาวล้นจอ
+        labels: ['Conformity', 'Observation', 'Minor NC', 'Major NC'],
+        datasets: [{ 
+          data: [data.conform, data.obs, data.minor, data.major], 
+          backgroundColor: ['#10b981', '#fbbf24', '#f97316', '#ef4444'], 
+          borderWidth: 3, 
+          borderColor: '#ffffff', 
+          hoverOffset: 6 
+        }]
+      },
+      plugins: [centerTextPlugin],
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '75%',
+        plugins: { 
+          legend: { 
+            display: true, 
+            position: 'right', 
+            labels: { 
+              usePointStyle: true, 
+              pointStyle: 'circle', 
+              font: { family: 'Sarabun', size: 12, weight: 'bold' }, 
+              padding: 12, 
+              color: '#475569' 
+            } 
+          }, 
+          tooltip: { titleFont: { family: 'Sarabun' }, bodyFont: { family: 'Sarabun' } } 
+        }
+      }
+    });
+  }
+
+// =========================================================================
+// หน้าอื่นๆ
+// =========================================================================
+function renderProgram(){
+  return `<div class="flex justify-between items-center mb-4"><div><h3 class="font-bold text-lg text-slate-800">Annual Audit Programme</h3><p class="text-sm text-slate-500 font-medium">Risk-based schedule and assignment</p></div><button onclick="openProgramForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-plus mr-2"></i>New Audit</button></div>${renderGlobalFilterBar()}${auditTable(state.audits)}`;
+}
+
+  function auditTable(data){
+    const fYear = state.globalFilter.year;
+    const fDept = state.globalFilter.department;
+    const fStatus = state.globalFilter.status;
+
+    const filteredData = data.filter(a => {
+      const matchYear = fYear === 'All' || (a.auditId && a.auditId.includes(fYear));
+      const matchDept = fDept === 'All' || (a.meta?.targetDepartment === fDept);
+
+      // ดึงสถานะปัจจุบันของ Audit มาเช็ค (ถ้าไม่มีให้มองเป็น PLANNED)
+      const currentStatus = a.meta?.status || a.status || 'PLANNED';
+      const matchStatus = fStatus === 'All' || (currentStatus === fStatus);
+
+      return matchYear && matchDept && matchStatus;
+    });
+
+    const ITEMS_PER_PAGE = 15;
+    const currentView = state.view === 'execution' ? 'execution' : 'program';
+    const paginatedData = paginateArray(filteredData, ITEMS_PER_PAGE, state.pages[currentView]);
+    const tableHtml = `<div class="card overflow-x-auto shadow-sm border-slate-200"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-4 text-left font-bold text-slate-600">Audit</th><th class="p-4 text-left font-bold text-slate-600">Department</th><th class="p-4 text-center font-bold text-slate-600">Date</th><th class="p-4 text-center font-bold text-slate-600">Status</th><th class="p-4 text-center font-bold text-slate-600">Progress</th><th class="p-4"></th></tr></thead><tbody>
+    ${paginatedData.map(a=>{
+      const q=a.checklist||[],done=q.filter(x=>x.result&&x.result!=='NOT_EVALUATED').length,p=q.length?Math.round(done/q.length*100):0;
+      const deleteBtn = hasRole('Admin') ? `<button onclick="deleteAudit('${a.id}')" class="text-red-500 hover:text-red-700 ml-4 bg-red-50 p-2 rounded-lg" title="ลบข้อมูล"><i class="fa-solid fa-trash"></i></button>` : '';
+      return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-4"><b>${esc(a.meta?.title||a.title||a.id)}</b><div class="text-xs text-slate-400 font-semibold mt-1">${esc(a.auditId||a.id)}</div></td><td class="p-4 font-semibold text-slate-700">${esc(a.meta?.targetDepartment||a.department)}</td><td class="p-4 text-center font-medium">${esc(a.meta?.scheduledDate||a.scheduledDate||'-')}</td><td class="p-4 text-center"><span class="bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-wide">${esc(a.meta?.status||a.status||'PLANNED')}</span></td><td class="p-4 text-center font-bold text-slate-700">${p}%</td><td class="p-4 text-right whitespace-nowrap"><button onclick="openAudit('${a.id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-4 py-1.5 rounded-lg transition">Open</button> ${deleteBtn}</td></tr>`
+    }).join('')||'<tr><td class="p-12 text-center text-slate-400 font-medium" colspan="6"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>No audits found matching criteria</td></tr>'}</tbody></table></div>`;
+    return tableHtml + renderPaginationBar(filteredData.length, ITEMS_PER_PAGE, state.pages[currentView], currentView);
+  }
+
+function openProgramForm(){showModal(`<form id="programForm" class="p-6 space-y-4"><div class="flex justify-between"><h3 class="font-bold text-xl">Create Audit Campaign</h3><button type="button" onclick="closeModal()">✕</button></div><div class="grid md:grid-cols-2 gap-4"><label class="text-sm font-bold">Audit ID<input name="auditId" required value="AUD-${new Date().getFullYear()}-${String(state.audits.length+1).padStart(3,'0')}" class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Title<input name="title" required class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Department<select name="department" class="w-full border rounded-lg p-2 mt-1">${DEPARTMENTS.map(x=>`<option>${x}</option>`).join('')}</select></label><label class="text-sm font-bold">Scheduled Date<input name="date" type="date" required class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Lead Auditor (Email ID)<input name="lead" value="${esc(state.profile.displayName||state.user.email)}" class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Auditee / Process Owner (Email ID)<input name="auditee" class="w-full border rounded-lg p-2 mt-1"></label></div><label class="block text-sm font-bold">Objective<textarea name="objective" class="w-full border rounded-lg p-2 mt-1"></textarea></label><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-5 py-3 shadow-md transition">Create Campaign</button></form>`);programForm.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('auditId');loading(true,'Creating audit...');try{await db.collection('audit_campaigns').doc(id).set({auditId:id,meta:{title:f.get('title'),targetDepartment:f.get('department'),scheduledDate:f.get('date'),leadAuditor:f.get('lead'),auditee:f.get('auditee'),objective:f.get('objective'),standards:[],status:'PLANNED'},checklist:[],summary:{totalCheckpoints:0,conformingCount:0,majorNcCount:0,minorNcCount:0,observationCount:0},createdBy:state.user.email,createdAt:SV.serverTimestamp(),updatedAt:SV.serverTimestamp()});await auditEvent('CREATE','AUDIT',id);closeModal();toast('Audit campaign created')}catch(x){toast(x.message,'error')}finally{loading(false)}}}
+
+function renderPlanner() {
+  setTimeout(updatePlannerDept, 100);
+  const availableAudits = state.audits.filter(a => !a.checklist || a.checklist.length === 0);
+
+  return `<div class="grid lg:grid-cols-3 gap-6">
+    <form id="plannerForm" class="card p-5 space-y-4 shadow-sm border-slate-200">
+      <h3 class="font-bold text-lg text-slate-800">Audit Scope & Risk Context</h3>
+      <label class="block text-sm font-bold text-slate-700">Audit Campaign
+        <select id="planAudit" onchange="updatePlannerDept()" class="w-full border border-slate-300 rounded-lg p-2.5 mt-1 outline-none focus:border-blue-500 bg-slate-50">
+          ${availableAudits.length > 0 ? availableAudits.map(a => `<option value="${a.id}">${esc(a.meta?.title || a.id)}</option>`).join('') : `<option value="">-- No available audits to plan --</option>`}
+        </select>
+      </label>
+      <label class="block text-sm font-bold text-slate-700">Department
+        <select id="planDept" class="w-full border border-slate-300 rounded-lg p-2.5 mt-1 outline-none focus:border-blue-500 bg-slate-50">
+          ${DEPARTMENTS.map(x => `<option>${x}</option>`).join('')}
+        </select>
+      </label>
+      <div>
+        <span class="text-sm font-bold text-slate-700">Applicable Standards</span>
+        <div class="mt-2 grid grid-cols-2 gap-3 max-h-48 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-slate-200">
+          ${STANDARDS.map(s => `<label class="flex gap-2 text-sm font-medium items-center"><input type="checkbox" name="std" value="${s}" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">${s}</label>`).join('')}
+        </div>
+      </div>
+      <label class="block text-sm font-bold text-slate-700">Key risks / KPI / complaints
+        <textarea id="planRisk" rows="4" class="w-full border border-slate-300 rounded-lg p-2.5 mt-1 outline-none focus:border-blue-500" placeholder="Enter current risks, previous issues and performance context"></textarea>
+      </label>
+      <label class="flex gap-2 text-sm font-bold text-slate-700 items-center"><input id="includeHistory" type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">Include previous NC follow-up</label>
+      <button type="submit" ${availableAudits.length === 0 ? 'disabled' : ''} class="w-full bg-indigo-600 text-white rounded-lg py-3.5 font-bold disabled:bg-slate-300 shadow-md hover:bg-indigo-700 transition">
+        <i class="fa-solid fa-robot mr-2"></i>Generate Integrated Checklist
+      </button>
+    </form>
+
+    <section class="lg:col-span-2 card p-5 shadow-sm border-slate-200 bg-slate-50/50">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="font-bold text-lg text-slate-800">Preview & Approval</h3>
+        <button id="saveChecklistBtn" onclick="saveGeneratedChecklist()" class="${state.generated.length ? '' : 'hidden'} bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg shadow font-bold transition"><i class="fa-solid fa-check mr-2"></i>Approve & Save</button>
+      </div>
+      <div id="generatedList" class="mt-4 space-y-4">
+        ${state.generated.length ? generatedHTML() : '<div class="py-24 text-center text-slate-400 font-medium"><i class="fa-solid fa-wand-magic-sparkles text-4xl mb-4 text-slate-300 block"></i>Configure scope and generate a checklist.</div>'}
+      </div>
+      ${state.generated.length ? `<button type="button" onclick="addGeneratedItem()" class="mt-4 w-full border-2 border-dashed border-slate-300 text-slate-500 py-3 rounded-xl hover:bg-slate-100 hover:border-slate-400 hover:text-slate-700 font-bold transition"><i class="fa-solid fa-plus mr-2"></i>เพิ่มข้อกำหนดด้วยตนเอง (Add Manual Item)</button>` : ''}
+    </section>
+  </div>`;
+}
+
+function updatePlannerDept() {
+  const auditId = document.getElementById('planAudit')?.value;
+  const audit = state.audits.find(a => a.id === auditId);
+  if (audit && audit.meta && audit.meta.targetDepartment) {
+    document.getElementById('planDept').value = audit.meta.targetDepartment;
+  }
+}
+
+function syncGeneratedEditors() {
+  document.querySelectorAll('.gen-question').forEach(x => { state.generated[+x.dataset.i].question = x.value; });
+  document.querySelectorAll('.gen-evidence').forEach(x => { state.generated[+x.dataset.e].expectedEvidence = x.value; });
+}
+
+const AUDIT_SYSTEM_OPTIONS = ['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements','General'];
+
+function syncGeneratedChecklistEditors() {
+  document.querySelectorAll('.gen-standard').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].standardsCovered = e.value; });
+  document.querySelectorAll('.gen-clause').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].clause = e.value; });
+  document.querySelectorAll('.gen-question').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].question = e.value; });
+  document.querySelectorAll('.gen-evidence').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].expectedEvidence = e.value; });
+  document.querySelectorAll('.gen-risk').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].riskFocus = e.value; });
+  document.querySelectorAll('.gen-type').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].questionType = e.value; });
+}
+
+function generatedHTML() {
+  setTimeout(() => { document.getElementById('saveChecklistBtn')?.classList.remove('hidden'); }, 0);
+  return state.generated.map((question, index) => {
+    const currentStandard = question.standardsCovered || question.standard || 'General';
+    const standardOptions = AUDIT_SYSTEM_OPTIONS.map(system => `<option value="${esc(system)}" ${currentStandard.includes(system) ? 'selected' : ''}>${esc(system)}</option>`).join('');
+    const questionTypeOptions = ['Document','Record','Interview','Observation','Traceability','Follow-up'].map(type => `<option value="${esc(type)}" ${question.questionType === type ? 'selected' : ''}>${esc(type)}</option>`).join('');
+
+    return `
+    <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm hover:shadow transition relative group">
+      <div class="absolute -left-3 -top-3 w-8 h-8 bg-blue-100 text-blue-700 font-black rounded-full flex items-center justify-center border-4 border-slate-50">${index+1}</div>
+      <div class="flex justify-between gap-3 items-start ml-2">
+        <div class="grid md:grid-cols-2 gap-4 flex-1">
+          <label class="text-xs font-bold text-slate-700">System / Standard
+            <select data-index="${index}" class="gen-standard w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50">${standardOptions}</select>
+          </label>
+          <label class="text-xs font-bold text-slate-700">Clause / Requirement
+            <input type="text" data-index="${index}" class="gen-clause w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50" value="${esc(question.clause || '')}" placeholder="e.g. 7.1.5">
+          </label>
+        </div>
+        <button type="button" onclick="deleteGeneratedItem(${index})" class="text-red-400 border border-red-100 bg-red-50 rounded-lg px-3 py-2.5 hover:bg-red-100 hover:text-red-600 transition" title="ลบรายการนี้"><i class="fa-solid fa-trash"></i></button>
+      </div>
+      <div class="ml-2 mt-4 space-y-4">
+        <label class="block text-sm font-bold text-slate-800">Audit Question
+          <textarea data-index="${index}" rows="2" class="gen-question w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 font-normal" placeholder="พิมพ์คำถามที่ต้องการตรวจ">${esc(question.question || '')}</textarea>
+        </label>
+        <label class="block text-sm font-bold text-slate-800">Expected Evidence
+          <textarea data-index="${index}" rows="2" class="gen-evidence w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 font-normal" placeholder="ระบุเอกสาร บันทึก การสัมภาษณ์ หรือการสังเกตการณ์ที่คาดหวัง">${esc(question.expectedEvidence || question.requirement || '')}</textarea>
+        </label>
+        <div class="grid md:grid-cols-2 gap-4">
+          <label class="text-xs font-bold text-slate-700">Risk Focus
+            <input type="text" data-index="${index}" class="gen-risk w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50" value="${esc(question.riskFocus || '')}">
+          </label>
+          <label class="text-xs font-bold text-slate-700">Question Type
+            <select data-index="${index}" class="gen-type w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50">${questionTypeOptions}</select>
+          </label>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteGeneratedItem(index) {
+  syncGeneratedChecklistEditors();
+  if (!confirm('ยืนยันลบรายการนี้ออกจาก Checklist?')) return;
+  state.generated.splice(index, 1);
+  render();
+}
+
+function addGeneratedItem() {
+  syncGeneratedChecklistEditors();
+  state.generated.push({ itemId: '', source: 'MANUAL', clause: '', standardsCovered: 'General', question: '', expectedEvidence: '', riskFocus: 'Manual addition', questionType: 'Observation', result: 'NOT_EVALUATED', evidence: '', comment: '', attachmentUrl: '', attachmentPath: '' });
+  render();
+}
+
+document.addEventListener('submit',async e=>{if(e.target.id!=='plannerForm')return;e.preventDefault();const standards=[...document.querySelectorAll('[name=std]:checked')].map(x=>x.value);if(!standards.length)return toast('Select at least one standard','warn');loading(true,'AI is generating a risk-based checklist...');try{const fn=functions.httpsCallable('generateAuditChecklist');const r=await fn({auditId:planAudit.value,department:planDept.value,standards,performanceContext:planRisk.value,includeHistory:includeHistory.checked});state.generated=r.data.data||r.data.checklist||[];render()}catch(x){toast(x.message,'error')}finally{loading(false)}});
+
+async function saveGeneratedChecklist() {
+  syncGeneratedChecklistEditors();
+  const auditId = document.getElementById('planAudit')?.value || state.audits[0]?.id;
+  if (!auditId) { toast('กรุณาเลือก Audit Campaign', 'warn'); return; }
+  if (!state.generated.length) { toast('ไม่มี Checklist สำหรับบันทึก', 'warn'); return; }
+
+  const incompleteIndex = state.generated.findIndex(item => (!String(item.clause || '').trim() || !String(item.question || '').trim() || !String(item.expectedEvidence || '').trim()));
+  if (incompleteIndex >= 0) { toast(`Checklist ลำดับที่ ${incompleteIndex + 1} ยังระบุ Clause, Question หรือ Expected Evidence ไม่ครบ`, 'warn'); return; }
+
+  const department = document.getElementById('planDept')?.value || '';
+  const selectedStandards = [...document.querySelectorAll('[name=std]:checked')].map(element => element.value);
+  loading(true, 'Saving approved checklist...');
+
+  try {
+    const fn = functions.httpsCallable('saveAuditPlan');
+    await fn({ auditId, department, standards: selectedStandards, questions: state.generated });
+    state.generated = []; toast('Checklist approved and saved'); state.view = 'execution'; buildNav(); render();
+  } catch (error) { toast(error.message, 'error'); } finally { loading(false); }
+}
+
+function renderExecution(){
+  if(state.selectedAudit) return renderAuditRoom();
+  return `
+    <div class="mb-4">
+      <h3 class="font-bold text-lg text-slate-800">Audit Execution</h3><p class="text-sm text-slate-500 font-medium">Open a campaign to record objective evidence and results.</p>
+    </div>
+    ${renderGlobalFilterBar()}
+    ${auditTable(state.audits)}
+  `;
+}
+
+function openAudit(id){state.selectedAudit=state.audits.find(a=>a.id===id);state.view='execution';buildNav();render()}
+
+function renderAuditRoom(){
+  const a=state.audits.find(x=>x.id===state.selectedAudit?.id)||state.selectedAudit,q=a.checklist||[];state.selectedAudit=a;
+
+  let topActionButtons = '';
+  if (a.meta?.status === 'COMPLETED' || a.meta?.status === 'LOCKED') {
+      if (hasRole('Admin')) topActionButtons = `<button onclick="reopenAudit('${a.id}')" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-unlock-keyhole mr-2"></i> Re-open Audit</button>`;
+  } else {
+      topActionButtons = `<button onclick="finalizeAudit('${a.id}')" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-flag-checkered mr-2"></i>Finalize Audit</button>`;
+  }
+
+  return `<div class="flex flex-wrap justify-between gap-4 mb-6">
+    <div>
+      <button onclick="state.selectedAudit=null;render()" class="text-blue-600 text-sm hover:underline font-bold mb-2 inline-block">← Back to List</button>
+      <h3 class="text-2xl font-black text-slate-800">${esc(a.meta?.title||a.id)}</h3>
+      <p class="text-sm font-semibold text-slate-500 mt-1"><i class="fa-solid fa-building mr-1"></i> ${esc(a.meta?.targetDepartment)} <span class="mx-2 text-slate-300">|</span> <i class="fa-solid fa-bookmark mr-1"></i> ${esc((a.meta?.standards||[]).join(', '))}</p>
+    </div>
+    <div class="flex gap-2 h-fit items-center">
+      <span class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 mr-2">${esc(a.meta?.status)}</span>
+      ${topActionButtons}
+    </div>
+  </div>
+
+  <div class="space-y-4">
+  ${q.map((x,i)=>`<article class="card p-6 shadow-sm border-slate-200 hover:shadow-md transition">
+    <div class="flex flex-wrap justify-between gap-2 border-b pb-3 mb-4">
+      <div><span class="text-xs bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono font-bold text-slate-600">${esc(x.itemId||`CHK-${i+1}`)}</span><span class="text-sm text-blue-600 ml-3 font-bold bg-blue-50 px-2 py-1 rounded-md">${esc(x.clause)}</span></div>
+      <span class="status-${esc(x.result||'NOT_EVALUATED').replace(/\s/g,'_')} text-[11px] px-3 py-1.5 rounded-full font-bold tracking-wide shadow-sm border border-white/50">${esc(x.result||'NOT_EVALUATED')}</span>
+    </div>
+    <h4 class="font-bold mt-2 text-lg text-slate-800">${esc(x.question)}</h4>
+    <p class="text-sm text-slate-600 mt-3 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed"><b class="text-slate-700">Expected evidence:</b><br/>${esc(x.expectedEvidence||x.requirement)}</p>
+
+    <div class="grid md:grid-cols-2 gap-5 mt-5">
+      <label class="text-sm font-bold text-slate-800">Objective Evidence (สิ่งที่พบ)
+        <textarea id="evi-${i}" rows="4" class="w-full border border-slate-300 rounded-lg p-3 mt-2 font-normal focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none leading-relaxed" placeholder="กรอกข้อมูลที่พบหน้างานจริง...">${esc(x.evidence)}</textarea>
+      </label>
+      <div>
+        <label class="text-sm font-bold text-slate-800">Result (ผลประเมิน)
+          <select id="res-${i}" class="w-full border border-slate-300 rounded-lg p-3 mt-2 font-bold focus:border-blue-500 outline-none bg-slate-50 cursor-pointer">
+            <option value="NOT_EVALUATED" class="font-medium text-slate-500">Not Evaluated</option>
+            ${['CONFORMING','Major NC','Minor NC','OBSERVATION','NA'].map(v=>`<option value="${v}" ${x.result===v?'selected':''} class="font-bold">${v}</option>`).join('')}
+          </select>
+        </label>
+        <label class="text-sm font-bold text-slate-800 block mt-4">N/A reason / Comment
+          <input id="com-${i}" value="${esc(x.comment)}" class="w-full border border-slate-300 rounded-lg p-3 mt-2 font-normal outline-none focus:border-blue-500 bg-slate-50" placeholder="เหตุผลเพิ่มเติม...">
+        </label>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-3 mt-6 pt-4 border-t border-slate-100">
+      <button onclick="saveCheckpoint('${a.id}',${i})" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-sm transition"><i class="fa-solid fa-floppy-disk mr-2"></i>Save checkpoint</button>
+      <button onclick="attachEvidence('${a.id}',${i})" class="bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 text-slate-700 px-5 py-2.5 rounded-lg font-bold transition shadow-sm"><i class="fa-solid fa-paperclip mr-2 text-slate-400"></i>Attach evidence</button>
+      ${x.attachmentUrl?`<a class="text-blue-600 hover:bg-blue-50 px-4 py-2.5 rounded-lg font-bold flex items-center transition" target="_blank" href="${esc(x.attachmentUrl)}"><i class="fa-solid fa-file-image mr-2"></i>View attachment</a>`:''}
+      ${(x.riskFocus === "Manual Addition" && x.result === "NOT_EVALUATED") ? `<button type="button" onclick="deleteExecutionItem('${a.id}', ${i})" class="text-red-500 hover:bg-red-50 font-bold py-2.5 px-4 rounded-lg transition ml-auto"><i class="fa-solid fa-trash mr-2"></i>Delete</button>` : ''}
+    </div>
+  </article>`).join('')||'<div class="card p-16 text-center text-slate-400 font-medium"><i class="fa-regular fa-folder-open text-4xl mb-4 text-slate-300 block"></i>No checklist available.</div>'}
+
+  <button onclick="openManualCheckpointModal('${a.id}')" class="w-full border-2 border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 py-5 rounded-xl transition mt-2 font-bold text-base shadow-sm"><i class="fa-solid fa-plus mr-2"></i>เพิ่มรายการตรวจเพิ่มเติมหน้างาน (Add Manual Checkpoint)</button>
+
+  <button onclick="openAICoach('${a.id}')" class="fixed bottom-8 right-8 z-[90] bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-full shadow-2xl transition-transform transform hover:scale-105 flex items-center font-black text-lg border-2 border-white/20">
+    <i class="fa-solid fa-robot mr-3 text-2xl animate-pulse"></i> ถาม AI Coach
+  </button>
+  </div>`;
+}
+
+function openManualCheckpointModal(auditId) {
+  showModal(`
+    <form id="manualChkForm" class="p-6 space-y-4">
+      <h3 class="font-bold text-2xl mb-4 text-slate-800">เพิ่มข้อกำหนด Manual (หน้างาน)</h3>
+      <div class="grid md:grid-cols-2 gap-4">
+        <label class="block text-sm font-bold text-slate-700">Standard / System<input name="std" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="e.g. ISO 9001" required></label>
+        <label class="block text-sm font-bold text-slate-700">Clause / Requirement<input name="clause" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="e.g. 7.1.5" required></label>
+      </div>
+      <label class="block text-sm font-bold text-slate-700">Audit Question<textarea name="q" rows="2" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="คำถาม..." required></textarea></label>
+      <label class="block text-sm font-bold text-slate-700">Expected Evidence<textarea name="ev" rows="2" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="หลักฐานที่คาดหวัง..." required></textarea></label>
+      <div class="flex justify-end gap-3 mt-6">
+        <button type="button" onclick="closeModal()" class="px-5 py-2.5 rounded-lg font-bold text-slate-600 hover:bg-slate-100 transition">ยกเลิก</button>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-plus mr-2"></i>เพิ่มลงใน Checkpoint</button>
+      </div>
+    </form>
+  `);
+
+  document.getElementById('manualChkForm').onsubmit = async (e) => {
+    e.preventDefault(); const fd = new FormData(e.target); const a = state.audits.find(x => x.id === auditId); const checklist = [...(a.checklist || [])];
+    checklist.push({ itemId: `CHK-${String(checklist.length + 1).padStart(3, "0")}`, clause: fd.get('clause'), standardsCovered: fd.get('std'), question: fd.get('q'), expectedEvidence: fd.get('ev'), riskFocus: "Manual Addition", questionType: "Observation", result: "NOT_EVALUATED", evidence: "", comment: "", attachmentUrl: "", attachmentPath: "" });
+    loading(true, 'Adding Checkpoint...');
+    try {
+        await db.collection('audit_campaigns').doc(auditId).update({ checklist, 'summary.totalCheckpoints': checklist.length });
+        await auditEvent('ADD_CHECKPOINT', 'AUDIT', auditId, { source: "Execution" });
+        closeModal(); state.selectedAudit.checklist = checklist; render(); toast('เพิ่มรายการสำเร็จ', 'ok');
+    } catch(err) { toast(err.message, 'error'); } finally { loading(false); }
+  };
+}
+
+async function deleteExecutionItem(auditId, index) {
+  if(!confirm('ยืนยันลบ Manual Checkpoint นี้?')) return;
+  const a = state.audits.find(x => x.id === auditId), checklist = [...(a.checklist || [])]; checklist.splice(index, 1);
+  loading(true, 'Deleting Checkpoint...');
+  try { await db.collection('audit_campaigns').doc(auditId).update({ checklist, 'summary.totalCheckpoints': checklist.length }); state.selectedAudit.checklist = checklist; render(); toast('ลบรายการสำเร็จ', 'ok'); } catch(err) { toast(err.message, 'error'); } finally { loading(false); }
+}
+
+function openAICoach(auditId) {
+  const a = state.audits.find(x => x.id === auditId);
+  showModal(`
+    <div class="p-2 sm:p-4">
+      <div class="flex justify-between items-center mb-4 border-b pb-4">
+        <h3 class="font-bold text-xl text-indigo-900 flex items-center"><div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mr-3"><i class="fa-solid fa-robot text-xl"></i></div>AI Coach (Lead Auditor)</h3>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-800 text-2xl font-bold bg-slate-50 w-10 h-10 rounded-lg flex items-center justify-center">✕</button>
+      </div>
+      <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mb-4 h-[60vh] overflow-y-auto text-sm space-y-4 shadow-inner" id="coachChatBox">
+        <div class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-lg"></i></div><div class="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200 flex-1 leading-relaxed text-slate-700">สวัสดีครับคู่หู! ผมคือ <b class="text-indigo-700">AI Coach</b> ผู้เชี่ยวชาญด้าน ISO 9001, 14001, 45001, 50001, GMP, Halal, FSC และ PEFC<br><br>มีอะไรให้ผมช่วยแนะนำในการเข้าตรวจแผนก <b class="text-slate-900">${esc(a.meta?.targetDepartment)}</b> ไหมครับ? พิมพ์ถามมาได้เลย ไม่ว่าจะเป็นวิธีการตั้งคำถาม การประเมินหลักฐาน หรือปรึกษาว่าสิ่งที่เจอควรให้ NC หรือไม่ครับ</div></div>
+      </div>
+      <form id="coachForm" class="flex gap-2 mt-4 relative">
+        <input type="text" id="coachInput" required class="flex-1 border-2 border-indigo-100 focus:border-indigo-500 rounded-xl p-4 pr-16 outline-none shadow-sm font-medium" placeholder="พิมพ์คำปรึกษาที่นี่... (เช่น Auditee ไม่มีบันทึก PM ควรให้ NC ไหม?)">
+        <button type="submit" class="absolute right-2 top-2 bottom-2 bg-indigo-600 text-white px-5 rounded-lg hover:bg-indigo-700 shadow transition flex items-center justify-center"><i class="fa-solid fa-paper-plane text-lg"></i></button>
+      </form>
+    </div>
+  `);
+  document.getElementById('coachForm').onsubmit = async e => {
+    e.preventDefault(); const inputEl = document.getElementById('coachInput'); const q = inputEl.value; inputEl.value = ''; const chatBox = document.getElementById('coachChatBox');
+    chatBox.innerHTML += `<div class="flex gap-3 items-start flex-row-reverse"><div class="w-10 h-10 shrink-0 rounded-full bg-slate-300 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user text-white text-lg"></i></div><div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-sm shadow-sm flex-1 text-right leading-relaxed">${esc(q)}</div></div>`; chatBox.scrollTop = chatBox.scrollHeight;
+    const loadingId = 'loading-' + Date.now();
+    chatBox.innerHTML += `<div id="${loadingId}" class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-lg"></i></div><div class="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200"><div class="spinner border-indigo-600 w-6 h-6 border-3"></div></div></div>`; chatBox.scrollTop = chatBox.scrollHeight;
+    try {
+      const fn = functions.httpsCallable('askAuditAICoach'); const res = await fn({ auditId, question: q }); document.getElementById(loadingId).remove();
+      const formattedAns = esc(res.data.answer).replace(/\*\*(.*?)\*\*/g, '<b class="text-slate-900">$1</b>').replace(/\n\*/g, '<br>•').replace(/\n/g, '<br>');
+      chatBox.innerHTML += `<div class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-lg"></i></div><div class="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200 flex-1 leading-relaxed text-slate-700">${formattedAns}</div></div>`; chatBox.scrollTop = chatBox.scrollHeight;
+    } catch(err) { document.getElementById(loadingId).remove(); toast(err.message, 'error'); }
+  };
+}
+
+async function saveCheckpoint(id,i){
+  const a=state.audits.find(x=>x.id===id),q=[...(a.checklist||[])];
+  const resVal = document.getElementById(`res-${i}`).value, eviVal = document.getElementById(`evi-${i}`).value;
+  if (['Major NC', 'Minor NC', 'OBSERVATION'].includes(resVal) && !eviVal.trim()) return toast('⚠️ กรุณาระบุ "Objective Evidence (สิ่งที่พบ)" ก่อนบันทึก NC หรือ Observation', 'warn');
+  q[i]={...q[i],evidence:eviVal,result:resVal,comment:document.getElementById(`com-${i}`).value,updatedBy:state.user.email,updatedAt:new Date().toISOString()};
+  loading(true,'Saving checkpoint...');
+  try{
+    const fn=functions.httpsCallable('updateAuditCheckpoint'); await fn({auditId:id,index:i,checkpoint:q[i]});
+    if(q[i].result.includes('NC')||q[i].result==='OBSERVATION') await openFindingDraft(id,i,q[i]);
+    if(state.selectedAudit&&state.selectedAudit.id===id){state.selectedAudit.checklist[i]=q[i];}
+    render();toast('Checkpoint saved', 'ok')
+  }catch(x){toast(x.message,'error')}finally{loading(false)}
+}
+
+async function openFindingDraft(auditId, checkpointIndex, checkpoint) {
+  const audit = state.audits.find(item => item.id === auditId); if (!audit) throw new Error('Audit campaign not found.');
+  const auditReference = audit.auditId || audit.id; const checklistItemId = checkpoint.itemId || `CHK-${String(checkpointIndex + 1).padStart(3, '0')}`;
+  const findingNo = `${auditReference}-${checklistItemId}`, findingDocumentId = findingNo.replace(/[\/\\#?]/g, '_'), findingReference = db.collection('findings').doc(findingDocumentId);
+  const existingSnapshot = await findingReference.get(), existingData = existingSnapshot.exists ? existingSnapshot.data() : {};
+  if (existingSnapshot.exists && existingData.status === 'VOID') return;
+  const scheduledDate = audit.meta?.scheduledDate || audit.scheduledDate || '', auditYear = scheduledDate ? scheduledDate.slice(0, 4) : String(new Date().getFullYear());
+  const findingData = { auditId: auditReference, auditDocumentId: audit.id, checkpointIndex, checklistItemId, findingNo, title: checkpoint.question || checkpoint.clause || 'Audit finding', department: audit.meta?.targetDepartment || audit.department || 'Not specified', clause: checkpoint.clause || '', standardsCovered: checkpoint.standardsCovered || '', criteria: checkpoint.expectedEvidence || checkpoint.requirement || '', condition: checkpoint.evidence || '', objectiveEvidence: checkpoint.evidence || '', classification: checkpoint.result?.includes('NC') ? checkpoint.result : 'Observation', status: existingData.status || 'DRAFT', auditYear, createdBy: existingData.createdBy || state.user.email, createdAt: existingData.createdAt || SV.serverTimestamp(), updatedBy: state.user.email, updatedAt: SV.serverTimestamp() };
+  await findingReference.set(findingData, { merge: true });
+  await auditEvent(existingSnapshot.exists ? 'UPDATE' : 'CREATE', 'FINDING', findingDocumentId, { auditId: auditReference, findingNo, checkpointIndex, checklistItemId });
+}
+
+function attachEvidence(id,i){const input=document.getElementById('fileInput');input.value='';input.onchange=async()=>{if(!input.files[0])return;loading(true,'Uploading evidence...');try{const f=input.files[0],path=`audit-evidence/${id}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`,ref=storage.ref(path);await ref.put(f,{customMetadata:{uploadedBy:state.user.email,auditId:id}});const url=await ref.getDownloadURL();const fn=functions.httpsCallable('updateAuditCheckpoint');await fn({auditId:id,index:i,checkpoint:{...(state.selectedAudit.checklist[i]),attachmentUrl:url,attachmentPath:path}});toast('Evidence uploaded')}catch(x){toast(x.message,'error')}finally{loading(false)}};input.click()}
+
+async function finalizeAudit(id){
+  if(!confirm('Finalize this audit and lock the execution record? (หากมี NC ระบบจะให้ AI เขียนสรุปให้ผู้บริหารอัตโนมัติ)'))return;
+  loading(true,'Finalizing audit and generating insights...');
+  try{
+    const fn=functions.httpsCallable('finalizeAuditCampaign');
+    await fn({auditId:id});
+    toast('Audit finalized successfully');
+    state.selectedAudit=null;
+    render();
+  }catch(x){
+    toast(x.message,'error');
+  }finally{
+    loading(false);
+  }
+}
+
+async function reopenAudit(id) {
+  if (!confirm('ยืนยันการเปิด Audit นี้ใหม่? (สถานะจะเปลี่ยนกลับเป็น In Progress)')) return;
+  loading(true, 'กำลังเปิด Audit ใหม่อีกครั้ง...');
+  try {
+    const fn = functions.httpsCallable('reopenAuditCampaign');
+    await fn({ auditId: id });
+    toast('เปิด Audit เรียบร้อยแล้ว สามารถแก้ไขได้เลยครับ', 'ok');
+    state.selectedAudit.meta.status = 'IN_PROGRESS';
+    render();
+  } catch (x) {
+    toast('ไม่สามารถเปิดได้: ' + x.message, 'error');
+  } finally {
+    loading(false);
+  }
+}
+
+function renderFindings(data = state.findings) {
+  const fYear = state.globalFilter.year, fDept = state.globalFilter.department, fStatus = state.globalFilter.status;
+  const filteredData = data.filter(f => {
+    const matchYear = fYear === 'All' || (f.auditYear === fYear) || (f.findingNo && f.findingNo.includes(fYear));
+    const matchDept = fDept === 'All' || f.department === fDept;
+    const matchStatus = fStatus === 'All' || f.status === fStatus;
+    return matchYear && matchDept && matchStatus;
+  });
+
+  const ITEMS_PER_PAGE = 15;
+  const currentView = state.view === 'capa' ? 'capa' : 'findings';
+  const paginatedData = paginateArray(filteredData, ITEMS_PER_PAGE, state.pages[currentView]);
+
+  const rows = paginatedData.map(finding => {
+    const deleteButton = hasRole('Admin') ? `<button type="button" onclick="deleteFinding('${finding.id}')" class="text-red-500 hover:text-red-700 ml-4 bg-red-50 p-2 rounded-lg transition" title="ลบ Finding"><i class="fa-solid fa-trash"></i></button>` : '';
+    let classificationClass = 'text-blue-600 bg-blue-50';
+    if (finding.classification === 'Major NC') classificationClass = 'text-red-600 bg-red-50 border border-red-100 shadow-sm';
+    else if (finding.classification === 'Minor NC') classificationClass = 'text-amber-600 bg-amber-50 border border-amber-100 shadow-sm';
+
+    return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-4 max-w-md"><div class="flex flex-col gap-1.5"><b class="text-blue-700 text-[15px]">${esc(getFindingDisplayRef(finding))}</b><span class="text-xs font-bold text-slate-700 line-clamp-2 leading-relaxed" title="${esc(getFindingDisplayTitle(finding))}">${esc(getFindingDisplayTitle(finding))}</span><span class="text-xs text-slate-500 line-clamp-2 mt-1"><b class="text-slate-600">Obj. Evidence:</b> ${esc(finding.condition || finding.objectiveEvidence || '-')}</span></div></td><td class="p-4 align-top"><span class="font-bold text-slate-700 block mb-1">${esc(finding.department || '-')}</span><span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block">${esc(finding.clause || '-')}</span></td><td class="p-4 text-center align-top"><span class="${classificationClass} px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide">${esc(finding.classification || 'Unclassified')}</span></td><td class="p-4 text-center align-top"><span class="bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide text-slate-600">${esc(finding.status || 'DRAFT')}</span></td><td class="p-4 text-center align-top font-semibold text-slate-700">${esc(finding.targetDate || '-')}</td><td class="p-4 text-right whitespace-nowrap align-top"><button type="button" onclick="editFinding('${finding.id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-4 py-2 rounded-lg transition">Review</button>${deleteButton}</td></tr>`;
+  }).join('') || `<tr><td colspan="6" class="p-12 text-center text-slate-400 font-medium"><i class="fa-solid fa-check-double text-4xl mb-3 text-slate-200 block"></i>No findings found matching criteria</td></tr>`;
+
+  const filterHtml = state.view === 'findings' ? renderGlobalFilterBar() : '';
+  const tableHtml = `${filterHtml}<div class="card overflow-x-auto shadow-sm border-slate-200"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-4 text-left font-bold text-slate-600">Finding Ref.</th><th class="p-4 text-left font-bold text-slate-600">Department / Clause</th><th class="p-4 text-center font-bold text-slate-600">Classification</th><th class="p-4 text-center font-bold text-slate-600">Status</th><th class="p-4 text-center font-bold text-slate-600">Due</th><th class="p-4"></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+
+  return tableHtml + renderPaginationBar(filteredData.length, ITEMS_PER_PAGE, state.pages[currentView], currentView);
+}
+
+function editFinding(id) {
+  const f = state.findings.find(x => x.id === id);
+  const displayRef = getFindingDisplayRef(f); const displayTitle = getFindingDisplayTitle(f);
+
+  showModal(`
+    <form id="findingForm" class="p-6 space-y-4 relative">
+      <input type="hidden" name="id" value="${id}">
+      <div class="flex justify-between items-start border-b border-slate-200 pb-5">
+        <div><h3 class="font-black text-2xl text-blue-800">${esc(displayRef)}</h3><p class="text-sm text-slate-700 font-bold mt-2"><i class="fa-solid fa-tag text-slate-400 mr-2"></i>${esc(displayTitle)}</p><p class="text-xs text-slate-500 mt-2 font-semibold bg-slate-100 inline-block px-3 py-1 rounded-md">แผนก: ${esc(f.department)} <span class="mx-2">|</span> Clause: <span class="text-blue-600">${esc(f.clause)}</span></p></div>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-800 text-2xl font-bold bg-slate-50 w-10 h-10 rounded-lg flex items-center justify-center transition">✕</button>
+      </div>
+
+      <div class="bg-gradient-to-r from-indigo-50 to-white border border-indigo-100 rounded-xl p-5 flex justify-between items-center shadow-sm">
+        <div><h4 class="font-bold text-indigo-900 text-base"><i class="fa-solid fa-wand-magic-sparkles text-indigo-500 mr-2"></i>AI CAPA Advisor</h4><p class="text-xs text-indigo-600 mt-1 font-medium">ให้ AI ช่วยวิเคราะห์สาเหตุ (Root Cause) และเสนอแนวทางแก้ไขจากหลักฐานที่พบ</p></div>
+        <button type="button" onclick="analyzeFindingWithAI('${id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition transform hover:scale-105">วิเคราะห์ด้วย AI</button>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-5 bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-inner">
+        <label class="text-sm font-bold text-slate-800">Classification (ระดับความรุนแรง)<select name="classification" id="finding-classification" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 bg-white font-semibold cursor-pointer">${['Unclassified NC','Major NC','Minor NC','Observation','Good Practice'].map(x => `<option value="${x}" ${f.classification === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label class="text-sm font-bold text-blue-700">Status (สถานะการติดตาม)<select name="status" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 bg-white font-black cursor-pointer">${['DRAFT','UNDER_REVIEW','ISSUED','CAPA_SUBMITTED','VERIFICATION','CLOSED','VOID'].map(x => `<option value="${x}" ${f.status === x ? 'selected' : ''}>${x}</option>`).join('')}</select><span class="text-[11px] text-slate-500 font-medium mt-2 block">*หากกรอก Root Cause ระบบจะปรับสถานะให้เป็น CAPA_SUBMITTED อัตโนมัติ</span></label>
+      </div>
+
+      <div class="space-y-4 mt-6">
+        <h4 class="font-black text-slate-800 border-b border-slate-200 pb-2 text-lg"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>Part 1: Finding Details</h4>
+        <label class="block text-sm font-bold text-slate-700">Criteria / Requirement (ข้อกำหนดที่ใช้อ้างอิง)<textarea name="criteria" id="finding-criteria" rows="2" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed">${esc(f.criteria)}</textarea></label>
+        <label class="block text-sm font-bold text-slate-700">Objective Evidence (สิ่งที่พบ / หลักฐาน)<textarea name="objectiveEvidence" id="finding-condition" rows="3" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed" placeholder="ระบุสิ่งที่พบเห็นหน้างานจริง...">${esc(f.objectiveEvidence || f.condition)}</textarea></label>
+        <label class="block text-sm font-bold text-slate-700">Risk & Impact (ความเสี่ยงและผลกระทบ)<textarea name="riskImpact" id="finding-riskImpact" rows="2" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed">${esc(f.riskImpact)}</textarea></label>
+      </div>
+
+      <div class="space-y-4 mt-8">
+        <h4 class="font-black text-slate-800 border-b border-slate-200 pb-2 text-lg"><i class="fa-solid fa-tools text-orange-500 mr-2"></i>Part 2: Corrective and Preventive Action</h4>
+        ${['correction','rootCause','correctiveAction','effectivenessCriteria'].map(k => `<label class="block text-sm font-bold text-slate-700">${k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}<textarea name="${k}" id="finding-${k}" rows="2" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed">${esc(f[k])}</textarea></label>`).join('')}
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-5 mt-6 border-t border-slate-200 pt-6">
+        <label class="text-sm font-bold text-slate-700">Responsible Person<input name="responsiblePerson" value="${esc(f.responsiblePerson)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold"></label>
+        <label class="text-sm font-bold text-slate-700">Target Date (กำหนดเสร็จ)<input name="targetDate" type="date" value="${esc(f.targetDate)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold"></label>
+        <label class="text-sm font-bold text-slate-700">Verification Date<input name="verificationDate" type="date" value="${esc(f.verificationDate)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold"></label>
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-5 py-3.5 rounded-xl font-bold mt-8 shadow-md transition text-lg"><i class="fa-solid fa-floppy-disk mr-2"></i>Save & Update Record</button>
+    </form>
+  `);
+
+  document.getElementById('findingForm').onsubmit = async e => {
+    e.preventDefault(); const data = Object.fromEntries(new FormData(e.target)); delete data.id;
+    if (data.status === 'DRAFT') data.status = 'ISSUED';
+    if (data.status === 'ISSUED' && (data.rootCause || data.correctiveAction)) data.status = 'CAPA_SUBMITTED';
+    data.condition = data.objectiveEvidence; data.updatedAt = SV.serverTimestamp(); data.updatedBy = state.user.email;
+    if (!f.findingNo && f.auditId) { const a = state.audits.find(x => x.id === f.auditId); if (a) { data.findingNo = `${a.auditId || a.id}-CHK-${String(f.checkpointIndex + 1).padStart(3, '0')}`; data.auditYear = a.auditId ? a.auditId.substring(4,8) : new Date().getFullYear().toString(); data.title = f.title || f.clause; } }
+    loading(true, 'Saving finding...');
+    try { await db.collection('findings').doc(id).update(data); await auditEvent('UPDATE', 'FINDING', id, { status: data.status, classification: data.classification }); closeModal(); toast('Finding updated successfully', 'ok'); render(); } catch (x) { toast(x.message, 'error'); } finally { loading(false); }
+  };
+}
+
+async function analyzeFindingWithAI(id) {
+  const f = state.findings.find(x => x.id === id); const condition = document.getElementById('finding-condition').value || f.condition; const criteria = document.getElementById('finding-criteria').value || f.criteria;
+  if (!condition) return toast('กรุณาระบุ Condition (สิ่งที่พบ) ก่อนให้ AI วิเคราะห์', 'warn');
+  loading(true, '🤖 AI กำลังวิเคราะห์รากเหง้าของปัญหาและสร้าง CAPA...');
+  try {
+    const fn = functions.httpsCallable('analyzeFindingAndCAPA'); const response = await fn({ findingId: id, department: f.department || 'Unknown', clause: f.clause || 'Unknown', condition: condition, criteria: criteria }); const aiResult = response.data.analysis;
+    if (aiResult.proposedRootCause) document.getElementById('finding-rootCause').value = aiResult.proposedRootCause; if (aiResult.correction) document.getElementById('finding-correction').value = aiResult.correction; if (aiResult.correctiveAction) document.getElementById('finding-correctiveAction').value = aiResult.correctiveAction; if (aiResult.effectivenessCriteria) document.getElementById('finding-effectivenessCriteria').value = aiResult.effectivenessCriteria;
+    toast('AI เติมข้อมูลวิเคราะห์ให้เรียบร้อยแล้ว กรุณาตรวจสอบก่อนบันทึก', 'ok');
+  } catch (x) { console.error(x); toast('การวิเคราะห์ด้วย AI ล้มเหลว: ' + x.message, 'error'); } finally { loading(false); }
+}
+
+function renderCAPA(){
+  return `
+    <div class="mb-4">
+      <h3 class="font-bold text-lg text-slate-800">CAPA Tracking</h3><p class="text-sm text-slate-500 font-medium">ติดตามการแก้ไขและการปิดประเด็นข้อบกพร่อง</p>
+    </div>
+    ${renderGlobalFilterBar()}
+    ${renderFindings(state.findings.filter(f => !['DRAFT','VOID'].includes(f.status)))}
+  `
+}
+
 function renderMRM(){const byDept={},byClass={};state.findings.forEach(f=>{byDept[f.department||'Unknown']=(byDept[f.department||'Unknown']||0)+1;byClass[f.classification||'Unclassified']=(byClass[f.classification||'Unclassified']||0)+1});const bar=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="mb-3"><div class="flex justify-between text-sm"><span>${esc(k)}</span><b>${v}</b></div><div class="h-2 bg-slate-100 rounded"><div class="h-2 bg-blue-600 rounded" style="width:${Math.min(100,v/Math.max(...Object.values(o),1)*100)}%"></div></div></div>`).join('');return `<div class="grid lg:grid-cols-2 gap-6"><section class="card p-5"><h3 class="font-bold mb-4">Findings by Department</h3>${bar(byDept)||'<p class="text-slate-400">No data</p>'}</section><section class="card p-5"><h3 class="font-bold mb-4">Findings by Classification</h3>${bar(byClass)||'<p class="text-slate-400">No data</p>'}</section><section class="card p-5 lg:col-span-2"><h3 class="font-bold mb-3">Management Review Inputs</h3><ul class="list-disc pl-5 text-sm space-y-2"><li>Audit programme completion: ${state.audits.filter(a=>a.meta?.status==='COMPLETED').length} completed of ${state.audits.length} recorded.</li><li>Open findings: ${state.findings.filter(f=>f.status!=='CLOSED').length}</li><li>Repeat and systemic issues require confirmation through approved classification and effectiveness review.</li></ul></section></div>`}
 function renderAdmin(){if(!hasRole('Admin'))return '<div class="card p-8">Access denied.</div>';return `<div class="card p-5"><h3 class="font-bold text-lg">Administration</h3><p class="text-sm text-slate-500 mt-1">Create users in Firebase Authentication, then maintain their role document under users/{uid}.</p><div class="mt-4 bg-slate-50 rounded-xl p-4 text-sm"><b>Supported roles</b><div class="mt-2 flex gap-2 flex-wrap">${['Admin','Lead Auditor','Auditor','Auditee','Management Viewer'].map(x=>`<span class="bg-white border rounded-full px-3 py-1">${x}</span>`).join('')}</div></div></div>`}
-window.closeModal=closeModal;window.openProgramForm=openProgramForm;window.openAudit=openAudit;window.saveGeneratedChecklist=saveGeneratedChecklist;window.saveCheckpoint=saveCheckpoint;window.attachEvidence=attachEvidence;window.finalizeAudit=finalizeAudit;window.editFinding=editFinding;window.state=state;
+
+// การจับฟังก์ชันลง window object (เพื่อให้ HTML เรียกใช้งานได้)
+window.closeModal=closeModal; window.openProgramForm=openProgramForm; window.openAudit=openAudit; window.saveGeneratedChecklist=saveGeneratedChecklist; window.saveCheckpoint=saveCheckpoint; window.attachEvidence=attachEvidence; window.finalizeAudit=finalizeAudit; window.editFinding=editFinding; window.state=state; window.deleteExecutionItem=deleteExecutionItem; window.reopenAudit=reopenAudit;
+
 updateNetwork();
-  // ฟังก์ชันสำหรับลบ Audit Campaign
-  async function deleteAudit(id) {
-    if (!confirm('ยืนยันการลบ Audit Campaign นี้? ข้อมูลทั้งหมดที่เกี่ยวข้องจะถูกลบทิ้งอย่างถาวร (สำหรับ Admin เท่านั้น)')) return;
 
-    loading(true, 'กำลังลบข้อมูล Audit...');
-    try {
-      // ลบเอกสารหลักใน Collection
-      await db.collection('audit_campaigns').doc(id).delete();
-      // บันทึกประวัติการลบ (Audit Trail)
-      await auditEvent('DELETE', 'AUDIT', id);
+async function deleteAudit(id) {if (!confirm('ยืนยันการลบ Audit Campaign นี้? ข้อมูลจะถูกลบทิ้งอย่างถาวร')) return; loading(true, 'กำลังลบข้อมูล Audit...'); try { await db.collection('audit_campaigns').doc(id).delete(); await auditEvent('DELETE', 'AUDIT', id); toast('ลบเรียบร้อย', 'ok'); } catch (error) { toast(error.message, 'error'); } finally { loading(false); }}
+async function deleteFinding(id) {if (!confirm('ยืนยันการลบ Finding นี้? ข้อมูลจะหายไปอย่างถาวร')) return; loading(true, 'กำลังลบข้อมูล Finding...'); try { await db.collection('findings').doc(id).delete(); await auditEvent('DELETE', 'FINDING', id); toast('ลบเรียบร้อย', 'ok'); } catch (error) { toast(error.message, 'error'); } finally { loading(false); }}
 
-      toast('ลบข้อมูล Audit เรียบร้อยแล้ว', 'ok');
-    } catch (error) {
-      console.error(error);
-      toast('ไม่สามารถลบได้: ' + error.message, 'error');
-    } finally {
-      loading(false);
-    }
+// 🟢 ฟังก์ชันสำหรับปุ่ม Analyze Now (ดึงข้อมูลเข้าสู่ window)
+async function triggerSystemicAnalysis() {
+  if(!confirm("ระบบจะส่งข้อมูล Finding ทั้งหมดที่ยังไม่ปิดให้ AI ประเมินปัญหาเชิงระบบ (Systemic Issues) ยืนยันการทำงานหรือไม่?")) return;
+  loading(true, '🤖 AI กำลังวิเคราะห์จุดอ่อนข้ามแผนกระดับองค์กร...');
+  try {
+    const fn = functions.httpsCallable('generateSystemicInsights');
+    const result = await fn();
+    toast(`วิเคราะห์สำเร็จ! AI ประมวลผลจากข้อมูล ${result.data.count} รายการ`, 'ok');
+  } catch (error) {
+    toast(`ไม่สามารถวิเคราะห์ข้อมูลได้: ${error.message}`, 'error');
+  } finally {
+    loading(false);
   }
+}
+window.triggerSystemicAnalysis = triggerSystemicAnalysis;
 
-  // ฟังก์ชันสำหรับลบ Finding (ข้อบกพร่อง)
-  async function deleteFinding(id) {
-    if (!confirm('ยืนยันการลบ Finding นี้? ข้อมูลจะหายไปอย่างถาวร (สำหรับ Admin เท่านั้น)')) return;
-
-    loading(true, 'กำลังลบข้อมูล Finding...');
-    try {
-      await db.collection('findings').doc(id).delete();
-      await auditEvent('DELETE', 'FINDING', id);
-
-      toast('ลบข้อมูล Finding เรียบร้อยแล้ว', 'ok');
-    } catch (error) {
-      console.error(error);
-      toast('ไม่สามารถลบได้: ' + error.message, 'error');
-    } finally {
-      loading(false);
-    }
-  }
 </script>
 </body>
 </html>
