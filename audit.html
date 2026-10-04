@@ -83,17 +83,18 @@ const auth=firebase.auth(), db=firebase.firestore(), functions=firebase.app().fu
     });
   } catch(e) {}
 const SV=firebase.firestore.FieldValue;
-const STANDARDS=['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements'];
+  const STANDARDS=['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements','FAMI-QS'];
 const DEPARTMENTS=['Top Management','Production','Quality Assurance','Quality Control Laboratory','Warehouse','Maintenance','Engineering','HR','Purchasing','Sales & Customer Service','Environment','Safety'];
-const NAV=[['dashboard','Dashboard','fa-chart-line'],['program','Annual Programme','fa-calendar-check'],['planner','Audit Planning & AI','fa-wand-magic-sparkles'],['execution','Audit Execution','fa-clipboard-check'],['findings','Findings Review','fa-triangle-exclamation'],['capa','CAPA Tracking','fa-list-check'],['mrm','MRM Dashboard','fa-chart-pie'],['admin','Master Data & Users','fa-users-gear']];
+  const NAV=[['dashboard','Dashboard','fa-chart-line'],['program','Annual Programme','fa-calendar-check'],['planner','Audit Planning & AI','fa-wand-magic-sparkles'],['execution','Audit Execution','fa-clipboard-check'],['findings','Findings & CAPA (Form F8)','fa-triangle-exclamation'],['capa','CAPA Tracking','fa-list-check'],['mrm','MRM Dashboard','fa-chart-pie'],['admin','Master Data & Users','fa-users-gear']];
 
 // 🟢 State รวมที่ใช้จัดการตัวแปรทั้งหมดในระบบ
-const state = {
-  user: null, profile: null, view: 'dashboard', audits: [], findings: [], selectedAudit: null, generated: [], unsubscribe: [], 
-  globalFilter: { year: 'All', department: 'All', status: 'All' }, 
-  systemicInsights: null,
-  pages: { program: 1, execution: 1, findings: 1, capa: 1 }
-};
+  const state = {
+    user: null, profile: null, view: 'dashboard', audits: [], findings: [], selectedAudit: null, generated: [], unsubscribe: [], 
+    globalFilter: { year: 'All', department: 'All', status: 'All' }, 
+    systemicInsights: null,
+    dashboardStats: null, // 🟢 เพิ่มตัวแปรนี้
+    pages: { program: 1, execution: 1, findings: 1, capa: 1 }
+  };
 
 // Helpers การแบ่งหน้า
 function paginateArray(array, pageSize, pageNumber) {
@@ -132,44 +133,18 @@ window.addEventListener('online',updateNetwork);window.addEventListener('offline
 async function auditEvent(action,entityType,entityId,details={}){try{await db.collection('audit_events').add({action,entityType,entityId,details,userId:state.user.uid,userEmail:state.user.email,createdAt:SV.serverTimestamp()})}catch(e){console.warn('Audit event',e)}}
 async function loadProfile(user){const ref=db.collection('users').doc(user.uid);const s=await ref.get();if(s.exists)return s.data();const p={email:user.email,displayName:user.displayName||user.email,role:'Auditor',active:true,createdAt:SV.serverTimestamp()};await ref.set(p,{merge:true});return p}
 
-  function setupLiveData() {
-    // 1. เคลียร์ Listener เก่าทิ้งทุกครั้งที่มีการเปลี่ยนเงื่อนไข (ประหยัดหน่วยความจำ)
-    state.unsubscribe.forEach(f => f());
-    state.unsubscribe = [];
-
-    const fYear = state.globalFilter.year;
-
-    // 2. ตั้งค่า Query พื้นฐาน ให้ดึงจากล่าสุดลงไปเก่าสุด
-    let auditQuery = db.collection('audit_campaigns').orderBy('createdAt', 'desc');
-    let findingQuery = db.collection('findings').orderBy('createdAt', 'desc');
-
-    // 3. ถ้ามีการเลือก "ปี" จาก Filter ให้เพิ่มเงื่อนไขเข้าไป
-    if (fYear !== 'All') {
-      findingQuery = db.collection('findings').where('auditYear', '==', fYear).orderBy('createdAt', 'desc');
-      auditQuery = db.collection('audit_campaigns').where('auditId', '>=', `AUD-${fYear}`).where('auditId', '<=', `AUD-${fYear}\uf8ff`).orderBy('createdAt', 'desc');
-    }
-
-    // 4. ดึงข้อมูล Audit และ Finding แบบจำกัดจำนวน 50 รายการ (Lazy Loading ประหยัด Read)
-    state.unsubscribe.push(auditQuery.limit(50).onSnapshot(s => {
-      state.audits = s.docs.map(d => ({ id: d.id, ...d.data() }));
-      render();
-    }));
-
-    state.unsubscribe.push(findingQuery.limit(50).onSnapshot(s => {
-      state.findings = s.docs.map(d => ({ id: d.id, ...d.data() }));
-      render();
-    }));
-
-    // 5. [เพิ่มใหม่] ดึงข้อมูลสถิติตัวเลขสรุปยอด สำหรับแสดงกราฟใน Dashboard
-    state.unsubscribe.push(db.collection('System_Stats').doc('Audit_Dashboard_Summary').onSnapshot(s => {
-      state.dashboardStats = s.exists ? s.data() : null;
-      if (state.view === 'dashboard') render();
-    }));
-
-    // 6. [ของเดิมที่ห้ามหาย] ดึงข้อมูล AI Insights เพื่อนำข้อความวิเคราะห์มาแสดงใน Dashboard
-    state.unsubscribe.push(db.collection('System_Stats').doc('Global_Systemic_Insights').onSnapshot(s => {
+  function setupLiveData(){
+    state.unsubscribe.forEach(f=>f()); state.unsubscribe=[];
+    state.unsubscribe.push(db.collection('audit_campaigns').orderBy('createdAt','desc').limit(500).onSnapshot(s=>{state.audits=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
+    state.unsubscribe.push(db.collection('findings').orderBy('createdAt','desc').limit(1000).onSnapshot(s=>{state.findings=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
+    state.unsubscribe.push(db.collection('System_Stats').doc('Global_Systemic_Insights').onSnapshot(s=>{
       state.systemicInsights = s.exists ? s.data() : null;
-      if (state.view === 'dashboard') render();
+      if(state.view === 'dashboard') render();
+    }));
+    // 🟢 เพิ่มบรรทัดนี้ เพื่อดึงข้อมูลสรุป Dashboard จาก Backend
+    state.unsubscribe.push(db.collection('System_Stats').doc('Audit_Dashboard_Global').onSnapshot(s=>{
+      state.dashboardStats = s.exists ? s.data() : null;
+      if(state.view === 'dashboard') render();
     }));
   }
 
@@ -224,261 +199,250 @@ function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view
 // =========================================================================
 // หน้า Dashboard
 // =========================================================================
-function renderDashboard() {
-  const fYear = state.globalFilter.year;
-  const fDept = state.globalFilter.department;
+  function renderDashboard() {
+    const fYear = state.globalFilter.year;
+    const fDept = state.globalFilter.department;
 
-  const filteredAudits = state.audits.filter(a => {
-    const matchYear = fYear === 'All' || (a.auditId && a.auditId.includes(fYear));
-    const matchDept = fDept === 'All' || (a.meta?.targetDepartment === fDept);
-    return matchYear && matchDept;
-  });
+    // 1. ดึงข้อมูลที่ Backend คำนวณเตรียมไว้ให้แล้วตาม Filter
+    const globalStats = state.dashboardStats?.years?.[fYear]?.departments?.[fDept] || {
+        audit_total: 0, audit_completed: 0,
+        findings_total: 0, findings_open: 0, findings_minor: 0, findings_major: 0, findings_obs: 0,
+        risk_score: 0,
+        chk_total: 0, chk_conform: 0, chk_obs: 0, chk_minor: 0, chk_major: 0,
+        standards: {}
+    };
 
-  const filteredFindings = state.findings.filter(f => {
-    const matchYear = fYear === 'All' || (f.auditYear === fYear) || (f.findingNo && f.findingNo.includes(fYear));
-    const matchDept = fDept === 'All' || f.department === fDept;
-    return matchYear && matchDept;
-  });
+    // 2. คำนวณค่าเพื่อแสดงผล
+    const auditPercent = globalStats.audit_total ? Math.round((globalStats.audit_completed / globalStats.audit_total) * 100) : 0;
+    const totalOpenFindings = globalStats.findings_minor + globalStats.findings_major;
+    const complianceScore = globalStats.chk_total > 0 ? Math.round(((globalStats.chk_conform + globalStats.chk_obs) / globalStats.chk_total) * 100) : 0;
 
-  const completedAudits = filteredAudits.filter(a => a.meta?.status === 'COMPLETED').length;
-  const auditPercent = filteredAudits.length ? Math.round((completedAudits / filteredAudits.length) * 100) : 0;
+    const chartData = { conform: globalStats.chk_conform, obs: globalStats.chk_obs, minor: globalStats.chk_minor, major: globalStats.chk_major, total: globalStats.chk_total };
+    const pctConform = globalStats.chk_total > 0 ? Math.round((globalStats.chk_conform / globalStats.chk_total) * 100) : 0;
+    const pctObs = globalStats.chk_total > 0 ? Math.round((globalStats.chk_obs / globalStats.chk_total) * 100) : 0;
+    const pctMinor = globalStats.chk_total > 0 ? Math.round((globalStats.chk_minor / globalStats.chk_total) * 100) : 0;
+    const pctMajor = globalStats.chk_total > 0 ? Math.round((globalStats.chk_major / globalStats.chk_total) * 100) : 0;
 
-  const openFindingsList = filteredFindings.filter(f => !['CLOSED','VOID'].includes(f.status));
-  const minorCount = openFindingsList.filter(f => f.classification === 'Minor NC').length;
-  const majorCount = openFindingsList.filter(f => f.classification === 'Major NC').length;
-  const totalOpenFindings = minorCount + majorCount;
+    // 3. จัดอันดับ Top 5 Risk Areas โดยดึงข้อมูลเปรียบเทียบทุกแผนก ภายในปีที่เลือก
+    const deptStats = state.dashboardStats?.years?.[fYear]?.departments || {};
+    const topRisks = Object.entries(deptStats)
+        .filter(([d, s]) => d !== 'ALL' && (s.risk_score || 0) > 0)
+        .sort((a, b) => (b[1].risk_score || 0) - (a[1].risk_score || 0))
+        .slice(0, 5)
+        .map(([d, s]) => [d, s.risk_score || 0]);
 
-  const overCapaCount = openFindingsList.filter(f => f.targetDate && f.targetDate < nowISO()).length;
-  const dueSoonCount = openFindingsList.filter(f => f.targetDate && f.targetDate >= nowISO() && f.targetDate <= new Date(Date.now() + 7*86400000).toISOString().slice(0,10)).length;
+    // 4. Overdue CAPA และ Recent Findings (ดึงข้อมูลแบบไดนามิกจากเวลาปัจจุบัน)
+    const filteredFindings = state.findings.filter(f => {
+      const matchYear = fYear === 'All' || (f.auditYear === fYear) || (f.findingNo && f.findingNo.includes(fYear));
+      const matchDept = fDept === 'All' || f.department === fDept;
+      return matchYear && matchDept && f.status !== 'VOID';
+    });
+    const openFindingsList = filteredFindings.filter(f => f.status !== 'CLOSED');
+    const overCapaCount = openFindingsList.filter(f => f.targetDate && f.targetDate < nowISO()).length;
+    const dueSoonCount = openFindingsList.filter(f => f.targetDate && f.targetDate >= nowISO() && f.targetDate <= new Date(Date.now() + 7*86400000).toISOString().slice(0,10)).length;
 
-  let totalCheckpoints = 0;
-  let conformingCount = 0;
-  let observationCount = 0;
-  let minorNCCountTotal = 0;
-  let majorNCCountTotal = 0;
-  let standardScores = {}; 
+    setTimeout(() => initNewDashboardCharts(chartData), 100);
 
-  filteredAudits.forEach(audit => {
-    if (audit.checklist && audit.checklist.length > 0) {
-      audit.checklist.forEach(chk => {
-        if (chk.result === 'NA' || chk.result === 'NOT_EVALUATED') return;
-        totalCheckpoints++;
-        if (chk.result === 'CONFORMING') conformingCount++;
-        else if (chk.result === 'OBSERVATION') observationCount++;
-        else if (chk.result === 'Minor NC') minorNCCountTotal++;
-        else if (chk.result === 'Major NC') majorNCCountTotal++;
+    // HTML ส่วน Systemic Insights (เหมือนเดิม)
+    let aiInsightsHtml = `
+      <div class="py-12 text-center text-slate-400 font-medium">
+        <i class="fa-regular fa-folder-open text-4xl mb-3 text-slate-200 block"></i>
+        ยังไม่มีข้อมูล Insights ในขณะนี้
+      </div>`;
 
-        let std = chk.standardsCovered || 'General';
-        if (!standardScores[std]) standardScores[std] = { total: 0, pass: 0 };
-        standardScores[std].total++;
-        if (chk.result === 'CONFORMING' || chk.result === 'OBSERVATION') standardScores[std].pass++;
-      });
-    }
-  });
+    if (state.systemicInsights && state.systemicInsights.insights && state.systemicInsights.insights.length > 0) {
+      aiInsightsHtml = state.systemicInsights.insights.map(insight => {
+        // กำหนดสีและไอคอนตามประเภทของ Insight (รองรับดีไซน์แบบในภาพ)
+        let icon = 'fa-info'; 
+        let bgClass = 'bg-blue-50'; 
+        let textClass = 'text-blue-500';
 
-  const complianceScore = totalCheckpoints > 0 ? Math.round(((conformingCount + observationCount) / totalCheckpoints) * 100) : 0;
-  const chartData = { conform: conformingCount, obs: observationCount, minor: minorNCCountTotal, major: majorNCCountTotal, total: totalCheckpoints };
+        const type = (insight.type || '').toLowerCase();
 
-  // คำนวณ % สำหรับแสดงในรายการด้านล่างกราฟ
-  const pctConform = totalCheckpoints > 0 ? Math.round((conformingCount / totalCheckpoints) * 100) : 0;
-  const pctObs = totalCheckpoints > 0 ? Math.round((observationCount / totalCheckpoints) * 100) : 0;
-  const pctMinor = totalCheckpoints > 0 ? Math.round((minorNCCountTotal / totalCheckpoints) * 100) : 0;
-  const pctMajor = totalCheckpoints > 0 ? Math.round((majorNCCountTotal / totalCheckpoints) * 100) : 0;
+        if (type === 'risk' || type === 'danger' || insight.title.includes('ซ้ำ')) {
+          icon = 'fa-triangle-exclamation';
+          bgClass = 'bg-red-50';
+          textClass = 'text-red-500';
+        } else if (type === 'warning' || insight.title.includes('เสี่ยง')) {
+          icon = 'fa-shield-halved';
+          bgClass = 'bg-amber-50';
+          textClass = 'text-amber-500';
+        } else if (type === 'opportunity' || insight.title.includes('โอกาส') || insight.title.includes('ปรับปรุง')) {
+          icon = 'fa-wand-magic-sparkles';
+          bgClass = 'bg-purple-50';
+          textClass = 'text-purple-600';
+        } else {
+          icon = 'fa-info';
+          bgClass = 'bg-blue-50';
+          textClass = 'text-blue-600';
+        }
 
-  const deptRiskScores = {};
-  filteredFindings.forEach(f => {
-    if (f.status === 'VOID') return;
-    const dept = f.department || 'Unknown';
-    if (!deptRiskScores[dept]) deptRiskScores[dept] = 0;
-    if (f.classification === 'Major NC') deptRiskScores[dept] += 10;
-    else if (f.classification === 'Minor NC') deptRiskScores[dept] += 5;
-    else if (f.classification === 'OBSERVATION') deptRiskScores[dept] += 1;
-  });
-  const topRisks = Object.entries(deptRiskScores).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
-  setTimeout(() => initNewDashboardCharts(chartData), 100);
-
-  // 🟢 HTML สำหรับ Systemic AI Insights
-  let aiInsightsHtml = `<div class="py-12 text-center text-slate-400 font-medium"><i class="fa-regular fa-lightbulb text-4xl mb-3 text-slate-200 block"></i>ยังไม่มีข้อมูลการวิเคราะห์เชิงระบบ<br>กดปุ่มด้านบนเพื่อให้ AI เริ่มประมวลผล</div>`;
-  if (state.systemicInsights && state.systemicInsights.insights && state.systemicInsights.insights.length > 0) {
-    aiInsightsHtml = state.systemicInsights.insights.map(insight => {
-      let icon = 'fa-lightbulb'; let color = 'blue';
-      if(insight.type === 'warning' || insight.type === 'risk' || insight.title.includes('ความเสี่ยง') || insight.title.includes('แนวโน้ม')) { 
-        icon = 'fa-triangle-exclamation'; color = 'red'; 
-      }
-      return `
-      <div class="bg-white p-4 rounded-xl border shadow-sm mb-3 hover:shadow-md transition">
-        <div class="flex gap-4">
-          <div class="w-10 h-10 rounded-full bg-${color}-50 text-${color}-500 flex items-center justify-center shrink-0 border border-${color}-100"><i class="fa-solid ${icon}"></i></div>
-          <div>
-            <p class="text-sm font-bold text-slate-800">${esc(insight.title)}</p>
-            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">${esc(insight.description)}</p>
+        return `
+        <div class="flex items-center gap-4 py-4 px-5 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition cursor-pointer">
+          <div class="w-10 h-10 rounded-full ${bgClass} ${textClass} flex items-center justify-center shrink-0">
+            <i class="fa-solid ${icon} text-lg"></i>
           </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-[13px] font-bold text-slate-800 truncate">${esc(insight.title)}</p>
+            <p class="text-[11px] font-medium text-slate-500 truncate mt-0.5">${esc(insight.description)}</p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+        </div>`;
+      }).join('');
+    }
+
+    // ประกอบโครงสร้าง Card ของ AI Insights แบบใหม่
+    const aiSectionHtml = `
+      <div class="card bg-white shadow-sm flex flex-col h-full overflow-hidden">
+        <!-- ส่วน Header -->
+        <div class="flex justify-between items-center p-5 border-b border-slate-100">
+          <h3 class="font-bold text-slate-800 flex items-center text-lg">
+            <i class="fa-solid fa-wand-magic-sparkles text-indigo-600 mr-2"></i> AI Insights
+          </h3>
+        </div>
+
+        <!-- ส่วน Sub-header (Key Insights for Management) -->
+        <div class="px-5 py-3.5 flex items-center gap-3 border-b border-slate-100 bg-slate-50/50">
+          <i class="fa-solid fa-lightbulb text-indigo-600 text-base"></i>
+          <h4 class="font-bold text-slate-800 text-sm">Key Insights for Management</h4>
+        </div>
+
+        <!-- รายการ Insights -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar">
+          ${aiInsightsHtml}
         </div>
       </div>`;
-    }).join('');
+
+    return `
+      <div class="flex flex-wrap justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-filter"></i></div>
+          <div><h2 class="text-lg font-bold text-slate-800">Dashboard Filter</h2></div>
+        </div>
+        <div class="flex gap-3">
+          <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.year=this.value; render()">
+            <option value="All">🗓️ All Years</option>
+            ${[...new Set(state.audits.map(a => a.auditId?.substring(4,8)||''))].filter(Boolean).sort().reverse().map(y => `<option value="${y}" ${fYear===y?'selected':''}>Year:${y}</option>`).join('')}
+          </select>
+          <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.department=this.value; render()">
+            <option value="All">🏢 All Departments</option>
+            ${DEPARTMENTS.map(d => `<option value="${d}" ${fDept===d?'selected':''}>${d}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-4 gap-4 mb-6">
+        <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+          <div class="flex justify-between items-start mb-4">
+            <div class="w-14 h-14 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-regular fa-calendar-check"></i></div>
+            <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Audits</p><p class="text-4xl font-extrabold text-slate-800 mt-1">${globalStats.audit_total}</p></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5 uppercase"><span>Planned ${globalStats.audit_total}</span><span>Completed ${globalStats.audit_completed}</span></div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 flex items-center overflow-hidden"><div class="bg-blue-600 h-2.5 rounded-r-full" style="width: ${auditPercent}%"></div></div>
+            <div class="text-right text-xs font-extrabold text-blue-700 mt-1.5">${auditPercent}%</div>
+          </div>
+        </div>
+        <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+          <div class="flex justify-between items-start mb-4">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-solid fa-check-double"></i></div>
+            <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Open Findings</p><p class="text-4xl font-extrabold text-slate-800 mt-1">${totalOpenFindings}</p></div>
+          </div>
+          <div>
+            <div class="flex justify-center gap-4 text-[11px] font-bold text-slate-500 mb-1.5 uppercase">
+              <span>Minor <b class="text-emerald-600 text-sm ml-1">${globalStats.findings_minor}</b></span>
+              <span class="border-l pl-4 border-slate-200">Major <b class="text-orange-500 text-sm ml-1">${globalStats.findings_major}</b></span>
+            </div>
+            <div class="flex h-2.5 w-full rounded-full overflow-hidden mt-2">
+              <div class="bg-emerald-500" style="width: ${totalOpenFindings? (globalStats.findings_minor/totalOpenFindings)*100 : 0}%"></div>
+              <div class="bg-orange-500" style="width: ${totalOpenFindings? (globalStats.findings_major/totalOpenFindings)*100 : 0}%"></div>
+              ${totalOpenFindings === 0 ? '<div class="bg-slate-100 w-full"></div>' : ''}
+            </div>
+          </div>
+        </div>
+        <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+          <div class="flex justify-between items-start mb-4">
+            <div class="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-regular fa-clock"></i></div>
+            <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Overdue CAPA</p><p class="text-4xl font-extrabold text-orange-600 mt-1">${overCapaCount}</p></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5 uppercase"><span class="text-orange-600">Overdue ${overCapaCount}</span><span>Due Soon ${dueSoonCount}</span></div>
+            <div class="flex h-2.5 w-full rounded-full overflow-hidden mt-2">
+              <div class="bg-orange-500" style="width: ${(overCapaCount/(overCapaCount+dueSoonCount||1))*100}%"></div>
+              <div class="bg-orange-200" style="width: ${(dueSoonCount/(overCapaCount+dueSoonCount||1))*100}%"></div>
+              ${(overCapaCount+dueSoonCount) === 0 ? '<div class="bg-slate-100 w-full"></div>' : ''}
+            </div>
+          </div>
+        </div>
+        <div class="card p-5 border border-purple-200 shadow-sm bg-gradient-to-br from-white to-purple-50 flex flex-col justify-center relative hover:shadow-md transition">
+          <div class="absolute top-4 right-4 w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl shadow-inner"><i class="fa-solid fa-ranking-star"></i></div>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Avg. Compliance Score</p>
+          <h2 class="text-6xl font-black text-purple-700 mt-2 tracking-tighter">${complianceScore}<span class="text-3xl text-purple-400">%</span></h2>
+          <p class="text-[11px] text-slate-500 mt-3 font-semibold">Across selected filters</p>
+        </div>
+      </div>
+
+      <!-- แถวกลาง: กราฟโดนัท, ความเสี่ยง, AI -->
+      <div class="grid lg:grid-cols-3 gap-6 mb-6">
+        <div class="card p-6 flex flex-col items-center shadow-sm">
+          <h3 class="font-bold text-slate-800 text-lg w-full text-left">Audit Results <span class="text-sm font-normal text-slate-400">(All Findings)</span></h3>
+          <div class="relative w-full h-[220px] mt-6 flex items-center justify-center">
+            <canvas id="resultsDonutChart"></canvas>
+          </div>
+          <div class="mt-8 w-full text-sm font-semibold text-slate-600 space-y-3 px-2">
+            <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-emerald-500 mr-3 shadow-inner"></span>Conformity</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${globalStats.chk_conform}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctConform}%)</span></div></div>
+            <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-amber-400 mr-3 shadow-inner"></span>Observation</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${globalStats.chk_obs}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctObs}%)</span></div></div>
+            <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-orange-500 mr-3 shadow-inner"></span>Minor NC</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${globalStats.chk_minor}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctMinor}%)</span></div></div>
+            <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-500 mr-3 shadow-inner"></span>Major NC</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${globalStats.chk_major}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctMajor}%)</span></div></div>
+          </div>
+        </div>
+        <div class="card p-6 shadow-sm flex flex-col">
+          <h3 class="font-bold text-slate-800 text-lg mb-6">Top 5 Risk Areas</h3>
+          <div class="flex-1">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                <tr><th class="py-3 px-3 text-left font-bold w-12">No.</th><th class="py-3 px-3 text-left font-bold">Department</th><th class="py-3 px-3 text-center font-bold">Risk Score</th></tr>
+              </thead>
+              <tbody>
+                ${topRisks.length > 0 ? topRisks.map((risk, idx) => {
+                  let scoreColor = idx === 0 ? 'bg-red-100 text-red-700 font-extrabold' : (idx < 3 ? 'bg-orange-100 text-orange-700 font-bold' : 'bg-amber-50 text-amber-700 font-bold');
+                  return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"><td class="py-4 px-3 text-slate-400 font-bold">${idx + 1}</td><td class="py-4 px-3 font-bold text-slate-700">${esc(risk[0])}</td><td class="py-4 px-3 text-center"><span class="px-4 py-1.5 rounded-full ${scoreColor} shadow-sm">${risk[1]}</span></td></tr>`;
+                }).join('') : `<tr><td colspan="3" class="py-12 text-center text-slate-400"><i class="fa-solid fa-check-circle text-3xl mb-2 text-slate-200 block"></i>No risk data available</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ${aiSectionHtml}
+      </div>
+
+      <!-- แถวล่างสุด -->
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="card p-6 lg:col-span-1 shadow-sm">
+          <h3 class="font-bold text-slate-800 text-lg mb-6">Audit by Standard</h3>
+          <div class="space-y-5">
+            ${Object.keys(globalStats.standards || {}).length > 0 ? Object.entries(globalStats.standards).sort((a,b) => b[1].total - a[1].total).map(([std, score]) => {
+              let pct = Math.round((score.pass / score.total) * 100);
+              let color = pct >= 80 ? 'bg-blue-500' : (pct >= 60 ? 'bg-emerald-500' : 'bg-red-400');
+              return `<div><div class="flex justify-between items-end mb-2"><span class="text-sm font-bold text-slate-700">${esc(std.replace(/_/g, '.'))}</span><div class="text-right"><span class="text-xs text-slate-400 font-bold mr-2">${score.pass}/${score.total}</span><span class="text-base font-black text-slate-800">${pct}%</span></div></div><div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"><div class="${color} h-2.5 rounded-r-full" style="width: ${pct}%"></div></div></div>`;
+            }).join('') : '<p class="text-sm text-slate-400 text-center mt-8"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>ไม่มีข้อมูลมาตรฐาน</p>'}
+          </div>
+        </div>
+        <div class="card p-6 lg:col-span-2 shadow-sm flex flex-col">
+          <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-slate-800 text-lg">Recent Findings</h3><button onclick="state.view='findings'; buildNav(); render()" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded-lg font-bold transition">View All</button></div>
+          <div class="overflow-x-auto flex-1">
+            <table class="w-full text-sm text-left"><thead class="text-xs text-slate-500 bg-slate-50 border-y border-slate-200"><tr><th class="py-3 px-4 font-bold uppercase tracking-wider">Date</th><th class="py-3 px-4 font-bold uppercase tracking-wider">Clause</th><th class="py-3 px-4 font-bold uppercase tracking-wider">Department</th><th class="py-3 px-4 font-bold uppercase tracking-wider text-center">Severity</th><th class="py-3 px-4 font-bold uppercase tracking-wider text-center">Status</th></tr></thead>
+              <tbody>
+                ${filteredFindings.slice(0, 5).map(f => {
+                  let badge = f.classification === 'Major NC' ? 'bg-red-100 text-red-700' : (f.classification === 'Minor NC' ? 'bg-amber-100 text-amber-700' : (f.classification === 'OBSERVATION' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'));
+                  let statusBadge = f.status === 'CLOSED' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-50 border border-slate-200 text-slate-600';
+                  return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"><td class="py-4 px-4 text-xs font-semibold text-slate-500">${fmtDate(f.createdAt)}</td><td class="py-4 px-4 font-bold text-blue-600 cursor-pointer hover:underline" onclick="editFinding('${f.id}')" title="${esc(f.title)}">${esc(f.clause || '-')}</td><td class="py-4 px-4 font-bold text-slate-700">${esc(f.department)}</td><td class="py-4 px-4 text-center"><span class="px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide shadow-sm ${badge}">${esc(f.classification)}</span></td><td class="py-4 px-4 text-center"><span class="px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide shadow-sm ${statusBadge}">${esc(f.status)}</span></td></tr>`
+                }).join('') || '<tr><td colspan="5" class="py-12 text-center text-slate-400"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>No recent findings</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
   }
-
-  let lastUpdatedText = state.systemicInsights?.lastUpdated ? `อัปเดตล่าสุด: ${fmtDate(state.systemicInsights.lastUpdated)}` : 'ยังไม่เคยประมวลผล';
-
-  // 🟢 ประกอบ AI Section
-  const aiSectionHtml = `
-    <div class="card p-6 bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100 shadow-sm flex flex-col h-full">
-      <div class="flex justify-between items-center mb-5 pb-3 border-b border-indigo-100/50">
-        <div>
-          <h3 class="font-bold text-indigo-900 flex items-center text-lg">
-            <i class="fa-solid fa-network-wired text-indigo-500 mr-2"></i>Systemic AI Insights
-          </h3>
-          <p class="text-[10px] text-indigo-400 mt-1 font-semibold">${lastUpdatedText}</p>
-        </div>
-        <button onclick="triggerSystemicAnalysis()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center">
-          <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Analyze
-        </button>
-      </div>
-      <div class="space-y-4 overflow-y-auto max-h-[320px] pr-2 custom-scrollbar flex-1">
-        ${aiInsightsHtml}
-      </div>
-    </div>
-  `;
-
-  return `
-    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500">
-      <div class="flex items-center gap-4">
-        <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-filter"></i></div>
-        <div><h2 class="text-lg font-bold text-slate-800">Dashboard Filter</h2></div>
-      </div>
-      <div class="flex gap-3">
-        <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.year=this.value; render()">
-          <option value="All">🗓️ All Years</option>
-          ${[...new Set(state.audits.map(a => a.auditId?.substring(4,8)||''))].filter(Boolean).sort().reverse().map(y => `<option value="${y}" ${fYear===y?'selected':''}>Year: ${y}</option>`).join('')}
-        </select>
-        <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.department=this.value; render()">
-          <option value="All">🏢 All Departments</option>
-          ${DEPARTMENTS.map(d => `<option value="${d}" ${fDept===d?'selected':''}>${d}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-
-    <div class="grid md:grid-cols-4 gap-4 mb-6">
-      <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
-        <div class="flex justify-between items-start mb-4">
-          <div class="w-14 h-14 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-regular fa-calendar-check"></i></div>
-          <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Audits</p><p class="text-4xl font-extrabold text-slate-800 mt-1">${filteredAudits.length}</p></div>
-        </div>
-        <div>
-          <div class="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5 uppercase"><span>Planned ${filteredAudits.length}</span><span>Completed ${completedAudits}</span></div>
-          <div class="w-full bg-slate-100 rounded-full h-2.5 flex items-center overflow-hidden"><div class="bg-blue-600 h-2.5 rounded-r-full" style="width: ${auditPercent}%"></div></div>
-          <div class="text-right text-xs font-extrabold text-blue-700 mt-1.5">${auditPercent}%</div>
-        </div>
-      </div>
-
-      <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
-        <div class="flex justify-between items-start mb-4">
-          <div class="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-solid fa-check-double"></i></div>
-          <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Open Findings</p><p class="text-4xl font-extrabold text-slate-800 mt-1">${totalOpenFindings}</p></div>
-        </div>
-        <div>
-          <div class="flex justify-center gap-4 text-[11px] font-bold text-slate-500 mb-1.5 uppercase">
-            <span>Minor <b class="text-emerald-600 text-sm ml-1">${minorCount}</b></span>
-            <span class="border-l pl-4 border-slate-200">Major <b class="text-orange-500 text-sm ml-1">${majorCount}</b></span>
-          </div>
-          <div class="flex h-2.5 w-full rounded-full overflow-hidden mt-2">
-            <div class="bg-emerald-500" style="width: ${totalOpenFindings? (minorCount/totalOpenFindings)*100 : 0}%"></div>
-            <div class="bg-orange-500" style="width: ${totalOpenFindings? (majorCount/totalOpenFindings)*100 : 0}%"></div>
-            ${totalOpenFindings === 0 ? '<div class="bg-slate-100 w-full"></div>' : ''}
-          </div>
-        </div>
-      </div>
-
-      <div class="card p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition">
-        <div class="flex justify-between items-start mb-4">
-          <div class="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-md"><i class="fa-regular fa-clock"></i></div>
-          <div class="text-right"><p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Overdue CAPA</p><p class="text-4xl font-extrabold text-orange-600 mt-1">${overCapaCount}</p></div>
-        </div>
-        <div>
-          <div class="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5 uppercase"><span class="text-orange-600">Overdue ${overCapaCount}</span><span>Due Soon ${dueSoonCount}</span></div>
-          <div class="flex h-2.5 w-full rounded-full overflow-hidden mt-2">
-            <div class="bg-orange-500" style="width: ${(overCapaCount/(overCapaCount+dueSoonCount||1))*100}%"></div>
-            <div class="bg-orange-200" style="width: ${(dueSoonCount/(overCapaCount+dueSoonCount||1))*100}%"></div>
-            ${(overCapaCount+dueSoonCount) === 0 ? '<div class="bg-slate-100 w-full"></div>' : ''}
-          </div>
-        </div>
-      </div>
-
-      <div class="card p-5 border border-purple-200 shadow-sm bg-gradient-to-br from-white to-purple-50 flex flex-col justify-center relative hover:shadow-md transition">
-        <div class="absolute top-4 right-4 w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl shadow-inner"><i class="fa-solid fa-ranking-star"></i></div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Avg. Compliance Score</p>
-        <h2 class="text-6xl font-black text-purple-700 mt-2 tracking-tighter">${complianceScore}<span class="text-3xl text-purple-400">%</span></h2>
-        <p class="text-[11px] text-slate-500 mt-3 font-semibold">Across selected filters</p>
-      </div>
-    </div>
-
-    <!-- แถวกลาง: กราฟโดนัท, ความเสี่ยง, AI -->
-    <div class="grid lg:grid-cols-3 gap-6 mb-6">
-      <div class="card p-6 flex flex-col items-center shadow-sm">
-        <h3 class="font-bold text-slate-800 text-lg w-full text-left">Audit Results <span class="text-sm font-normal text-slate-400">(All Findings)</span></h3>
-        <div class="relative w-full h-[220px] mt-6 flex items-center justify-center">
-          <canvas id="resultsDonutChart"></canvas>
-        </div>
-        <div class="mt-8 w-full text-sm font-semibold text-slate-600 space-y-3 px-2">
-          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-emerald-500 mr-3 shadow-inner"></span>Conformity</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${conformingCount}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctConform}%)</span></div></div>
-          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-amber-400 mr-3 shadow-inner"></span>Observation</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${observationCount}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctObs}%)</span></div></div>
-          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-orange-500 mr-3 shadow-inner"></span>Minor NC</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${minorNCCountTotal}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctMinor}%)</span></div></div>
-          <div class="flex justify-between items-center"><div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-500 mr-3 shadow-inner"></span>Major NC</div> <div class="text-right"><span class="font-bold text-slate-800 text-base">${majorNCCountTotal}</span> <span class="text-xs text-slate-400 font-medium ml-1">(${pctMajor}%)</span></div></div>
-        </div>
-      </div>
-
-      <div class="card p-6 shadow-sm flex flex-col">
-        <h3 class="font-bold text-slate-800 text-lg mb-6">Top 5 Risk Areas</h3>
-        <div class="flex-1">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
-              <tr><th class="py-3 px-3 text-left font-bold w-12">No.</th><th class="py-3 px-3 text-left font-bold">Department</th><th class="py-3 px-3 text-center font-bold">Risk Score</th></tr>
-            </thead>
-            <tbody>
-              ${topRisks.length > 0 ? topRisks.map((risk, idx) => {
-                let scoreColor = idx === 0 ? 'bg-red-100 text-red-700 font-extrabold' : (idx < 3 ? 'bg-orange-100 text-orange-700 font-bold' : 'bg-amber-50 text-amber-700 font-bold');
-                return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"><td class="py-4 px-3 text-slate-400 font-bold">${idx + 1}</td><td class="py-4 px-3 font-bold text-slate-700">${esc(risk[0])}</td><td class="py-4 px-3 text-center"><span class="px-4 py-1.5 rounded-full ${scoreColor} shadow-sm">${risk[1]}</span></td></tr>`;
-              }).join('') : `<tr><td colspan="3" class="py-12 text-center text-slate-400"><i class="fa-solid fa-check-circle text-3xl mb-2 text-slate-200 block"></i>No risk data available</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- เรียกใช้ AI Section ตรงนี้ -->
-      ${aiSectionHtml}
-    </div>
-
-    <!-- แถวล่างสุด -->
-    <div class="grid lg:grid-cols-3 gap-6">
-      <div class="card p-6 lg:col-span-1 shadow-sm">
-        <h3 class="font-bold text-slate-800 text-lg mb-6">Audit by Standard</h3>
-        <div class="space-y-5">
-          ${Object.keys(standardScores).length > 0 ? Object.entries(standardScores).sort((a,b) => b[1].total - a[1].total).map(([std, score]) => {
-            let pct = Math.round((score.pass / score.total) * 100);
-            let color = pct >= 80 ? 'bg-blue-500' : (pct >= 60 ? 'bg-emerald-500' : 'bg-red-400');
-            return `<div><div class="flex justify-between items-end mb-2"><span class="text-sm font-bold text-slate-700">${esc(std)}</span><div class="text-right"><span class="text-xs text-slate-400 font-bold mr-2">${score.pass}/${score.total}</span><span class="text-base font-black text-slate-800">${pct}%</span></div></div><div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"><div class="${color} h-2.5 rounded-r-full" style="width: ${pct}%"></div></div></div>`;
-          }).join('') : '<p class="text-sm text-slate-400 text-center mt-8"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>ไม่มีข้อมูลมาตรฐาน</p>'}
-        </div>
-      </div>
-
-      <div class="card p-6 lg:col-span-2 shadow-sm flex flex-col">
-        <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-slate-800 text-lg">Recent Findings</h3><button onclick="state.view='findings'; buildNav(); render()" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded-lg font-bold transition">View All</button></div>
-        <div class="overflow-x-auto flex-1">
-          <table class="w-full text-sm text-left"><thead class="text-xs text-slate-500 bg-slate-50 border-y border-slate-200"><tr><th class="py-3 px-4 font-bold uppercase tracking-wider">Date</th><th class="py-3 px-4 font-bold uppercase tracking-wider">Clause</th><th class="py-3 px-4 font-bold uppercase tracking-wider">Department</th><th class="py-3 px-4 font-bold uppercase tracking-wider text-center">Severity</th><th class="py-3 px-4 font-bold uppercase tracking-wider text-center">Status</th></tr></thead>
-            <tbody>
-              ${filteredFindings.slice(0, 5).map(f => {
-                let badge = f.classification === 'Major NC' ? 'bg-red-100 text-red-700' : (f.classification === 'Minor NC' ? 'bg-amber-100 text-amber-700' : (f.classification === 'OBSERVATION' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'));
-                let statusBadge = f.status === 'CLOSED' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-50 border border-slate-200 text-slate-600';
-                return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"><td class="py-4 px-4 text-xs font-semibold text-slate-500">${fmtDate(f.createdAt)}</td><td class="py-4 px-4 font-bold text-blue-600 cursor-pointer hover:underline" onclick="editFinding('${f.id}')" title="${esc(f.title)}">${esc(f.clause || '-')}</td><td class="py-4 px-4 font-bold text-slate-700">${esc(f.department)}</td><td class="py-4 px-4 text-center"><span class="px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide shadow-sm ${badge}">${esc(f.classification)}</span></td><td class="py-4 px-4 text-center"><span class="px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide shadow-sm ${statusBadge}">${esc(f.status)}</span></td></tr>`
-              }).join('') || '<tr><td colspan="5" class="py-12 text-center text-slate-400"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>No recent findings</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
-}
 
   let dashDonutChart = null;
   const centerTextPlugin = {
@@ -587,7 +551,16 @@ function renderProgram(){
     ${paginatedData.map(a=>{
       const q=a.checklist||[],done=q.filter(x=>x.result&&x.result!=='NOT_EVALUATED').length,p=q.length?Math.round(done/q.length*100):0;
       const deleteBtn = hasRole('Admin') ? `<button onclick="deleteAudit('${a.id}')" class="text-red-500 hover:text-red-700 ml-4 bg-red-50 p-2 rounded-lg" title="ลบข้อมูล"><i class="fa-solid fa-trash"></i></button>` : '';
-      return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-4"><b>${esc(a.meta?.title||a.title||a.id)}</b><div class="text-xs text-slate-400 font-semibold mt-1">${esc(a.auditId||a.id)}</div></td><td class="p-4 font-semibold text-slate-700">${esc(a.meta?.targetDepartment||a.department)}</td><td class="p-4 text-center font-medium">${esc(a.meta?.scheduledDate||a.scheduledDate||'-')}</td><td class="p-4 text-center"><span class="bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-wide">${esc(a.meta?.status||a.status||'PLANNED')}</span></td><td class="p-4 text-center font-bold text-slate-700">${p}%</td><td class="p-4 text-right whitespace-nowrap"><button onclick="openAudit('${a.id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-4 py-1.5 rounded-lg transition">Open</button> ${deleteBtn}</td></tr>`
+      
+      // 🟢 เพิ่ม Logic เช็ค Audit ที่ค้างเกิน 60 วัน
+      const schDate = a.meta?.scheduledDate || a.scheduledDate;
+      let overdueBadge = '';
+      if (schDate && !['COMPLETED', 'LOCKED'].includes(a.meta?.status||a.status)) {
+          const daysDiff = (new Date() - new Date(schDate)) / (1000 * 3600 * 24);
+          if (daysDiff > 60) overdueBadge = `<div class="mt-1"><span class="bg-red-100 text-red-600 border border-red-200 px-2 py-0.5 rounded text-[9px] font-bold">⚠️ Overdue > 60 Days</span></div>`;
+      }
+
+      return `<tr class="border-t hover:bg-slate-50 transition"><td class="p-4"><b>${esc(a.meta?.title||a.title||a.id)}</b><div class="text-xs text-slate-400 font-semibold mt-1">${esc(a.auditId||a.id)}</div></td><td class="p-4 font-semibold text-slate-700">${esc(a.meta?.targetDepartment||a.department)}</td><td class="p-4 text-center font-medium">${esc(schDate||'-')} ${overdueBadge}</td><td class="p-4 text-center"><span class="bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-wide">${esc(a.meta?.status||a.status||'PLANNED')}</span></td><td class="p-4 text-center font-bold text-slate-700">${p}%</td><td class="p-4 text-right whitespace-nowrap"><button onclick="openAudit('${a.id}')" class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-4 py-1.5 rounded-lg transition">Open</button> ${deleteBtn}</td></tr>`
     }).join('')||'<tr><td class="p-12 text-center text-slate-400 font-medium" colspan="6"><i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-200 block"></i>No audits found matching criteria</td></tr>'}</tbody></table></div>`;
     return tableHtml + renderPaginationBar(filteredData.length, ITEMS_PER_PAGE, state.pages[currentView], currentView);
   }
@@ -652,7 +625,7 @@ function syncGeneratedEditors() {
   document.querySelectorAll('.gen-evidence').forEach(x => { state.generated[+x.dataset.e].expectedEvidence = x.value; });
 }
 
-const AUDIT_SYSTEM_OPTIONS = ['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements','General'];
+  const AUDIT_SYSTEM_OPTIONS = ['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements','FAMI-QS','General'];
 
 function syncGeneratedChecklistEditors() {
   document.querySelectorAll('.gen-standard').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].standardsCovered = e.value; });
@@ -1010,13 +983,43 @@ function editFinding(id) {
         <label class="text-sm font-bold text-slate-700">Verification Date<input name="verificationDate" type="date" value="${esc(f.verificationDate)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold"></label>
       </div>
 
-      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-5 py-3.5 rounded-xl font-bold mt-8 shadow-md transition text-lg"><i class="fa-solid fa-floppy-disk mr-2"></i>Save & Update Record</button>
+      <!-- 🟢 โซนยืนยันการใช้ AI (จะถูกเปิดขึ้นมาเมื่อกดวิเคราะห์ AI) -->
+      <div id="ai-verify-section" class="hidden mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+         <label class="flex items-center gap-3 cursor-pointer">
+           <input type="checkbox" id="human-verified" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+           <span class="text-sm font-bold text-indigo-900">ฉันได้ทบทวน แก้ไข และยืนยันความถูกต้องของข้อมูลจาก AI แล้ว (Human Verified)</span>
+         </label>
+      </div>
+
+  <div class="flex gap-4 mt-8">
+        ${['CAPA_SUBMITTED', 'VERIFICATION'].includes(f.status) ? `<button type="button" onclick="rejectCapa('${id}')" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-5 py-3.5 rounded-xl font-bold shadow-sm transition text-base"><i class="fa-solid fa-rotate-left mr-2"></i>Reject CAPA</button>` : ''}
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3.5 rounded-xl font-bold shadow-md transition text-lg"><i class="fa-solid fa-floppy-disk mr-2"></i>Save & Update Record</button>
+      </div>
     </form>
   `);
 
   document.getElementById('findingForm').onsubmit = async e => {
-    e.preventDefault(); const data = Object.fromEntries(new FormData(e.target)); delete data.id;
-    if (data.status === 'DRAFT') data.status = 'ISSUED';
+  e.preventDefault(); 
+
+  // 🟢 เช็คว่าได้กดยืนยัน Human Verified หรือยัง (ถ้าวิเคราะห์ด้วย AI)
+  const verifySec = document.getElementById('ai-verify-section');
+  if (verifySec && !verifySec.classList.contains('hidden')) {
+      const isVerified = document.getElementById('human-verified').checked;
+      if (!isVerified) {
+          return toast('⚠️ กรุณากดยืนยันการทบทวนข้อมูลจาก AI (Human Verified) ก่อนบันทึก', 'warn');
+      }
+  }
+
+  const data = Object.fromEntries(new FormData(e.target)); delete data.id;
+
+  // 🟢 ดึง Raw Draft ที่พักไว้มาแนบใส่ data เพื่อส่งไป Firestore
+  if (window.tempAiRawDraft) {
+      data.ai_raw_draft = window.tempAiRawDraft;
+      data.humanVerified = true;
+      window.tempAiRawDraft = null; // เคลียร์ค่า
+  }
+
+  if (data.status === 'DRAFT') data.status = 'ISSUED';
     if (data.status === 'ISSUED' && (data.rootCause || data.correctiveAction)) data.status = 'CAPA_SUBMITTED';
     data.condition = data.objectiveEvidence; data.updatedAt = SV.serverTimestamp(); data.updatedBy = state.user.email;
     if (!f.findingNo && f.auditId) { const a = state.audits.find(x => x.id === f.auditId); if (a) { data.findingNo = `${a.auditId || a.id}-CHK-${String(f.checkpointIndex + 1).padStart(3, '0')}`; data.auditYear = a.auditId ? a.auditId.substring(4,8) : new Date().getFullYear().toString(); data.title = f.title || f.clause; } }
@@ -1032,6 +1035,17 @@ async function analyzeFindingWithAI(id) {
   try {
     const fn = functions.httpsCallable('analyzeFindingAndCAPA'); const response = await fn({ findingId: id, department: f.department || 'Unknown', clause: f.clause || 'Unknown', condition: condition, criteria: criteria }); const aiResult = response.data.analysis;
     if (aiResult.proposedRootCause) document.getElementById('finding-rootCause').value = aiResult.proposedRootCause; if (aiResult.correction) document.getElementById('finding-correction').value = aiResult.correction; if (aiResult.correctiveAction) document.getElementById('finding-correctiveAction').value = aiResult.correctiveAction; if (aiResult.effectivenessCriteria) document.getElementById('finding-effectivenessCriteria').value = aiResult.effectivenessCriteria;
+
+    // 🟢 เก็บข้อความต้นฉบับไว้ใน Memory ชั่วคราว
+    window.tempAiRawDraft = JSON.stringify(aiResult);
+
+    // 🟢 โชว์ Checkbox บังคับยืนยัน
+    const verifySec = document.getElementById('ai-verify-section');
+    if(verifySec) {
+        verifySec.classList.remove('hidden');
+        document.getElementById('human-verified').checked = false;
+    }
+
     toast('AI เติมข้อมูลวิเคราะห์ให้เรียบร้อยแล้ว กรุณาตรวจสอบก่อนบันทึก', 'ok');
   } catch (x) { console.error(x); toast('การวิเคราะห์ด้วย AI ล้มเหลว: ' + x.message, 'error'); } finally { loading(false); }
 }
@@ -1072,7 +1086,29 @@ async function triggerSystemicAnalysis() {
   }
 }
 window.triggerSystemicAnalysis = triggerSystemicAnalysis;
-
+  window.rejectCapa = async function(id) {
+    const reason = prompt('ระบุเหตุผลที่ตีกลับ CAPA นี้ (จะถูกบันทึกลงในช่อง Effectiveness Criteria):');
+    if(!reason) return;
+    loading(true, 'Rejecting CAPA...');
+    try {
+      const f = state.findings.find(x => x.id === id);
+      const existingEff = document.getElementById('finding-effectivenessCriteria')?.value || f.effectivenessCriteria || '';
+      const updateData = {
+          status: 'ISSUED', // ถอยสถานะกลับไปให้แก้ไข
+          effectivenessCriteria: `[${fmtDate(new Date())} - REJECTED]: ${reason}\n\n` + existingEff,
+          updatedAt: SV.serverTimestamp(),
+          updatedBy: state.user.email
+      };
+      await db.collection('findings').doc(id).update(updateData);
+      await auditEvent('REJECT_CAPA', 'FINDING', id, { reason });
+      closeModal();
+      toast('ตีกลับ CAPA ให้ผู้รับผิดชอบแก้ไขใหม่แล้ว', 'ok');
+    } catch(e) {
+      toast(e.message, 'error');
+    } finally {
+      loading(false);
+    }
+  };
 </script>
 </body>
 </html>
