@@ -84,13 +84,21 @@ const auth=firebase.auth(), db=firebase.firestore(), functions=firebase.app().fu
   } catch(e) {}
 const SV=firebase.firestore.FieldValue;
   const STANDARDS=['ISO9001','ISO14001','ISO45001','ISO50001','GMP','HACCP','Halal','FSC','PEFC','Customer Requirements','FAMI-QS'];
-const DEPARTMENTS=['Top Management','Production','Quality Assurance','Quality Control Laboratory','Warehouse','Maintenance','Engineering','HR','Purchasing','Sales & Customer Service','Environment','Safety'];
+  const DEPARTMENTS=[
+    'HR', 'OHM', 'CSR', 'Computer (IT)', 'Account', 'Legal', 'Purchase', 'Marketing',
+    'Store', 'Warehouse', 'Viscose (P)', 'Viscose_En', 'Laboratory', 'Viscose (M)', 'Customer Complaint',
+    'Spinning (P)', 'Spinning_En', 'Safety&Hygiene', 'Spinning (M)', 'Tech cell',
+    'Auxiliary (P)', 'Auxiliary_En', 'ETP and WTP (P)', 'Auxiliary (M)', 'ETP and WTP (M)',
+    'ABEC (P)', 'ABEC_En', 'Workshop', 'CMT & NDT', 'CMT_En', 'ABEC (M)', 'Civil', 'Electrical',
+    'CS2 Process', 'CS2_En', 'Instrument', 'HR (SIL)', 'Store (SIL)', 'SHEM (SIL)',
+    'Lab (SIL)', 'Inst. & Elec. (SIL)', 'Maintenance (SIL)', 'Top Management.', 'Internal Audit', 'Document Control'
+  ];
   const NAV=[['dashboard','Dashboard','fa-chart-line'],['program','Annual Programme','fa-calendar-check'],['planner','Audit Planning & AI','fa-wand-magic-sparkles'],['execution','Audit Execution','fa-clipboard-check'],['findings','Findings & CAPA (Form F8)','fa-triangle-exclamation'],['capa','CAPA Tracking','fa-list-check'],['mrm','MRM Dashboard','fa-chart-pie'],['admin','Master Data & Users','fa-users-gear']];
 
 // 🟢 State รวมที่ใช้จัดการตัวแปรทั้งหมดในระบบ
-  const state = {
+    const state = {
     user: null, profile: null, view: 'dashboard', audits: [], findings: [], selectedAudit: null, generated: [], unsubscribe: [], 
-    globalFilter: { year: 'All', department: 'All', status: 'All' }, 
+    globalFilter: { year: new Date().getFullYear().toString(), department: 'All', status: 'All' }, 
     systemicInsights: null,
     dashboardStats: null, // 🟢 เพิ่มตัวแปรนี้
     pages: { program: 1, execution: 1, findings: 1, capa: 1 }
@@ -133,10 +141,18 @@ window.addEventListener('online',updateNetwork);window.addEventListener('offline
 async function auditEvent(action,entityType,entityId,details={}){try{await db.collection('audit_events').add({action,entityType,entityId,details,userId:state.user.uid,userEmail:state.user.email,createdAt:SV.serverTimestamp()})}catch(e){console.warn('Audit event',e)}}
 async function loadProfile(user){const ref=db.collection('users').doc(user.uid);const s=await ref.get();if(s.exists)return s.data();const p={email:user.email,displayName:user.displayName||user.email,role:'Auditor',active:true,createdAt:SV.serverTimestamp()};await ref.set(p,{merge:true});return p}
 
-  function setupLiveData(){
+    function setupLiveData(){
     state.unsubscribe.forEach(f=>f()); state.unsubscribe=[];
+
+    // Audits อาจจะไม่ได้มีฟิลด์ auditYear โดยตรง จึงใช้ Limit เช่นเดิมเพื่อไม่ให้เปลืองดัชนี
     state.unsubscribe.push(db.collection('audit_campaigns').orderBy('createdAt','desc').limit(500).onSnapshot(s=>{state.audits=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
-    state.unsubscribe.push(db.collection('findings').orderBy('createdAt','desc').limit(1000).onSnapshot(s=>{state.findings=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
+
+    // ปรับปรุงการค้นหา Findings ให้ดึงเฉพาะปีที่เลือก (หรือดึงทั้งหมดถ้าเลือก All)
+    let findingQuery = db.collection('findings');
+    if (state.globalFilter.year !== 'All') {
+        findingQuery = findingQuery.where('auditYear', '==', state.globalFilter.year);
+    }
+    state.unsubscribe.push(findingQuery.orderBy('createdAt','desc').limit(1000).onSnapshot(s=>{state.findings=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
     state.unsubscribe.push(db.collection('System_Stats').doc('Global_Systemic_Insights').onSnapshot(s=>{
       state.systemicInsights = s.exists ? s.data() : null;
       if(state.view === 'dashboard') render();
@@ -178,7 +194,7 @@ function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view
     return `
       <div class="flex flex-wrap gap-3 mb-5 bg-white p-3 rounded-xl border shadow-sm items-center border-l-4 border-l-blue-500">
         <span class="text-sm font-bold text-slate-700 ml-2"><i class="fa-solid fa-filter text-blue-500 mr-2"></i>Filters:</span>
-        <select class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-slate-50 outline-none focus:border-blue-500 transition" onchange="state.globalFilter.year=this.value; state.pages['${state.view}'] = 1; render()">
+        <select class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-slate-50 outline-none focus:border-blue-500 transition" onchange="state.globalFilter.year=this.value; state.pages['${state.view}'] = 1; setupLiveData();">
           <option value="All">All Years</option>
           ${[...new Set(state.audits.map(a => a.auditId?.substring(4,8)||''))].filter(Boolean).sort().reverse().map(y => `<option value="${y}" ${state.globalFilter.year===y?'selected':''}>${y}</option>`).join('')}
         </select>
@@ -199,21 +215,36 @@ function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view
 // =========================================================================
 // หน้า Dashboard
 // =========================================================================
-  function renderDashboard() {
-    const fYear = state.globalFilter.year;
-    const fDept = state.globalFilter.department;
+      function renderDashboard() {
+      const fYear = state.globalFilter.year;
+      const fDept = state.globalFilter.department;
 
-    // 1. ดึงข้อมูลที่ Backend คำนวณเตรียมไว้ให้แล้วตาม Filter
-    const globalStats = state.dashboardStats?.years?.[fYear]?.departments?.[fDept] || {
-        audit_total: 0, audit_completed: 0,
-        findings_total: 0, findings_open: 0, findings_minor: 0, findings_major: 0, findings_obs: 0,
-        risk_score: 0,
-        chk_total: 0, chk_conform: 0, chk_obs: 0, chk_minor: 0, chk_major: 0,
-        standards: {}
-    };
+      // 🟢 เพิ่มตัวแปรนี้: แปลง 'All' จาก Dropdown หน้าเว็บ ให้เป็น 'ALL' ตัวใหญ่ เพื่อให้ตรงกับฐานข้อมูล
+        const queryDept = fDept === 'All' ? 'ALL' : fDept;
 
-    // 2. คำนวณค่าเพื่อแสดงผล
-    const auditPercent = globalStats.audit_total ? Math.round((globalStats.audit_completed / globalStats.audit_total) * 100) : 0;
+        // 1. ดึงข้อมูลดิบมาจาก Firestore (ถ้ามีข้อมูลแต่ไม่ครบทุกฟิลด์ จะเก็บไว้ใน rawStats ก่อน)
+        const rawStats = state.dashboardStats?.years?.[fYear]?.departments?.[queryDept] || {};
+
+        // ดักจับและแปลงค่าที่ไม่มี (undefined) ให้กลายเป็น 0 ให้หมดเพื่อป้องกัน NaN
+        const globalStats = {
+            audit_total: rawStats.audit_total || 0, 
+            audit_completed: rawStats.audit_completed || 0,
+            findings_total: rawStats.findings_total || 0, 
+            findings_open: rawStats.findings_open || 0, 
+            findings_minor: rawStats.findings_minor || 0, 
+            findings_major: rawStats.findings_major || 0, 
+            findings_obs: rawStats.findings_obs || 0,
+            risk_score: rawStats.risk_score || 0,
+            chk_total: rawStats.chk_total || 0, 
+            chk_conform: rawStats.chk_conform || 0, 
+            chk_obs: rawStats.chk_obs || 0, 
+            chk_minor: rawStats.chk_minor || 0, 
+            chk_major: rawStats.chk_major || 0,
+            standards: rawStats.standards || {}
+        };
+
+        // 2. คำนวณค่าเพื่อแสดงผล
+        const auditPercent = globalStats.audit_total ? Math.round((globalStats.audit_completed / globalStats.audit_total) * 100) : 0;
     const totalOpenFindings = globalStats.findings_minor + globalStats.findings_major;
     const complianceScore = globalStats.chk_total > 0 ? Math.round(((globalStats.chk_conform + globalStats.chk_obs) / globalStats.chk_total) * 100) : 0;
 
@@ -320,12 +351,12 @@ function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view
           <div><h2 class="text-lg font-bold text-slate-800">Dashboard Filter</h2></div>
         </div>
         <div class="flex gap-3">
-          <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.year=this.value; render()">
+          <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.year=this.value; setupLiveData();">
             <option value="All">🗓️ All Years</option>
             ${[...new Set(state.audits.map(a => a.auditId?.substring(4,8)||''))].filter(Boolean).sort().reverse().map(y => `<option value="${y}" ${fYear===y?'selected':''}>Year:${y}</option>`).join('')}
           </select>
           <select class="border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-indigo-900 outline-none bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer" onchange="state.globalFilter.department=this.value; render()">
-            <option value="All">🏢 All Departments</option>
+          <option value="All">🏢 All Departments</option>
             ${DEPARTMENTS.map(d => `<option value="${d}" ${fDept===d?'selected':''}>${d}</option>`).join('')}
           </select>
         </div>
@@ -535,7 +566,7 @@ function renderProgram(){
 
     const filteredData = data.filter(a => {
       const matchYear = fYear === 'All' || (a.auditId && a.auditId.includes(fYear));
-      const matchDept = fDept === 'All' || (a.meta?.targetDepartment === fDept);
+      const matchDept = fDept === 'All' || (a.meta?.targetDepartment && a.meta.targetDepartment.includes(fDept));
 
       // ดึงสถานะปัจจุบันของ Audit มาเช็ค (ถ้าไม่มีให้มองเป็น PLANNED)
       const currentStatus = a.meta?.status || a.status || 'PLANNED';
@@ -565,7 +596,13 @@ function renderProgram(){
     return tableHtml + renderPaginationBar(filteredData.length, ITEMS_PER_PAGE, state.pages[currentView], currentView);
   }
 
-function openProgramForm(){showModal(`<form id="programForm" class="p-6 space-y-4"><div class="flex justify-between"><h3 class="font-bold text-xl">Create Audit Campaign</h3><button type="button" onclick="closeModal()">✕</button></div><div class="grid md:grid-cols-2 gap-4"><label class="text-sm font-bold">Audit ID<input name="auditId" required value="AUD-${new Date().getFullYear()}-${String(state.audits.length+1).padStart(3,'0')}" class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Title<input name="title" required class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Department<select name="department" class="w-full border rounded-lg p-2 mt-1">${DEPARTMENTS.map(x=>`<option>${x}</option>`).join('')}</select></label><label class="text-sm font-bold">Scheduled Date<input name="date" type="date" required class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Lead Auditor (Email ID)<input name="lead" value="${esc(state.profile.displayName||state.user.email)}" class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Auditee / Process Owner (Email ID)<input name="auditee" class="w-full border rounded-lg p-2 mt-1"></label></div><label class="block text-sm font-bold">Objective<textarea name="objective" class="w-full border rounded-lg p-2 mt-1"></textarea></label><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-5 py-3 shadow-md transition">Create Campaign</button></form>`);programForm.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('auditId');loading(true,'Creating audit...');try{await db.collection('audit_campaigns').doc(id).set({auditId:id,meta:{title:f.get('title'),targetDepartment:f.get('department'),scheduledDate:f.get('date'),leadAuditor:f.get('lead'),auditee:f.get('auditee'),objective:f.get('objective'),standards:[],status:'PLANNED'},checklist:[],summary:{totalCheckpoints:0,conformingCount:0,majorNcCount:0,minorNcCount:0,observationCount:0},createdBy:state.user.email,createdAt:SV.serverTimestamp(),updatedAt:SV.serverTimestamp()});await auditEvent('CREATE','AUDIT',id);closeModal();toast('Audit campaign created')}catch(x){toast(x.message,'error')}finally{loading(false)}}}
+function openProgramForm(){showModal(`<form id="programForm" class="p-6 space-y-4"><div class="flex justify-between"><h3 class="font-bold text-xl">Create Audit Campaign</h3><button type="button" onclick="closeModal()">✕</button></div><div class="grid md:grid-cols-2 gap-4"><label class="text-sm font-bold">Audit ID<input name="auditId" required value="AUD-${new Date().getFullYear()}-${String(state.audits.length+1).padStart(3,'0')}" class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Title<input name="title" required class="w-full border rounded-lg p-2 mt-1"></label><div class="md:col-span-2">
+  <span class="text-sm font-bold">Departments in Scope</span>
+  <div class="mt-1 grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-slate-200">
+    ${DEPARTMENTS.map(d=>`<label class="flex gap-2 text-sm font-medium items-center"><input type="checkbox" name="department" value="${d}" class="w-4 h-4 text-blue-600 rounded">${d}</label>`).join('')}
+  </div>
+</div>
+<label class="text-sm font-bold">Scheduled Date<input name="date" type="date" required class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Lead Auditor (Email ID)<input name="lead" value="${esc(state.profile.displayName||state.user.email)}" class="w-full border rounded-lg p-2 mt-1"></label><label class="text-sm font-bold">Auditee / Process Owner (Email ID)<input name="auditee" class="w-full border rounded-lg p-2 mt-1"></label></div><label class="block text-sm font-bold">Objective<textarea name="objective" class="w-full border rounded-lg p-2 mt-1"></textarea></label><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-5 py-3 shadow-md transition">Create Campaign</button></form>`);programForm.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('auditId');loading(true,'Creating audit...');try{await db.collection('audit_campaigns').doc(id).set({auditId:id,meta:{title:f.get('title'),targetDepartment:[...document.querySelectorAll('[name=department]:checked')].map(x=>x.value).join(' + '),scheduledDate:f.get('date'),leadAuditor:f.get('lead'),auditee:f.get('auditee'),objective:f.get('objective'),standards:[],status:'PLANNED'},checklist:[],summary:{totalCheckpoints:0,conformingCount:0,majorNcCount:0,minorNcCount:0,observationCount:0},createdBy:state.user.email,createdAt:SV.serverTimestamp(),updatedAt:SV.serverTimestamp()});await auditEvent('CREATE','AUDIT',id);closeModal();toast('Audit campaign created')}catch(x){toast(x.message,'error')}finally{loading(false)}}}
 
 function renderPlanner() {
   setTimeout(updatePlannerDept, 100);
@@ -579,10 +616,8 @@ function renderPlanner() {
           ${availableAudits.length > 0 ? availableAudits.map(a => `<option value="${a.id}">${esc(a.meta?.title || a.id)}</option>`).join('') : `<option value="">-- No available audits to plan --</option>`}
         </select>
       </label>
-      <label class="block text-sm font-bold text-slate-700">Department
-        <select id="planDept" class="w-full border border-slate-300 rounded-lg p-2.5 mt-1 outline-none focus:border-blue-500 bg-slate-50">
-          ${DEPARTMENTS.map(x => `<option>${x}</option>`).join('')}
-        </select>
+      <label class="block text-sm font-bold text-slate-700">Department(s)
+        <input id="planDept" type="text" readonly class="w-full border border-slate-300 rounded-lg p-2.5 mt-1 outline-none bg-slate-100 text-slate-600" placeholder="Auto-filled from campaign">
       </label>
       <div>
         <span class="text-sm font-bold text-slate-700">Applicable Standards</span>
@@ -636,46 +671,77 @@ function syncGeneratedChecklistEditors() {
   document.querySelectorAll('.gen-type').forEach(e => { const i = Number(e.dataset.index); if (state.generated[i]) state.generated[i].questionType = e.value; });
 }
 
-function generatedHTML() {
-  setTimeout(() => { document.getElementById('saveChecklistBtn')?.classList.remove('hidden'); }, 0);
-  return state.generated.map((question, index) => {
-    const currentStandard = question.standardsCovered || question.standard || 'General';
-    const standardOptions = AUDIT_SYSTEM_OPTIONS.map(system => `<option value="${esc(system)}" ${currentStandard.includes(system) ? 'selected' : ''}>${esc(system)}</option>`).join('');
-    const questionTypeOptions = ['Document','Record','Interview','Observation','Traceability','Follow-up'].map(type => `<option value="${esc(type)}" ${question.questionType === type ? 'selected' : ''}>${esc(type)}</option>`).join('');
+  // 🟢 แทนที่ฟังก์ชัน generatedHTML() เดิมในไฟล์ HTML
+  function generatedHTML() {
+    setTimeout(() => { document.getElementById('saveChecklistBtn')?.classList.remove('hidden'); }, 0);
 
-    return `
-    <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm hover:shadow transition relative group">
-      <div class="absolute -left-3 -top-3 w-8 h-8 bg-blue-100 text-blue-700 font-black rounded-full flex items-center justify-center border-4 border-slate-50">${index+1}</div>
-      <div class="flex justify-between gap-3 items-start ml-2">
-        <div class="grid md:grid-cols-2 gap-4 flex-1">
-          <label class="text-xs font-bold text-slate-700">System / Standard
-            <select data-index="${index}" class="gen-standard w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50">${standardOptions}</select>
-          </label>
-          <label class="text-xs font-bold text-slate-700">Clause / Requirement
-            <input type="text" data-index="${index}" class="gen-clause w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50" value="${esc(question.clause || '')}" placeholder="e.g. 7.1.5">
-          </label>
+    // ดึงเฉพาะมาตรฐานที่ติ๊กเลือกไว้ในหน้า Planner มาทำปุ่มลัด (ถ้าไม่มีให้ใช้ลิสต์มาตรฐานหลัก)
+    const activeStds = [...document.querySelectorAll('[name=std]:checked')].map(x => x.value);
+    const badgeOptions = activeStds.length ? activeStds : AUDIT_SYSTEM_OPTIONS;
+
+    return state.generated.map((question, index) => {
+      const currentStandard = question.standardsCovered || question.standard || 'General';
+      const questionTypeOptions = ['Document','Record','Interview','Observation','Traceability','Follow-up']
+        .map(type => `<option value="${esc(type)}" ${question.questionType === type ? 'selected' : ''}>${esc(type)}</option>`).join('');
+
+      // สร้างปุ่ม Toggle มาตรฐานเพื่อให้คลิกเพิ่ม/ลดมาตรฐานที่ควบรวมได้ง่ายๆ
+      const stdBadges = badgeOptions.map(std => {
+        const isSelected = currentStandard.split(',').map(s => s.trim()).includes(std);
+        return `<button type="button" onclick="toggleQuestionStd(${index}, '${esc(std)}')" 
+          class="px-2 py-0.5 rounded text-[11px] font-bold border transition ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100'}">
+          ${esc(std)}
+        </button>`;
+      }).join('');
+
+      return `
+      <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm hover:shadow transition relative group">
+        <div class="absolute -left-3 -top-3 w-8 h-8 bg-blue-100 text-blue-700 font-black rounded-full flex items-center justify-center border-4 border-slate-50">${index+1}</div>
+        <div class="flex justify-between gap-3 items-start ml-2">
+          <div class="grid md:grid-cols-2 gap-4 flex-1">
+            <div>
+              <label class="text-xs font-bold text-slate-700 block">System / Standard (รองรับการควบรวม IMS)
+                <input type="text" data-index="${index}" class="gen-standard w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50 font-bold text-blue-800" value="${esc(currentStandard)}" placeholder="เช่น ISO9001, ISO14001, GMP">
+              </label>
+              <div class="flex flex-wrap gap-1 mt-1.5">${stdBadges}</div>
+            </div>
+            <label class="text-xs font-bold text-slate-700">Clause / Requirement (ระบุเทียบแต่ละระบบ)
+              <input type="text" data-index="${index}" class="gen-clause w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50 font-semibold text-slate-700" value="${esc(question.clause || '')}" placeholder="เช่น ISO9001: 6.1 | ISO14001: 6.1.1 | GMP: Sec.1">
+            </label>
+          </div>
+          <button type="button" onclick="deleteGeneratedItem(${index})" class="text-red-400 border border-red-100 bg-red-50 rounded-lg px-3 py-2.5 hover:bg-red-100 hover:text-red-600 transition" title="ลบรายการนี้"><i class="fa-solid fa-trash"></i></button>
         </div>
-        <button type="button" onclick="deleteGeneratedItem(${index})" class="text-red-400 border border-red-100 bg-red-50 rounded-lg px-3 py-2.5 hover:bg-red-100 hover:text-red-600 transition" title="ลบรายการนี้"><i class="fa-solid fa-trash"></i></button>
-      </div>
-      <div class="ml-2 mt-4 space-y-4">
-        <label class="block text-sm font-bold text-slate-800">Audit Question
-          <textarea data-index="${index}" rows="2" class="gen-question w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 font-normal" placeholder="พิมพ์คำถามที่ต้องการตรวจ">${esc(question.question || '')}</textarea>
-        </label>
-        <label class="block text-sm font-bold text-slate-800">Expected Evidence
-          <textarea data-index="${index}" rows="2" class="gen-evidence w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 font-normal" placeholder="ระบุเอกสาร บันทึก การสัมภาษณ์ หรือการสังเกตการณ์ที่คาดหวัง">${esc(question.expectedEvidence || question.requirement || '')}</textarea>
-        </label>
-        <div class="grid md:grid-cols-2 gap-4">
-          <label class="text-xs font-bold text-slate-700">Risk Focus
-            <input type="text" data-index="${index}" class="gen-risk w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50" value="${esc(question.riskFocus || '')}">
+        <div class="ml-2 mt-4 space-y-4">
+          <label class="block text-sm font-bold text-slate-800">Audit Question
+            <textarea data-index="${index}" rows="2" class="gen-question w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 font-normal" placeholder="พิมพ์คำถามที่ต้องการตรวจ">${esc(question.question || '')}</textarea>
           </label>
-          <label class="text-xs font-bold text-slate-700">Question Type
-            <select data-index="${index}" class="gen-type w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50">${questionTypeOptions}</select>
+          <label class="block text-sm font-bold text-slate-800">Expected Evidence
+            <textarea data-index="${index}" rows="2" class="gen-evidence w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 font-normal" placeholder="ระบุเอกสาร บันทึก การสัมภาษณ์ หรือการสังเกตการณ์ที่คาดหวัง">${esc(question.expectedEvidence || question.requirement || '')}</textarea>
           </label>
+          <div class="grid md:grid-cols-2 gap-4">
+            <label class="text-xs font-bold text-slate-700">Risk Focus
+              <input type="text" data-index="${index}" class="gen-risk w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50" value="${esc(question.riskFocus || '')}">
+            </label>
+            <label class="text-xs font-bold text-slate-700">Question Type
+              <select data-index="${index}" class="gen-type w-full border border-slate-300 rounded-lg p-2.5 mt-1.5 outline-none bg-slate-50">${questionTypeOptions}</select>
+            </label>
+          </div>
         </div>
-      </div>
-    </div>`;
-  }).join('');
-}
+      </div>`;
+    }).join('');
+  }
+
+  // 🟢 เพิ่มฟังก์ชันช่วยกดปุ่ม Toggle มาตรฐานต่อท้าย generatedHTML()
+  window.toggleQuestionStd = function(index, std) {
+    syncGeneratedChecklistEditors();
+    let current = (state.generated[index].standardsCovered || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (current.includes(std)) {
+      current = current.filter(s => s !== std);
+    } else {
+      current.push(std);
+    }
+    state.generated[index].standardsCovered = current.length ? current.join(', ') : 'General';
+    render();
+  };
 
 function deleteGeneratedItem(index) {
   syncGeneratedChecklistEditors();
@@ -728,11 +794,20 @@ function openAudit(id){state.selectedAudit=state.audits.find(a=>a.id===id);state
 function renderAuditRoom(){
   const a=state.audits.find(x=>x.id===state.selectedAudit?.id)||state.selectedAudit,q=a.checklist||[];state.selectedAudit=a;
 
-  let topActionButtons = '';
-  if (a.meta?.status === 'COMPLETED' || a.meta?.status === 'LOCKED') {
-      if (hasRole('Admin')) topActionButtons = `<button onclick="reopenAudit('${a.id}')" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-unlock-keyhole mr-2"></i> Re-open Audit</button>`;
-  } else {
-      topActionButtons = `<button onclick="finalizeAudit('${a.id}')" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-flag-checkered mr-2"></i>Finalize Audit</button>`;
+  let topActionButtons = `<button onclick="printAuditChecklist('${a.id}')" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-bold shadow-sm transition mr-2"><i class="fa-solid fa-print mr-2"></i> Print Checklist</button>`;
+
+    if (a.meta?.status === 'COMPLETED' || a.meta?.status === 'LOCKED') {
+        if (hasRole('Admin')) topActionButtons += `<button onclick="reopenAudit('${a.id}')" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-unlock-keyhole mr-2"></i> Re-open Audit</button>`;
+        // ปุ่ม Download Full Report พร้อมช่องเลือกภาษา TH/EN
+        topActionButtons += `<div class="inline-flex border border-emerald-600 rounded-lg overflow-hidden shadow-sm ml-2">
+          <select id="export-audit-lang" class="px-2.5 py-2 bg-white text-emerald-800 font-bold text-xs outline-none cursor-pointer">
+            <option value="th">TH</option>
+            <option value="en">EN</option>
+          </select>
+          <button onclick="exportAuditReport('${a.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 font-bold transition text-sm"><i class="fa-solid fa-download mr-2"></i> Download Report</button>
+        </div>`;
+    } else {
+      topActionButtons += `<button onclick="finalizeAudit('${a.id}')" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-flag-checkered mr-2"></i>Finalize Audit</button>`;
   }
 
   return `<div class="flex flex-wrap justify-between gap-4 mb-6">
@@ -750,7 +825,7 @@ function renderAuditRoom(){
   <div class="space-y-4">
   ${q.map((x,i)=>`<article class="card p-6 shadow-sm border-slate-200 hover:shadow-md transition">
     <div class="flex flex-wrap justify-between gap-2 border-b pb-3 mb-4">
-      <div><span class="text-xs bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono font-bold text-slate-600">${esc(x.itemId||`CHK-${i+1}`)}</span><span class="text-sm text-blue-600 ml-3 font-bold bg-blue-50 px-2 py-1 rounded-md">${esc(x.clause)}</span></div>
+      <div><span class="text-xs bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono font-bold text-slate-600">${esc(x.itemId||`CHK-${i+1}`)}</span><span class="text-xs bg-indigo-100 text-indigo-800 ml-2 px-2.5 py-1 rounded-md font-extrabold">${esc(x.standardsCovered||'General')}</span><span class="text-sm text-blue-600 ml-2 font-bold bg-blue-50 px-2 py-1 rounded-md">${esc(x.clause)}</span></div>
       <span class="status-${esc(x.result||'NOT_EVALUATED').replace(/\s/g,'_')} text-[11px] px-3 py-1.5 rounded-full font-bold tracking-wide shadow-sm border border-white/50">${esc(x.result||'NOT_EVALUATED')}</span>
     </div>
     <h4 class="font-bold mt-2 text-lg text-slate-800">${esc(x.question)}</h4>
@@ -789,34 +864,85 @@ function renderAuditRoom(){
   </div>`;
 }
 
-function openManualCheckpointModal(auditId) {
-  showModal(`
-    <form id="manualChkForm" class="p-6 space-y-4">
-      <h3 class="font-bold text-2xl mb-4 text-slate-800">เพิ่มข้อกำหนด Manual (หน้างาน)</h3>
-      <div class="grid md:grid-cols-2 gap-4">
-        <label class="block text-sm font-bold text-slate-700">Standard / System<input name="std" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="e.g. ISO 9001" required></label>
-        <label class="block text-sm font-bold text-slate-700">Clause / Requirement<input name="clause" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="e.g. 7.1.5" required></label>
-      </div>
-      <label class="block text-sm font-bold text-slate-700">Audit Question<textarea name="q" rows="2" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="คำถาม..." required></textarea></label>
-      <label class="block text-sm font-bold text-slate-700">Expected Evidence<textarea name="ev" rows="2" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="หลักฐานที่คาดหวัง..." required></textarea></label>
-      <div class="flex justify-end gap-3 mt-6">
-        <button type="button" onclick="closeModal()" class="px-5 py-2.5 rounded-lg font-bold text-slate-600 hover:bg-slate-100 transition">ยกเลิก</button>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-plus mr-2"></i>เพิ่มลงใน Checkpoint</button>
-      </div>
-    </form>
-  `);
+  function openManualCheckpointModal(auditId) {
+    showModal(`
+      <form id="manualChkForm" class="p-6 space-y-4">
+        <h3 class="font-bold text-2xl mb-4 text-slate-800">เพิ่มข้อกำหนด (หน้างาน)</h3>
 
-  document.getElementById('manualChkForm').onsubmit = async (e) => {
-    e.preventDefault(); const fd = new FormData(e.target); const a = state.audits.find(x => x.id === auditId); const checklist = [...(a.checklist || [])];
-    checklist.push({ itemId: `CHK-${String(checklist.length + 1).padStart(3, "0")}`, clause: fd.get('clause'), standardsCovered: fd.get('std'), question: fd.get('q'), expectedEvidence: fd.get('ev'), riskFocus: "Manual Addition", questionType: "Observation", result: "NOT_EVALUATED", evidence: "", comment: "", attachmentUrl: "", attachmentPath: "" });
-    loading(true, 'Adding Checkpoint...');
-    try {
-        await db.collection('audit_campaigns').doc(auditId).update({ checklist, 'summary.totalCheckpoints': checklist.length });
-        await auditEvent('ADD_CHECKPOINT', 'AUDIT', auditId, { source: "Execution" });
-        closeModal(); state.selectedAudit.checklist = checklist; render(); toast('เพิ่มรายการสำเร็จ', 'ok');
-    } catch(err) { toast(err.message, 'error'); } finally { loading(false); }
-  };
-}
+        <!-- เลือกโหมด -->
+        <div class="mb-4 bg-slate-100 p-2 rounded-lg inline-flex gap-2">
+          <label class="cursor-pointer px-4 py-2 rounded-md bg-white shadow-sm text-blue-700 font-bold text-sm" id="tab-manual">
+            <input type="radio" name="mode" value="manual" checked class="hidden" onchange="toggleChkMode()"> พิมพ์เอง (Manual)
+          </label>
+          <label class="cursor-pointer px-4 py-2 rounded-md text-slate-500 font-bold text-sm hover:bg-slate-200 transition" id="tab-ai">
+            <input type="radio" name="mode" value="ai" class="hidden" onchange="toggleChkMode()"> ให้ AI สร้างให้ (Auto)
+          </label>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <label class="block text-sm font-bold text-slate-700">Standard / System
+            <select name="std" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50">
+              ${STANDARDS.map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
+          </label>
+          <label class="block text-sm font-bold text-slate-700">Clause / Topic<input name="clause" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="e.g. 7.1.5 หรือ เรื่องการสอบเทียบ" required></label>
+        </div>
+
+        <!-- โซนสำหรับพิมพ์เอง -->
+        <div id="mode-manual-zone" class="space-y-4 block">
+          <label class="block text-sm font-bold text-slate-700">Audit Question<textarea name="q" rows="2" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="คำถาม..."></textarea></label>
+          <label class="block text-sm font-bold text-slate-700">Expected Evidence<textarea name="ev" rows="2" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-blue-500 bg-slate-50" placeholder="หลักฐานที่คาดหวัง..."></textarea></label>
+        </div>
+
+        <!-- โซนสำหรับ AI -->
+        <div id="mode-ai-zone" class="space-y-4 hidden bg-indigo-50 border border-indigo-200 p-4 rounded-xl mt-4">
+          <label class="block text-sm font-bold text-indigo-900">จำนวนข้อที่ต้องการให้ AI สร้าง<input type="number" name="aiCount" min="1" max="5" value="1" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-indigo-500"></label>
+          <label class="block text-sm font-bold text-indigo-900">บริบทเพิ่มเติม (ทางเลือก)<input type="text" name="aiContext" class="w-full border rounded-lg p-2.5 mt-1.5 outline-none focus:border-indigo-500" placeholder="เช่น เน้นเรื่องสารเคมีในห้องแล็บ"></label>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+          <button type="button" onclick="closeModal()" class="px-5 py-2.5 rounded-lg font-bold text-slate-600 hover:bg-slate-100 transition">ยกเลิก</button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg shadow-sm font-bold transition"><i class="fa-solid fa-plus mr-2"></i>เพิ่มลงใน Checkpoint</button>
+        </div>
+      </form>
+    `);
+
+    window.toggleChkMode = function() {
+      const isManual = document.querySelector('input[name="mode"]:checked').value === 'manual';
+      document.getElementById('mode-manual-zone').style.display = isManual ? 'block' : 'none';
+      document.getElementById('mode-ai-zone').style.display = isManual ? 'none' : 'block';
+      document.getElementById('tab-manual').className = isManual ? 'cursor-pointer px-4 py-2 rounded-md bg-white shadow-sm text-blue-700 font-bold text-sm' : 'cursor-pointer px-4 py-2 rounded-md text-slate-500 font-bold text-sm hover:bg-slate-200 transition';
+      document.getElementById('tab-ai').className = !isManual ? 'cursor-pointer px-4 py-2 rounded-md bg-white shadow-sm text-blue-700 font-bold text-sm' : 'cursor-pointer px-4 py-2 rounded-md text-slate-500 font-bold text-sm hover:bg-slate-200 transition';
+    };
+
+    document.getElementById('manualChkForm').onsubmit = async (e) => {
+      e.preventDefault(); const fd = new FormData(e.target); 
+      const mode = fd.get('mode');
+      const a = state.audits.find(x => x.id === auditId); 
+      let checklist = [...(a.checklist || [])];
+
+      if (mode === 'manual') {
+          checklist.push({ itemId: `CHK-${String(checklist.length + 1).padStart(3, "0")}`, clause: fd.get('clause'), standardsCovered: fd.get('std'), question: fd.get('q'), expectedEvidence: fd.get('ev'), riskFocus: "Manual Addition", questionType: "Observation", result: "NOT_EVALUATED", evidence: "", comment: "", attachmentUrl: "", attachmentPath: "" });
+      } else {
+          loading(true, '🤖 AI กำลังสร้างคำถาม...');
+          try {
+              const fn = functions.httpsCallable('generateSpecificCheckpoints');
+              const res = await fn({ standard: fd.get('std'), clause: fd.get('clause'), count: Number(fd.get('aiCount')), context: fd.get('aiContext') });
+              const aiItems = res.data.data;
+              aiItems.forEach(aiItem => {
+                  checklist.push({ itemId: `CHK-${String(checklist.length + 1).padStart(3, "0")}`, clause: aiItem.clause, standardsCovered: aiItem.standardsCovered, question: aiItem.question, expectedEvidence: aiItem.expectedEvidence, riskFocus: aiItem.riskFocus, questionType: aiItem.questionType, result: "NOT_EVALUATED", evidence: "", comment: "", attachmentUrl: "", attachmentPath: "" });
+              });
+          } catch(err) { toast(err.message, 'error'); loading(false); return; }
+      }
+
+      loading(true, 'Saving Checkpoints...');
+      try {
+          await db.collection('audit_campaigns').doc(auditId).update({ checklist, 'summary.totalCheckpoints': checklist.length });
+          await auditEvent('ADD_CHECKPOINT', 'AUDIT', auditId, { source: mode });
+          closeModal(); state.selectedAudit.checklist = checklist; render(); toast('เพิ่มรายการสำเร็จ', 'ok');
+      } catch(err) { toast(err.message, 'error'); } finally { loading(false); }
+    };
+  }
 
 async function deleteExecutionItem(auditId, index) {
   if(!confirm('ยืนยันลบ Manual Checkpoint นี้?')) return;
@@ -825,35 +951,120 @@ async function deleteExecutionItem(auditId, index) {
   try { await db.collection('audit_campaigns').doc(auditId).update({ checklist, 'summary.totalCheckpoints': checklist.length }); state.selectedAudit.checklist = checklist; render(); toast('ลบรายการสำเร็จ', 'ok'); } catch(err) { toast(err.message, 'error'); } finally { loading(false); }
 }
 
-function openAICoach(auditId) {
-  const a = state.audits.find(x => x.id === auditId);
-  showModal(`
-    <div class="p-2 sm:p-4">
-      <div class="flex justify-between items-center mb-4 border-b pb-4">
-        <h3 class="font-bold text-xl text-indigo-900 flex items-center"><div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mr-3"><i class="fa-solid fa-robot text-xl"></i></div>AI Coach (Lead Auditor)</h3>
-        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-800 text-2xl font-bold bg-slate-50 w-10 h-10 rounded-lg flex items-center justify-center">✕</button>
-      </div>
-      <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mb-4 h-[60vh] overflow-y-auto text-sm space-y-4 shadow-inner" id="coachChatBox">
-        <div class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-lg"></i></div><div class="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200 flex-1 leading-relaxed text-slate-700">สวัสดีครับคู่หู! ผมคือ <b class="text-indigo-700">AI Coach</b> ผู้เชี่ยวชาญด้าน ISO 9001, 14001, 45001, 50001, GMP, Halal, FSC และ PEFC<br><br>มีอะไรให้ผมช่วยแนะนำในการเข้าตรวจแผนก <b class="text-slate-900">${esc(a.meta?.targetDepartment)}</b> ไหมครับ? พิมพ์ถามมาได้เลย ไม่ว่าจะเป็นวิธีการตั้งคำถาม การประเมินหลักฐาน หรือปรึกษาว่าสิ่งที่เจอควรให้ NC หรือไม่ครับ</div></div>
-      </div>
-      <form id="coachForm" class="flex gap-2 mt-4 relative">
-        <input type="text" id="coachInput" required class="flex-1 border-2 border-indigo-100 focus:border-indigo-500 rounded-xl p-4 pr-16 outline-none shadow-sm font-medium" placeholder="พิมพ์คำปรึกษาที่นี่... (เช่น Auditee ไม่มีบันทึก PM ควรให้ NC ไหม?)">
-        <button type="submit" class="absolute right-2 top-2 bottom-2 bg-indigo-600 text-white px-5 rounded-lg hover:bg-indigo-700 shadow transition flex items-center justify-center"><i class="fa-solid fa-paper-plane text-lg"></i></button>
-      </form>
-    </div>
-  `);
-  document.getElementById('coachForm').onsubmit = async e => {
-    e.preventDefault(); const inputEl = document.getElementById('coachInput'); const q = inputEl.value; inputEl.value = ''; const chatBox = document.getElementById('coachChatBox');
-    chatBox.innerHTML += `<div class="flex gap-3 items-start flex-row-reverse"><div class="w-10 h-10 shrink-0 rounded-full bg-slate-300 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user text-white text-lg"></i></div><div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-sm shadow-sm flex-1 text-right leading-relaxed">${esc(q)}</div></div>`; chatBox.scrollTop = chatBox.scrollHeight;
-    const loadingId = 'loading-' + Date.now();
-    chatBox.innerHTML += `<div id="${loadingId}" class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-lg"></i></div><div class="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200"><div class="spinner border-indigo-600 w-6 h-6 border-3"></div></div></div>`; chatBox.scrollTop = chatBox.scrollHeight;
-    try {
-      const fn = functions.httpsCallable('askAuditAICoach'); const res = await fn({ auditId, question: q }); document.getElementById(loadingId).remove();
-      const formattedAns = esc(res.data.answer).replace(/\*\*(.*?)\*\*/g, '<b class="text-slate-900">$1</b>').replace(/\n\*/g, '<br>•').replace(/\n/g, '<br>');
-      chatBox.innerHTML += `<div class="flex gap-3 items-start"><div class="w-10 h-10 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-lg"></i></div><div class="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200 flex-1 leading-relaxed text-slate-700">${formattedAns}</div></div>`; chatBox.scrollTop = chatBox.scrollHeight;
-    } catch(err) { document.getElementById(loadingId).remove(); toast(err.message, 'error'); }
+  function openAICoach(auditId) {
+    const a = state.audits.find(x => x.id === auditId);
+
+    // 1. ค้นหาว่ามีกล่องแชทถูกสร้างไว้แล้วหรือไม่
+    let coachPanel = document.getElementById('floatingAICoach');
+
+    // 2. ถ้ารหัส Audit เปลี่ยนไป (ย้ายไปตรวจงานอื่น) ให้ลบแชทเก่าทิ้งเพื่อเริ่มห้องใหม่
+    if (coachPanel && coachPanel.dataset.auditId !== auditId) {
+        coachPanel.remove();
+        coachPanel = null;
+    }
+
+    // 3. ถ้ายังไม่มีกล่องแชท ให้สร้างขึ้นมาใหม่
+    if (!coachPanel) {
+      coachPanel = document.createElement('div');
+      coachPanel.id = 'floatingAICoach';
+      coachPanel.dataset.auditId = auditId;
+
+      // ตั้งค่า CSS ให้อยู่มุมขวาล่าง (เหนือปุ่มเรียก AI เล็กน้อย) และมีเงาสวยงาม
+      coachPanel.className = 'fixed bottom-24 right-4 sm:right-8 w-[380px] max-w-[90vw] h-[500px] max-h-[70vh] bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-indigo-200 flex flex-col z-[100] transition-all duration-300';
+
+      coachPanel.innerHTML = `
+        <!-- ส่วนหัว (Header) มีปุ่มย่อ/ขยาย และปิด -->
+        <div class="flex justify-between items-center bg-indigo-600 text-white p-3.5 rounded-t-2xl cursor-pointer shadow-md z-10" id="coachHeader" onclick="toggleMinimizeCoach()">
+          <h3 class="font-bold text-base flex items-center"><i class="fa-solid fa-robot mr-2 text-indigo-200"></i> AI Coach (Lead Auditor)</h3>
+          <div class="flex gap-1 items-center">
+             <button type="button" class="text-white hover:text-indigo-200 text-lg font-bold w-8 h-8 flex items-center justify-center transition" title="ย่อ/ขยาย"><i class="fa-solid fa-minus" id="coachMinIcon"></i></button>
+             <button type="button" onclick="event.stopPropagation(); document.getElementById('floatingAICoach').classList.add('hidden');" class="text-white hover:text-red-300 text-lg font-bold w-8 h-8 flex items-center justify-center transition" title="ซ่อนกล่องแชท"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
+
+        <!-- ส่วนเนื้อหาแชทและช่องพิมพ์ (Body) -->
+        <div id="coachBody" class="flex flex-col flex-1 overflow-hidden bg-slate-50 rounded-b-2xl">
+            <div class="p-4 flex-1 overflow-y-auto text-sm space-y-4 shadow-inner" id="coachChatBox">
+              <div class="flex gap-3 items-start">
+                 <div class="w-8 h-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-xs"></i></div>
+                 <div class="bg-white p-3.5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200 flex-1 leading-relaxed text-slate-700">สวัสดีครับคู่หู! ผมคือ <b class="text-indigo-700">AI Coach</b><br><br>มีอะไรให้ผมช่วยแนะนำในการเข้าตรวจแผนก <b class="text-slate-900">${esc(a.meta?.targetDepartment)}</b> ไหมครับ? พิมพ์ถามมาได้เลย ไม่ว่าจะเป็นวิธีการตั้งคำถาม การประเมินหลักฐาน หรือปรึกษาว่าสิ่งที่เจอควรให้ NC หรือไม่ครับ</div>
+              </div>
+            </div>
+
+            <form id="coachForm" class="flex gap-2 p-3 bg-white border-t border-slate-200">
+              <input type="text" id="coachInput" required class="flex-1 border border-slate-300 focus:border-indigo-500 rounded-xl p-3 outline-none text-sm shadow-sm transition" placeholder="พิมพ์คำปรึกษาที่นี่... (เช่น ควรให้ NC ไหม?)">
+              <button type="submit" class="bg-indigo-600 text-white w-12 rounded-xl hover:bg-indigo-700 shadow-md transition flex items-center justify-center text-lg"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </div>
+      `;
+
+      document.body.appendChild(coachPanel);
+
+      // ผูกเหตุการณ์ตอนกดส่งข้อความแชท
+      document.getElementById('coachForm').onsubmit = async e => {
+        e.preventDefault(); 
+        const inputEl = document.getElementById('coachInput'); 
+        const q = inputEl.value; 
+        inputEl.value = ''; 
+        const chatBox = document.getElementById('coachChatBox');
+
+        // แสดงข้อความฝั่งผู้ใช้
+        chatBox.innerHTML += `<div class="flex gap-3 items-start flex-row-reverse mt-2"><div class="w-8 h-8 shrink-0 rounded-full bg-slate-300 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user text-slate-600 text-xs"></i></div><div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-sm shadow-sm flex-1 text-right leading-relaxed text-[13px]">${esc(q)}</div></div>`; 
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // แสดงไอคอน Loading ของ AI
+        const loadingId = 'loading-' + Date.now();
+        chatBox.innerHTML += `<div id="${loadingId}" class="flex gap-3 items-start mt-2"><div class="w-8 h-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-xs"></i></div><div class="bg-white p-3.5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200"><div class="spinner border-indigo-600 w-5 h-5 border-2"></div></div></div>`; 
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // เรียก Cloud Function
+        try {
+          const fn = functions.httpsCallable('askAuditAICoach'); 
+          const res = await fn({ auditId, question: q }); 
+          document.getElementById(loadingId).remove();
+
+          // จัด Format ตัวหนาและเว้นบรรทัด
+          const formattedAns = esc(res.data.answer).replace(/\*\*(.*?)\*\*/g, '<b class="text-slate-900">$1</b>').replace(/\n\*/g, '<br>•').replace(/\n/g, '<br>');
+
+          chatBox.innerHTML += `<div class="flex gap-3 items-start mt-2"><div class="w-8 h-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center shadow-md border-2 border-white"><i class="fa-solid fa-user-tie text-white text-xs"></i></div><div class="bg-white p-3.5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-200 flex-1 leading-relaxed text-slate-700 text-[13px]">${formattedAns}</div></div>`; 
+          chatBox.scrollTop = chatBox.scrollHeight;
+        } catch(err) { 
+          document.getElementById(loadingId).remove(); 
+          toast(err.message, 'error'); 
+        }
+      };
+    } else {
+      // 4. ถ้ามีกล่องแชทอยู่แล้ว แค่ซ่อนอยู่ ให้โชว์ขึ้นมา (ความจำแชทจะอยู่ครบ)
+      coachPanel.classList.remove('hidden');
+
+      // ถ้าย่อไว้อยู่ (Minimize) ให้ขยายกลับมาอัตโนมัติ
+      const body = document.getElementById('coachBody');
+      if (body.classList.contains('hidden')) {
+         toggleMinimizeCoach(); 
+      }
+    }
+  }
+
+  // =========================================================================
+  // ฟังก์ชัน ย่อ-ขยาย กล่องแชท (ให้เหลือแค่แถบสีน้ำเงินด้านบน)
+  // =========================================================================
+  window.toggleMinimizeCoach = function() {
+      const body = document.getElementById('coachBody');
+      const icon = document.getElementById('coachMinIcon');
+      const panel = document.getElementById('floatingAICoach');
+
+      if (body.classList.contains('hidden')) {
+          // สถานะขยาย
+          body.classList.remove('hidden');
+          panel.classList.replace('h-auto', 'h-[500px]');
+          icon.classList.replace('fa-window-maximize', 'fa-minus');
+      } else {
+          // สถานะย่อ (ซ่อน Body ทิ้งไป)
+          body.classList.add('hidden');
+          panel.classList.replace('h-[500px]', 'h-auto');
+          icon.classList.replace('fa-minus', 'fa-window-maximize');
+      }
   };
-}
 
 async function saveCheckpoint(id,i){
   const a=state.audits.find(x=>x.id===id),q=[...(a.checklist||[])];
@@ -919,7 +1130,7 @@ function renderFindings(data = state.findings) {
   const fYear = state.globalFilter.year, fDept = state.globalFilter.department, fStatus = state.globalFilter.status;
   const filteredData = data.filter(f => {
     const matchYear = fYear === 'All' || (f.auditYear === fYear) || (f.findingNo && f.findingNo.includes(fYear));
-    const matchDept = fDept === 'All' || f.department === fDept;
+    const matchDept = fDept === 'All' || (f.department && f.department.includes(fDept));
     const matchStatus = fStatus === 'All' || f.status === fStatus;
     return matchYear && matchDept && matchStatus;
   });
@@ -956,13 +1167,22 @@ function editFinding(id) {
       </div>
 
       <div class="bg-gradient-to-r from-indigo-50 to-white border border-indigo-100 rounded-xl p-5 flex justify-between items-center shadow-sm">
-        <div><h4 class="font-bold text-indigo-900 text-base"><i class="fa-solid fa-wand-magic-sparkles text-indigo-500 mr-2"></i>AI CAPA Advisor</h4><p class="text-xs text-indigo-600 mt-1 font-medium">ให้ AI ช่วยวิเคราะห์สาเหตุ (Root Cause) และเสนอแนวทางแก้ไขจากหลักฐานที่พบ</p></div>
-        <button type="button" onclick="analyzeFindingWithAI('${id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition transform hover:scale-105">วิเคราะห์ด้วย AI</button>
+        <div><h4 class="font-bold text-indigo-900 text-base"><i class="fa-solid fa-wand-magic-sparkles text-indigo-500 mr-2"></i>AI CAPA Advisor</h4><p class="text-xs text-indigo-600 mt-1 font-medium">ให้ AI ช่วยวิเคราะห์สาเหตุและแนวทางแก้ไข</p></div>
+        <div class="flex items-center gap-2">
+           <select id="capa-lang-select" class="text-xs font-bold border border-indigo-200 rounded-lg px-2 py-2 outline-none text-indigo-700 bg-white">
+             <option value="th" selected>TH (ไทย)</option>
+             <option value="en">EN (English)</option>
+           </select>
+           <button type="button" onclick="analyzeFindingWithAI('${id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition transform hover:scale-105">วิเคราะห์ด้วย AI</button>
+        </div>
       </div>
 
       <div class="grid md:grid-cols-2 gap-5 bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-inner">
         <label class="text-sm font-bold text-slate-800">Classification (ระดับความรุนแรง)<select name="classification" id="finding-classification" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 bg-white font-semibold cursor-pointer">${['Unclassified NC','Major NC','Minor NC','Observation','Good Practice'].map(x => `<option value="${x}" ${f.classification === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
-        <label class="text-sm font-bold text-blue-700">Status (สถานะการติดตาม)<select name="status" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 bg-white font-black cursor-pointer">${['DRAFT','UNDER_REVIEW','ISSUED','CAPA_SUBMITTED','VERIFICATION','CLOSED','VOID'].map(x => `<option value="${x}" ${f.status === x ? 'selected' : ''}>${x}</option>`).join('')}</select><span class="text-[11px] text-slate-500 font-medium mt-2 block">*หากกรอก Root Cause ระบบจะปรับสถานะให้เป็น CAPA_SUBMITTED อัตโนมัติ</span></label>
+        <label class="text-sm font-bold text-blue-700">Status (สถานะการติดตาม)<select name="status" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 bg-white font-black cursor-pointer">${['DRAFT','UNDER_REVIEW','ISSUED','CAPA_SUBMITTED','VERIFICATION','CLOSED','VOID'].map(x => {
+            const disableClose = (x === 'CLOSED' || x === 'VOID') && !hasRole('Admin', 'Lead Auditor') ? 'disabled' : '';
+            return `<option value="${x}" ${f.status === x ? 'selected' : ''} ${disableClose}>${x}</option>`;
+        }).join('')}</select><span class="text-[11px] text-slate-500 font-medium mt-2 block">*สถานะ CLOSED/VOID สงวนสิทธิ์เฉพาะ Lead Auditor และ Admin เท่านั้น</span></label>
       </div>
 
       <div class="space-y-4 mt-6">
@@ -976,7 +1196,14 @@ function editFinding(id) {
         <h4 class="font-black text-slate-800 border-b border-slate-200 pb-2 text-lg"><i class="fa-solid fa-tools text-orange-500 mr-2"></i>Part 2: Corrective and Preventive Action</h4>
         ${['correction','rootCause','correctiveAction','effectivenessCriteria'].map(k => `<label class="block text-sm font-bold text-slate-700">${k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}<textarea name="${k}" id="finding-${k}" rows="2" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed">${esc(f[k])}</textarea></label>`).join('')}
       </div>
-
+      <div class="space-y-4 mt-8">
+        <h4 class="font-black text-slate-800 border-b border-slate-200 pb-2 text-lg"><i class="fa-solid fa-check-double text-green-600 mr-2"></i>Part 3: Effectiveness Review & Verification</h4>
+        <label class="block text-sm font-bold text-slate-700">Verification Result (ผลการทวนสอบประสิทธิผล)<textarea name="verificationResult" rows="2" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed" placeholder="ระบุผลการทวนสอบว่าการแก้ไขได้ผลหรือไม่...">${esc(f.verificationResult)}</textarea></label>
+        <div class="grid md:grid-cols-2 gap-5 mt-2">
+          <label class="text-sm font-bold text-slate-700">Verified By (ผู้ทวนสอบ)<input name="verifiedBy" value="${esc(f.verifiedBy)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold" placeholder="ชื่อผู้ทวนสอบ"></label>
+          <label class="text-sm font-bold text-slate-700">Verification Date (วันที่ทวนสอบจริง)<input name="actualVerificationDate" type="date" value="${esc(f.actualVerificationDate)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold"></label>
+        </div>
+      </div>
       <div class="grid md:grid-cols-3 gap-5 mt-6 border-t border-slate-200 pt-6">
         <label class="text-sm font-bold text-slate-700">Responsible Person<input name="responsiblePerson" value="${esc(f.responsiblePerson)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold"></label>
         <label class="text-sm font-bold text-slate-700">Target Date (กำหนดเสร็จ)<input name="targetDate" type="date" value="${esc(f.targetDate)}" class="w-full border border-slate-300 p-2.5 rounded-lg mt-2 outline-none focus:border-blue-500 font-semibold"></label>
@@ -984,22 +1211,38 @@ function editFinding(id) {
       </div>
 
       <!-- 🟢 โซนยืนยันการใช้ AI (จะถูกเปิดขึ้นมาเมื่อกดวิเคราะห์ AI) -->
-      <div id="ai-verify-section" class="hidden mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+  <div id="ai-verify-section" class="hidden mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
          <label class="flex items-center gap-3 cursor-pointer">
            <input type="checkbox" id="human-verified" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
            <span class="text-sm font-bold text-indigo-900">ฉันได้ทบทวน แก้ไข และยืนยันความถูกต้องของข้อมูลจาก AI แล้ว (Human Verified)</span>
          </label>
       </div>
 
-  <div class="flex gap-4 mt-8">
-        ${['CAPA_SUBMITTED', 'VERIFICATION'].includes(f.status) ? `<button type="button" onclick="rejectCapa('${id}')" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-5 py-3.5 rounded-xl font-bold shadow-sm transition text-base"><i class="fa-solid fa-rotate-left mr-2"></i>Reject CAPA</button>` : ''}
+      <!-- 🟢 โซนกลุ่มปุ่มกดด้านล่าง (มี Export, Reject และ Save เรียงกัน) -->
+      <div class="flex gap-4 mt-8 border-t border-slate-200 pt-6">
+        ${['CAPA_SUBMITTED', 'VERIFICATION'].includes(f.status) ? `<button type="button" onclick="rejectCapa('${id}')" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-5 py-3.5 rounded-xl font-bold shadow-sm transition text-base"><i class="fa-solid fa-rotate-left mr-2"></i>Reject</button>` : ''}
+
+        <div class="flex border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+           <select id="export-capa-lang" class="px-3 py-3.5 bg-slate-50 text-slate-700 font-bold text-sm outline-none border-r border-slate-300 cursor-pointer">
+              <option value="th"> TH (Thai)</option>
+              <option value="en"> EN (English)</option>
+           </select>
+           <button type="button" onclick="exportCapaReport('${id}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-3.5 font-bold transition text-base flex items-center">
+              <i class="fa-solid fa-file-pdf mr-2"></i>Export CAPA
+           </button>
+        </div>
+
         <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3.5 rounded-xl font-bold shadow-md transition text-lg"><i class="fa-solid fa-floppy-disk mr-2"></i>Save & Update Record</button>
       </div>
     </form>
   `);
 
-  document.getElementById('findingForm').onsubmit = async e => {
-  e.preventDefault(); 
+    document.getElementById('findingForm').onsubmit = async e => {
+    e.preventDefault(); 
+    const data = Object.fromEntries(new FormData(e.target)); 
+    if ((data.status === 'CLOSED' || data.status === 'VOID') && !hasRole('Admin', 'Lead Auditor')) {
+        return toast('⚠️ ไม่อนุญาตให้บันทึก: เฉพาะ Admin หรือ Lead Auditor เท่านั้นที่สามารถปิด (CLOSED) หรือยกเลิก (VOID) ข้อบกพร่องได้', 'error');
+    }
 
   // 🟢 เช็คว่าได้กดยืนยัน Human Verified หรือยัง (ถ้าวิเคราะห์ด้วย AI)
   const verifySec = document.getElementById('ai-verify-section');
@@ -1010,7 +1253,7 @@ function editFinding(id) {
       }
   }
 
-  const data = Object.fromEntries(new FormData(e.target)); delete data.id;
+  delete data.id;
 
   // 🟢 ดึง Raw Draft ที่พักไว้มาแนบใส่ data เพื่อส่งไป Firestore
   if (window.tempAiRawDraft) {
@@ -1028,27 +1271,31 @@ function editFinding(id) {
   };
 }
 
-async function analyzeFindingWithAI(id) {
-  const f = state.findings.find(x => x.id === id); const condition = document.getElementById('finding-condition').value || f.condition; const criteria = document.getElementById('finding-criteria').value || f.criteria;
-  if (!condition) return toast('กรุณาระบุ Condition (สิ่งที่พบ) ก่อนให้ AI วิเคราะห์', 'warn');
-  loading(true, '🤖 AI กำลังวิเคราะห์รากเหง้าของปัญหาและสร้าง CAPA...');
-  try {
-    const fn = functions.httpsCallable('analyzeFindingAndCAPA'); const response = await fn({ findingId: id, department: f.department || 'Unknown', clause: f.clause || 'Unknown', condition: condition, criteria: criteria }); const aiResult = response.data.analysis;
-    if (aiResult.proposedRootCause) document.getElementById('finding-rootCause').value = aiResult.proposedRootCause; if (aiResult.correction) document.getElementById('finding-correction').value = aiResult.correction; if (aiResult.correctiveAction) document.getElementById('finding-correctiveAction').value = aiResult.correctiveAction; if (aiResult.effectivenessCriteria) document.getElementById('finding-effectivenessCriteria').value = aiResult.effectivenessCriteria;
+  async function analyzeFindingWithAI(id) {
+    const f = state.findings.find(x => x.id === id); const condition = document.getElementById('finding-condition').value || f.condition; const criteria = document.getElementById('finding-criteria').value || f.criteria;
+    if (!condition) return toast('กรุณาระบุ Condition (สิ่งที่พบ) ก่อนให้ AI วิเคราะห์', 'warn');
+    loading(true, '🤖 AI กำลังวิเคราะห์รากเหง้าของปัญหาและสร้าง CAPA...');
+    try {
+      // 🟢 1. ดึงค่าภาษาจาก Dropdown หน้าเว็บ
+      const lang = document.getElementById('capa-lang-select').value; 
 
-    // 🟢 เก็บข้อความต้นฉบับไว้ใน Memory ชั่วคราว
-    window.tempAiRawDraft = JSON.stringify(aiResult);
+      // 🟢 2. เพิ่ม lang: lang เข้าไปในวงเล็บปีกกา { ... } เพื่อส่งไป Backend
+      const fn = functions.httpsCallable('analyzeFindingAndCAPA'); const response = await fn({ findingId: id, department: f.department || 'Unknown', clause: f.clause || 'Unknown', condition: condition, criteria: criteria, lang: lang }); const aiResult = response.data.analysis;
+      if (aiResult.proposedRootCause) document.getElementById('finding-rootCause').value = aiResult.proposedRootCause; if (aiResult.correction) document.getElementById('finding-correction').value = aiResult.correction; if (aiResult.correctiveAction) document.getElementById('finding-correctiveAction').value = aiResult.correctiveAction; if (aiResult.effectivenessCriteria) document.getElementById('finding-effectivenessCriteria').value = aiResult.effectivenessCriteria;
 
-    // 🟢 โชว์ Checkbox บังคับยืนยัน
-    const verifySec = document.getElementById('ai-verify-section');
-    if(verifySec) {
-        verifySec.classList.remove('hidden');
-        document.getElementById('human-verified').checked = false;
-    }
+      // 🟢 เก็บข้อความต้นฉบับไว้ใน Memory ชั่วคราว
+      window.tempAiRawDraft = JSON.stringify(aiResult);
 
-    toast('AI เติมข้อมูลวิเคราะห์ให้เรียบร้อยแล้ว กรุณาตรวจสอบก่อนบันทึก', 'ok');
-  } catch (x) { console.error(x); toast('การวิเคราะห์ด้วย AI ล้มเหลว: ' + x.message, 'error'); } finally { loading(false); }
-}
+      // 🟢 โชว์ Checkbox บังคับยืนยัน
+      const verifySec = document.getElementById('ai-verify-section');
+      if(verifySec) {
+          verifySec.classList.remove('hidden');
+          document.getElementById('human-verified').checked = false;
+      }
+
+      toast('AI เติมข้อมูลวิเคราะห์ให้เรียบร้อยแล้ว กรุณาตรวจสอบก่อนบันทึก', 'ok');
+    } catch (x) { console.error(x); toast('การวิเคราะห์ด้วย AI ล้มเหลว: ' + x.message, 'error'); } finally { loading(false); }
+  }
 
 function renderCAPA(){
   return `
@@ -1108,6 +1355,196 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
     } finally {
       loading(false);
     }
+  };
+  // =========================================================================
+  // ฟังก์ชันสร้างหน้าต่าง Print แบบมี Stamp
+  // =========================================================================
+  function openPrintWindow(title, htmlContent) {
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
+            h1 { color: #0f172a; font-size: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;}
+            h2 { color: #334155; font-size: 18px; margin-top: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;}
+            th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; vertical-align: top;}
+            th { background-color: #f8fafc; font-weight: bold; color: #475569;}
+            .meta { font-size: 14px; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 15px; border-radius: 8px;}
+            .stamp-box { position: absolute; top: 40px; right: 40px; transform: rotate(-15deg); border: 4px solid; padding: 10px 20px; font-size: 24px; font-weight: 900; border-radius: 10px; text-transform: uppercase; letter-spacing: 2px; }
+            .stamp-COMPLETED, .stamp-CLOSED { color: #15803d; border-color: #15803d; }
+            .stamp-ISSUED, .stamp-IN_PROGRESS { color: #b45309; border-color: #b45309; }
+            .stamp-CAPA_SUBMITTED { color: #4338ca; border-color: #4338ca; }
+            @media print { body { padding: 0; } .stamp-box { opacity: 0.8; } }
+          </style>
+        </head>
+        <body>
+          ${htmlContent}
+          <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
+  // 1. ปริ้นท์ Checklist เปล่าๆ ไปเดินหน้างาน
+  window.printAuditChecklist = function(auditId) {
+      const a = state.audits.find(x => x.id === auditId);
+
+      const dept = a.meta?.targetDepartment || a.department || 'Unknown';
+      const date = a.meta?.scheduledDate || a.scheduledDate || '-';
+      const lead = a.meta?.leadAuditor || a.leadAuditor || '-';
+
+      // 🟢 1. ดึงจาก meta.standards ก่อน ถ้าไม่มี ให้สแกนหาจาก standardsCovered ในแต่ละข้อของ checklist มารวมกันอัตโนมัติ
+      let stdArray = a.meta?.standards || a.standards || [];
+      if (stdArray.length === 0 && a.checklist) {
+          const extracted = new Set();
+          a.checklist.forEach(chk => {
+              if (chk.standardsCovered) {
+                  // แยกกรณีมีหลายมาตรฐานคั่นด้วยคอมมา
+                  chk.standardsCovered.split(',').forEach(s => extracted.add(s.trim()));
+              }
+          });
+          stdArray = Array.from(extracted);
+      }
+      const standardsText = stdArray.length > 0 ? stdArray.join(', ') : 'Not Specified';
+
+      let html = `<h1>Audit Checklist: ${dept}</h1>
+                  <div class="meta">
+                    <div><b>Audit ID:</b> ${a.auditId || a.id}</div>
+                    <div><b>Date:</b> ${date}</div>
+                    <div><b>Lead Auditor:</b> ${lead}</div>
+                    <div><b>Standards:</b> ${standardsText}</div>
+                  </div>
+                  <table><tr><th width="10%">Item</th><th width="30%">Question / Standard</th><th width="30%">Expected Evidence</th><th width="30%">Notes (สิ่งที่พบ)</th></tr>`;
+      (a.checklist || []).forEach(x => {
+          html += `<tr>
+              <td><b>${x.itemId}</b></td>
+              <td><b>${x.clause}</b><br/>${x.question}</td>
+              <td>${x.expectedEvidence}</td>
+              <td></td>
+          </tr>`;
+      });
+      html += `</table>`;
+      openPrintWindow(`Checklist_${a.auditId || a.id}`, html);
+  };
+
+  // 2. Export Audit Report
+  window.exportAuditReport = async function(auditId) {
+      const a = state.audits.find(x => x.id === auditId);
+
+      // 🟢 ดึงค่าภาษาจาก Dropdown
+      const lang = document.getElementById('export-audit-lang').value;
+
+    let auditData = {
+        title: "Internal Audit Report",
+        department: a.meta?.targetDepartment || a.department || 'Unknown',
+        date: a.meta?.scheduledDate || a.scheduledDate || '-',
+        leadAuditor: a.meta?.leadAuditor || a.leadAuditor || '-',
+        executiveSummary: a.meta?.executiveSummary || '-',
+        findings: (a.checklist || []).filter(x => x.result !== 'CONFORMING' && x.result !== 'NOT_EVALUATED').map(x => ({
+            itemId: x.itemId, clause: x.clause, result: x.result, evidence: x.evidence
+        }))
+    };
+
+      // 🟢 ส่งไปให้ AI จัดการแปลงภาษาให้ตรงกับที่เลือกเสมอ (ทั้งไทยและอังกฤษ) เพื่อให้แน่ใจว่าผลลัพธ์เป็นภาษาที่ต้องการชัวร์ๆ
+    loading(true, `Translating Report to ${lang.toUpperCase()}...`);
+    try {
+        const fn = functions.httpsCallable('translateDocument');
+        const res = await fn({ content: JSON.stringify(auditData), targetLang: lang });
+        // ✅ แก้ไขให้รองรับ Object เช่นเดียวกัน
+        auditData = typeof res.data.data === 'string' ? JSON.parse(res.data.data) : res.data.data;
+    } catch(e) { 
+        console.error("Translation Error:", e);
+        toast('Translate error, using original text.', 'warn'); 
+    } finally { 
+        loading(false); 
+    }
+
+      let html = `
+          <div class="stamp-box stamp-${a.meta?.status}">${a.meta?.status}</div>
+          <h1>${auditData.title}</h1>
+          <div class="meta">
+            <div><b>Department:</b> ${auditData.department}</div>
+            <div><b>Date:</b> ${auditData.date || '-'}</div>
+            <div><b>Lead Auditor:</b> ${auditData.leadAuditor}</div>
+            <div style="grid-column: span 2;"><b>Executive Summary:</b><br/>${auditData.executiveSummary || '-'}</div>
+          </div>
+          <h2>Audit Findings Details</h2>
+          <table><tr><th width="15%">Item / Clause</th><th width="15%">Result</th><th>Objective Evidence</th></tr>`;
+
+      if(auditData.findings.length > 0) {
+          auditData.findings.forEach(f => {
+              html += `<tr><td><b>${f.itemId}</b><br/>${f.clause}</td><td><b>${f.result}</b></td><td>${f.evidence}</td></tr>`;
+          });
+      } else {
+          html += `<tr><td colspan="3" style="text-align:center;">No findings reported.</td></tr>`;
+      }
+      html += `</table>`;
+      openPrintWindow(`Audit_Report_${a.auditId}`, html);
+  };
+
+  // 3. Export CAPA Report
+  window.exportCapaReport = async function(findingId) {
+      const f = state.findings.find(x => x.id === findingId);
+
+      // 🟢 ดึงค่าภาษาจาก Dropdown
+      const lang = document.getElementById('export-capa-lang').value;
+
+    let capaData = {
+        title: "Corrective and Preventive Action (CAPA) Report",
+        findingNo: f.findingNo, department: f.department, clause: f.clause, classification: f.classification,
+        findingTitle: getFindingDisplayTitle(f), // 🟢 ดึงหัวข้อเรื่องมาด้วย
+        objectiveEvidence: f.objectiveEvidence || f.condition,
+        correction: f.correction, rootCause: f.rootCause, correctiveAction: f.correctiveAction,
+        effectivenessCriteria: f.effectivenessCriteria,
+        verificationResult: f.verificationResult, verifiedBy: f.verifiedBy, actualVerificationDate: f.actualVerificationDate
+    };
+
+      // 🟢 ส่งแปลภาษา
+    loading(true, `Translating CAPA to ${lang.toUpperCase()}...`);
+    try {
+        const fn = functions.httpsCallable('translateDocument');
+        const res = await fn({ content: JSON.stringify(capaData), targetLang: lang });
+        // ✅ เช็คก่อน ถ้าข้อมูลเป็น String ค่อย Parse ถ้าเป็น Object อยู่แล้วให้ใช้งานได้เลย
+        capaData = typeof res.data.data === 'string' ? JSON.parse(res.data.data) : res.data.data;
+    } catch(e) { 
+        console.error("Translation Error:", e); // เพิ่ม log ไว้ดูรายละเอียด error ใน Console
+        toast('Translate error, using original text. (Check console for details)', 'warn'); 
+    } finally { 
+        loading(false); 
+    }
+
+      let html = `
+          <div class="stamp-box stamp-${f.status}">${f.status}</div>
+          <h1>${capaData.title}</h1>
+          <div class="meta">
+            <div><b>Finding No:</b> ${capaData.findingNo}</div>
+            <div><b>Department:</b> ${capaData.department}</div>
+            <div><b>Clause:</b> ${capaData.clause}</div>
+            <div><b>Classification:</b> ${capaData.classification}</div>
+          </div>
+          <h2>1. Finding Description</h2>
+          <table>
+              <tr><td><b>Finding Details (ประเด็นที่ตรวจ):</b><br/>${capaData.findingTitle || '-'}</td></tr>
+              <tr><td><b>Objective Evidence (สิ่งที่พบ):</b><br/>${capaData.objectiveEvidence || '-'}</td></tr>
+          </table>
+          <h2>2. Action Plan</h2>
+          <table>
+              <tr><th width="20%">Immediate Correction</th><td>${capaData.correction || '-'}</td></tr>
+              <tr><th>Root Cause</th><td>${capaData.rootCause || '-'}</td></tr>
+    <tr><th>Corrective Action</th><td>${capaData.correctiveAction || '-'}</td></tr>
+            <tr><th>Effectiveness Criteria</th><td>${capaData.effectivenessCriteria || '-'}</td></tr>
+        </table>
+        <h2>3. Effectiveness Review & Verification</h2>
+        <table>
+            <tr><th width="20%">Verification Result</th><td colspan="3">${capaData.verificationResult || '-'}</td></tr>
+            <tr><th width="20%">Verified By</th><td>${capaData.verifiedBy || '-'}</td><th width="20%">Date</th><td>${capaData.actualVerificationDate || '-'}</td></tr>
+        </table>
+    `;
+      openPrintWindow(`CAPA_Report_${f.findingNo}`, html);
   };
 </script>
 </body>
