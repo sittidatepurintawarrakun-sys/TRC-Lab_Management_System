@@ -309,15 +309,14 @@ function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view
         }
 
         return `
-        <div class="flex items-center gap-4 py-4 px-5 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition cursor-pointer">
-          <div class="w-10 h-10 rounded-full ${bgClass} ${textClass} flex items-center justify-center shrink-0">
+        <div class="flex items-start gap-4 py-4 px-5 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
+          <div class="w-10 h-10 rounded-full ${bgClass} ${textClass} flex items-center justify-center shrink-0 mt-0.5">
             <i class="fa-solid ${icon} text-lg"></i>
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-[13px] font-bold text-slate-800 truncate">${esc(insight.title)}</p>
-            <p class="text-[11px] font-medium text-slate-500 truncate mt-0.5">${esc(insight.description)}</p>
+          <div class="flex-1">
+            <p class="text-[13px] font-bold text-slate-800 leading-tight">${esc(insight.title)}</p>
+            <p class="text-[12px] font-medium text-slate-500 mt-1.5 leading-relaxed">${esc(insight.description)}</p>
           </div>
-          <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
         </div>`;
       }).join('');
     }
@@ -789,7 +788,28 @@ function renderExecution(){
   `;
 }
 
-function openAudit(id){state.selectedAudit=state.audits.find(a=>a.id===id);state.view='execution';buildNav();render()}
+  function openAudit(id) {
+    // ยกเลิกตัวดักฟังห้องเก่าก่อน (ถ้ามี)
+    if (window.auditRoomUnsub) window.auditRoomUnsub();
+
+    // 🟢 ดักฟังการเปลี่ยนแปลงแบบ Realtime: ใครกด Save ข้อไหน อีกคนหน้าจอจะเด้งอัปเดตทันที
+    window.auditRoomUnsub = db.collection('audit_campaigns').doc(id).onSnapshot(doc => {
+      if (doc.exists) {
+        state.selectedAudit = { id: doc.id, ...doc.data() };
+        const idx = state.audits.findIndex(a => a.id === id);
+        if (idx !== -1) state.audits[idx] = state.selectedAudit;
+
+        // อัปเดตหน้าจอเฉพาะเมื่อเปิดดูห้องตรวจอยู่
+        if (state.view === 'execution' && state.selectedAudit) {
+          render();
+        }
+      }
+    });
+
+    state.view = 'execution';
+    buildNav();
+    render();
+  }
 
 function renderAuditRoom(){
   const a=state.audits.find(x=>x.id===state.selectedAudit?.id)||state.selectedAudit,q=a.checklist||[];state.selectedAudit=a;
@@ -812,7 +832,7 @@ function renderAuditRoom(){
 
   return `<div class="flex flex-wrap justify-between gap-4 mb-6">
     <div>
-      <button onclick="state.selectedAudit=null;render()" class="text-blue-600 text-sm hover:underline font-bold mb-2 inline-block">← Back to List</button>
+      <button onclick="if(window.auditRoomUnsub) window.auditRoomUnsub(); state.selectedAudit=null; render()" class="text-blue-600 text-sm hover:underline font-bold mb-2 inline-block">← Back to List</button>
       <h3 class="text-2xl font-black text-slate-800">${esc(a.meta?.title||a.id)}</h3>
       <p class="text-sm font-semibold text-slate-500 mt-1"><i class="fa-solid fa-building mr-1"></i> ${esc(a.meta?.targetDepartment)} <span class="mx-2 text-slate-300">|</span> <i class="fa-solid fa-bookmark mr-1"></i> ${esc((a.meta?.standards||[]).join(', '))}</p>
     </div>
@@ -1189,7 +1209,6 @@ function editFinding(id) {
         <h4 class="font-black text-slate-800 border-b border-slate-200 pb-2 text-lg"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>Part 1: Finding Details</h4>
         <label class="block text-sm font-bold text-slate-700">Criteria / Requirement (ข้อกำหนดที่ใช้อ้างอิง)<textarea name="criteria" id="finding-criteria" rows="2" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed">${esc(f.criteria)}</textarea></label>
         <label class="block text-sm font-bold text-slate-700">Objective Evidence (สิ่งที่พบ / หลักฐาน)<textarea name="objectiveEvidence" id="finding-condition" rows="3" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed" placeholder="ระบุสิ่งที่พบเห็นหน้างานจริง...">${esc(f.objectiveEvidence || f.condition)}</textarea></label>
-        <label class="block text-sm font-bold text-slate-700">Risk & Impact (ความเสี่ยงและผลกระทบ)<textarea name="riskImpact" id="finding-riskImpact" rows="2" class="w-full border border-slate-300 p-3 rounded-lg mt-2 outline-none focus:border-blue-500 font-normal leading-relaxed">${esc(f.riskImpact)}</textarea></label>
       </div>
 
       <div class="space-y-4 mt-8">
@@ -1434,34 +1453,40 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
   // 2. Export Audit Report
   window.exportAuditReport = async function(auditId) {
       const a = state.audits.find(x => x.id === auditId);
-
-      // 🟢 ดึงค่าภาษาจาก Dropdown
+      // ดึงค่าภาษาจาก Dropdown
       const lang = document.getElementById('export-audit-lang').value;
 
-    let auditData = {
-        title: "Internal Audit Report",
-        department: a.meta?.targetDepartment || a.department || 'Unknown',
-        date: a.meta?.scheduledDate || a.scheduledDate || '-',
-        leadAuditor: a.meta?.leadAuditor || a.leadAuditor || '-',
-        executiveSummary: a.meta?.executiveSummary || '-',
-        findings: (a.checklist || []).filter(x => x.result !== 'CONFORMING' && x.result !== 'NOT_EVALUATED').map(x => ({
-            itemId: x.itemId, clause: x.clause, result: x.result, evidence: x.evidence
-        }))
-    };
+      // ดึงคะแนนจาก Database (ถ้าไม่มีให้แสดง -)
+      const score = a.summary?.complianceScore !== undefined ? `${a.summary.complianceScore}%` : '-';
 
-      // 🟢 ส่งไปให้ AI จัดการแปลงภาษาให้ตรงกับที่เลือกเสมอ (ทั้งไทยและอังกฤษ) เพื่อให้แน่ใจว่าผลลัพธ์เป็นภาษาที่ต้องการชัวร์ๆ
-    loading(true, `Translating Report to ${lang.toUpperCase()}...`);
-    try {
-        const fn = functions.httpsCallable('translateDocument');
-        const res = await fn({ content: JSON.stringify(auditData), targetLang: lang });
-        // ✅ แก้ไขให้รองรับ Object เช่นเดียวกัน
-        auditData = typeof res.data.data === 'string' ? JSON.parse(res.data.data) : res.data.data;
-    } catch(e) { 
-        console.error("Translation Error:", e);
-        toast('Translate error, using original text.', 'warn'); 
-    } finally { 
-        loading(false); 
-    }
+      let auditData = {
+          title: "Internal Audit Report",
+          department: a.meta?.targetDepartment || a.department || 'Unknown',
+          date: a.meta?.scheduledDate || a.scheduledDate || '-',
+          leadAuditor: a.meta?.leadAuditor || a.leadAuditor || '-',
+          complianceScore: score, // เพิ่มตัวแปรคะแนน
+          executiveSummary: a.meta?.executiveSummary || '-',
+          // เอาฟิลเตอร์กรอง CONFORMING ออก เพื่อให้มาทั้งหมด (ยกเว้นข้อที่ยังไม่ได้ตรวจ)
+          findings: (a.checklist || []).filter(x => x.result && x.result !== 'NOT_EVALUATED').map(x => ({
+              itemId: x.itemId, 
+              clause: x.clause, 
+              question: x.question, // แนบคำถามไปด้วยเพื่อให้รายงานอ่านรู้เรื่องขึ้น
+              result: x.result, 
+              evidence: x.evidence || x.comment || '-' // ถ้าเป็น N/A จะได้ดึง comment มาแสดง
+          }))
+      };
+
+      loading(true, `Translating Report to ${lang.toUpperCase()}...`);
+      try {
+          const fn = functions.httpsCallable('translateDocument');
+          const res = await fn({ content: JSON.stringify(auditData), targetLang: lang });
+          auditData = typeof res.data.data === 'string' ? JSON.parse(res.data.data) : res.data.data;
+      } catch(e) { 
+          console.error("Translation Error:", e);
+          toast('Translate error, using original text.', 'warn'); 
+      } finally { 
+          loading(false); 
+      }
 
       let html = `
           <div class="stamp-box stamp-${a.meta?.status}">${a.meta?.status}</div>
@@ -1470,6 +1495,7 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
             <div><b>Department:</b> ${auditData.department}</div>
             <div><b>Date:</b> ${auditData.date || '-'}</div>
             <div><b>Lead Auditor:</b> ${auditData.leadAuditor}</div>
+            <div><b>Compliance Score:</b> <span style="color: #4338ca; font-weight: 900; font-size: 1.1em;">${auditData.complianceScore}</span></div>
             <div style="grid-column: span 2;"><b>Executive Summary:</b><br/>${auditData.executiveSummary || '-'}</div>
           </div>
           <h2>Audit Findings Details</h2>
@@ -1477,12 +1503,23 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
 
       if(auditData.findings.length > 0) {
           auditData.findings.forEach(f => {
-              html += `<tr><td><b>${f.itemId}</b><br/>${f.clause}</td><td><b>${f.result}</b></td><td>${f.evidence}</td></tr>`;
+              // กำหนดสีให้ผลลัพธ์อ่านง่ายขึ้น
+              let resColor = '#475569';
+              if (f.result === 'CONFORMING') resColor = '#166534';
+              else if (f.result.includes('NC')) resColor = '#991b1b';
+              else if (f.result === 'OBSERVATION') resColor = '#92400e';
+
+              html += `<tr>
+                <td><b>${f.itemId}</b><br/>${f.clause}</td>
+                <td style="color: ${resColor}; font-weight: bold;">${f.result}</td>
+                <td><b>Q:</b> ${f.question || '-'}<br/><br/><b>Found:</b> ${f.evidence}</td>
+              </tr>`;
           });
       } else {
           html += `<tr><td colspan="3" style="text-align:center;">No findings reported.</td></tr>`;
       }
       html += `</table>`;
+
       openPrintWindow(`Audit_Report_${a.auditId}`, html);
   };
 
