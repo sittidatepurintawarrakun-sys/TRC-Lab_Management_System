@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRC Customer Feedback & Complaint Intelligence System v1.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Firebase v9 Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <!-- Chart.js & SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Sarabun', sans-serif; background: #f1f5f9; color: #0f172a; }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 1px 3px rgba(15,23,42,0.04); }
+    .nav-active { background: #2563eb; color: #ffffff; font-weight: 700; }
+    .subtab-active { border-bottom: 3px solid #2563eb; color: #1d4ed8; font-weight: 700; background: #eff6ff; }
+    .spinner { width: 20px; height: 20px; border: 3px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media print {
+      #sidebar, header, .no-print { display: none !important; }
+      main { margin: 0 !important; padding: 0 !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- Toast Notification Container -->
+<div id="toastArea" class="fixed right-4 bottom-4 z-[200] space-y-2"></div>
+
+<!-- Global Loading Overlay -->
+<div id="loadingOverlay" class="hidden fixed inset-0 z-[190] bg-slate-950/50 backdrop-blur-xs flex items-center justify-center">
+  <div class="bg-white rounded-2xl p-6 shadow-2xl flex items-center gap-4 border border-slate-200">
+    <div class="spinner"></div>
+    <div>
+      <div id="loadingTitle" class="font-bold text-slate-800 text-sm">กำลังประมวลผล...</div>
+      <div id="loadingSub" class="text-xs text-slate-500">กรุณารอสักครู่</div>
+    </div>
+  </div>
+</div>
+  <section id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-5">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
+      <div class="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-3xl mx-auto shadow-lg">
+        <i class="fa-solid fa-headset"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-center mt-5 text-slate-800">TRC Complaint Intelligence</h1>
+      <p class="text-center text-slate-500 text-sm mt-1">Customer Feedback, Investigation, Level-5 RCA & CAPA</p>
+
+      <form id="loginForm" class="mt-7 space-y-4">
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-700">Email</span>
+          <input id="loginEmail" type="email" required class="mt-1 w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-600 outline-none" placeholder="name@adityabirla.com">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-700">Password</span>
+          <input id="loginPassword" type="password" required class="mt-1 w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-600 outline-none" placeholder="Password">
+        </label>
+        <button id="loginBtn" type="submit" class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition shadow-md">
+          <i class="fa-solid fa-right-to-bracket mr-2"></i>เข้าสู่ระบบ (Sign In)
+        </button>
+      </form>
+
+      <div class="mt-4 text-center">
+        <a href="index.html" class="text-xs text-slate-400 hover:text-blue-600 font-semibold">
+          <i class="fa-solid fa-arrow-left mr-1"></i> กลับหน้าหลัก (Back to Laboratory Dashboard)
+        </a>
+      </div>
+      <p class="text-[11px] text-slate-400 text-center mt-4">Access is controlled by Firebase Authentication & server-side role validation.</p>
+    </div>
+  </section>
+
+  <!-- 🟢 ซ่อนหน้าแอปหลักไว้ด้วย class "hidden" จนกว่าจะ Login สำเร็จ -->
+  <div id="appMainLayout" class="hidden min-h-screen flex">
+
+<!-- Main Layout -->
+<div class="min-h-screen flex">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-72 bg-slate-950 text-slate-300 min-h-screen fixed left-0 top-0 flex flex-col z-40">
+    <div class="p-5 border-b border-slate-800 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-lg shadow">TRC</div>
+      <div>
+        <div class="text-white font-bold text-base leading-tight">Complaint AI</div>
+        <div class="text-[11px] text-slate-400">GQP-1007 • GMP • Level-5 RCA</div>
+      </div>
+    </div>
+
+    <nav class="p-4 space-y-1.5 flex-1 overflow-y-auto text-sm" id="mainNav">
+      <button onclick="switchMainView('dashboard')" data-view="dashboard" class="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition nav-active">
+        <i class="fa-solid fa-chart-pie w-5"></i> Dashboard & Trends
+      </button>
+      <button onclick="switchMainView('intake')" data-view="intake" class="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition">
+        <i class="fa-solid fa-wand-magic-sparkles w-5"></i> AI Intake & Matching
+      </button>
+      <button onclick="switchMainView('cases')" data-view="cases" class="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition">
+        <i class="fa-solid fa-folder-tree w-5"></i> Case Register (RRL-01)
+      </button>
+      <button onclick="switchMainView('workspace')" data-view="workspace" class="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition">
+        <i class="fa-solid fa-microscope w-5"></i> Case Workspace (5M+CAPA)
+      </button>
+      <button onclick="switchMainView('audittrail')" data-view="audittrail" class="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition">
+        <i class="fa-solid fa-shield-halved w-5"></i> ALCOA+ Audit Trail
+      </button>
+    </nav>
+
+    <div class="p-4 border-t border-slate-800 text-xs space-y-2">
+      <div id="userNameDisplay" class="text-white font-bold truncate">-</div>
+      <div id="userRoleDisplay" class="text-[11px] text-blue-400 font-semibold">-</div>
+      <button onclick="forceResyncDashboard()" class="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 font-semibold flex items-center justify-center gap-2 transition">
+        <i class="fa-solid fa-arrows-rotate"></i> Sync & Verify Counter
+      </button>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <a href="index.html" class="py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-center font-semibold transition">
+          <i class="fa-solid fa-house mr-1"></i> Home
+        </a>
+        <button id="logoutBtn" class="py-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-600 hover:text-white font-semibold transition">
+          <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Logout
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Content Area -->
+  <div class="flex-1 ml-72 min-h-screen flex flex-col">
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+      <div>
+        <h1 id="headerTitle" class="font-extrabold text-xl text-slate-800">Executive Dashboard & Trend Intelligence</h1>
+        <p id="headerSub" class="text-xs text-slate-500">Real-time Customer Complaint, GMP Risk, SLA Aging & Level-5 RCA Tracking</p>
+      </div>
+      <div class="flex items-center gap-3 no-print">
+        <button onclick="exportRegisterExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-xs flex items-center gap-2 transition">
+          <i class="fa-solid fa-file-excel"></i> Export Register (Excel)
+        </button>
+        <button onclick="window.print()" class="border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+          <i class="fa-solid fa-print"></i> Print
+        </button>
+      </div>
+    </header>
+
+    <main class="p-8 flex-1 space-y-6">
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 1: EXECUTIVE DASHBOARD                                           -->
+      <!-- ===================================================================== -->
+      <section id="view-dashboard" class="space-y-6">
+        <!-- Global Filter Bar -->
+        <div class="card p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-blue-600">
+          <div class="flex items-center gap-2 text-sm font-bold text-slate-700">
+            <i class="fa-solid fa-filter text-blue-600"></i> ตัวกรองข้อมูล (Global Filter):
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <select id="dashFilterYear" onchange="renderDashboardUI()" class="border rounded-lg px-3 py-1.5 text-sm font-semibold bg-slate-50">
+              <option value="ALL">ทุกปี (All Years)</option>
+            </select>
+            <select id="dashFilterMachine" onchange="renderDashboardUI()" class="border rounded-lg px-3 py-1.5 text-sm font-semibold bg-slate-50">
+              <option value="ALL">ทุกไลน์ผลิต (All Lines)</option>
+              <option value="MC2">MC2 (Modal)</option>
+              <option value="MC3">MC3 (Non-Woven)</option>
+              <option value="MC5">MC5 (Grey)</option>
+              <option value="MC6">MC6 (Non-Woven)</option>
+            </select>
+            <select id="dashFilterType" onchange="renderDashboardUI()" class="border rounded-lg px-3 py-1.5 text-sm font-semibold bg-slate-50">
+              <option value="ALL">ทุกประเภท (Complaint + Feedback)</option>
+              <option value="COMPLAINT">เฉพาะ Complaint</option>
+              <option value="FEEDBACK">เฉพาะ Feedback</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div class="card p-5 border-l-4 border-l-blue-600">
+            <div class="text-xs font-bold text-slate-400 uppercase">Total Cases</div>
+            <div id="kpiTotal" class="text-3xl font-black text-slate-800 mt-1">0</div>
+            <div id="kpiSplit" class="text-[11px] text-slate-500 mt-2">Complaint: 0 | Feedback: 0</div>
+          </div>
+          <div class="card p-5 border-l-4 border-l-amber-500">
+            <div class="text-xs font-bold text-slate-400 uppercase">Open / Investigating</div>
+            <div id="kpiOpen" class="text-3xl font-black text-amber-600 mt-1">0</div>
+            <div class="text-[11px] text-slate-500 mt-2">อยู่ระหว่างสืบสวน/ติดตาม CAPA</div>
+          </div>
+          <div class="card p-5 border-l-4 border-l-red-600">
+            <div class="text-xs font-bold text-slate-400 uppercase">GMP / Safety / Overdue</div>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span id="kpiGmp" class="text-3xl font-black text-red-600">0</span>
+              <span id="kpiOverdue" class="text-xs font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded">0 Overdue</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-2">เคสติดธง GMP หรือเกิน SLA 15 วัน</div>
+          </div>
+          <div class="card p-5 border-l-4 border-l-indigo-600">
+            <div class="text-xs font-bold text-slate-400 uppercase">Level-5 RCA Verified</div>
+            <div id="kpiLevel5" class="text-3xl font-black text-indigo-600 mt-1">0</div>
+            <div class="text-[11px] text-slate-500 mt-2">ผ่านเกณฑ์ประเมิน A-G = 5.0 เต็ม</div>
+          </div>
+          <div class="card p-5 border-l-4 border-l-emerald-600">
+            <div class="text-xs font-bold text-slate-400 uppercase">Closed Cases</div>
+            <div id="kpiClosed" class="text-3xl font-black text-emerald-600 mt-1">0</div>
+            <div class="text-[11px] text-slate-500 mt-2">ผ่าน Closure Gate ครบ 10 ข้อ</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="card p-5">
+            <h3 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-tags text-blue-600 mr-1"></i> สัดส่วนตามหมวดปัญหา (Defect Taxonomy)</h3>
+            <div class="h-60"><canvas id="chartByDefect"></canvas></div>
+          </div>
+          <div class="card p-5">
+            <h3 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-industry text-indigo-600 mr-1"></i> แยกตามเครื่องจักร (Machine Line MC2-MC6)</h3>
+            <div class="h-60"><canvas id="chartByMachine"></canvas></div>
+          </div>
+          <div class="card p-5">
+            <h3 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-chart-line text-emerald-600 mr-1"></i> แนวโน้มรายเดือน (Monthly Trend)</h3>
+            <div class="h-60"><canvas id="chartByMonth"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 2: AI INTAKE & DUPLICATE MATCHING INBOX                          -->
+      <!-- ===================================================================== -->
+      <section id="view-intake" class="hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left: Source Input -->
+          <div class="lg:col-span-5 card p-6 space-y-4">
+            <div class="flex items-center justify-between border-b pb-3">
+              <h3 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-envelope-open-text text-blue-600 mr-2"></i>1. นำเข้าข้อมูลต้นฉบับ (Email / เอกสารแนบ)</h3>
+              <select id="intakeSourceType" class="border rounded-lg px-2.5 py-1 text-xs font-bold bg-slate-50">
+                <option value="CUSTOMER_EMAIL">Customer Email</option>
+                <option value="CTS_NOTIFICATION">CTS / SAP Notification</option>
+                <option value="CUSTOMER_REPORT">Customer Official Report</option>
+                <option value="INTERNAL_LAB_NOTE">Lab / Plant Investigation Note</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">วางข้อความจาก Email / รายละเอียดปัญหา (Thai / English)</label>
+              <textarea id="intakeRawText" rows="9" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:border-blue-600 outline-none" placeholder="คัดลอกข้อความจากอีเมลลูกค้า ข้อมูล Lot, Invoice, อาการที่พบ เช่น High weft breakage, Fluorescence, Black particle วางที่นี่..."></textarea>
+            </div>
+
+            <!-- File Attachment Box -->
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-dashed border-slate-300 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-700"><i class="fa-solid fa-paperclip mr-1"></i> แนบไฟล์ประกอบ (รูปภาพ, Excel, CSV, TXT, PDF)</span>
+                <input type="file" id="intakeFiles" multiple accept=".txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.pdf" onchange="handleIntakeFilesSelected(event)" class="text-xs">
+              </div>
+              <div id="intakeFileList" class="text-xs text-slate-500 space-y-1">ยังไม่ได้เลือกไฟล์แนบ</div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+              <button onclick="runAiIntakeAnalysis()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow flex items-center justify-center gap-2 transition">
+                <i class="fa-solid fa-robot"></i> วิเคราะห์ด้วย AI & เช็คเคสซ้ำ
+              </button>
+              <button onclick="clearIntakeForm()" class="px-4 py-3 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">
+                ล้างค่า
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: Extracted Structured Fields & Matching Candidates -->
+          <div class="lg:col-span-7 space-y-6">
+            <!-- Matching Alert Box -->
+            <div id="matchingResultCard" class="hidden card p-5 border-l-4 border-l-amber-500 bg-amber-50/40 space-y-3">
+              <div class="flex justify-between items-center">
+                <h4 class="font-bold text-amber-900 text-sm"><i class="fa-solid fa-code-compare mr-2"></i>ระบบตรวจพบเคสในระบบที่มีความใกล้เคียง (Duplicate / Related Check)</h4>
+                <span class="text-xs font-bold text-amber-700">เลือกตัดสินใจก่อนบันทึก</span>
+              </div>
+              <div id="matchingListContainer" class="space-y-2"></div>
+            </div>
+
+            <!-- Extracted Form -->
+            <form id="intakeConfirmForm" onsubmit="saveConfirmedIntakeCase(event)" class="card p-6 space-y-4">
+              <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-list-check text-emerald-600 mr-2"></i>2. ตรวจสอบและยืนยันข้อมูล (Human Confirmation)</h3>
+                <span id="intakeAiBadge" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-bold">Manual / Ready</span>
+              </div>
+
+              <!-- Missing Fields & AI Questions Warning -->
+              <div id="intakeMissingBox" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1"></div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <label class="font-bold text-slate-700">Case ID (Auto/Custom)
+                  <input type="text" id="f_caseId" required class="w-full border rounded-lg p-2 mt-1 font-mono font-bold bg-slate-50">
+                </label>
+                <label class="font-bold text-slate-700">ประเภท (Type)
+                  <select id="f_caseType" class="w-full border rounded-lg p-2 mt-1 font-bold bg-white">
+                    <option value="COMPLAINT">COMPLAINT (ข้อร้องเรียน)</option>
+                    <option value="FEEDBACK">FEEDBACK (ข้อเสนอแนะ)</option>
+                  </select>
+                </label>
+                <label class="font-bold text-slate-700">ความรุนแรง (Severity)
+                  <select id="f_severity" class="w-full border rounded-lg p-2 mt-1 font-bold bg-white">
+                    <option value="MINOR">MINOR</option>
+                    <option value="MAJOR">MAJOR</option>
+                    <option value="CRITICAL">CRITICAL (GMP/Safety)</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <label class="font-bold text-slate-700 md:col-span-2">หัวข้อเรื่อง (Case Title) *
+                  <input type="text" id="f_title" required class="w-full border rounded-lg p-2 mt-1">
+                </label>
+                <label class="font-bold text-slate-700">วันที่รับแจ้ง (Received Date) *
+                  <input type="date" id="f_receivedDate" required class="w-full border rounded-lg p-2 mt-1">
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <label class="font-bold text-slate-700">ชื่อลูกค้า (Customer Name) *
+                  <input type="text" id="f_customerName" required class="w-full border rounded-lg p-2 mt-1">
+                </label>
+                <label class="font-bold text-slate-700">ประเทศ (Country)
+                  <input type="text" id="f_country" class="w-full border rounded-lg p-2 mt-1">
+                </label>
+                <label class="font-bold text-slate-700">เลขที่อ้างอิงลูกค้า / SAP QM01
+                  <input type="text" id="f_customerRef" placeholder="Customer Ref / SAP Notification" class="w-full border rounded-lg p-2 mt-1">
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs bg-slate-50 p-3 rounded-xl border">
+                <label class="font-bold text-slate-700">กลุ่มผลิตภัณฑ์ (Family)
+                  <select id="f_productFamily" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                    <option value="VISCOSE_STAPLE_FIBRE">Viscose Staple Fibre</option>
+                    <option value="MODAL_FIBRE">Modal Fibre</option>
+                    <option value="NON_WOVEN_FIBRE">Non-Woven Fibre</option>
+                    <option value="BY_PRODUCT_SALT">By-Product Salt (Na2SO4)</option>
+                    <option value="BY_PRODUCT_ACID">By-Product Acid (H2SO4)</option>
+                    <option value="UNKNOWN">Other / Unknown</option>
+                  </select>
+                </label>
+                <label class="font-bold text-slate-700">เกรด (Grade / Denier x Cut)
+                  <input type="text" id="f_grade" placeholder="e.g. 1.2D x 38mm" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold text-slate-700">เครื่องจักร (Machine Line)
+                  <input type="text" id="f_machines" placeholder="MC2, MC3, MC5, MC6" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold text-slate-700">วันที่ผลิต (Prod Dates: YYYY-MM-DD)
+                  <input type="text" id="f_prodDates" placeholder="2026-09-10, 2026-09-11" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold text-slate-700">Lot / Batch No.
+                  <input type="text" id="f_lots" placeholder="คั่นด้วยลูกน้ำ (,)" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold text-slate-700">Invoice No.
+                  <input type="text" id="f_invoices" placeholder="คั่นด้วยลูกน้ำ (,)" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold text-slate-700">Delivery Order (DO No.)
+                  <input type="text" id="f_dos" placeholder="คั่นด้วยลูกน้ำ (,)" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold text-slate-700">ปริมาณที่ร้องเรียน (Qty & Unit)
+                  <div class="flex gap-1 mt-1">
+                    <input type="number" step="0.01" id="f_qty" placeholder="0.00" class="w-2/3 border rounded-lg p-2 bg-white">
+                    <input type="text" id="f_unit" placeholder="MT" value="MT" class="w-1/3 border rounded-lg p-2 bg-white">
+                  </div>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <label class="font-bold text-slate-700">หมวดปัญหาหลัก (Defect Category)
+                  <select id="f_defectCategory" class="w-full border rounded-lg p-2 mt-1 bg-white font-bold">
+                    <option value="PERFORMANCE">PERFORMANCE (การนำไปปั่น/ทอ/ย้อม)</option>
+                    <option value="PHYSICAL_PROPERTY">PHYSICAL_PROPERTY (Tenacity/Elongation/Denier)</option>
+                    <option value="CHEMICAL">CHEMICAL (OPU/Sulfur/Ash/pH)</option>
+                    <option value="CONTAMINATION">CONTAMINATION (สิ่งแปลกปลอม/จุดดำ/แมลง/น้ำมัน)</option>
+                    <option value="APPEARANCE">APPEARANCE (Fluorescence/สีเพี้ยน)</option>
+                    <option value="PACKAGING">PACKAGING (ห่อชำรุด/ป้ายผิด/เปียก)</option>
+                    <option value="DOCUMENTATION">DOCUMENTATION (COA/เอกสารผิด)</option>
+                    <option value="LOGISTICS">LOGISTICS (น้ำหนักขาด/ขนส่ง)</option>
+                    <option value="SUSTAINABILITY">SUSTAINABILITY (FSC/PEFC Claim)</option>
+                  </select>
+                </label>
+                <label class="font-bold text-slate-700">เลขบันทึก RRL-01 (กรณี Reject/Hold/Return/GMP)
+                  <input type="text" id="f_rrlRef" placeholder="เช่น RRL-2026-001 (ตาม GQP-1007 ข้อ 6.1.1)" class="w-full border rounded-lg p-2 mt-1">
+                </label>
+              </div>
+
+              <div class="text-xs">
+                <label class="font-bold text-slate-700">อาการและรายละเอียดที่ลูกค้าร้องเรียน (Symptom & Customer Allegation) *
+                  <textarea id="f_symptom" rows="2" required class="w-full border rounded-lg p-2 mt-1"></textarea>
+                </label>
+              </div>
+
+              <!-- Risk Flags (GQP-1007 / GMP-001) -->
+              <div class="p-3 rounded-xl bg-red-50/60 border border-red-200 space-y-2">
+                <div class="text-xs font-bold text-red-900"><i class="fa-solid fa-triangle-exclamation mr-1"></i> การคัดกรองความเสี่ยงตามมาตรฐาน GMP & GQP-1007 (Risk Screening Flags)</div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  <label class="flex items-center gap-2"><input type="checkbox" id="rf_gmp" class="rounded text-red-600"> เกี่ยวข้องกับ GMP / Hygiene</label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="rf_contam" class="rounded text-red-600"> ความเสี่ยงปนเปื้อน (Contamination)</label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="rf_safety" class="rounded text-red-600"> ความปลอดภัยผลิตภัณฑ์ (Product Safety)</label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="rf_fsc" class="rounded text-red-600"> กระทบเคลม FSC / PEFC CoC</label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="rf_recall" class="rounded text-red-600"> ขอคืนสินค้า / Hold / Recall (เปิด RRL-01)</label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="rf_capa" checked class="rounded text-red-600"> ลูกค้าต้องการรายงาน RCA & CAPA</label>
+                </div>
+              </div>
+
+              <!-- Human Verification Gate -->
+              <div class="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between">
+                <label class="flex items-center gap-2.5 text-xs font-bold text-blue-950 cursor-pointer">
+                  <input type="checkbox" id="f_humanConfirmed" required class="w-4 h-4 rounded text-blue-600">
+                  ฉันได้ตรวจสอบความถูกต้องของข้อมูลที่สกัดจาก AI เทียบกับต้นฉบับแล้ว (AI Assists, Human Decides)
+                </label>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow transition">
+                  <i class="fa-solid fa-check-double mr-1"></i> บันทึกเปิดเคสใหม่
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 3: CASE REGISTER (CRUD + SEARCH + DELETE CASCADE)                -->
+      <!-- ===================================================================== -->
+      <section id="view-cases" class="hidden space-y-4">
+        <div class="card p-4 flex flex-wrap gap-3 items-center justify-between">
+          <div class="flex flex-wrap gap-2 items-center flex-1">
+            <input type="text" id="regSearch" oninput="renderCaseRegisterTable()" placeholder="ค้นหา Case ID, ลูกค้า, Lot, Invoice, อาการ..." class="border rounded-lg px-3 py-2 text-sm w-72">
+            <select id="regStatusFilter" onchange="renderCaseRegisterTable()" class="border rounded-lg px-3 py-2 text-sm bg-slate-50 font-semibold">
+              <option value="ALL">ทุกสถานะ (All Statuses)</option>
+              <option value="REGISTERED">REGISTERED</option>
+              <option value="INVESTIGATION">INVESTIGATION</option>
+              <option value="RCA_LEVEL5_PASSED">RCA_LEVEL5_PASSED</option>
+              <option value="CAPA_IMPLEMENTATION">CAPA_IMPLEMENTATION</option>
+              <option value="EFFECTIVENESS_REVIEW">EFFECTIVENESS_REVIEW</option>
+              <option value="CLOSED">CLOSED</option>
+            </select>
+          </div>
+          <button onclick="switchMainView('intake')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold">
+            <i class="fa-solid fa-plus mr-1"></i> รับเรื่องใหม่ (New Intake)
+          </button>
+        </div>
+
+        <div class="card overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 text-xs font-bold text-slate-600 uppercase border-b">
+              <tr>
+                <th class="p-4">Case ID / Date</th>
+                <th class="p-4">Customer / Ref</th>
+                <th class="p-4">Product / Line / Lot</th>
+                <th class="p-4">Defect & Symptom</th>
+                <th class="p-4 text-center">SLA (15d)</th>
+                <th class="p-4 text-center">Level-5 Score</th>
+                <th class="p-4 text-center">Status</th>
+                <th class="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="caseRegisterTbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 4: CASE WORKSPACE (6 ENTERPRISE SUB-TABS)                        -->
+      <!-- ===================================================================== -->
+      <section id="view-workspace" class="hidden space-y-5">
+        <div id="wsEmptyState" class="card p-12 text-center text-slate-400">
+          <i class="fa-solid fa-folder-open text-4xl mb-3 block text-slate-300"></i>
+          กรุณาเลือกเคสจากหน้า <b>Case Register</b> เพื่อเปิดห้องปฏิบัติการสืบสวน (Case Workspace)
+        </div>
+
+        <div id="wsContainer" class="hidden space-y-5">
+          <!-- Workspace Header Banner -->
+          <div class="card p-5 flex flex-wrap justify-between items-start gap-4 border-l-4 border-l-indigo-600">
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="wsBadgeId" class="font-mono font-black text-lg text-indigo-700">FB-2026-0001</span>
+                <span id="wsBadgeType" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-red-100 text-red-700">COMPLAINT</span>
+                <span id="wsBadgeStatus" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">INVESTIGATION</span>
+              </div>
+              <h2 id="wsTitle" class="font-extrabold text-xl text-slate-800 mt-1">-</h2>
+              <p id="wsMetaLine" class="text-xs text-slate-500 mt-1">-</p>
+            </div>
+            <div class="flex flex-wrap gap-2 no-print">
+              <select id="wsStatusSelect" onchange="changeWorkspaceStatus(this.value)" class="border rounded-lg px-3 py-2 text-xs font-bold bg-slate-50">
+                <option value="REGISTERED">REGISTERED</option>
+                <option value="CONTAINMENT">CONTAINMENT (กักกัน/RRL-01)</option>
+                <option value="INVESTIGATION">INVESTIGATION (สืบสวน 5M+E)</option>
+                <option value="RCA_LEVEL5_PASSED">RCA_LEVEL5_PASSED (ผ่านเกณฑ์ 5.0)</option>
+                <option value="CAPA_IMPLEMENTATION">CAPA_IMPLEMENTATION</option>
+                <option value="EFFECTIVENESS_REVIEW">EFFECTIVENESS_REVIEW</option>
+                <option value="CLOSED">CLOSED (ปิดเคส)</option>
+              </select>
+              <button onclick="deleteCaseCascade(currentCaseDocId)" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-xs font-bold">
+                <i class="fa-solid fa-trash mr-1"></i> ลบเคสนี้ (Cascade Delete)
+              </button>
+            </div>
+          </div>
+
+          <!-- Workspace Sub-Navigation -->
+          <div class="card px-4 flex flex-wrap gap-1 border-b text-xs no-print">
+            <button onclick="switchWsTab('overview')" data-wstab="overview" class="ws-tab-btn px-4 py-3.5 subtab-active">
+              <i class="fa-solid fa-comments mr-1"></i> 1. ข้อมูลหลัก & Timeline
+            </button>
+            <button onclick="switchWsTab('plantdata')" data-wstab="plantdata" class="ws-tab-btn px-4 py-3.5">
+              <i class="fa-solid fa-database mr-1"></i> 2. ดึงข้อมูล In-Process / Product / Pulp
+            </button>
+            <button onclick="switchWsTab('investigation')" data-wstab="investigation" class="ws-tab-btn px-4 py-3.5">
+              <i class="fa-solid fa-sitemap mr-1"></i> 3. สืบสวน 5M+E & 5 Whys
+            </button>
+            <button onclick="switchWsTab('rcascale')" data-wstab="rcascale" class="ws-tab-btn px-4 py-3.5">
+              <i class="fa-solid fa-award mr-1"></i> 4. ประเมิน RCA Scale (Level 5 A-G)
+            </button>
+            <button onclick="switchWsTab('capa')" data-wstab="capa" class="ws-tab-btn px-4 py-3.5">
+              <i class="fa-solid fa-screwdriver-wrench mr-1"></i> 5. CAPA & Effectiveness
+            </button>
+            <button onclick="switchWsTab('closure')" data-wstab="closure" class="ws-tab-btn px-4 py-3.5">
+              <i class="fa-solid fa-reply-all mr-1"></i> 6. ร่างจดหมายตอบลูกค้า & Closure Gate
+            </button>
+          </div>
+
+          <!-- SUB-TAB 1: OVERVIEW & COMMUNICATION TIMELINE -->
+          <div id="wstab-overview" class="ws-tab-pane grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-6 card p-5 space-y-3">
+              <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-sm text-slate-800">แก้ไขข้อมูลหลักของเคส (Edit Case Header & Traceability IDs)</h3>
+                <button onclick="saveOverviewEdits()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700">
+                  <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการแก้ไข
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <label class="font-bold">ลูกค้า (Customer)<input id="e_customer" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Customer Ref / SAP QM01<input id="e_custRef" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">เกรด (Grade)<input id="e_grade" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">เครื่องจักร (MC2/MC3/MC5/MC6)<input id="e_machines" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">วันที่ผลิต (YYYY-MM-DD)<input id="e_prodDates" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Lot / Batch No.<input id="e_lots" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Invoice No.<input id="e_invoices" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">DO No. / RRL-01 No.<input id="e_rrl" class="w-full border rounded p-2 mt-1"></label>
+              </div>
+              <label class="block text-xs font-bold">อาการ/ปัญหาที่แจ้ง (Symptom)
+                <textarea id="e_symptom" rows="3" class="w-full border rounded p-2 mt-1 text-xs"></textarea>
+              </label>
+            </div>
+
+            <!-- Communication & Evidence Timeline (Add / Delete) -->
+            <div class="lg:col-span-6 card p-5 space-y-4">
+              <h3 class="font-bold text-sm text-slate-800 border-b pb-2">ประวัติการสื่อสารและหลักฐานเพิ่มเติม (Communication Timeline)</h3>
+              <div class="flex gap-2">
+                <input type="text" id="commNoteInput" placeholder="บันทึกการติดต่อลูกค้า / ผลตรวจตัวอย่างเพิ่มเติม..." class="flex-1 border rounded-lg px-3 py-2 text-xs">
+                <button onclick="addCommunicationItem()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold">
+                  <i class="fa-solid fa-plus"></i> เพิ่ม
+                </button>
+              </div>
+              <div id="commTimelineList" class="space-y-2 max-h-80 overflow-y-auto text-xs"></div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 2: PLANT DATA & TRACEABILITY INTEGRATION -->
+          <div id="wstab-plantdata" class="ws-tab-pane hidden space-y-4">
+            <div class="card p-5 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-indigo-950 text-white">
+              <div>
+                <h3 class="font-bold text-base"><i class="fa-solid fa-satellite-dish text-blue-400 mr-2"></i>เชื่อมต่อฐานข้อมูลโรงงานอัตโนมัติ (In-Process, Fibre Lab, Projector, Pulp COA)</h3>
+                <p class="text-xs text-slate-300 mt-0.5">ดึงพารามิเตอร์จริงของวันผลิต (T) และวันเตรียม Viscose (T-1) จาก Firestore เพื่อใช้เป็นหลักฐาน Statistical Proof (เกณฑ์ C = Level 5)</p>
+              </div>
+              <button onclick="pullPlantDataForCurrentCase()" class="bg-blue-500 hover:bg-blue-400 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg flex items-center gap-2">
+                <i class="fa-solid fa-cloud-arrow-down"></i> ดึงข้อมูลจริงจากระบบ Lab & Process
+              </button>
+            </div>
+
+            <div id="plantDataDisplayArea" class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
+              <div class="card p-8 text-center text-slate-400 lg:col-span-2">กดปุ่ม "ดึงข้อมูลจริงจากระบบ Lab & Process" ด้านบนเพื่อให้ระบบค้นหาข้อมูลตาม Machine, วันที่ผลิต, Lot และ Invoice</div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 3: 5M+E INVESTIGATION & 5 WHYS -->
+          <div id="wstab-investigation" class="ws-tab-pane hidden space-y-4">
+            <div class="card p-6 space-y-4">
+              <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                <div>
+                  <h3 class="font-bold text-base text-slate-800">การสืบสวนรากเหง้าปัญหาแบบ 5M+E, Retain Sample และ 5 Whys</h3>
+                  <p class="text-xs text-slate-500">ต้องระบุครบทุกมิติและมีหลักฐานเชิงสถิติรองรับเพื่อให้ได้คะแนนประเมิน RCA = Level 5</p>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="runAiRcaEvaluation('UPGRADE_TO_LEVEL_5')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> ให้ AI ช่วยร่าง/ยกระดับเนื้อหาสู่ Level 5
+                  </button>
+                  <button onclick="saveInvestigationData()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i> บันทึกผลสืบสวน
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <label class="font-bold text-slate-700">Problem Statement & Retain Sample Check (GQP-1007 ข้อ 6.2.3)
+                  <textarea id="inv_problem" rows="2" placeholder="ระบุปัญหาที่ชัดเจน ผลตรวจ Retain Sample และสภาพการจัดเก็บ..." class="w-full border rounded-lg p-2.5 mt-1"></textarea>
+                </label>
+                <label class="font-bold text-slate-700">Statistical & Lab Evidence (หลักฐานตัวเลข CV%, Ppk, COA vs Lab, Gel Count)
+                  <textarea id="inv_statsEvidence" rows="2" placeholder="ระบุค่าทางสถิติ เช่น Tenacity Ppk ลดลงจาก 1.45 เป็น 0.92, Kw สูงผิดปกติ, Spin Bath Acid/Zn..." class="w-full border rounded-lg p-2.5 mt-1"></textarea>
+                </label>
+              </div>
+
+              <!-- 5M + E Grid -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs bg-slate-50 p-4 rounded-xl border">
+                <label class="font-bold text-slate-700"><i class="fa-solid fa-user-check text-blue-600 mr-1"></i> Man (ทักษะพนักงาน / กะทำงาน / การต่อด้าย)
+                  <textarea id="m_man" rows="2" class="w-full border rounded-lg p-2 mt-1 bg-white"></textarea>
+                </label>
+                <label class="font-bold text-slate-700"><i class="fa-solid fa-gears text-indigo-600 mr-1"></i> Machine (Spinneret / Jet / Cutter / Filter / Dryer)
+                  <textarea id="m_machine" rows="2" class="w-full border rounded-lg p-2 mt-1 bg-white"></textarea>
+                </label>
+                <label class="font-bold text-slate-700"><i class="fa-solid fa-boxes-stacked text-amber-600 mr-1"></i> Material (Pulp Lot / RI / Kw / Spin Bath / Finish Oil)
+                  <textarea id="m_material" rows="2" class="w-full border rounded-lg p-2 mt-1 bg-white"></textarea>
+                </label>
+                <label class="font-bold text-slate-700"><i class="fa-solid fa-book-open text-emerald-600 mr-1"></i> Method (SOP / LWI / Stretch / Washing Flow / Spec Limit)
+                  <textarea id="m_method" rows="2" class="w-full border rounded-lg p-2 mt-1 bg-white"></textarea>
+                </label>
+                <label class="font-bold text-slate-700"><i class="fa-solid fa-scale-balanced text-purple-600 mr-1"></i> Measurement (Calibration / Denier / Gage R&R / Lab Testing)
+                  <textarea id="m_measurement" rows="2" class="w-full border rounded-lg p-2 mt-1 bg-white"></textarea>
+                </label>
+                <label class="font-bold text-slate-700"><i class="fa-solid fa-temperature-half text-teal-600 mr-1"></i> Environment & Cross-Functional Team (E & Team)
+                  <textarea id="m_environment" rows="2" placeholder="สภาพแวดล้อม + ทีมข้ามสายงานที่ร่วมสืบสวน (QA, Spinning, Viscose, Eng, CTS)" class="w-full border rounded-lg p-2 mt-1 bg-white"></textarea>
+                </label>
+              </div>
+
+              <!-- 5 Whys & Root Cause & Escape Point -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <label class="font-bold text-slate-700">5 Whys Chain (ลำดับทำไม 5 ขั้นตอนอย่างเป็นตรรกะ)
+                  <textarea id="inv_fiveWhys" rows="4" placeholder="Why 1: ...\nWhy 2: ...\nWhy 3: ...\nWhy 4: ...\nWhy 5 (Root Cause): ..." class="w-full border rounded-lg p-2.5 mt-1"></textarea>
+                </label>
+                <div class="space-y-3">
+                  <label class="block font-bold text-slate-700">True Root Cause (รากเหง้าที่แท้จริง)
+                    <textarea id="inv_rootCause" rows="2" class="w-full border rounded-lg p-2 mt-1"></textarea>
+                  </label>
+                  <label class="block font-bold text-slate-700">Systemic Cause & Escape Point (ทำไมระบบตรวจจับไม่ได้ก่อนส่งถึงลูกค้า + การขยายผล)
+                    <textarea id="inv_escapePoint" rows="2" class="w-full border rounded-lg p-2 mt-1"></textarea>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 4: RCA ASSESSMENT SCALE (LEVEL 5 RUBRIC A-G) -->
+          <div id="wstab-rcascale" class="ws-tab-pane hidden space-y-4">
+            <div class="card p-6 space-y-4">
+              <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-3">
+                <div>
+                  <h3 class="font-bold text-base text-slate-800"><i class="fa-solid fa-gavel text-indigo-600 mr-2"></i>การตรวจประเมินคุณภาพ RCA & CAPA ตามเกณฑ์ธุรกิจ (RCA_Assessment_Scale_Ver-0)</h3>
+                  <p class="text-xs text-slate-500">กฎเหล็ก: ทุกหัวข้อ (A ถึง G) ต้องได้คะแนน <b>5 / 5 เท่านั้น</b> จึงจะผ่านเกณฑ์อนุมัติ (Level 5 Verified)</p>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="runAiRcaEvaluation('ASSESS_ONLY')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">
+                    <i class="fa-solid fa-magnifying-glass-chart mr-1"></i> ประเมินคะแนน RCA ปัจจุบัน (Assess A-G)
+                  </button>
+                  <button onclick="applyAiProposalToWorkspace()" id="btnApplyProposal" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">
+                    <i class="fa-solid fa-bolt mr-1"></i> นำร่าง Level 5 ของ AI ไปใส่ในฟอร์มสืบสวนและ CAPA
+                  </button>
+                </div>
+              </div>
+
+              <div id="rcaScaleScoreboard" class="grid grid-cols-1 md:grid-cols-7 gap-2 text-center text-xs"></div>
+              <div id="rcaScaleDetailsBox" class="space-y-3 text-xs"></div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 5: CAPA & EFFECTIVENESS CRUD -->
+          <div id="wstab-capa" class="ws-tab-pane hidden space-y-4">
+            <div class="card p-5 space-y-4">
+              <h3 class="font-bold text-sm text-slate-800 border-b pb-2">เพิ่ม/แก้ไข มาตรการแก้ไขและป้องกัน (CAPA & Effectiveness Verification)</h3>
+              <form id="capaForm" onsubmit="saveCapaItem(event)" class="grid grid-cols-1 md:grid-cols-6 gap-3 text-xs bg-slate-50 p-4 rounded-xl border">
+                <input type="hidden" id="capa_editId">
+                <label class="font-bold">ประเภท (Action Type)
+                  <select id="capa_type" class="w-full border rounded p-2 mt-1 bg-white font-bold">
+                    <option value="CONTAINMENT">CONTAINMENT (กักกันทันที)</option>
+                    <option value="CORRECTION">CORRECTION (แก้ไขเฉพาะหน้า)</option>
+                    <option value="CORRECTIVE_ACTION">CORRECTIVE ACTION (แก้ที่รากเหง้า)</option>
+                    <option value="PREVENTIVE_HORIZONTAL">PREVENTIVE & HORIZONTAL (ป้องกันซ้ำ/ขยายผลทุก MC)</option>
+                  </select>
+                </label>
+                <label class="font-bold md:col-span-2">รายละเอียดการดำเนินการ (Action Description) *
+                  <input type="text" id="capa_desc" required placeholder="ระบุการปรับปรุงเชิงวิศวกรรม/Poka-Yoke/FMEA/SOP..." class="w-full border rounded p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold">ผู้รับผิดชอบ (Owner / Dept) *
+                  <input type="text" id="capa_owner" required placeholder="เช่น Spinning LH / QA" class="w-full border rounded p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold">กำหนดเสร็จ (Target Date) *
+                  <input type="date" id="capa_due" required class="w-full border rounded p-2 mt-1 bg-white">
+                </label>
+                <label class="font-bold">สถานะ (Status)
+                  <select id="capa_status" class="w-full border rounded p-2 mt-1 bg-white font-bold">
+                    <option value="OPEN">OPEN</option>
+                    <option value="IN_PROGRESS">IN_PROGRESS</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                    <option value="EFFECTIVENESS_VERIFIED">EFFECTIVENESS_VERIFIED</option>
+                  </select>
+                </label>
+                <label class="font-bold md:col-span-4">เกณฑ์วัดผลลัพธ์และหลักฐานยืนยัน (Effectiveness Criteria & Verification Evidence - Level 5) *
+                  <input type="text" id="capa_eff" required placeholder="เช่น ติดตาม Ppk > 1.33 และไม่เกิดซ้ำใน 3 เดือน (30 Lots) พร้อมแนบกราฟ SPC" class="w-full border rounded p-2 mt-1 bg-white">
+                </label>
+                <div class="md:col-span-2 flex items-end gap-2">
+                  <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg">
+                    <i class="fa-solid fa-plus-circle mr-1"></i> บันทึก CAPA
+                  </button>
+                  <button type="button" onclick="resetCapaForm()" class="px-3 py-2 border rounded-lg bg-white text-slate-600">ยกเลิก</button>
+                </div>
+              </form>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left">
+                  <thead class="bg-slate-100 font-bold text-slate-600 uppercase">
+                    <tr>
+                      <th class="p-3">Type</th>
+                      <th class="p-3">Action Description</th>
+                      <th class="p-3">Owner</th>
+                      <th class="p-3">Target Date</th>
+                      <th class="p-3">Effectiveness & Evidence</th>
+                      <th class="p-3 text-center">Status</th>
+                      <th class="p-3 text-right">Edit / Delete</th>
+                    </tr>
+                  </thead>
+                  <tbody id="capaListTbody" class="divide-y"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 6: CUSTOMER RESPONSE DRAFT & 10-POINT CLOSURE GATE -->
+          <div id="wstab-closure" class="ws-tab-pane hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- AI Customer Response Generator -->
+            <div class="lg:col-span-7 card p-5 space-y-3">
+              <div class="flex flex-wrap justify-between items-center border-b pb-2 gap-2">
+                <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-envelope-circle-check text-blue-600 mr-1"></i> AI ร่างจดหมายตอบกลับลูกค้า (Customer Reply Draft)</h3>
+                <div class="flex gap-2">
+                  <select id="respType" class="border rounded px-2 py-1 text-xs font-bold">
+                    <option value="INTERIM_15DAY">Interim Reply (ภายใน 15 วันทำการ)</option>
+                    <option value="FINAL_CLOSURE">Final Investigation & CAPA Reply</option>
+                  </select>
+                  <select id="respLang" class="border rounded px-2 py-1 text-xs font-bold">
+                    <option value="EN">English (International)</option>
+                    <option value="TH">ภาษาไทย (ทางการ)</option>
+                  </select>
+                  <button onclick="generateCustomerReply()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-bold">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> ร่างจดหมาย
+                  </button>
+                </div>
+              </div>
+              <input type="text" id="respSubject" placeholder="Subject..." class="w-full border rounded-lg p-2 text-xs font-bold">
+              <textarea id="respBody" rows="12" class="w-full border rounded-lg p-3 text-xs font-mono leading-relaxed"></textarea>
+              <button onclick="saveCustomerReplyDraft()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกสำเนาจดหมายตอบลูกค้า (ตาม GQP-1007 ข้อ 7.2.4)
+              </button>
+            </div>
+
+            <!-- 10-Point Closure Gate -->
+            <div class="lg:col-span-5 card p-5 space-y-3">
+              <h3 class="font-bold text-sm text-slate-800 border-b pb-2"><i class="fa-solid fa-lock text-emerald-600 mr-1"></i> Mandatory Closure Gate (10 ข้อตาม GQP-1007 & GMP)</h3>
+              <div class="space-y-2 text-xs" id="closureGateChecklist">
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 1. ยืนยันการจำแนกประเภทและระดับความรุนแรง (Severity) แล้ว</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 2. ระบุขอบเขต Lot / Batch / Bale และตรวจ Retain Sample แล้ว</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 3. ดึงข้อมูล In-Process / Lab ประกอบการสืบสวน 5M+E ครบถ้วน</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 4. ผลการประเมิน RCA Assessment Scale ผ่านเกณฑ์ Level 5 ครบ A-G</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 5. ดำเนินการ CAPA เสร็จสิ้นและมีหลักฐานแนบครบถ้วน</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 6. ทวนสอบประสิทธิผล (Effectiveness Check) ผ่านตามเกณฑ์</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 7. บันทึกจดหมายตอบลูกค้า (Interim / Final Reply) ในระบบแล้ว</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 8. บันทึกผลการตัดสินใจต่อผลิตภัณฑ์ (Disposition / RRL-01) แล้ว</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 9. เคลียร์ประเด็นความเสี่ยง GMP / Safety / FSC-PEFC ครบถ้วน</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 10. ทบทวนและอนุมัติปิดเคสโดย QA / MR / Department Head</label>
+              </div>
+              <button onclick="executeCloseCaseGate()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow mt-3">
+                <i class="fa-solid fa-flag-checkered mr-1"></i> ยืนยันผ่าน Closure Gate & ปิดเคส (CLOSE CASE)
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 5: ALCOA+ AUDIT TRAIL                                            -->
+      <!-- ===================================================================== -->
+      <section id="view-audittrail" class="hidden space-y-4">
+        <div class="card p-5">
+          <h3 class="font-bold text-base text-slate-800 mb-3"><i class="fa-solid fa-shield-halved text-blue-600 mr-2"></i>บันทึกประวัติการทำรายการตามหลัก ALCOA+ Data Integrity (Append-Only Audit Trail)</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-50 font-bold text-slate-600 border-b">
+                <tr>
+                  <th class="p-3">Timestamp</th>
+                  <th class="p-3">Action</th>
+                  <th class="p-3">Case ID</th>
+                  <th class="p-3">User</th>
+                  <th class="p-3">Details</th>
+                </tr>
+              </thead>
+              <tbody id="auditTrailTbody" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// =========================================================================
+// 1. FIREBASE CONFIGURATION (เชื่อมต่อโปรเจกต์เดียวกับระบบ Lab & Internal Audit)
+// =========================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+  authDomain: "lab-trc-management-system.firebaseapp.com",
+  projectId: "lab-trc-management-system",
+  storageBucket: "lab-trc-management-system.appspot.com",
+  messagingSenderId: "43919979160",
+  appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const functions = firebase.app().functions('asia-southeast1');
+const storage = firebase.storage();
+  try {
+      db.settings({ experimentalForceLongPolling: true, merge: true });
+  } catch(e) {}
+const SV = firebase.firestore.FieldValue;
+
+// Global Application State (ไม่มี Mock Data ใดๆ ทั้งสิ้น)
+let allCases = [];
+let currentCaseDocId = null;
+let currentCaseObj = null;
+let latestAiProposal = null;
+let pendingIntakeFiles = [];
+let pendingInlineImages = [];
+let pendingAttachmentsText = "";
+let chartInstances = {};
+
+// =========================================================================
+// 2. UI UTILITIES & HELPERS
+// =========================================================================
+const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+function toast(msg, type = 'ok') {
+  const bg = type === 'error' ? 'bg-red-600' : (type === 'warn' ? 'bg-amber-500' : 'bg-slate-900');
+  const el = document.createElement('div');
+  el.className = `${bg} text-white px-4 py-3 rounded-xl shadow-xl text-xs font-bold max-w-sm transition`;
+  el.textContent = msg;
+  document.getElementById('toastArea').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function setLoading(on, title = 'กำลังประมวลผล...', sub = 'กรุณารอสักครู่') {
+  const ov = document.getElementById('loadingOverlay');
+  document.getElementById('loadingTitle').textContent = title;
+  document.getElementById('loadingSub').textContent = sub;
+  ov.classList.toggle('hidden', !on);
+}
+
+function addWorkingDays(startDateStr, days) {
+  const d = new Date(startDateStr || new Date());
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dayOfWeek = d.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) added++;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+async function logClientAuditEvent(action, caseId, details = {}) {
+  try {
+    await db.collection('complaint_audit_events').add({
+      action,
+      caseId: String(caseId || '-'),
+      userEmail: firebase.auth().currentUser?.email || 'System_Owner',
+      details,
+      createdAt: SV.serverTimestamp()
+    });
+  } catch (e) { console.warn('Audit log warning:', e); }
+}
+
+// =========================================================================
+// 3. REALTIME FIRESTORE LISTENERS (SYNC ALL CASES & AUDIT TRAIL)
+// =========================================================================
+function initRealtimeListeners() {
+  // Generate default Case ID & today's date in Intake form
+  document.getElementById('f_receivedDate').value = new Date().toISOString().slice(0, 10);
+  generateNextCaseId();
+
+  // Listen to complaint_cases
+  db.collection('complaint_cases').orderBy('createdAtIso', 'desc').onSnapshot(snap => {
+    allCases = snap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+    populateYearFilter();
+    renderDashboardUI();
+    renderCaseRegisterTable();
+    generateNextCaseId();
+
+    if (currentCaseDocId) {
+      const updated = allCases.find(c => c.docId === currentCaseDocId);
+      if (updated) {
+        currentCaseObj = updated;
+        populateWorkspaceUI(updated);
+      }
+    }
+  });
+
+  // Listen to Audit Trail
+  db.collection('complaint_audit_events').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+    const tbody = document.getElementById('auditTrailTbody');
+    if (!tbody) return;
+    tbody.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const ts = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleString('th-TH') : '-';
+      return `<tr class="hover:bg-slate-50">
+        <td class="p-3 font-mono text-slate-500">${esc(ts)}</td>
+        <td class="p-3 font-bold text-blue-700">${esc(d.action)}</td>
+        <td class="p-3 font-mono font-bold">${esc(d.caseId)}</td>
+        <td class="p-3">${esc(d.userEmail)}</td>
+        <td class="p-3 text-slate-500 font-mono text-[11px]">${esc(JSON.stringify(d.details || {}))}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="5" class="p-6 text-center text-slate-400">ยังไม่มีประวัติการทำรายการ</td></tr>';
+  });
+}
+
+function generateNextCaseId() {
+  const year = new Date().getFullYear();
+  const seq = String(allCases.length + 1).padStart(4, '0');
+  const inp = document.getElementById('f_caseId');
+  if (inp && !inp.dataset.locked) {
+    inp.value = `FB-${year}-${seq}`;
+  }
+}
+
+function populateYearFilter() {
+  const sel = document.getElementById('dashFilterYear');
+  const currentVal = sel.value;
+  const years = [...new Set(allCases.map(c => (c.receivedDate || c.createdAtIso || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+  sel.innerHTML = `<option value="ALL">ทุกปี (All Years)</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if (years.includes(currentVal)) sel.value = currentVal;
+}
+
+// =========================================================================
+// 4. NAVIGATION CONTROL
+// =========================================================================
+function switchMainView(viewName) {
+  ['dashboard', 'intake', 'cases', 'workspace', 'audittrail'].forEach(v => {
+    document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewName);
+  });
+  document.querySelectorAll('#mainNav button').forEach(btn => {
+    btn.classList.toggle('nav-active', btn.dataset.view === viewName);
+  });
+}
+
+function switchWsTab(tabName) {
+  ['overview', 'plantdata', 'investigation', 'rcascale', 'capa', 'closure'].forEach(t => {
+    document.getElementById(`wstab-${t}`).classList.toggle('hidden', t !== tabName);
+  });
+  document.querySelectorAll('.ws-tab-btn').forEach(btn => {
+    btn.classList.toggle('subtab-active', btn.dataset.wstab === tabName);
+  });
+}
+
+// =========================================================================
+// 5. DASHBOARD RENDERING (ZERO GHOST COUNT - DYNAMIC FROM LIVE STATE)
+// =========================================================================
+function renderDashboardUI() {
+  const fYear = document.getElementById('dashFilterYear').value;
+  const fMc = document.getElementById('dashFilterMachine').value;
+  const fType = document.getElementById('dashFilterType').value;
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const filtered = allCases.filter(c => {
+    const cYear = (c.receivedDate || c.createdAtIso || '').slice(0, 4);
+    const mcs = c.productionSummary?.machineNumbers || [];
+    const matchYear = fYear === 'ALL' || cYear === fYear;
+    const matchMc = fMc === 'ALL' || mcs.includes(fMc);
+    const matchType = fType === 'ALL' || c.caseType === fType;
+    return matchYear && matchMc && matchType;
+  });
+
+  const total = filtered.length;
+  const compCount = filtered.filter(c => c.caseType === 'COMPLAINT').length;
+  const fbCount = filtered.filter(c => c.caseType === 'FEEDBACK').length;
+  const closedCount = filtered.filter(c => c.status === 'CLOSED').length;
+  const openCount = total - closedCount;
+  const gmpCount = filtered.filter(c => c.riskFlags?.gmpRelevant || c.riskFlags?.productSafetyPotential || c.riskFlags?.contaminationPotential).length;
+  const overdueCount = filtered.filter(c => c.status !== 'CLOSED' && c.dueDates?.interimReplyDue && c.dueDates.interimReplyDue < todayISO).length;
+  const lv5Count = filtered.filter(c => c.rcaAssessment?.isLevel5Passed === true).length;
+
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiSplit').textContent = `Complaint: ${compCount} | Feedback: ${fbCount}`;
+  document.getElementById('kpiOpen').textContent = openCount;
+  document.getElementById('kpiGmp').textContent = gmpCount;
+  document.getElementById('kpiOverdue').textContent = `${overdueCount} Overdue`;
+  document.getElementById('kpiLevel5').textContent = lv5Count;
+  document.getElementById('kpiClosed').textContent = closedCount;
+
+  // Aggregations for Charts
+  const byDefect = {}, byMachine = { MC2: 0, MC3: 0, MC5: 0, MC6: 0 }, byMonth = {};
+  filtered.forEach(c => {
+    const def = c.issueSummary?.defectCategory || 'OTHER';
+    byDefect[def] = (byDefect[def] || 0) + 1;
+    (c.productionSummary?.machineNumbers || []).forEach(m => {
+      if (byMachine[m] !== undefined) byMachine[m] += 1;
+    });
+    const mStr = (c.receivedDate || c.createdAtIso || '').slice(0, 7);
+    if (mStr) byMonth[mStr] = (byMonth[mStr] || 0) + 1;
+  });
+
+  drawChart('chartByDefect', 'doughnut', Object.keys(byDefect), Object.values(byDefect), ['#2563eb','#ef4444','#f59e0b','#10b981','#8b5cf6','#ec4899','#64748b']);
+  drawChart('chartByMachine', 'bar', Object.keys(byMachine), Object.values(byMachine), ['#4f46e5','#06b6d4','#10b981','#f97316']);
+  const sortedMonths = Object.keys(byMonth).sort();
+  drawChart('chartByMonth', 'line', sortedMonths, sortedMonths.map(k => byMonth[k]), ['#059669']);
+}
+
+function drawChart(canvasId, type, labels, data, colors) {
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+  chartInstances[canvasId] = new Chart(ctx, {
+    type,
+    data: {
+      labels: labels.length ? labels : ['No Data'],
+      datasets: [{
+        label: 'Cases',
+        data: data.length ? data : [0],
+        backgroundColor: colors,
+        borderColor: type === 'line' ? colors[0] : '#ffffff',
+        borderWidth: 2,
+        tension: 0.3
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: type === 'doughnut', position: 'bottom' } } }
+  });
+}
+
+async function forceResyncDashboard() {
+  setLoading(true, 'กำลังซิงค์และตรวจสอบยอดรวม Dashboard...', 'คำนวณใหม่จากเอกสารจริงทั้งหมดในระบบ');
+  try {
+    const fn = functions.httpsCallable('recalculateComplaintDashboard');
+    await fn();
+    toast('ซิงค์ตัวเลข Dashboard ตรงกับข้อมูลจริง 100% เรียบร้อยครับ');
+  } catch (e) {
+    renderDashboardUI();
+    toast('อัปเดตตัวเลขจาก Live Snapshot เรียบร้อยครับ');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// =========================================================================
+// 6. AI INTAKE & FILE EXTRACTION + DUPLICATE CHECK
+// =========================================================================
+async function handleIntakeFilesSelected(event) {
+  const files = Array.from(event.target.files || []);
+  pendingIntakeFiles = files;
+  pendingInlineImages = [];
+  pendingAttachmentsText = "";
+
+  const listEl = document.getElementById('intakeFileList');
+  if (!files.length) {
+    listEl.textContent = 'ยังไม่ได้เลือกไฟล์แนบ';
+    return;
+  }
+
+  listEl.innerHTML = files.map(f => `<div class="text-blue-700 font-semibold"><i class="fa-solid fa-file mr-1"></i>${esc(f.name)} (${(f.size/1024).toFixed(1)} KB)</div>`).join('');
+
+  for (const file of files) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (['txt', 'csv'].includes(ext)) {
+      const txt = await file.text();
+      pendingAttachmentsText += `\n--- FILE: ${file.name} ---\n${txt.slice(0, 8000)}\n`;
+    } else if (['xlsx', 'xls'].includes(ext)) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      wb.SheetNames.slice(0, 2).forEach(sName => {
+        const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sName]);
+        pendingAttachmentsText += `\n--- EXCEL (${file.name} - ${sName}) ---\n${csv.slice(0, 6000)}\n`;
+      });
+    } else if (['png', 'jpg', 'jpeg', 'pdf'].includes(ext) && file.size < 4 * 1024 * 1024) {
+      const b64 = await new Promise(res => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      pendingInlineImages.push({ base64: b64, mimeType: file.type || 'application/pdf', name: file.name });
+    }
+  }
+}
+
+async function runAiIntakeAnalysis() {
+  const rawText = (document.getElementById('intakeRawText').value + "\n" + pendingAttachmentsText).trim();
+  if (!rawText && !pendingInlineImages.length) {
+    return toast('กรุณาวางข้อความอีเมลหรือแนบไฟล์ก่อนวิเคราะห์ครับ', 'warn');
+  }
+
+  setLoading(true, '🤖 AI Gemini กำลังสกัดข้อมูลและค้นหาเคสซ้ำ...', 'ตรวจสอบตามโครงสร้าง GQP-1007 & Pulp/Fibre Taxonomy');
+  try {
+    const fn = functions.httpsCallable('analyzeComplaintIntake');
+    const res = await fn({
+      rawText,
+      sourceType: document.getElementById('intakeSourceType').value,
+      attachmentsMeta: pendingIntakeFiles.map(f => ({ name: f.name, size: f.size })),
+      inlineImages: pendingInlineImages
+    });
+
+    const ext = res.data.extracted || {};
+    const matches = res.data.matches || [];
+
+    // Populate Form Fields
+    document.getElementById('f_caseType').value = ext.caseType || 'COMPLAINT';
+    document.getElementById('f_severity').value = ext.severity || 'MAJOR';
+    document.getElementById('f_title').value = ext.title || `${ext.customerName || 'Customer'} - ${ext.defectCategory || 'Issue'}`;
+    document.getElementById('f_customerName').value = ext.customerName || '';
+    document.getElementById('f_country').value = ext.country || '';
+    document.getElementById('f_customerRef').value = ext.customerComplaintRef || '';
+    document.getElementById('f_productFamily').value = ext.productFamily || 'VISCOSE_STAPLE_FIBRE';
+    document.getElementById('f_grade').value = ext.grade || '';
+    document.getElementById('f_machines').value = (ext.machineNumbers || []).join(', ');
+    document.getElementById('f_prodDates').value = (ext.productionDates || []).join(', ');
+    document.getElementById('f_lots').value = [...(ext.lotNumbers || []), ...(ext.batchNumbers || [])].join(', ');
+    document.getElementById('f_invoices').value = (ext.invoiceNumbers || []).join(', ');
+    document.getElementById('f_dos').value = (ext.doNumbers || []).join(', ');
+    document.getElementById('f_qty').value = ext.complaintQuantity || '';
+    document.getElementById('f_unit').value = ext.unit || 'MT';
+    if (ext.defectCategory) document.getElementById('f_defectCategory').value = ext.defectCategory;
+    document.getElementById('f_symptom').value = ext.symptom || '';
+
+    // Risk Flags
+    const rf = ext.riskFlags || {};
+    document.getElementById('rf_gmp').checked = !!rf.gmpRelevant;
+    document.getElementById('rf_contam').checked = !!rf.contaminationPotential;
+    document.getElementById('rf_safety').checked = !!rf.productSafetyPotential;
+    document.getElementById('rf_fsc').checked = !!rf.fscPefcClaimIssue;
+    document.getElementById('rf_recall').checked = !!rf.returnHoldRecall;
+    document.getElementById('rf_capa').checked = rf.formalCapaRequested !== false;
+
+    document.getElementById('intakeAiBadge').textContent = 'AI Extracted (รอการยืนยัน)';
+    document.getElementById('intakeAiBadge').className = 'text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-bold';
+
+    // Show Missing Critical Fields & Recommended Questions
+    const missBox = document.getElementById('intakeMissingBox');
+    const missList = ext.missingCriticalFields || [];
+    const recQ = ext.recommendedQuestionsForCustomer || [];
+    if (missList.length || recQ.length) {
+      missBox.classList.remove('hidden');
+      missBox.innerHTML = `
+        <div><b>⚠️ ข้อมูลสำคัญที่ยังไม่พบในต้นฉบับ (AI ไม่เดาข้อมูลเอง):</b> ${esc(missList.join(', ') || 'ครบถ้วน')}</div>
+        ${recQ.length ? `<div class="mt-1"><b>💡 คำถามที่ AI แนะนำให้ถามกลับไปยังลูกค้า/CTS:</b> ${esc(recQ.join(' | '))}</div>` : ''}
+      `;
+    } else {
+      missBox.classList.add('hidden');
+    }
+
+    // Show Duplicate / Related Matches
+    const matchCard = document.getElementById('matchingResultCard');
+    const matchContainer = document.getElementById('matchingListContainer');
+    if (matches.length > 0) {
+      matchCard.classList.remove('hidden');
+      matchContainer.innerHTML = matches.map(m => `
+        <div class="bg-white p-3 rounded-lg border border-amber-300 flex flex-wrap justify-between items-center gap-2 text-xs">
+          <div>
+            <span class="font-mono font-bold text-indigo-700">${esc(m.caseId)}</span>
+            <span class="mx-1 font-bold text-slate-800">${esc(m.title)}</span>
+            <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">Score: ${m.score} (${esc(m.band)})</span>
+            <div class="text-slate-500 mt-0.5">เหตุผล: ${esc((m.reasons || []).join(', '))}</div>
+          </div>
+          <button type="button" onclick="appendIntakeToExistingCase('${m.caseDocId}')" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-bold">
+            นำไปอัปเดตต่อในเคสนี้ (Append)
+          </button>
+        </div>
+      `).join('');
+    } else {
+      matchCard.classList.add('hidden');
+    }
+
+    toast('AI สกัดข้อมูลและตรวจสอบเคสซ้ำเสร็จสมบูรณ์');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function appendIntakeToExistingCase(targetDocId) {
+  const rawText = document.getElementById('intakeRawText').value.trim();
+  if (!confirm('ยืนยันการนำข้อมูลอีเมล/เอกสารชุดนี้ไปเพิ่มใน Timeline ของเคสเดิม แทนการเปิดเคสใหม่?')) return;
+  setLoading(true, 'กำลังเพิ่มข้อมูลเข้าสู่เคสเดิม...');
+  try {
+    const caseRef = db.collection('complaint_cases').doc(targetDocId);
+    await caseRef.collection('communications').add({
+      note: `[APPENDED FROM AI INTAKE]: ${rawText.slice(0, 1500)}`,
+      createdBy: firebase.auth().currentUser?.email || 'System_Owner',
+      createdAt: SV.serverTimestamp(),
+      createdAtIso: new Date().toISOString()
+    });
+    await caseRef.update({ updatedAt: SV.serverTimestamp() });
+    await logClientAuditEvent('APPEND_COMMUNICATION', targetDocId, { source: 'AI_INTAKE_MATCH' });
+    toast('เพิ่มข้อมูลเข้าสู่เคสเดิมเรียบร้อยครับ');
+    openCaseWorkspace(targetDocId);
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function saveConfirmedIntakeCase(event) {
+  event.preventDefault();
+  if (!document.getElementById('f_humanConfirmed').checked) {
+    return toast('กรุณาติ๊กยืนยันการตรวจสอบข้อมูล (Human Confirmation) ก่อนบันทึก', 'warn');
+  }
+
+  const receivedDate = document.getElementById('f_receivedDate').value || new Date().toISOString().slice(0, 10);
+  const splitClean = id => document.getElementById(id).value.split(',').map(s => s.trim()).filter(Boolean);
+  const mcs = splitClean('f_machines').map(normalizeComplaintMc).filter(Boolean);
+
+  const newCase = {
+    caseId: document.getElementById('f_caseId').value.trim(),
+    caseType: document.getElementById('f_caseType').value,
+    severity: document.getElementById('f_severity').value,
+    status: 'REGISTERED',
+    title: document.getElementById('f_title').value.trim(),
+    receivedDate,
+    customerNameSnapshot: document.getElementById('f_customerName').value.trim(),
+    country: document.getElementById('f_country').value.trim(),
+    externalRefs: {
+      customerComplaintRef: document.getElementById('f_customerRef').value.trim(),
+      rrlRef: document.getElementById('f_rrlRef').value.trim()
+    },
+    productSummary: {
+      family: document.getElementById('f_productFamily').value,
+      grade: document.getElementById('f_grade').value.trim()
+    },
+    productionSummary: {
+      machineNumbers: mcs.length ? mcs : ['MC2'],
+      productionDates: splitClean('f_prodDates'),
+      lotNumbers: splitClean('f_lots')
+    },
+    supplySummary: {
+      invoiceNumbers: splitClean('f_invoices'),
+      doNumbers: splitClean('f_dos'),
+      complaintQuantity: parseFloat(document.getElementById('f_qty').value) || 0,
+      unit: document.getElementById('f_unit').value.trim() || 'MT'
+    },
+    issueSummary: {
+      defectCategory: document.getElementById('f_defectCategory').value,
+      symptom: document.getElementById('f_symptom').value.trim()
+    },
+    riskFlags: {
+      gmpRelevant: document.getElementById('rf_gmp').checked,
+      contaminationPotential: document.getElementById('rf_contam').checked,
+      productSafetyPotential: document.getElementById('rf_safety').checked,
+      fscPefcClaimIssue: document.getElementById('rf_fsc').checked,
+      returnHoldRecall: document.getElementById('rf_recall').checked,
+      formalCapaRequested: document.getElementById('rf_capa').checked
+    },
+    dueDates: {
+      interimReplyDue: addWorkingDays(receivedDate, 15), // GQP-1007 15 Working Days
+      finalReplyDue: addWorkingDays(receivedDate, 30)    // GQP-1007 30 Working Days
+    },
+    investigation: {
+      problemStatement: '',
+      statsEvidence: '',
+      fiveME: { man: '', machine: '', material: '', method: '', measurement: '', environment: '' },
+      fiveWhys: '',
+      rootCause: '',
+      escapePoint: ''
+    },
+    rcaAssessment: null,
+    customerReplyDraft: { subject: '', bodyText: '' },
+    rawSourceText: document.getElementById('intakeRawText').value,
+    humanConfirmed: true,
+    createdAtIso: new Date().toISOString(),
+    createdAt: SV.serverTimestamp(),
+    updatedAt: SV.serverTimestamp()
+  };
+
+  setLoading(true, 'กำลังสร้างเคสและอัปโหลดไฟล์แนบ...', 'บันทึกตามมาตรฐาน ALCOA+');
+  try {
+    const docRef = await db.collection('complaint_cases').add(newCase);
+
+    // Upload files to Cloud Storage if any
+    for (const file of pendingIntakeFiles) {
+      const storagePath = `complaint-cases/${docRef.id}/intake/${Date.now()}_${file.name}`;
+      const ref = storage.ref(storagePath);
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      await docRef.collection('attachments').add({
+        name: file.name,
+        storagePath,
+        url,
+        uploadedAtIso: new Date().toISOString()
+      });
+    }
+
+    // Create initial communication timeline entry
+    await docRef.collection('communications').add({
+      note: `เปิดเคสใหม่ (${newCase.caseId}) จาก ${document.getElementById('intakeSourceType').value}`,
+      createdBy: firebase.auth().currentUser?.email || 'System_Owner',
+      createdAt: SV.serverTimestamp(),
+      createdAtIso: new Date().toISOString()
+    });
+
+    await logClientAuditEvent('CREATE_CASE', newCase.caseId, { customer: newCase.customerNameSnapshot, severity: newCase.severity });
+    clearIntakeForm();
+    toast(`สร้างเคส ${newCase.caseId} สำเร็จ!`);
+    openCaseWorkspace(docRef.id);
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function clearIntakeForm() {
+  document.getElementById('intakeRawText').value = '';
+  document.getElementById('intakeConfirmForm').reset();
+  document.getElementById('f_receivedDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('matchingResultCard').classList.add('hidden');
+  document.getElementById('intakeMissingBox').classList.add('hidden');
+  pendingIntakeFiles = [];
+  pendingInlineImages = [];
+  pendingAttachmentsText = "";
+  document.getElementById('intakeFileList').textContent = 'ยังไม่ได้เลือกไฟล์แนบ';
+  generateNextCaseId();
+}
+
+// =========================================================================
+// 7. CASE REGISTER TABLE & CASCADE DELETE
+// =========================================================================
+function renderCaseRegisterTable() {
+  const q = (document.getElementById('regSearch')?.value || '').toLowerCase().trim();
+  const stFilter = document.getElementById('regStatusFilter')?.value || 'ALL';
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const filtered = allCases.filter(c => {
+    if (stFilter !== 'ALL' && c.status !== stFilter) return false;
+    if (!q) return true;
+    const hay = `${c.caseId} ${c.title} ${c.customerNameSnapshot} ${(c.productionSummary?.lotNumbers||[]).join(' ')} ${(c.supplySummary?.invoiceNumbers||[]).join(' ')} ${c.issueSummary?.symptom}`.toLowerCase();
+    return hay.includes(q);
+  });
+
+  const tbody = document.getElementById('caseRegisterTbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = filtered.map(c => {
+    const due15 = c.dueDates?.interimReplyDue || '-';
+    const isOverdue = c.status !== 'CLOSED' && due15 !== '-' && due15 < todayISO;
+    const lv5 = c.rcaAssessment?.isLevel5Passed;
+    const avgScore = c.rcaAssessment?.overallAverage ? Number(c.rcaAssessment.overallAverage).toFixed(1) : '-';
+
+    return `<tr class="hover:bg-slate-50 transition">
+      <td class="p-4">
+        <div class="font-mono font-bold text-indigo-700">${esc(c.caseId)}</div>
+        <div class="text-xs text-slate-400">${esc(c.receivedDate)}</div>
+      </td>
+      <td class="p-4">
+        <div class="font-bold text-slate-800">${esc(c.customerNameSnapshot)}</div>
+        <div class="text-xs text-slate-400">Ref: ${esc(c.externalRefs?.customerComplaintRef || '-')}</div>
+      </td>
+      <td class="p-4 text-xs">
+        <div class="font-bold text-slate-700">${esc(c.productSummary?.grade || c.productSummary?.family)}</div>
+        <div class="text-slate-500">MC: ${esc((c.productionSummary?.machineNumbers||[]).join(', '))} | Lot: ${esc((c.productionSummary?.lotNumbers||[]).join(', ') || '-')}</div>
+      </td>
+      <td class="p-4 max-w-xs">
+        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">${esc(c.issueSummary?.defectCategory)}</span>
+        ${c.riskFlags?.gmpRelevant ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 ml-1">GMP</span>' : ''}
+        <div class="text-xs text-slate-600 truncate mt-1" title="${esc(c.issueSummary?.symptom)}">${esc(c.issueSummary?.symptom)}</div>
+      </td>
+      <td class="p-4 text-center text-xs">
+        <span class="${isOverdue ? 'text-red-600 font-bold' : 'text-slate-600'}">${esc(due15)}</span>
+        ${isOverdue ? '<div class="text-[10px] text-red-600 font-bold">⚠️ Overdue</div>' : ''}
+      </td>
+      <td class="p-4 text-center">
+        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${lv5 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+          ${lv5 ? '⭐ 5.0 PASS' : `${avgScore} / 5.0`}
+        </span>
+      </td>
+      <td class="p-4 text-center">
+        <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">${esc(c.status)}</span>
+      </td>
+      <td class="p-4 text-right whitespace-nowrap space-x-1">
+        <button onclick="openCaseWorkspace('${c.docId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
+          <i class="fa-solid fa-folder-open mr-1"></i> เปิดจัดการ
+        </button>
+        <button onclick="deleteCaseCascade('${c.docId}')" class="bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-bold" title="ลบเคสและข้อมูลย่อยทั้งหมด">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="p-10 text-center text-slate-400">ไม่พบข้อมูลเคสในระบบ</td></tr>';
+}
+
+async function deleteCaseCascade(docId) {
+  if (!docId) return;
+  const target = allCases.find(c => c.docId === docId);
+  if (!confirm(`ยืนยันการลบเคส ${target?.caseId || docId} แบบถาวร?\nระบบจะลบข้อมูลย่อย (Timeline, CAPA, RCA, ไฟล์แนบ) ทั้งหมด และคำนวณตัดยอดใน Dashboard อัตโนมัติทันที`)) return;
+
+  setLoading(true, 'กำลังลบข้อมูลแบบ Cascading & อัปเดตยอดรวม...', 'ป้องกันปัญหายอดค้างหรือนับซ้ำ');
+  try {
+    const fn = functions.httpsCallable('deleteComplaintCaseCascade');
+    await fn({ caseDocId: docId });
+    if (currentCaseDocId === docId) {
+      currentCaseDocId = null;
+      currentCaseObj = null;
+      document.getElementById('wsContainer').classList.add('hidden');
+      document.getElementById('wsEmptyState').classList.remove('hidden');
+    }
+    toast('ลบเคสและปรับปรุงยอดรวม Dashboard เรียบร้อยครับ');
+    switchMainView('cases');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// =========================================================================
+// 8. CASE WORKSPACE & SUB-COLLECTIONS CRUD
+// =========================================================================
+let unsubComm = null;
+let unsubCapa = null;
+
+function openCaseWorkspace(docId) {
+  currentCaseDocId = docId;
+  const c = allCases.find(x => x.docId === docId);
+  if (!c) return;
+  currentCaseObj = c;
+
+  document.getElementById('wsEmptyState').classList.add('hidden');
+  document.getElementById('wsContainer').classList.remove('hidden');
+  populateWorkspaceUI(c);
+  setupWorkspaceSubListeners(docId);
+  switchMainView('workspace');
+}
+
+function populateWorkspaceUI(c) {
+  document.getElementById('wsBadgeId').textContent = c.caseId;
+  document.getElementById('wsBadgeType').textContent = c.caseType;
+  document.getElementById('wsBadgeStatus').textContent = c.status;
+  document.getElementById('wsStatusSelect').value = c.status || 'REGISTERED';
+  document.getElementById('wsTitle').textContent = c.title;
+  document.getElementById('wsMetaLine').textContent = `ลูกค้า: ${c.customerNameSnapshot} | เกรด: ${c.productSummary?.grade || '-'} | MC: ${(c.productionSummary?.machineNumbers||[]).join(', ')} | วันผลิต: ${(c.productionSummary?.productionDates||[]).join(', ') || '-'} | SLA 15 วัน: ${c.dueDates?.interimReplyDue || '-'}`;
+
+  // Tab 1: Overview Edits
+  document.getElementById('e_customer').value = c.customerNameSnapshot || '';
+  document.getElementById('e_custRef').value = c.externalRefs?.customerComplaintRef || '';
+  document.getElementById('e_grade').value = c.productSummary?.grade || '';
+  document.getElementById('e_machines').value = (c.productionSummary?.machineNumbers || []).join(', ');
+  document.getElementById('e_prodDates').value = (c.productionSummary?.productionDates || []).join(', ');
+  document.getElementById('e_lots').value = (c.productionSummary?.lotNumbers || []).join(', ');
+  document.getElementById('e_invoices').value = (c.supplySummary?.invoiceNumbers || []).join(', ');
+  document.getElementById('e_rrl').value = c.externalRefs?.rrlRef || '';
+  document.getElementById('e_symptom').value = c.issueSummary?.symptom || '';
+
+  // Tab 3: Investigation 5M+E
+  const inv = c.investigation || {};
+  const fm = inv.fiveME || {};
+  document.getElementById('inv_problem').value = inv.problemStatement || '';
+  document.getElementById('inv_statsEvidence').value = inv.statsEvidence || '';
+  document.getElementById('m_man').value = fm.man || '';
+  document.getElementById('m_machine').value = fm.machine || '';
+  document.getElementById('m_material').value = fm.material || '';
+  document.getElementById('m_method').value = fm.method || '';
+  document.getElementById('m_measurement').value = fm.measurement || '';
+  document.getElementById('m_environment').value = fm.environment || '';
+  document.getElementById('inv_fiveWhys').value = inv.fiveWhys || '';
+  document.getElementById('inv_rootCause').value = inv.rootCause || '';
+  document.getElementById('inv_escapePoint').value = inv.escapePoint || '';
+
+  // Tab 4: Render saved RCA Assessment if exists
+  if (c.rcaAssessment) {
+    renderRcaAssessmentUI(c.rcaAssessment);
+  } else {
+    document.getElementById('rcaScaleScoreboard').innerHTML = '<div class="col-span-7 p-6 text-slate-400">ยังไม่ได้ทำการประเมิน กดปุ่ม "ประเมินคะแนน RCA ปัจจุบัน (Assess A-G)" ด้านบน</div>';
+    document.getElementById('rcaScaleDetailsBox').innerHTML = '';
+  }
+
+  // Tab 6: Customer Reply
+  document.getElementById('respSubject').value = c.customerReplyDraft?.subject || '';
+  document.getElementById('respBody').value = c.customerReplyDraft?.bodyText || '';
+}
+
+function setupWorkspaceSubListeners(docId) {
+  if (unsubComm) unsubComm();
+  if (unsubCapa) unsubCapa();
+
+  const caseRef = db.collection('complaint_cases').doc(docId);
+
+  // Communications Listener
+  unsubComm = caseRef.collection('communications').orderBy('createdAtIso', 'desc').onSnapshot(snap => {
+    const container = document.getElementById('commTimelineList');
+    container.innerHTML = snap.docs.map(d => {
+      const item = d.data();
+      return `<div class="p-3 bg-slate-50 rounded-lg border flex justify-between items-start gap-2">
+        <div>
+          <div class="font-semibold text-slate-800">${esc(item.note)}</div>
+          <div class="text-[10px] text-slate-400 mt-1">${esc(item.createdAtIso?.slice(0,16).replace('T',' '))} โดย ${esc(item.createdBy)}</div>
+        </div>
+        <button onclick="deleteCommItem('${d.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+      </div>`;
+    }).join('') || '<div class="text-slate-400 text-center py-4">ยังไม่มีประวัติการสื่อสาร</div>';
+  });
+
+  // CAPA Actions Listener
+  unsubCapa = caseRef.collection('capa_actions').orderBy('createdAtIso', 'asc').onSnapshot(snap => {
+    const tbody = document.getElementById('capaListTbody');
+    tbody.innerHTML = snap.docs.map(d => {
+      const item = d.data();
+      return `<tr class="border-b hover:bg-slate-50">
+        <td class="p-3 font-bold text-indigo-700">${esc(item.actionType)}</td>
+        <td class="p-3">${esc(item.description)}</td>
+        <td class="p-3 font-semibold">${esc(item.owner)}</td>
+        <td class="p-3">${esc(item.targetDate)}</td>
+        <td class="p-3 text-slate-600">${esc(item.effectivenessCriteria)}</td>
+        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">${esc(item.status)}</span></td>
+        <td class="p-3 text-right whitespace-nowrap">
+          <button onclick='editCapaRow("${d.id}", ${JSON.stringify(item).replace(/'/g, "&#39;")})' class="text-blue-600 mr-2"><i class="fa-solid fa-pen"></i></button>
+          <button onclick="deleteCapaRow('${d.id}')" class="text-red-600"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="p-6 text-center text-slate-400">ยังไม่มีรายการ CAPA</td></tr>';
+  });
+}
+
+async function saveOverviewEdits() {
+  if (!currentCaseDocId) return;
+  const splitClean = id => document.getElementById(id).value.split(',').map(s => s.trim()).filter(Boolean);
+  await db.collection('complaint_cases').doc(currentCaseDocId).update({
+    customerNameSnapshot: document.getElementById('e_customer').value.trim(),
+    'externalRefs.customerComplaintRef': document.getElementById('e_custRef').value.trim(),
+    'externalRefs.rrlRef': document.getElementById('e_rrl').value.trim(),
+    'productSummary.grade': document.getElementById('e_grade').value.trim(),
+    'productionSummary.machineNumbers': splitClean('e_machines').map(normalizeComplaintMc),
+    'productionSummary.productionDates': splitClean('e_prodDates'),
+    'productionSummary.lotNumbers': splitClean('e_lots'),
+    'supplySummary.invoiceNumbers': splitClean('e_invoices'),
+    'issueSummary.symptom': document.getElementById('e_symptom').value.trim(),
+    updatedAt: SV.serverTimestamp()
+  });
+  await logClientAuditEvent('UPDATE_OVERVIEW', currentCaseObj?.caseId);
+  toast('บันทึกการแก้ไขข้อมูลหลักเรียบร้อยครับ');
+}
+
+async function addCommunicationItem() {
+  const note = document.getElementById('commNoteInput').value.trim();
+  if (!note || !currentCaseDocId) return;
+  await db.collection('complaint_cases').doc(currentCaseDocId).collection('communications').add({
+    note,
+    createdBy: firebase.auth().currentUser?.email || 'System_Owner',
+    createdAt: SV.serverTimestamp(),
+    createdAtIso: new Date().toISOString()
+  });
+  document.getElementById('commNoteInput').value = '';
+  toast('เพิ่มบันทึกใน Timeline แล้ว');
+}
+
+async function deleteCommItem(commId) {
+  if (!confirm('ยืนยันการลบบันทึกนี้?')) return;
+  await db.collection('complaint_cases').doc(currentCaseDocId).collection('communications').doc(commId).delete();
+  toast('ลบบันทึกเรียบร้อย');
+}
+
+// =========================================================================
+// 9. PULL PLANT & LAB DATA (IN-PROCESS, PRODUCT, PROJECTOR, PULP)
+// =========================================================================
+async function pullPlantDataForCurrentCase() {
+  if (!currentCaseObj) return;
+  const mc = (currentCaseObj.productionSummary?.machineNumbers || ['MC2'])[0];
+  const prodDates = currentCaseObj.productionSummary?.productionDates || [];
+  const invoiceNo = (currentCaseObj.supplySummary?.invoiceNumbers || [])[0] || '';
+  const doNo = (currentCaseObj.supplySummary?.doNumbers || [])[0] || '';
+  const lotNumbers = currentCaseObj.productionSummary?.lotNumbers || [];
+
+  setLoading(true, `กำลังดึงข้อมูลโรงงานของเครื่อง ${mc}...`, 'ค้นหาจาก stats_Viscose, stats_Spinning, stats_Product, stats_Projector และ rm_pulp_inspections');
+  try {
+    const fn = functions.httpsCallable('fetchComplaintPlantData');
+    const res = await fn({ machineId: mc, productionDates: prodDates, invoiceNo, doNo, lotNumbers });
+    const pData = res.data.plantData;
+
+    await db.collection('complaint_cases').doc(currentCaseDocId).update({
+      plantDataSnapshot: pData,
+      updatedAt: SV.serverTimestamp()
+    });
+
+    renderPlantDataSnapshot(pData);
+    toast('ดึงข้อมูล In-Process, Product Lab และ Pulp สำเร็จ!');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderPlantDataSnapshot(pData) {
+  const box = document.getElementById('plantDataDisplayArea');
+  if (!pData) return;
+
+  const formatStatsTable = (statsObj) => {
+    if (!statsObj) return '<div class="text-slate-400 italic">ไม่พบข้อมูลในวันที่ระบุ</div>';
+    return `<div class="grid grid-cols-2 gap-1.5">` + Object.entries(statsObj).slice(0, 14).map(([k, v]) => {
+      if (!v || v.avg === undefined) return '';
+      const cvWarn = v.cv > 5 ? 'text-red-600 font-bold' : 'text-slate-500';
+      return `<div class="bg-slate-50 p-1.5 rounded border flex justify-between">
+        <span class="truncate font-semibold">${esc(k)}</span>
+        <span class="font-mono">${Number(v.avg).toFixed(2)} <small class="${cvWarn}">(CV:${Number(v.cv||0).toFixed(1)}%)</small></span>
+      </div>`;
+    }).join('') + `</div>`;
+  };
+
+  box.innerHTML = `
+    <div class="card p-4 space-y-2">
+      <div class="font-bold text-blue-800 border-b pb-1"><i class="fa-solid fa-flask mr-1"></i> 1. ข้อมูล In-Process (Viscose, Auxiliary, Spinning) - เครื่อง ${esc(pData.machineId)}</div>
+      ${(pData.inProcessStats || []).map(row => `
+        <div class="border rounded-lg p-2.5 space-y-2">
+          <div class="font-bold text-slate-700 bg-blue-50 px-2 py-1 rounded">📅 วันที่: ${esc(row.date)}</div>
+          <div><b>Viscose:</b> ${formatStatsTable(row.viscose)}</div>
+          <div><b>Auxiliary (Spin Bath):</b> ${formatStatsTable(row.auxiliary)}</div>
+          <div><b>Spinning:</b> ${formatStatsTable(row.spinning)}</div>
+        </div>
+      `).join('') || '<div class="text-slate-400 p-4">ไม่พบข้อมูล In-Process ของวันที่ระบุ (ตรวจสอบการกรอก Production Date YYYY-MM-DD ในแท็บที่ 1)</div>'}
+    </div>
+
+    <div class="card p-4 space-y-3">
+      <div class="font-bold text-emerald-800 border-b pb-1"><i class="fa-solid fa-tags mr-1"></i> 2. ข้อมูลคุณภาพเส้นใย (Fibre Lab: ${esc(pData.productType)}) & Viscose Projector</div>
+      ${(pData.productLabStats || []).map(row => `
+        <div class="border rounded-lg p-2.5 space-y-1">
+          <div class="font-bold text-slate-700 bg-emerald-50 px-2 py-1 rounded">📅 วันที่ผลิต: ${esc(row.date)}</div>
+          ${formatStatsTable(row.stats)}
+        </div>
+      `).join('') || '<div class="text-slate-400 p-2">ไม่พบข้อมูล Fibre Lab ในวันที่ระบุ</div>'}
+
+      <div class="font-bold text-indigo-800 border-b pb-1 pt-2"><i class="fa-solid fa-microscope mr-1"></i> 3. ข้อมูล Viscose Projector (Gel Count & Particles)</div>
+      ${(pData.projectorStats || []).map(p => `
+        <div class="bg-indigo-50 p-2 rounded border flex justify-between font-semibold">
+          <span>วันที่ ${esc(p.date)}</span>
+          <span>Gel Avg: <b>${esc(p.gel_avg)}</b> | Short: ${esc(p.short_fiber_avg)} | Black: ${esc(p.black_particle_avg)}</span>
+        </div>
+      `).join('') || '<div class="text-slate-400 p-2">ไม่พบข้อมูล Projector ในวันที่ระบุ</div>'}
+
+      <div class="font-bold text-amber-800 border-b pb-1 pt-2"><i class="fa-solid fa-tree mr-1"></i> 4. ข้อมูลวัตถุดิบเยื่อกระดาษ (RM Pulp COA)</div>
+      ${(pData.pulpInspections || []).slice(0, 4).map(rm => `
+        <div class="bg-amber-50 p-2 rounded border text-[11px]">
+          <b>${esc(rm.supplier)}</b> | Batch: ${esc(rm.batchNo)} | Date: ${esc(rm.receivedDate)}
+          | Alpha: <b>${esc(rm.parameters?.alphaCellulose?.coa ?? '-')}</b> | Visc: <b>${esc(rm.parameters?.viscosity?.coa ?? '-')}</b>
+        </div>
+      `).join('') || '<div class="text-slate-400 p-2">ไม่พบข้อมูล RM Pulp</div>'}
+    </div>
+  `;
+}
+
+// =========================================================================
+// 10. 5M+E INVESTIGATION & LEVEL-5 RCA ASSESSMENT (A-G RUBRIC)
+// =========================================================================
+async function saveInvestigationData() {
+  if (!currentCaseDocId) return;
+  const invData = collectCurrentInvestigationForm();
+  await db.collection('complaint_cases').doc(currentCaseDocId).update({
+    investigation: invData,
+    updatedAt: SV.serverTimestamp()
+  });
+  await logClientAuditEvent('SAVE_INVESTIGATION_5ME', currentCaseObj?.caseId);
+  toast('บันทึกข้อมูลการสืบสวน 5M+E และ 5 Whys เรียบร้อยครับ');
+}
+
+function collectCurrentInvestigationForm() {
+  return {
+    problemStatement: document.getElementById('inv_problem').value.trim(),
+    statsEvidence: document.getElementById('inv_statsEvidence').value.trim(),
+    fiveME: {
+      man: document.getElementById('m_man').value.trim(),
+      machine: document.getElementById('m_machine').value.trim(),
+      material: document.getElementById('m_material').value.trim(),
+      method: document.getElementById('m_method').value.trim(),
+      measurement: document.getElementById('m_measurement').value.trim(),
+      environment: document.getElementById('m_environment').value.trim()
+    },
+    fiveWhys: document.getElementById('inv_fiveWhys').value.trim(),
+    rootCause: document.getElementById('inv_rootCause').value.trim(),
+    escapePoint: document.getElementById('inv_escapePoint').value.trim()
+  };
+}
+
+async function runAiRcaEvaluation(mode) {
+  if (!currentCaseDocId || !currentCaseObj) return;
+  const invData = collectCurrentInvestigationForm();
+
+  setLoading(true, '🕵️ AI กำลังตรวจประเมินตามเกณฑ์ RCA_Assessment_Scale_Ver-0 (A ถึง G)...', 'บังคับมาตรฐาน Level 5 เท่านั้น พร้อมเชื่อมโยงข้อมูล Lab & Process');
+  try {
+    const fn = functions.httpsCallable('evaluateAndUpgradeRCA');
+    const res = await fn({
+      mode,
+      caseContext: {
+        caseId: currentCaseObj.caseId,
+        customer: currentCaseObj.customerNameSnapshot,
+        product: currentCaseObj.productSummary,
+        production: currentCaseObj.productionSummary,
+        issue: currentCaseObj.issueSummary,
+        riskFlags: currentCaseObj.riskFlags
+      },
+      rcaInput: invData,
+      plantDataSnapshot: currentCaseObj.plantDataSnapshot || null
+    });
+
+    const evalResult = res.data.evaluation;
+    latestAiProposal = evalResult.level5UpgradedProposal || null;
+
+    const newStatus = evalResult.isLevel5Passed ? 'RCA_LEVEL5_PASSED' : 'INVESTIGATION';
+    await db.collection('complaint_cases').doc(currentCaseDocId).update({
+      investigation: invData,
+      rcaAssessment: evalResult,
+      status: newStatus,
+      updatedAt: SV.serverTimestamp()
+    });
+
+    // Save immutable RCA version snapshot
+    await db.collection('complaint_cases').doc(currentCaseDocId).collection('rca_versions').add({
+      investigation: invData,
+      rcaAssessment: evalResult,
+      createdAtIso: new Date().toISOString()
+    });
+
+    renderRcaAssessmentUI(evalResult);
+    switchWsTab('rcascale');
+    toast(evalResult.isLevel5Passed ? '🎉 ยินดีด้วย! ผลประเมิน RCA ผ่านเกณฑ์ Level 5 ครบทุกข้อ!' : 'ประเมินเสร็จสิ้น: พบหัวข้อที่ได้ต่ำกว่า Level 5 กรุณาดูคำแนะนำเพื่อยกระดับ');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderRcaAssessmentUI(evalResult) {
+  const board = document.getElementById('rcaScaleScoreboard');
+  const details = document.getElementById('rcaScaleDetailsBox');
+  const btnApply = document.getElementById('btnApplyProposal');
+
+  if (evalResult.level5UpgradedProposal) {
+    latestAiProposal = evalResult.level5UpgradedProposal;
+    btnApply.classList.remove('hidden');
+  }
+
+  const labels = [
+    ['A_AccuracyPrecision', 'A. Accuracy & Precision'],
+    ['B_DepthOfAnalysis', 'B. Depth (5Ms + PpK)'],
+    ['C_DataDriven', 'C. Data-Driven (SPC)'],
+    ['D_Consistency', 'D. Consistency (5Whys)'],
+    ['E_CrossFunctional', 'E. Cross-Functional'],
+    ['F_CapaMeasures', 'F. CAPA Sustainability'],
+    ['G_ContinuousImprovement', 'G. Continuous Imp.']
+  ];
+
+  board.innerHTML = labels.map(([key, title]) => {
+    const obj = evalResult.scores?.[key] || { score: 0 };
+    const is5 = obj.score === 5;
+    return `<div class="p-3 rounded-xl border ${is5 ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}">
+      <div class="font-bold text-slate-700 text-[11px]">${esc(title)}</div>
+      <div class="text-2xl font-black mt-1 ${is5 ? 'text-emerald-600' : 'text-red-600'}">${obj.score} / 5</div>
+      <div class="text-[10px] font-bold ${is5 ? 'text-emerald-700' : 'text-red-700'}">${is5 ? 'PASS (Level 5)' : 'BELOW TARGET'}</div>
+    </div>`;
+  }).join('');
+
+  details.innerHTML = `
+    <div class="p-4 rounded-xl ${evalResult.isLevel5Passed ? 'bg-emerald-600 text-white' : 'bg-amber-50 border border-amber-300 text-amber-950'} font-bold">
+      ${evalResult.isLevel5Passed
+        ? '✅ ผ่านเกณฑ์มาตรฐานสูงสุด (Level 5 Achieved Across All 7 Criteria)'
+        : '⚠️ ยังไม่ผ่านเกณฑ์ Level 5 ครบทุกข้อ! กรุณาปรับปรุงตาม Gap Analysis ด้านล่าง หรือกดปุ่มสีส้ม "นำร่าง Level 5 ของ AI ไปใส่ในฟอร์ม"'}
+      <div class="text-xs font-normal mt-1">${esc(evalResult.executiveCritique)}</div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      ${labels.map(([key, title]) => {
+        const obj = evalResult.scores?.[key] || {};
+        return `<div class="p-3 rounded-lg border bg-white">
+          <div class="font-bold text-slate-800">${esc(title)} — คะแนน: ${obj.score}/5</div>
+          <div class="text-slate-600 mt-1"><b>เหตุผล:</b> ${esc(obj.rationale)}</div>
+          ${obj.score < 5 ? `<div class="text-red-600 font-semibold mt-1"><b>สิ่งที่ต้องเพิ่มให้ถึง Level 5:</b> ${esc(obj.gapToLevel5)}</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function applyAiProposalToWorkspace() {
+  if (!latestAiProposal || !currentCaseDocId) return;
+  const p = latestAiProposal;
+
+  document.getElementById('inv_problem').value = p.problemStatement || '';
+  document.getElementById('inv_statsEvidence').value = p.statisticalAndLabEvidence || '';
+  document.getElementById('m_man').value = p.fiveME?.man || '';
+  document.getElementById('m_machine').value = p.fiveME?.machine || '';
+  document.getElementById('m_material').value = p.fiveME?.material || '';
+  document.getElementById('m_method').value = p.fiveME?.method || '';
+  document.getElementById('m_measurement').value = p.fiveME?.measurement || '';
+  document.getElementById('m_environment').value = `${p.fiveME?.environment || ''} | Cross-Functional Team: ${p.crossFunctionalTeam || ''}`;
+  document.getElementById('inv_fiveWhys').value = Array.isArray(p.fiveWhys) ? p.fiveWhys.join('\n') : (p.fiveWhys || '');
+  document.getElementById('inv_rootCause').value = p.rootCause || '';
+  document.getElementById('inv_escapePoint').value = `${p.systemicAndEscapePoint || ''} | Horizontal Deployment: ${p.preventiveAndHorizontalDeployment || ''}`;
+
+  await saveInvestigationData();
+
+  // สร้างรายการ CAPA แนะนำลงในตาราง CAPA ให้อัตโนมัติถ้ายังไม่มี
+  const capaRef = db.collection('complaint_cases').doc(currentCaseDocId).collection('capa_actions');
+  const existingCapa = await capaRef.get();
+  if (existingCapa.empty) {
+    const due = addWorkingDays(new Date().toISOString().slice(0, 10), 14);
+    if (p.containmentAndCorrection) {
+      await capaRef.add({
+        actionType: 'CONTAINMENT',
+        description: p.containmentAndCorrection,
+        owner: 'QA / Warehouse / Production',
+        targetDate: due,
+        effectivenessCriteria: p.effectivenessCriteria || '100% affected lots segregated and logged in RRL-01',
+        status: 'COMPLETED',
+        createdAtIso: new Date().toISOString()
+      });
+    }
+    if (p.correctiveActions) {
+      await capaRef.add({
+        actionType: 'CORRECTIVE_ACTION',
+        description: p.correctiveActions,
+        owner: 'Production LH / Engineering / Lab DH',
+        targetDate: due,
+        effectivenessCriteria: p.effectivenessCriteria || 'Zero recurrence & Ppk > 1.33 over 3 months',
+        status: 'IN_PROGRESS',
+        createdAtIso: new Date().toISOString()
+      });
+    }
+    if (p.preventiveAndHorizontalDeployment) {
+      await capaRef.add({
+        actionType: 'PREVENTIVE_HORIZONTAL',
+        description: p.preventiveAndHorizontalDeployment,
+        owner: 'Cross-Functional RCA Task Force / QMR',
+        targetDate: due,
+        effectivenessCriteria: p.effectivenessCriteria || 'PFMEA & SOP updated across MC2, MC3, MC5, MC6',
+        status: 'OPEN',
+        createdAtIso: new Date().toISOString()
+      });
+    }
+  }
+
+  toast('นำร่าง Level 5 ของ AI ไปเติมในฟอร์ม 5M+E และสร้างรายการ CAPA เรียบร้อย! กดประเมินซ้ำเพื่อรับคะแนน 5.0 ได้เลยครับ');
+  switchWsTab('investigation');
+}
+
+// =========================================================================
+// 11. CAPA CRUD (ADD, EDIT, DELETE)
+// =========================================================================
+async function saveCapaItem(event) {
+  event.preventDefault();
+  if (!currentCaseDocId) return;
+  const editId = document.getElementById('capa_editId').value;
+  const payload = {
+    actionType: document.getElementById('capa_type').value,
+    description: document.getElementById('capa_desc').value.trim(),
+    owner: document.getElementById('capa_owner').value.trim(),
+    targetDate: document.getElementById('capa_due').value,
+    status: document.getElementById('capa_status').value,
+    effectivenessCriteria: document.getElementById('capa_eff').value.trim(),
+    updatedAtIso: new Date().toISOString()
+  };
+
+  const colRef = db.collection('complaint_cases').doc(currentCaseDocId).collection('capa_actions');
+  if (editId) {
+    await colRef.doc(editId).update(payload);
+    toast('อัปเดตรายการ CAPA เรียบร้อย');
+  } else {
+    payload.createdAtIso = new Date().toISOString();
+    await colRef.add(payload);
+    toast('เพิ่มรายการ CAPA เรียบร้อย');
+  }
+  resetCapaForm();
+}
+
+function editCapaRow(id, item) {
+  document.getElementById('capa_editId').value = id;
+  document.getElementById('capa_type').value = item.actionType || 'CORRECTIVE_ACTION';
+  document.getElementById('capa_desc').value = item.description || '';
+  document.getElementById('capa_owner').value = item.owner || '';
+  document.getElementById('capa_due').value = item.targetDate || '';
+  document.getElementById('capa_status').value = item.status || 'OPEN';
+  document.getElementById('capa_eff').value = item.effectivenessCriteria || '';
+}
+
+async function deleteCapaRow(id) {
+  if (!confirm('ยืนยันการลบรายการ CAPA นี้?')) return;
+  await db.collection('complaint_cases').doc(currentCaseDocId).collection('capa_actions').doc(id).delete();
+  toast('ลบรายการ CAPA เรียบร้อย');
+}
+
+function resetCapaForm() {
+  document.getElementById('capaForm').reset();
+  document.getElementById('capa_editId').value = '';
+}
+
+// =========================================================================
+// 12. AI CUSTOMER RESPONSE & 10-POINT CLOSURE GATE
+// =========================================================================
+async function generateCustomerReply() {
+  if (!currentCaseObj) return;
+  setLoading(true, '✉️ AI กำลังร่างจดหมายตอบกลับลูกค้าอย่างเป็นทางการ...', 'อ้างอิงผลสืบสวน 5M+E และมาตรการ CAPA');
+  try {
+    const fn = functions.httpsCallable('draftCustomerComplaintResponse');
+    const res = await fn({
+      responseType: document.getElementById('respType').value,
+      language: document.getElementById('respLang').value,
+      caseData: currentCaseObj
+    });
+    document.getElementById('respSubject').value = res.data.draft.subject || '';
+    document.getElementById('respBody').value = res.data.draft.bodyText || '';
+    toast('ร่างจดหมายเสร็จสมบูรณ์ กรุณาตรวจสอบก่อนบันทึก');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function saveCustomerReplyDraft() {
+  if (!currentCaseDocId) return;
+  await db.collection('complaint_cases').doc(currentCaseDocId).update({
+    customerReplyDraft: {
+      subject: document.getElementById('respSubject').value.trim(),
+      bodyText: document.getElementById('respBody').value.trim(),
+      savedAtIso: new Date().toISOString()
+    }
+  });
+  await logClientAuditEvent('SAVE_CUSTOMER_REPLY', currentCaseObj?.caseId);
+  toast('บันทึกสำเนาจดหมายตอบลูกค้าเรียบร้อย');
+}
+
+async function changeWorkspaceStatus(newStatus) {
+  if (!currentCaseDocId) return;
+  if (newStatus === 'CLOSED') {
+    switchWsTab('closure');
+    return toast('การปิดเคส (CLOSED) ต้องกดยืนยันผ่าน Closure Gate 10 ข้อในแท็บที่ 6 เท่านั้นครับ', 'warn');
+  }
+  await db.collection('complaint_cases').doc(currentCaseDocId).update({
+    status: newStatus,
+    updatedAt: SV.serverTimestamp()
+  });
+  await logClientAuditEvent('STATUS_CHANGE', currentCaseObj?.caseId, { toStatus: newStatus });
+  toast(`เปลี่ยนสถานะเป็น ${newStatus} เรียบร้อย`);
+}
+
+async function executeCloseCaseGate() {
+  if (!currentCaseDocId || !currentCaseObj) return;
+  const checks = [...document.querySelectorAll('.cg-chk')];
+  if (checks.some(c => !c.checked)) {
+    return toast('⚠️ กรุณาตรวจสอบและติ๊กยืนยัน Closure Gate ให้ครบทั้ง 10 ข้อก่อนปิดเคสครับ', 'warn');
+  }
+  if (!currentCaseObj.rcaAssessment?.isLevel5Passed) {
+    return toast('⚠️ เคสนี้ยังไม่ผ่านเกณฑ์ประเมิน RCA Assessment Scale = Level 5 (5.0 เต็ม) ไม่สามารถปิดเคสได้!', 'error');
+  }
+
+  await db.collection('complaint_cases').doc(currentCaseDocId).update({
+    status: 'CLOSED',
+    closedAtIso: new Date().toISOString(),
+    updatedAt: SV.serverTimestamp()
+  });
+  await logClientAuditEvent('CLOSE_CASE_GATE_PASSED', currentCaseObj.caseId);
+  toast(`🎉 ปิดเคส ${currentCaseObj.caseId} ตามมาตรฐาน GQP-1007 & GMP สมบูรณ์แล้ว!`);
+}
+
+// =========================================================================
+// 13. EXPORT TO EXCEL (REGISTER & RRL-01 REPORT)
+// =========================================================================
+function exportRegisterExcel() {
+  if (!allCases.length) return toast('ไม่มีข้อมูลสำหรับ Export', 'warn');
+  const rows = allCases.map(c => ({
+    "Case ID": c.caseId,
+    "Type": c.caseType,
+    "Status": c.status,
+    "Severity": c.severity,
+    "Received Date": c.receivedDate,
+    "Customer": c.customerNameSnapshot,
+    "Customer Ref / SAP": c.externalRefs?.customerComplaintRef || '',
+    "RRL-01 Ref": c.externalRefs?.rrlRef || '',
+    "Product Family": c.productSummary?.family || '',
+    "Grade": c.productSummary?.grade || '',
+    "Machines": (c.productionSummary?.machineNumbers || []).join(', '),
+    "Production Dates": (c.productionSummary?.productionDates || []).join(', '),
+    "Lot Numbers": (c.productionSummary?.lotNumbers || []).join(', '),
+    "Invoices": (c.supplySummary?.invoiceNumbers || []).join(', '),
+    "Defect Category": c.issueSummary?.defectCategory || '',
+    "Symptom": c.issueSummary?.symptom || '',
+    "GMP Flag": c.riskFlags?.gmpRelevant ? 'YES' : 'NO',
+    "Root Cause": c.investigation?.rootCause || '',
+    "Level-5 Verified": c.rcaAssessment?.isLevel5Passed ? 'PASS (5.0)' : 'PENDING',
+    "15-Day SLA Due": c.dueDates?.interimReplyDue || ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Complaint_Register");
+  XLSX.writeFile(wb, `TRC_Complaint_Feedback_Register_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+  const auth = firebase.auth();
+  let currentUserProfile = null;
+  let unsubscribeCasesSnap = null;
+  let unsubscribeAuditSnap = null;
+
+  // กำหนด Role ที่อนุญาตให้เข้าใช้งานหน้า Customer Complaint
+  const ALLOWED_COMPLAINT_ROLES = ['Admin', 'SYSTEM_OWNER', 'Lead Auditor', 'Auditor', 'QMR', 'QA', 'Lab DH'];
+
+  async function verifyUserProfile(user) {
+    const ref = db.collection('users').doc(user.uid);
+    const snap = await ref.get();
+
+    if (!snap.exists) {
+      throw new Error('บัญชีของคุณยังไม่ได้รับการอนุมัติสิทธิ์ในระบบ (User profile not provisioned)');
+    }
+
+    const profile = snap.data();
+    if (profile.active === false) {
+      throw new Error('บัญชีผู้ใช้นี้ถูกระงับการใช้งาน (Account disabled)');
+    }
+
+    // ตรวจสอบ Role (หากมีกำหนด Role ไว้ในระบบ)
+    if (profile.role && !ALLOWED_COMPLAINT_ROLES.includes(profile.role)) {
+      throw new Error(`สิทธิ์การใช้งานของคุณ (${profile.role}) ไม่ได้รับอนุญาตให้เข้าถึงระบบ Customer Complaint`);
+    }
+
+    return profile;
+  }
+
+  // ดักจับสถานะการ Login แบบ Real-time
+  auth.onAuthStateChanged(async (user) => {
+    const loginScreen = document.getElementById('loginScreen');
+    const appMainLayout = document.getElementById('appMainLayout');
+
+    if (!user) {
+      currentUserProfile = null;
+      if (unsubscribeCasesSnap) { unsubscribeCasesSnap(); unsubscribeCasesSnap = null; }
+      if (unsubscribeAuditSnap) { unsubscribeAuditSnap(); unsubscribeAuditSnap = null; }
+      appMainLayout.classList.add('hidden');
+      loginScreen.classList.remove('hidden');
+      return;
+    }
+
+    setLoading(true, 'กำลังตรวจสอบสิทธิ์ผู้ใช้งาน...', 'Verifying Firebase Authentication & User Role');
+    try {
+      currentUserProfile = await verifyUserProfile(user);
+
+      // แสดงชื่อและสิทธิ์ใน Sidebar
+      document.getElementById('userNameDisplay').textContent = currentUserProfile.displayName || user.email;
+      document.getElementById('userRoleDisplay').textContent = `Role: ${currentUserProfile.role || 'Authorized'}`;
+
+      // ซ่อนหน้า Login และเปิดหน้าแอป
+      loginScreen.classList.add('hidden');
+      appMainLayout.classList.remove('hidden');
+
+      // เริ่มดึงข้อมูลเมื่อผ่านการยืนยันตัวตนแล้วเท่านั้น
+      initRealtimeListeners();
+      await logClientAuditEvent('USER_LOGIN', 'SYSTEM', { email: user.email, role: currentUserProfile.role });
+    } catch (err) {
+      toast(err.message, 'error');
+      await auth.signOut();
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ฟอร์มกดปุ่มเข้าสู่ระบบ
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    setLoading(true, 'กำลังเข้าสู่ระบบ...', 'Authenticating with Firebase...');
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch (err) {
+      toast('อีเมลหรือรหัสผ่านไม่ถูกต้อง: ' + err.message, 'error');
+      setLoading(false);
+    }
+  });
+
+  // ปุ่มกดออกจากระบบ
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await logClientAuditEvent('USER_LOGOUT', 'SYSTEM');
+    await auth.signOut();
+    toast('ออกจากระบบเรียบร้อยแล้ว');
+  });
+</script>
+</body>
+</html>
