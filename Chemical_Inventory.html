@@ -392,6 +392,9 @@
             <p class="text-sm text-slate-500">Pending → Approve/Standardize → Active → Expired/Discarded</p>
           </div>
           <div class="flex items-center gap-2">
+            <button id="btnCleanupOldWS" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors" title="ลบเฉพาะประวัติ Superseded/Discarded ที่เก่าเกิน 1 ปี (GMP Retention)">
+              <i class="fa-solid fa-broom mr-1"></i>Archive Cleanup (&gt;1 Yr)
+            </button>
             <button id="btnOpenPrepWSModal" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors">
               <i class="fa-solid fa-plus mr-2"></i>New Preparation (Pending)
             </button>
@@ -406,10 +409,9 @@
                 <option value="ALL">All</option>
                 <option value="Pending">Pending</option>
                 <option value="Active">Active</option>
-                <option value="Expired">Expired</option>
-                <option value="Discarded">Discarded</option>
-            <option value="Superseded">Superseded</option>
-                <option value="Superseded">Superseded</option>
+              <option value="Expired">Expired (หมดอายุ)</option>
+                <option value="Discarded">Discarded (ทำลายทิ้ง)</option>
+                <option value="Superseded">Superseded (เตรียมใหม่ทับแล้ว - เก็บประวัติ)</option>
               </select>
               <button id="btnWSReload" class="bg-slate-900 hover:bg-slate-950 text-white text-xs font-bold px-3 py-2 rounded-xl">
                 <i class="fa-solid fa-rotate mr-2"></i>Reload
@@ -771,8 +773,8 @@
             <input type="date" id="wsPrepDate" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500" />
           </div>
           <div>
-            <label class="block text-xs font-bold text-teal-600 uppercase mb-1">อายุสารละลาย (Expiry)</label>
-            <input type="text" id="wsExpDate" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-400 cursor-not-allowed text-center" value="คำนวณอัตโนมัติหลัง Approve (+45 วัน)" readonly />
+            <label class="block text-xs font-bold text-teal-600 uppercase mb-1">วันหมดอายุ (+45 วันจากวันเตรียม)</label>
+            <input type="text" id="wsExpDate" class="w-full p-3 bg-teal-50 border border-teal-200 rounded-xl font-bold text-teal-800 cursor-not-allowed text-center mono" value="เลือกวันเตรียมเพื่อคำนวณ (+45 วัน)" readonly />
           </div>
         </div>
  
@@ -786,44 +788,59 @@
     </div>
   </div>
  
-  <div id="approveModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-      <div class="bg-amber-500 p-4 text-white flex justify-between items-center">
-        <h3 class="font-bold text-lg"><i class="fa-solid fa-clipboard-check mr-2"></i>Approve / Standardization</h3>
-        <button id="btnCloseApproveModal" class="text-amber-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-      </div>
-      <div class="p-6 space-y-4">
-        <input type="hidden" id="approveDocId" />
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Actual Concentration</label>
-            <input type="number" step="0.0001" id="approveFactor" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" placeholder="(เว้นว่างได้)" />
+    <div id="approveModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div class="bg-amber-500 p-4 text-white flex justify-between items-center">
+          <h3 class="font-bold text-lg"><i class="fa-solid fa-clipboard-check mr-2"></i>WHO-GMP Approval &amp; E-Signature</h3>
+          <button id="btnCloseApproveModal" class="text-amber-100 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="approveDocId" />
+          <div id="approveBatchInfoBox" class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Actual Concentration</label>
+              <input type="number" step="0.0001" id="approveFactor" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" placeholder="(เว้นว่างได้)" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Unit (หน่วย)</label>
+              <select id="approveUnit" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+                <option value="">- ไม่มี -</option>
+                <option value="%">%</option>
+                <option value="ppm">ppm</option>
+                <option value="gpl">gpl</option>
+                <option value="g">g</option>
+                <option value="L">L</option>
+                <option value="ml">ml</option>
+                <option value="M">M</option>
+                <option value="N">N</option>
+              </select>
+            </div>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Unit (หน่วย)</label>
-            <select id="approveUnit" class="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
-              <option value="">- ไม่มี -</option>
-              <option value="%">%</option>
-              <option value="ppm">ppm</option>
-              <option value="gpl">gpl</option>
-              <option value="g">g</option>
-              <option value="L">L</option>
-              <option value="ml">ml</option>
-              <option value="M">M</option>
-              <option value="N">N</option>
-            </select>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Remark / Verification Note</label>
+            <input type="text" id="approveRemark" class="w-full p-3 border border-slate-300 rounded-xl" placeholder="เช่น อยู่ในเกณฑ์ที่ยอมรับได้" />
           </div>
+          <!-- [ANCHOR: WHO-GMP-Electronic-Signature-Box] ส่วนลงนามอิเล็กทรอนิกส์ ALCOA+ -->
+          <div class="p-3.5 bg-teal-50/70 border border-teal-200 rounded-xl space-y-3">
+            <div class="text-[11px] font-bold text-teal-800 uppercase flex items-center">
+              <i class="fa-solid fa-file-signature mr-1.5"></i>Electronic Signature (ALCOA+ Verification)
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">ชื่อ-นามสกุลผู้ทวนสอบ (Reviewer Name) *</label>
+              <input type="text" id="approveSignerName" class="w-full p-2.5 bg-white border border-teal-300 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-teal-500" placeholder="ระบุชื่อ-นามสกุลจริง" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">ยืนยันรหัสผ่านเข้าสู่ระบบ (Password Re-auth) *</label>
+              <input type="password" id="approveSignerPassword" class="w-full p-2.5 bg-white border border-teal-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500" placeholder="กรอกรหัสผ่านเพื่อประทับตรา E-Signature" />
+            </div>
+          </div>
+          <button id="btnConfirmApprove" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg mt-2 transition-colors">
+            <i class="fa-solid fa-check-double mr-2"></i>Sign &amp; Approve (Active)
+          </button>
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Remark</label>
-          <input type="text" id="approveRemark" class="w-full p-3 border border-slate-300 rounded-xl" placeholder="เช่น อยู่ในเกณฑ์ที่ยอมรับได้" />
-        </div>
-        <button id="btnConfirmApprove" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 transition-colors">
-          <i class="fa-solid fa-check-double mr-2"></i>Approve (Active)
-        </button>
       </div>
     </div>
-  </div>
  
   <div id="editStoreModal" class="fixed inset-0 bg-black/60 hidden-module z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
@@ -1015,7 +1032,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = initializeFirestore(app, { experimentalForceLongPolling: true });
-    const functions = getFunctions(app);
+    const functions = getFunctions(app, "asia-southeast1");
     const storage = getStorage(app); 
  
     const ADMIN_EMAILS = [
@@ -1024,11 +1041,92 @@
     ];
     let isSuperAdmin = false;
  
+    async function syncExpiredBatchesAndStats() {
+      try {
+        const todayStr = ymd(new Date());
+        const allWsSnap = await getDocs(collection(db, "WS_Batches"));
+
+        // 1. จัดกลุ่มตามสูตรสารเคมี (master_id หรือ ชื่อสาร+ความเข้มข้น) เพื่อหาขวดล่าสุดของแต่ละสูตร
+        const groups = {};
+        allWsSnap.docs.forEach(docSnap => {
+          const d = docSnap.data();
+          const key = d.master_id || normalizeWsScanIdentity(`${safeText(d.master_name)} ${safeText(d.master_conc)}`);
+          if (!key) return;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push({ docSnap, data: d, sortTime: getWsBatchSortTime(d) });
+        });
+
+        // 2. ตรวจสอบแต่ละสูตร: ถ้ามีขวดใหม่เตรียมขึ้นมาแล้ว (Pending หรือ Active) ขวดเก่ากว่าจะต้องถูกเปลี่ยนเป็น Superseded ทันที
+        for (const key of Object.keys(groups)) {
+          const list = groups[key];
+          // เรียงจากเตรียมล่าสุด -> เก่าสุด
+          list.sort((a, b) => b.sortTime - a.sortTime);
+          const newest = list[0];
+
+          for (let i = 0; i < list.length; i++) {
+            const item = list[i];
+            const d = item.data;
+            const st = String(d.status || "").trim();
+            const calcExp = d.exp_date || (d.prep_date ? addDaysToYMD(d.prep_date, 45) : "");
+
+            if (i === 0) {
+              // ขวดล่าสุดของสูตรนี้: ถ้าเป็น Active แต่เลยวันหมดอายุแล้ว (และยังไม่มีขวดใหม่มาแทน) ให้เปลี่ยนเป็น Expired
+              if (st === "Active" && calcExp && calcExp < todayStr) {
+                await updateDoc(item.docSnap.ref, {
+                  status: "Expired",
+                  exp_date: calcExp,
+                  system_note: `Auto-expired on ${todayStr} (Waiting for new preparation)`,
+                  lastUpdated: serverTimestamp()
+                });
+                item.data.status = "Expired";
+              } else if (!d.exp_date && calcExp) {
+                await updateDoc(item.docSnap.ref, { exp_date: calcExp });
+              }
+            } else {
+              // ขวดเก่า (มีขวดที่ใหม่กว่าคือ newest อยู่แล้ว): ถ้าสถานะยังค้างเป็น Active หรือ Expired ให้เปลี่ยนเป็น Superseded ทันที!
+              if (st === "Active" || st === "Expired") {
+                await updateDoc(item.docSnap.ref, {
+                  status: "Superseded",
+                  exp_date: calcExp,
+                  replaced_by: newest.data.label_id || "Newer Batch",
+                  replaced_at: serverTimestamp(),
+                  system_note: `Auto-superseded by ${newest.data.label_id || "newer preparation"}`,
+                  lastUpdated: serverTimestamp()
+                });
+                item.data.status = "Superseded";
+              }
+            }
+          }
+        }
+
+        // 3. นับยอดคงเหลือจริงหลังเคลียร์ขวดเก่าออกแล้ว
+        let pCount = 0, aCount = 0, eCount = 0;
+        Object.values(groups).flat().forEach(item => {
+          const st = String(item.data.status || "").toLowerCase();
+          if (st === "pending") pCount++;
+          else if (st === "active") aCount++;
+          else if (st === "expired") eCount++; // นับเฉพาะที่หมดอายุและยังไม่ได้เตรียมใหม่!
+        });
+
+        await setDoc(doc(db, "System_Stats", "Lab_Chemical_Dashboard"), {
+          total_pending: pCount,
+          total_active: aCount,
+          total_expired: eCount,
+          lastUpdated: serverTimestamp()
+        }, { merge: true });
+      } catch (err) {
+        console.error("syncExpiredBatchesAndStats error:", err);
+      }
+    }
+
     function runLazyMaintenance() {
+      syncExpiredBatchesAndStats().then(() => {
+        refreshDashboardOnly();
+      });
       const triggerDailyMaintenance = httpsCallable(functions, 'triggerDailyMaintenance');
       triggerDailyMaintenance().then((res) => {
-          if (res.data?.updated > 0) { console.log(`[Maintenance] Expired ${res.data.updated}`); refreshDashboardOnly(); }
-      }).catch(err => console.error(err));
+          if (res.data?.updated > 0) { refreshDashboardOnly(); }
+      }).catch(err => console.warn("Cloud Maintenance skipped:", err.message));
     }
  
     // =========================================================
@@ -1070,21 +1168,31 @@
     function ymd(dateObj) {
       const d = new Date(dateObj);
       if (Number.isNaN(d.getTime())) return "";
-      return d.toISOString().split("T")[0];
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
     }
- 
-    function addDaysToYMD(baseDate, days) {
-      const d = new Date(baseDate);
-      d.setDate(d.getDate() + days);
+
+    function addDaysToYMD(baseDateStr, days) {
+      if (!baseDateStr) return "";
+      const parts = String(baseDateStr).split("-");
+      const d = parts.length === 3 ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])) : new Date(baseDateStr);
+      if (Number.isNaN(d.getTime())) return "";
+      d.setDate(d.getDate() + Number(days));
       return ymd(d);
     }
- 
+
     function humanDaysLeft(expYmd) {
       if (!expYmd) return { text: "N/A", days: null };
-      const exp = new Date(expYmd);
-      const now = new Date();
-      const days = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
-      if (days < 0) return { text: `${expYmd} (Expired)`, days };
+      const todayParts = ymd(new Date()).split("-");
+      const expParts = String(expYmd).split("-");
+      if (expParts.length !== 3) return { text: expYmd, days: null };
+      const todayMs = new Date(Number(todayParts[0]), Number(todayParts[1]) - 1, Number(todayParts[2])).getTime();
+      const expMs = new Date(Number(expParts[0]), Number(expParts[1]) - 1, Number(expParts[2])).getTime();
+      const days = Math.round((expMs - todayMs) / (1000 * 60 * 60 * 24));
+      if (days < 0) return { text: `${expYmd} (Expired ${Math.abs(days)}d ago)`, days };
+      if (days === 0) return { text: `${expYmd} (Expires Today)`, days: 0 };
       return { text: `${expYmd} (${days} days)`, days };
     }
  
@@ -1654,20 +1762,27 @@
             return; 
         }
  
-        let filteredLots = storeChemicalsCache.filter(item => item.chemical_name === selectedChem && (item.current_opened_remaining > 0 || item.total_bottles > item.opened_bottles));
-        
-        filteredLots.sort((a, b) => {
-          const aOpened = a.current_opened_remaining > 0;
-          const bOpened = b.current_opened_remaining > 0;
-          if (aOpened && !bOpened) return -1;
-          if (!aOpened && bOpened) return 1;
-          let da = a.exp_date ? new Date(a.exp_date).getTime() : Infinity;
-          let db = b.exp_date ? new Date(b.exp_date).getTime() : Infinity;
-          return da - db;
-        });
- 
-        let lotHtml = '<option value="">-- เลือกล็อตของสารเคมี --</option>';
-        filteredLots.forEach(lotObj => {
+          const todayStr = ymd(new Date());
+          // [ANCHOR: GMP-Block-Expired-RawMaterial] กรองเอาเฉพาะ Lot ที่ยังไม่หมดอายุ (exp_date >= todayStr)
+          let allMatchingLots = storeChemicalsCache.filter(item => item.chemical_name === selectedChem && (item.current_opened_remaining > 0 || item.total_bottles > item.opened_bottles));
+          let filteredLots = allMatchingLots.filter(item => !item.exp_date || item.exp_date >= todayStr);
+          let expiredBlockedCount = allMatchingLots.length - filteredLots.length;
+
+          filteredLots.sort((a, b) => {
+            const aOpened = a.current_opened_remaining > 0;
+            const bOpened = b.current_opened_remaining > 0;
+            if (aOpened && !bOpened) return -1;
+            if (!aOpened && bOpened) return 1;
+            let da = a.exp_date ? new Date(a.exp_date).getTime() : Infinity;
+            let db = b.exp_date ? new Date(b.exp_date).getTime() : Infinity;
+            return da - db;
+          });
+
+          let lotHtml = '<option value="">-- เลือกล็อตของสารเคมี --</option>';
+          if (filteredLots.length === 0 && expiredBlockedCount > 0) {
+            lotHtml = `<option value="">🚫 สารเคมีนี้หมดอายุแล้ว (${expiredBlockedCount} Lot) - ระบบ GMP บล็อกการใช้งาน</option>`;
+          }
+          filteredLots.forEach(lotObj => {
           const shortLot = lotObj.manufacturer_lot || lotObj.id;
           const isOpened = lotObj.current_opened_remaining > 0;
           const statusText = isOpened ? "[เปิดแล้ว]" : "[ขวดใหม่]";
@@ -1735,9 +1850,9 @@
         document.addEventListener("click", (e) => { if(e.target.id !== "recvChemName") hide("recvAutocompleteList"); });
       }
  
-      if($("wsStatusFilter")) $("wsStatusFilter").onchange = () => loadWSBatches(true);
+      if($("wsStatusFilter")) $("wsStatusFilter").onchange = () => loadWSBatches(false);
       if($("btnWSReload")) $("btnWSReload").onclick = () => loadWSBatches(true);
-      if($("wsSearch")) $("wsSearch").oninput = () => loadWSBatches(true);
+      if($("wsSearch")) $("wsSearch").oninput = () => loadWSBatches(false);
  
       if($("btnOpenReceiveModal")) {
         $("btnOpenReceiveModal").onclick = async () => { 
@@ -1820,11 +1935,20 @@
       $("btnOpenPrepWSModal").onclick = () => { 
         if($("wsMasterSelect")) $("wsMasterSelect").value = "";
         if($("rawMaterialsContainer")) $("rawMaterialsContainer").innerHTML = ""; 
+        const todayStr = ymd(new Date());
+        if($("wsPrepDate")) $("wsPrepDate").value = todayStr;
+        if($("wsExpDate")) $("wsExpDate").value = addDaysToYMD(todayStr, 45);
         rmRowCounter = 0; 
         window.addRawMaterialRow(); 
         populateWsDeductEngine(); 
         show("prepWSModal"); 
       };
+    }
+    if($("wsPrepDate")) {
+      $("wsPrepDate").addEventListener("change", (e) => {
+        const pDate = e.target.value;
+        $("wsExpDate").value = pDate ? addDaysToYMD(pDate, 45) : "เลือกวันเตรียมเพื่อคำนวณ (+45 วัน)";
+      });
     }
     if($("btnAddRawMaterial")) {
       $("btnAddRawMaterial").addEventListener("click", window.addRawMaterialRow);
@@ -2488,15 +2612,26 @@
       try {
         const newBatchLabel = await generateUniqueWsBatchLabel();
  
-        await addDoc(collection(db, "WS_Batches"), {
-          label_id: newBatchLabel,
-          formula_qr_identity: formulaQrIdentity,
-          master_id: usedMasterId,
-          master_name: master?.name || currentBatch.master_name || usedMasterId,
-          master_conc: master?.concentration || currentBatch.master_conc || "",
-          ghs_classes: master?.ghs_classes || currentBatch.ghs_classes || [],
-          prep_date: prepDate,
-          exp_date: "",
+          const calculatedExpDate = addDaysToYMD(prepDate, 45);
+          // [ANCHOR: Supersede-Old-Batch-On-Renew] เปลี่ยนสถานะขวดเก่าที่หมดอายุหรือใกล้หมดอายุเป็น Superseded ทันทีที่เตรียมใหม่
+          if (lastScanCache.latestDocId) {
+            await updateDoc(doc(db, "WS_Batches", lastScanCache.latestDocId), {
+              status: "Superseded",
+              replaced_by: newBatchLabel,
+              replaced_at: serverTimestamp(),
+              replaced_by_user: auth.currentUser.email,
+              lastUpdated: serverTimestamp()
+            });
+          }
+          await addDoc(collection(db, "WS_Batches"), {
+            label_id: newBatchLabel,
+            formula_qr_identity: formulaQrIdentity,
+            master_id: usedMasterId,
+            master_name: master?.name || currentBatch.master_name || usedMasterId,
+            master_conc: master?.concentration || currentBatch.master_conc || "",
+            ghs_classes: master?.ghs_classes || currentBatch.ghs_classes || [],
+            prep_date: prepDate,
+            exp_date: calculatedExpDate,
           raw_lot_ref: rawLot.trim() || rawLotGuess || "N/A",
           raw_doc_id: currentBatch.raw_doc_id || null,
           raw_materials: Array.isArray(currentBatch.raw_materials) ? currentBatch.raw_materials : [],
@@ -2551,26 +2686,53 @@
  
     async function loadNearExpiryWS() {
       try {
-        const q1 = query(collection(db, "WS_Batches"), where("status", "==", "Active"), orderBy("exp_date", "asc"), limit(30));
+        const q1 = query(collection(db, "WS_Batches"), where("status", "in", ["Active", "Expired"]));
         const snap = await getDocs(q1);
         if (snap.empty) {
-          $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry active working solutions</div>`;
+          $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry or expired working solutions</div>`;
           return;
         }
- 
-        let html = "", hasAny = false;
+
+        let items = [];
         snap.forEach(d => {
           const x = d.data();
-          if (!x.exp_date) return;
-          const left = humanDaysLeft(x.exp_date);
+          const expDate = x.exp_date || (x.prep_date ? addDaysToYMD(x.prep_date, 45) : "");
+          if (!expDate) return;
+          const left = humanDaysLeft(expDate);
           if (left.days !== null && left.days <= 7) {
-            hasAny = true;
-            const cls = (left.days < 0) ? "bg-red-50 border-red-200 text-red-800" : (left.days <= 3 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-slate-50 border-slate-200 text-slate-700");
-            html += `<div class="p-3 rounded-lg border ${cls}"><div class="flex justify-between items-center gap-2"><div><div class="mono font-bold text-teal-700 text-xs">${safeText(x.label_id)}</div><div class="text-sm font-semibold truncate max-w-[200px]" title="${safeText(x.master_name)}">${safeText(x.master_name)}</div></div><div class="text-right text-xs font-bold leading-tight">${left.text.replace(' (', '<br><span class="text-[10px] font-normal">(')}</span></div></div></div>`;
+            items.push({ docId: d.id, ...x, exp_date: expDate, left });
           }
         });
- 
-        $("nearExpiryWS").innerHTML = hasAny ? `<div class="max-h-80 overflow-y-auto pr-2 space-y-2 custom-scrollbar">${html}</div>` : `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry within 7 days</div>`;
+
+        items.sort((a, b) => (a.left.days ?? 999) - (b.left.days ?? 999));
+
+        if (items.length === 0) {
+          $("nearExpiryWS").innerHTML = `<div class="p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium"><i class="fa-solid fa-circle-check mr-2"></i>No near-expiry within 7 days</div>`;
+          return;
+        }
+
+        let html = "";
+        items.forEach(x => {
+          const isExpired = x.left.days < 0 || x.status === "Expired";
+          const cls = isExpired ? "bg-red-50 border-red-200 text-red-800" : (x.left.days <= 3 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-slate-50 border-slate-200 text-slate-700");
+          const statusTag = isExpired ? `<span class="bg-red-600 text-white px-1.5 py-0.5 rounded text-[9px] font-bold ml-1">EXPIRED (รอเตรียมใหม่)</span>` : `<span class="bg-amber-500 text-white px-1.5 py-0.5 rounded text-[9px] font-bold ml-1">NEAR EXP</span>`;
+
+          html += `
+            <div class="p-3 rounded-lg border ${cls}">
+              <div class="flex justify-between items-center gap-2">
+                <div>
+                  <div class="mono font-bold text-teal-700 text-xs">${safeText(x.label_id)} ${statusTag}</div>
+                  <div class="text-sm font-semibold truncate max-w-[230px]" title="${safeText(x.master_name)} ${safeText(x.master_conc)}">${safeText(x.master_name)} <span class="text-xs font-normal">(${safeText(x.master_conc)})</span></div>
+                  <div class="text-[10px] opacity-75 mt-0.5">Prep: ${safeText(x.prep_date || "-")}</div>
+                </div>
+                <div class="text-right text-xs font-bold leading-tight">
+                  ${x.left.text.replace(' (', '<br><span class="text-[10px] font-normal">(')}</span>
+                </div>
+              </div>
+            </div>`;
+        });
+
+        $("nearExpiryWS").innerHTML = `<div class="max-h-80 overflow-y-auto pr-2 space-y-2 custom-scrollbar">${html}</div>`;
       } catch (err) { 
         $("nearExpiryWS").innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-xs"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error: ${err.message}</div>`;
       }
@@ -2703,9 +2865,14 @@
           if (days < 0) expCls = "text-red-600 font-bold";
           else if (days <= 30) expCls = "text-amber-600 font-bold";
         }
+        const isLotExpired = x.exp_date && x.exp_date < ymd(new Date());
         let stockHtml = `<div class="text-sm font-bold text-slate-700">ทั้งหมด: ${total} ขวด</div><div class="text-[11px] text-slate-500 font-medium">เปิดแล้ว: ${opened} ขวด</div>`;
         let actionHtml = "";
-        if (opened < total) actionHtml += `<button data-lot="${lot}" class="btnOpenBottle w-full mb-1 bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1.5 rounded text-xs font-bold shadow-sm transition-all active:scale-95"><i class="fa-solid fa-box-open mr-1"></i>เปิดขวดใหม่</button>`;
+        if (isLotExpired) {
+          actionHtml += `<div class="w-full mb-1 bg-red-100 text-red-700 border border-red-300 px-2 py-1.5 rounded text-[10px] font-bold"><i class="fa-solid fa-ban mr-1"></i>EXPIRED (ห้ามใช้)</div>`;
+        } else if (opened < total) {
+          actionHtml += `<button data-lot="${lot}" class="btnOpenBottle w-full mb-1 bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1.5 rounded text-xs font-bold shadow-sm transition-all active:scale-95"><i class="fa-solid fa-box-open mr-1"></i>เปิดขวดใหม่</button>`;
+        }
         if (opened > 0) stockHtml += `<div class="mt-1 text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-1 rounded border border-teal-200">ขวดเปิดเหลือ: ${remainingAmt} ${unit}</div>`;
         if (isSuperAdmin) {
           actionHtml += `<div class="flex gap-2 justify-center mt-2 border-t pt-2"><button data-id="${lot}" class="btnAdminEditStore text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded w-full"><i class="fa-solid fa-pen"></i></button><button data-id="${lot}" class="btnAdminDelStore text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded w-full"><i class="fa-solid fa-trash"></i></button></div>`;
@@ -2741,17 +2908,43 @@
     async function openBottleClientTransaction(docId) {
       if (!docId) return;
       try {
+        const todayStr = ymd(new Date());
+        const oneYearFromOpen = addDaysToYMD(todayStr, 365);
+        let finalAfterOpenExp = oneYearFromOpen;
+
         await runTransaction(db, async (tx) => {
           const ref = doc(db, "Store_Chemicals", docId);
           const snap = await tx.get(ref);
           if (!snap.exists()) throw new Error("ไม่พบข้อมูลวัตถุดิบชิ้นนี้");
           const x = snap.data();
+          if (x.exp_date && x.exp_date < todayStr) throw new Error("🚫 GMP Blocked: สารเคมี Lot นี้หมดอายุแล้ว (" + x.exp_date + ") ห้ามเปิดใช้งานเด็ดขาด!");
           if (Number(x.opened_bottles || 0) >= Number(x.total_bottles || 0)) throw new Error("ไม่มีขวดใหม่ให้เปิดแล้ว");
- 
-          tx.update(ref, { opened_bottles: increment(1), current_opened_remaining: Number(x.capacity_per_bottle || 0), last_opened_date: serverTimestamp(), last_opened_by: auth.currentUser.email, lastUpdated: serverTimestamp() });
-          tx.set(doc(collection(db, "Lab_Store_Transaction_Logs")), { action: "OPEN_BOTTLE", document_id: docId, manufacturer_lot: x.manufacturer_lot || "N/A", operator: auth.currentUser.email, timestamp: serverTimestamp() });
+
+          // เลือกวันที่สั้นกว่าระหว่าง Exp Date ข้างขวด กับ +365 วันหลังเปิดขวด
+          if (x.exp_date && x.exp_date < oneYearFromOpen) {
+            finalAfterOpenExp = x.exp_date;
+          }
+
+          tx.update(ref, {
+            opened_bottles: increment(1),
+            current_opened_remaining: Number(x.capacity_per_bottle || 0),
+            opened_date_ymd: todayStr,
+            exp_after_open_ymd: finalAfterOpenExp,
+            last_opened_date: serverTimestamp(),
+            last_opened_by: auth.currentUser.email,
+            lastUpdated: serverTimestamp()
+          });
+          tx.set(doc(collection(db, "Lab_Store_Transaction_Logs")), {
+            action: "OPEN_BOTTLE",
+            document_id: docId,
+            manufacturer_lot: x.manufacturer_lot || "N/A",
+            opened_date_ymd: todayStr,
+            exp_after_open_ymd: finalAfterOpenExp,
+            operator: auth.currentUser.email,
+            timestamp: serverTimestamp()
+          });
         });
-        alert("✅ เปิดขวดใหม่เรียบร้อย สต็อกในขวดถูกรีเซ็ตเต็มความจุ");
+        alert(`✅ เปิดขวดใหม่เรียบร้อย (WHO-GMP Logged)\nวันที่เปิดขวด: ${todayStr}\nวันหมดอายุหลังเปิดขวด: ${finalAfterOpenExp}`);
         await loadStoreTable(); await loadStoreAlerts(); populateWsDeductEngine();
       } catch (err) { alert("❌ ผิดพลาด: " + err.message); }
     }
@@ -2984,10 +3177,30 @@
       btn.disabled = true; 
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving & Deducting...';
  
-      try {
-        const batchLabelId = await generateUniqueWsBatchLabel();
-        await runTransaction(db, async (tx) => {
-          rmItems.forEach(rm => {
+            try {
+            const batchLabelId = await generateUniqueWsBatchLabel();
+            const calculatedExpDate = addDaysToYMD(prepDate, 45);
+            const todayStr = ymd(new Date());
+
+            // ค้นหาขวดเก่าของสูตรเดียวกันที่หมดอายุแล้วหรือใกล้หมดอายุ เพื่อเปลี่ยนเป็น Superseded (เก็บประวัติ Traceability แต่เอาออกจากหน้าแจ้งเตือน Dashboard)
+              const oldBatchesSnap = await getDocs(query(collection(db, "WS_Batches"), where("master_id", "==", masterId)));
+              const oldDocsToSupersede = oldBatchesSnap.docs.filter(d => {
+                const st = String(d.data().status || "").trim();
+                return st === "Expired" || st === "Active";
+              });
+
+            await runTransaction(db, async (tx) => {
+              oldDocsToSupersede.forEach(oldDoc => {
+                tx.update(oldDoc.ref, {
+                  status: "Superseded",
+                  replaced_by: batchLabelId,
+                  replaced_at: serverTimestamp(),
+                  replaced_by_user: auth.currentUser.email,
+                  lastUpdated: serverTimestamp()
+                });
+              });
+
+              rmItems.forEach(rm => {
             if (rm.source === "WS") {
                // กรณีที่สารตั้งต้นคือ Working Solution ให้ไปตัดยอดที่ WS_Batches
                const wsRef = doc(db, "WS_Batches", rm.rawDocId);
@@ -3027,7 +3240,7 @@
             master_conc: master?.concentration || "",
             ghs_classes: master?.ghs_classes || [],
             prep_date: prepDate, 
-            exp_date: "", 
+            exp_date: calculatedExpDate, 
             raw_materials: rmItems.map(r => ({ doc_id: r.rawDocId, lot_ref: r.rawLotDisplay, amount: r.deductAmt, unit: r.unit })),
             raw_lot_ref: rmItems.length > 0 ? rmItems.map(r => r.rawLotDisplay).join(', ') : "N/A", 
             raw_doc_id: rmItems.length > 0 ? rmItems[0].rawDocId : null,
@@ -3110,37 +3323,70 @@ Status: Pending
        } catch(e) { alert(e.message); }
     };
  
-    const WS_PAGE_SIZE = 80; let wsLastDoc = null;
-    async function loadWSBatches(reset = false) {
+    let wsBatchesCache = [];
+    async function loadWSBatches(forceReload = false) {
       try {
-        if (reset) wsLastDoc = null;
-        const statusFilter = $("wsStatusFilter")?.value || "ALL", keyword = $("wsSearch")?.value?.trim().toLowerCase() || "";
-        let q1 = query(collection(db, "WS_Batches"), orderBy("timestamp", "desc"), limit(WS_PAGE_SIZE));
-        if (!reset && wsLastDoc) q1 = query(collection(db, "WS_Batches"), orderBy("timestamp", "desc"), startAfter(wsLastDoc), limit(WS_PAGE_SIZE));
- 
-        const snap = await getDocs(q1); const tbody = $("wsTableBody");
-        if (snap.empty) { tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ยังไม่มีข้อมูล</td></tr>`; return; }
- 
-        wsLastDoc = snap.docs[snap.docs.length - 1]; let rows = [];
-        snap.forEach(docSnap => {
-          const d = docSnap.data(), id = docSnap.id;
-          if (statusFilter !== "ALL" && d.status !== statusFilter) return;
-          const hay = [safeText(d.label_id), safeText(d.master_name), safeText(d.raw_lot_ref), safeText(d.preparer), safeText(d.status)].join(" ").toLowerCase();
-          if (keyword && !hay.includes(keyword)) return;
- 
-          const expInfo = humanDaysLeft(d.exp_date);
-          let expHtml = d.status === "Pending" ? `<span class="text-slate-400 italic">Waiting</span>` : `<span class="${(expInfo.days !== null && expInfo.days <= 3) ? "text-amber-600 font-bold" : "text-slate-700"}">${expInfo.text}</span>`;
-          let statusBadge = d.status === "Pending" ? `<span class="badge badge-amber"><i class="fa-solid fa-clock"></i>Pending</span>` : (d.status === "Active" ? `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i>Active</span>` : `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>${safeText(d.status)}</span>`);
- 
-          let actionHtml = d.status === "Pending" ? `<button data-id="${id}" class="btnApprove bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm"><i class="fa-solid fa-check-double mr-1"></i>Approve</button>` : (d.status === "Active" ? `<div class="text-xs text-slate-500">Factor: <b class="text-green-700">${safeText(d.standardization?.factor)}</b><br/><button data-id="${id}" class="btnDiscard mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm"><i class="fa-solid fa-trash mr-1"></i>Discard</button></div>` : `<div class="text-xs text-slate-400">Locked</div>`);
- 
+        const tbody = $("wsTableBody");
+        if (forceReload || wsBatchesCache.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...</td></tr>`;
+          // ดึงโดยไม่ใช้ orderBy("timestamp") เพื่อไม่ให้เอกสารที่ไม่มีฟิลด์ timestamp ตกหล่น
+          const snap = await getDocs(collection(db, "WS_Batches"));
+          const sortedDocs = sortWsBatchDocumentsByLatest(snap.docs);
+          wsBatchesCache = sortedDocs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+        }
+
+        if (wsBatchesCache.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ยังไม่มีข้อมูล</td></tr>`;
+          return;
+        }
+
+        const statusFilter = $("wsStatusFilter")?.value || "ALL";
+        const rawKeyword = $("wsSearch")?.value?.trim().toLowerCase() || "";
+        // แยกคำค้นหาด้วยช่องว่างและตัดวงเล็บออก เพื่อให้ค้นหา "K2CrO4 (Potassium Chromate) 5%" หรือ "K2CrO4" ได้แม่นยำทุกรูปแบบ
+        const searchTokens = rawKeyword.replace(/[()]/g, " ").split(/\s+/).filter(Boolean);
+
+        let rows = [];
+        wsBatchesCache.forEach(item => {
+          const d = item.data, id = item.id;
+          if (statusFilter !== "ALL" && String(d.status || "").toLowerCase() !== statusFilter.toLowerCase()) return;
+
+          if (searchTokens.length > 0) {
+            const hay = [
+              safeText(d.label_id),
+              safeText(d.master_name),
+              safeText(d.master_conc),
+              safeText(d.formula_qr_identity),
+              safeText(d.master_id),
+              safeText(d.raw_lot_ref),
+              safeText(d.preparer),
+              safeText(d.status),
+              safeText(d.prep_date),
+              safeText(d.exp_date)
+            ].join(" ").toLowerCase().replace(/[()]/g, " ");
+
+            // ต้องตรงกับทุกคำย่อยที่พิมพ์ค้นหา
+            const isMatched = searchTokens.every(token => hay.includes(token));
+            if (!isMatched) return;
+          }
+
+          const effectiveExp = d.exp_date || (d.prep_date ? addDaysToYMD(d.prep_date, 45) : "");
+          const expInfo = humanDaysLeft(effectiveExp);
+          let expHtml = `<span class="${(expInfo.days !== null && expInfo.days < 0) ? "text-red-600 font-bold" : ((expInfo.days !== null && expInfo.days <= 7) ? "text-amber-600 font-bold" : "text-slate-700")}">${expInfo.text}</span>`;
+          let statusBadge = d.status === "Pending" ? `<span class="badge badge-amber"><i class="fa-solid fa-clock"></i>Pending</span>` : (d.status === "Active" ? `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i>Active</span>` : (d.status === "Superseded" ? `<span class="badge badge-slate"><i class="fa-solid fa-clock-rotate-left"></i>Superseded</span>` : `<span class="badge badge-red"><i class="fa-solid fa-ban"></i>${safeText(d.status)}</span>`));
+
+          let actionHtml = d.status === "Pending"
+            ? `<button data-id="${id}" class="btnApprove bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm"><i class="fa-solid fa-check-double mr-1"></i>Approve</button>`
+            : ((d.status === "Active" || d.status === "Expired")
+              ? `<div class="text-xs text-slate-500">Factor: <b class="text-green-700">${safeText(d.standardization?.factor || "-")}</b><br/><button data-id="${id}" class="btnDiscard mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm"><i class="fa-solid fa-trash mr-1"></i>Discard</button></div>`
+              : `<div class="text-[11px] text-slate-400 font-semibold">${d.replaced_by ? `แทนที่โดย<br><span class="mono text-teal-700">${safeText(d.replaced_by)}</span>` : "Archived (เก็บประวัติ)"}</div>`);
+
           if (isSuperAdmin) {
              actionHtml += `<div class="flex gap-2 justify-center mt-2 border-t pt-2"><button data-id="${id}" class="btnAdminEditWs text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded w-full"><i class="fa-solid fa-pen"></i></button><button data-id="${id}" class="btnAdminDelWs text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded w-full"><i class="fa-solid fa-trash"></i></button></div>`;
           }
- 
+
           rows.push(`<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="p-4 mono font-bold text-teal-700 text-xs"><i class="fa-solid fa-qrcode mr-1"></i>${safeText(d.label_id)}</td><td class="p-4"><p class="font-bold text-slate-800">${safeText(d.master_name)}</p><p class="text-xs text-teal-600 font-semibold bg-teal-50 inline-block px-2 rounded mt-1">${safeText(d.master_conc)}</p></td><td class="p-4 text-xs"><p class="text-slate-500 mb-1">Prep: ${safeText(d.prep_date)}</p><p class="text-slate-400">Raw Lot: <span class="mono">${safeText(d.raw_lot_ref)}</span></p></td><td class="p-4 text-sm">${expHtml}</td><td class="p-4 text-center">${statusBadge}</td><td class="p-4 text-center align-middle w-32">${actionHtml}</td></tr>`);
         });
- 
+
         if (rows.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500">ไม่พบข้อมูล</td></tr>`; return; }
         tbody.innerHTML = rows.join("");
         document.querySelectorAll(".btnApprove").forEach(b => b.addEventListener("click", () => openApproveModal(b.getAttribute("data-id"))));
@@ -3150,25 +3396,66 @@ Status: Pending
       } catch (err) { console.error(err); }
     }
  
-    function openApproveModal(docId) { $("approveDocId").value = docId; $("approveFactor").value = ""; $("approveUnit").value = ""; $("approveRemark").value = ""; show("approveModal"); }
+    async function openApproveModal(docId) {
+      $("approveDocId").value = docId;
+      $("approveFactor").value = "";
+      $("approveUnit").value = "";
+      $("approveRemark").value = "";
+      $("approveSignerName").value = "";
+      $("approveSignerPassword").value = "";
+      if ($("approveBatchInfoBox")) $("approveBatchInfoBox").innerHTML = "กำลังโหลดข้อมูล Batch...";
+      show("approveModal");
+
+      try {
+        const snap = await getDoc(doc(db, "WS_Batches", docId));
+        if (snap.exists() && $("approveBatchInfoBox")) {
+          const d = snap.data();
+          const samePersonWarn = (d.preparer === auth.currentUser.email)
+            ? `<div class="mt-1.5 p-1.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>หมายเหตุ: คุณเป็นผู้เตรียมสารขวดนี้ ตามหลัก 4-Eyes Principle ควรให้ผู้ทวนสอบท่านอื่นเป็นผู้อนุมัติ</div>`
+            : "";
+          $("approveBatchInfoBox").innerHTML = `
+            <div><b>Batch:</b> <span class="mono text-teal-700 font-bold">${safeText(d.label_id)}</span> | <b>Formula:</b> ${safeText(d.master_name)} (${safeText(d.master_conc)})</div>
+            <div class="mt-0.5"><b>Prepared By:</b> ${safeText(d.preparer)} | <b>Prep Date:</b> ${safeText(d.prep_date)}</div>
+            ${samePersonWarn}
+          `;
+        }
+      } catch (e) { console.error(e); }
+    }
+
     $("btnConfirmApprove").addEventListener("click", async () => {
       const docId = $("approveDocId").value;
       const factor = $("approveFactor").value;
       const unit = $("approveUnit").value;
-      const remark = $("approveRemark").value;
+      const remark = $("approveRemark").value.trim();
+      const signerName = $("approveSignerName")?.value.trim() || "";
+      const signerPassword = $("approveSignerPassword")?.value || "";
       if (!docId) return;
- 
+
+      if (!signerName || !signerPassword) {
+        alert("⚠️ มาตรฐาน WHO-GMP (ALCOA+): กรุณาระบุชื่อ-นามสกุลผู้ทวนสอบ และรหัสผ่านเพื่อลงนามอิเล็กทรอนิกส์ (Electronic Signature)");
+        return;
+      }
+
       const factorDisplay = factor ? `${factor} ${unit}`.trim() : "N/A";
       const btn = $("btnConfirmApprove");
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Approving...';
- 
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Verifying E-Signature...';
+
       try {
         const newBatchRef = doc(db, "WS_Batches", docId);
         const newBatchSnap = await getDoc(newBatchRef);
         if (!newBatchSnap.exists()) throw new Error("ไม่พบ Batch ที่ต้องการ Approve");
- 
+
         const newBatchData = newBatchSnap.data();
+
+        // 1. ตรวจสอบ Segregation of Duties (4-Eyes Principle)
+        if (newBatchData.preparer === auth.currentUser.email && !isSuperAdmin) {
+          throw new Error("🚫 GMP Segregation of Duties (4-Eyes Principle): ผู้เตรียมสารไม่สามารถกด Approve สารที่ตนเองเตรียมได้ กรุณาให้เจ้าหน้าที่ท่านอื่นหรือหัวหน้างานเป็นผู้ทวนสอบ");
+        }
+
+        // 2. ยืนยันตัวตนด้วยรหัสผ่านจริง (Electronic Signature Re-authentication)
+        await signInWithEmailAndPassword(auth, auth.currentUser.email, signerPassword);
+
         const sameMasterSnapshot = await getDocs(
           query(
             collection(db, "WS_Batches"),
@@ -3176,51 +3463,120 @@ Status: Pending
             limit(100)
           )
         );
-        const activeDocuments = sameMasterSnapshot.docs.filter(activeDoc =>
-          safeText(activeDoc.data().status).trim().toUpperCase() === "ACTIVE"
-        );
- 
+        const oldDocuments = sameMasterSnapshot.docs.filter(d => {
+          const st = safeText(d.data().status).trim().toUpperCase();
+          return d.id !== docId && (st === "ACTIVE" || st === "EXPIRED");
+        });
+
+        const expFromPrep = newBatchData.prep_date ? addDaysToYMD(newBatchData.prep_date, 45) : (newBatchData.exp_date || addDaysToYMD(ymd(new Date()), 45));
+        const verifiedAtIso = new Date().toISOString();
+
         await runTransaction(db, async tx => {
-          for (const activeDoc of activeDocuments) {
-            if (activeDoc.id !== docId) {
-              tx.update(activeDoc.ref, {
-                status: "Superseded",
-                replaced_by: newBatchData.label_id,
-                replaced_at: serverTimestamp(),
-                replaced_by_user: auth.currentUser.email,
-                lastUpdated: serverTimestamp()
-              });
-            }
+          for (const oldDoc of oldDocuments) {
+            tx.update(oldDoc.ref, {
+              status: "Superseded",
+              replaced_by: newBatchData.label_id,
+              replaced_at: serverTimestamp(),
+              replaced_by_user: auth.currentUser.email,
+              lastUpdated: serverTimestamp()
+            });
           }
- 
+
           tx.update(newBatchRef, {
             status: "Active",
-            exp_date: addDaysToYMD(new Date(), 45),
+            exp_date: expFromPrep,
             standardization: {
               factor: factorDisplay,
-              remark: remark || "",
+              remark: remark || "Verified & Approved",
               verified_by: auth.currentUser.email,
-              verified_at: new Date().toISOString()
+              verifier_full_name: signerName,
+              verified_at: verifiedAtIso
+            },
+            electronic_signature: {
+              signer_name: signerName,
+              signer_email: auth.currentUser.email,
+              signer_uid: auth.currentUser.uid,
+              meaning: "Working Solution Standardization & Release Approval (WHO-GMP)",
+              signed_at_iso: verifiedAtIso,
+              verified_server_timestamp: serverTimestamp()
             },
             approved_by: auth.currentUser.email,
             approved_at: serverTimestamp(),
             lastUpdated: serverTimestamp()
           });
+
+          // บันทึก Immutable Audit Trail ลง Collection แยก
+          tx.set(doc(collection(db, "Lab_WS_Audit_Logs")), {
+            action: "APPROVE_WS_BATCH",
+            batch_doc_id: docId,
+            label_id: newBatchData.label_id,
+            master_name: newBatchData.master_name,
+            preparer: newBatchData.preparer,
+            approver_email: auth.currentUser.email,
+            approver_name: signerName,
+            factor: factorDisplay,
+            exp_date: expFromPrep,
+            timestamp: serverTimestamp()
+          });
         });
- 
+
         hide("approveModal");
+        await syncExpiredBatchesAndStats();
         await loadWSBatches(true);
         await refreshDashboardOnly();
       } catch (err) {
         alert("❌ Approve ไม่สำเร็จ: " + err.message);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i>Approve (Active)';
+        btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i>Sign & Approve (Active)';
       }
     });
+
     async function discardWS(docId) {
-      if (!docId) return; const reason = prompt("ใส่เหตุผลการ Discard (GMP):", "Expired / Contaminated"); if (reason === null) return;
-      try { await updateDoc(doc(db, "WS_Batches", docId), { status: "Discarded", discard_reason: reason, discarded_by: auth.currentUser.email, discarded_at: new Date().toISOString(), lastUpdated: serverTimestamp() }); await loadWSBatches(true); await refreshDashboardOnly(); } catch (err) { alert(err.message); }
+      if (!docId) return;
+      const reason = prompt("ใส่เหตุผลการ Discard (GMP):", "Expired / Contaminated");
+      if (reason === null || !reason.trim()) return;
+      try {
+        await updateDoc(doc(db, "WS_Batches", docId), {
+          status: "Discarded",
+          discard_reason: reason.trim(),
+          discarded_by: auth.currentUser.email,
+          discarded_at: new Date().toISOString(),
+          lastUpdated: serverTimestamp()
+        });
+        await syncExpiredBatchesAndStats();
+        await loadWSBatches(true);
+        await refreshDashboardOnly();
+      } catch (err) { alert(err.message); }
+    }
+
+    // [ANCHOR: GMP-1Year-Archive-Cleanup] ลบเฉพาะประวัติ Superseded / Discarded ที่เก่าเกิน 1 ปี (365 วัน) เพื่อรักษาฐานข้อมูลให้เบาโดยไม่เสีย Traceability 1 ปี
+    if ($("btnCleanupOldWS")) {
+      $("btnCleanupOldWS").addEventListener("click", async () => {
+        if (!isSuperAdmin) {
+          alert("เฉพาะ Admin เท่านั้นที่สามารถรันคำสั่ง Archive Cleanup ได้ครับ");
+          return;
+        }
+        const cutoffYmd = addDaysToYMD(ymd(new Date()), -365);
+        if (!confirm(`⚠️ ยืนยันการทำ GMP Archive Cleanup?\n\nระบบจะลบเฉพาะรายการ Working Solution ที่มีสถานะ 'Superseded' หรือ 'Discarded' ที่เตรียมไว้ก่อนวันที่ ${cutoffYmd} (เก่าเกิน 1 ปี)\n*รายการภายใน 1 ปี และรายการที่ยัง Active/Pending จะถูกเก็บไว้ทั้งหมด*`)) return;
+
+        try {
+          const allSnap = await getDocs(collection(db, "WS_Batches"));
+          let deletedCount = 0;
+          for (const d of allSnap.docs) {
+            const data = d.data();
+            const st = String(data.status || "").trim();
+            if ((st === "Superseded" || st === "Discarded") && data.prep_date && data.prep_date < cutoffYmd) {
+              await deleteDoc(d.ref);
+              deletedCount++;
+            }
+          }
+          alert(`✅ ทำความสะอาดฐานข้อมูลสำเร็จ! ลบประวัติเก่าเกิน 1 ปีออกจำนวน ${deletedCount} รายการ`);
+          await loadWSBatches(true);
+        } catch (err) {
+          alert("❌ เกิดข้อผิดพลาด: " + err.message);
+        }
+      });
     }
  
     // =========================================================
@@ -3599,10 +3955,14 @@ Status: Pending
       $("resTypeBadge").className = "badge badge-amber"; 
       $("resTypeBadge").innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>SEARCH';
  
-      let lots = storeChemicalsCache.filter(x => x.chemical_name === chemName && (x.total_bottles - x.opened_bottles > 0 || x.current_opened_remaining > 0));
- 
+      const todayStr = ymd(new Date());
+      let allLots = storeChemicalsCache.filter(x => x.chemical_name === chemName && (x.total_bottles - x.opened_bottles > 0 || x.current_opened_remaining > 0));
+      // [ANCHOR: FEFO-Exclude-Expired] กรองเฉพาะขวดที่ยังไม่หมดอายุมาแนะนำให้ใช้งาน
+      let lots = allLots.filter(x => !x.exp_date || x.exp_date >= todayStr);
+
       if(lots.length === 0) {
-         $("resSubtitle").innerHTML = `<div class="p-8 text-center text-red-400 bg-red-50 rounded-xl"><i class="fa-solid fa-box-open text-3xl mb-2 block"></i>ไม่พบสต็อกของ ${chemName} ในคลังหลัก</div>`;
+         const expMsg = allLots.length > 0 ? `พบสต็อก ${allLots.length} Lot แต่หมดอายุทั้งหมดแล้ว 🚫 (ระบบ GMP ห้ามนำไปใช้งาน)` : `ไม่พบสต็อกของ ${chemName} ในคลังหลัก`;
+         $("resSubtitle").innerHTML = `<div class="p-8 text-center text-red-600 bg-red-50 rounded-xl border border-red-200 font-bold"><i class="fa-solid fa-ban text-3xl mb-2 block"></i>${expMsg}</div>`;
          return;
       }
  

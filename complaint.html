@@ -217,9 +217,27 @@
             <h3 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-industry text-indigo-600 mr-1"></i> แยกตามเครื่องจักร (Machine Line MC2-MC6)</h3>
             <div class="h-60"><canvas id="chartByMachine"></canvas></div>
           </div>
-          <div class="card p-5">
+      <div class="card p-5">
             <h3 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-chart-line text-emerald-600 mr-1"></i> แนวโน้มรายเดือน (Monthly Trend)</h3>
             <div class="h-60"><canvas id="chartByMonth"></canvas></div>
+          </div>
+        </div>
+
+        <!-- [ANCHOR: Executive-AI-Insights-Panel] แผงวิเคราะห์ AI ระดับผู้บริหาร (เหมือนระบบ Internal Audit) -->
+        <div class="card p-6 border-l-4 border-l-indigo-600 bg-gradient-to-br from-white to-indigo-50/30 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-brain text-indigo-600"></i> Executive AI Systemic Insights & Management Review Summary
+              </h3>
+              <p class="text-xs text-slate-500">วิเคราะห์แนวโน้มปัญหาซ้ำซาก (Systemic Issues), ความเชื่อมโยงเครื่องจักร MC2-MC6 และข้อเสนอแนะเชิงรุกสำหรับทีมและผู้บริหาร</p>
+            </div>
+            <button data-id="btn-run-exec-insights" onclick="runExecutiveAiInsights()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow flex items-center gap-2 transition">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> วิเคราะห์ภาพรวมด้วย AI (Generate Insights)
+            </button>
+          </div>
+          <div id="execAiInsightsContainer" class="text-xs text-slate-600">
+            <div class="p-4 text-center text-slate-400">กดปุ่ม "วิเคราะห์ภาพรวมด้วย AI" เพื่อให้ระบบสรุป Systemic Insights ล่าสุดจากฐานข้อมูล</div>
           </div>
         </div>
       </section>
@@ -565,6 +583,46 @@
               </button>
             </div>
 
+          <div class="card p-5 border-l-4 border-l-emerald-600 bg-emerald-50/30 space-y-3">
+              <div class="flex flex-wrap justify-between items-center gap-2 border-b border-emerald-200 pb-2">
+                <div>
+                  <h4 class="font-bold text-sm text-emerald-950"><i class="fa-solid fa-calculator text-emerald-600 mr-1.5"></i>เครื่องคำนวณดัชนีศักยภาพกระบวนการ (SPC Capability: Cp, Cpk, Pp, Ppk, CV%, Avg, Min, Max)</h4>
+                  <p class="text-[11px] text-slate-600">เลือกพารามิเตอร์ที่ดึงมาจากฐานข้อมูล หรือกรอกค่าเพื่อคำนวณเทียบกับ Spec Limit (LSL / USL) แล้วส่งเข้าช่องหลักฐานสถิติ Level 5 ได้ทันที</p>
+                </div>
+                <button type="button" data-id="btn-push-spc" onclick="pushSpcToInvestigation()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold shadow">
+                  <i class="fa-solid fa-file-import mr-1"></i> ส่งผลคำนวณเข้าฟอร์มสืบสวน 5M+E (เกณฑ์ C = Level 5)
+                </button>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-8 gap-2.5 text-xs">
+                <label class="font-bold text-slate-700 md:col-span-2">เลือกพารามิเตอร์จากระบบ (Auto-fill)
+                  <select id="spc_paramSelect" onchange="onSelectSpcParameter(this.value)" class="w-full border rounded-lg p-2 mt-1 bg-white font-semibold">
+                    <option value="">-- ดึงข้อมูลโรงงานก่อน หรือกรอกเอง --</option>
+                  </select>
+                </label>
+                <label class="font-bold text-slate-700">LSL (สเปคต่ำสุด)
+                  <input type="number" step="any" id="spc_lsl" oninput="calculateSpcMetrics()" placeholder="เช่น 2.20" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
+                </label>
+                <label class="font-bold text-slate-700">USL (สเปคสูงสุด)
+                  <input type="number" step="any" id="spc_usl" oninput="calculateSpcMetrics()" placeholder="เช่น 2.80" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
+                </label>
+                <label class="font-bold text-slate-700">Mean (Avg)
+                  <input type="number" step="any" id="spc_mean" oninput="calculateSpcMetrics()" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
+                </label>
+                <label class="font-bold text-slate-700">SD (Within / Overall)
+                  <input type="number" step="any" id="spc_sd" oninput="calculateSpcMetrics()" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
+                </label>
+                <label class="font-bold text-slate-700">Min / Max
+                  <input type="text" id="spc_minmax" placeholder="Min / Max" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
+                </label>
+                <label class="font-bold text-slate-700">Within SD Factor
+                  <input type="number" step="0.01" id="spc_withinFactor" value="0.92" oninput="calculateSpcMetrics()" title="สัดส่วน Within-subgroup SD ต่อ Overall SD (ปกติ 0.85-0.95)" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
+                </label>
+              </div>
+              <div id="spcResultBanner" class="p-3 rounded-xl bg-white border border-emerald-200 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                <span class="text-slate-500">กรอกค่า LSL และ USL เพื่อคำนวณค่า Cp, Cpk, Pp, Ppk และ %CV อัตโนมัติ</span>
+              </div>
+            </div>
+
             <div id="plantDataDisplayArea" class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
               <div class="card p-8 text-center text-slate-400 lg:col-span-2">กดปุ่ม "ดึงข้อมูลจริงจากระบบ Lab & Process" ด้านบนเพื่อให้ระบบค้นหาข้อมูลตาม Machine, วันที่ผลิต, Lot และ Invoice</div>
             </div>
@@ -762,9 +820,39 @@
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 9. เคลียร์ประเด็นความเสี่ยง GMP / Safety / FSC-PEFC ครบถ้วน</label>
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 10. ทบทวนและอนุมัติปิดเคสโดย QA / MR / Department Head</label>
               </div>
-              <button onclick="executeCloseCaseGate()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow mt-3">
-                <i class="fa-solid fa-flag-checkered mr-1"></i> ยืนยันผ่าน Closure Gate & ปิดเคส (CLOSE CASE)
-              </button>
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-300 space-y-2.5 mt-3">
+                <div class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                  <i class="fa-solid fa-file-signature text-indigo-600"></i> Electronic Signature & Approval Control (WHO GMP TRS 957 / TRS 1033)
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                  <label class="font-semibold text-slate-700">ชื่อผู้อนุมัติ (Signer Full Name) *
+                    <input type="text" id="esig_name" placeholder="ระบุชื่อ-นามสกุลผู้อนุมัติ" class="w-full border rounded-lg p-2 mt-1 bg-white font-bold">
+                  </label>
+                  <label class="font-semibold text-slate-700">ความหมายของการลงนาม (Signature Meaning) *
+                    <select id="esig_meaning" class="w-full border rounded-lg p-2 mt-1 bg-white font-bold">
+                      <option value="QA_MR_FINAL_CLOSURE_APPROVAL">อนุมัติปิดเคสและรับรองผล CAPA (QA / MR Final Closure)</option>
+                      <option value="DEPARTMENT_HEAD_RCA_APPROVAL">รับรองผลสืบสวนรากเหง้า Level 5 (Department Head Approval)</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="block text-xs font-semibold text-slate-700">ความเห็นการอนุมัติ / เหตุผลประกอบ (Approval Remarks & Disposition Summary) *
+                  <input type="text" id="esig_reason" placeholder="เช่น ตรวจสอบหลักฐาน SPC และ CAPA ครบถ้วน ผ่านเกณฑ์ Level 5" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                </label>
+                <label class="flex items-center gap-2 text-[11px] font-bold text-indigo-950 cursor-pointer pt-1">
+                  <input type="checkbox" id="esig_reauth" class="w-4 h-4 rounded text-indigo-600">
+                  ข้าพเจ้ายืนยันตัวตนด้วยบัญชีที่เข้าสู่ระบบและขอลงนามอิเล็กทรอนิกส์ซึ่งมีผลเทียบเท่าลายมือชื่อตามระเบียบ GMP
+                </label>
+                <div id="esigSavedStamp" class="hidden p-2.5 rounded-lg bg-emerald-100 border border-emerald-300 text-[11px] text-emerald-900 font-mono"></div>
+              </div>
+
+              <div class="flex gap-2 mt-3">
+                <button data-id="btn-close-case-gate" onclick="executeCloseCaseGate()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow">
+                  <i class="fa-solid fa-flag-checkered mr-1"></i> ลงนามอนุมัติ & ปิดเคส (CLOSE & LOCK CASE)
+                </button>
+                <button type="button" data-id="btn-reopen-case" onclick="reopenClosedCase()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-3 rounded-xl text-xs shadow" title="ปลดล็อกเคสเพื่อแก้ไขเพิ่มเติมพร้อมบันทึกเหตุผลลง Audit Trail">
+                  <i class="fa-solid fa-unlock-keyhole mr-1"></i> Reopen
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1136,13 +1224,30 @@ async function runAiIntakeAnalysis() {
 
     // Show Missing Critical Fields & Recommended Questions
     const missBox = document.getElementById('intakeMissingBox');
-    const missList = ext.missingCriticalFields || [];
+    const mandatoryTraceChecklist = [];
+    if (!(ext.lotNumbers?.length || ext.batchNumbers?.length)) mandatoryTraceChecklist.push('Lot / Batch No.');
+    if (!ext.invoiceNumbers?.length && !ext.doNumbers?.length) mandatoryTraceChecklist.push('Invoice No. / DO No.');
+    if (!ext.productionDates?.length) mandatoryTraceChecklist.push('Production Date (วันที่ผลิต)');
+    if (!ext.machineNumbers?.length) mandatoryTraceChecklist.push('Machine Line (MC2/MC3/MC5/MC6)');
+    if (!ext.complaintQuantity) mandatoryTraceChecklist.push('Complaint Quantity (ปริมาณที่มีปัญหา)');
+
+    const missList = [...new Set([...mandatoryTraceChecklist, ...(ext.missingCriticalFields || [])])];
     const recQ = ext.recommendedQuestionsForCustomer || [];
     if (missList.length || recQ.length) {
+      const followUpDraft = `เรียน ทีม Sales / CTS / ผู้เกี่ยวข้อง,\nอ้างอิงเรื่องแจ้งร้องเรียนลูกค้า (${ext.customerName || 'ระบุชื่อลูกค้า'} - ${ext.grade || 'ระบุเกรด'}),\nเพื่อให้สามารถตรวจสอบย้อนกลับ (Traceability) และดึงข้อมูลกระบวนการผลิตได้ครบถ้วน รบกวนช่วยตรวจสอบและขอข้อมูลเพิ่มเติมดังนี้ครับ:\n- ข้อมูลที่ยังขาด: ${missList.join(', ')}\n${recQ.length ? `- คำถามเพิ่มเติม: ${recQ.join(' / ')}` : ''}\nขอบคุณครับ`;
+      window._latestFollowUpText = followUpDraft;
       missBox.classList.remove('hidden');
       missBox.innerHTML = `
-        <div><b>⚠️ ข้อมูลสำคัญที่ยังไม่พบในต้นฉบับ (AI ไม่เดาข้อมูลเอง):</b> ${esc(missList.join(', ') || 'ครบถ้วน')}</div>
-        ${recQ.length ? `<div class="mt-1"><b>💡 คำถามที่ AI แนะนำให้ถามกลับไปยังลูกค้า/CTS:</b> ${esc(recQ.join(' | '))}</div>` : ''}
+        <div class="flex flex-wrap justify-between items-start gap-2">
+          <div class="flex-1">
+            <div class="font-bold text-amber-900"><i class="fa-solid fa-magnifying-glass-location mr-1"></i> ผลการตรวจเช็คข้อมูลสำคัญตามหลักการ Traceability (GQP-1007 / GMP):</div>
+            <div class="mt-1"><b>⚠️ ข้อมูลที่ยังไม่พบในไฟล์ SAP/Email ต้นฉบับ:</b> <span class="text-red-700 font-bold">${esc(missList.join(', ') || 'ครบถ้วน')}</span></div>
+            ${recQ.length ? `<div class="mt-1"><b>💡 คำถามที่ AI แนะนำให้ถามกลับไปยังลูกค้า / Sale / CTS:</b> ${esc(recQ.join(' | '))}</div>` : ''}
+          </div>
+          <button type="button" onclick="navigator.clipboard.writeText(window._latestFollowUpText || ''); toast('คัดลอกข้อความสำหรับส่งถาม Sale / ลูกค้า เรียบร้อยแล้ว! นำไปวางใน Email/Line ได้เลย');" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-bold text-[11px] shrink-0 shadow-xs">
+            <i class="fa-regular fa-copy mr-1"></i> คัดลอกข้อความไปถามต่อ
+          </button>
+        </div>
       `;
     } else {
       missBox.classList.add('hidden');
@@ -1388,29 +1493,50 @@ function renderCaseRegisterTable() {
   }).join('') || '<tr><td colspan="8" class="p-10 text-center text-slate-400">ไม่พบข้อมูลเคสในระบบ</td></tr>';
 }
 
-async function deleteCaseCascade(docId) {
-  if (!docId) return;
-  const target = allCases.find(c => c.docId === docId);
-  if (!confirm(`ยืนยันการลบเคส ${target?.caseId || docId} แบบถาวร?\nระบบจะลบข้อมูลย่อย (Timeline, CAPA, RCA, ไฟล์แนบ) ทั้งหมด และคำนวณตัดยอดใน Dashboard อัตโนมัติทันที`)) return;
-
-  setLoading(true, 'กำลังลบข้อมูลแบบ Cascading & อัปเดตยอดรวม...', 'ป้องกันปัญหายอดค้างหรือนับซ้ำ');
-  try {
-    const fn = functions.httpsCallable('deleteComplaintCaseCascade');
-    await fn({ caseDocId: docId });
-    if (currentCaseDocId === docId) {
-      currentCaseDocId = null;
-      currentCaseObj = null;
-      document.getElementById('wsContainer').classList.add('hidden');
-      document.getElementById('wsEmptyState').classList.remove('hidden');
+  async function deleteCaseCascade(docId) {
+    if (!docId) return;
+    const target = allCases.find(c => c.docId === docId);
+    const reason = prompt(
+      `[WHO TRS 1033 Data Integrity & Data Omission Control]\nกรุณาระบุเหตุผลในการยกเลิกเคส (VOID) สำหรับ ${target?.caseId || docId}:\n(หมายเหตุ: ระบบจะทำการ VOID เพื่อเก็บประวัติใน Audit Trail และตัดยอดออกจาก Dashboard ทันที หากต้องการลบข้อมูลทดสอบทิ้งถาวรให้พิมพ์คำว่า HARD_DELETE: ตามด้วยเหตุผล)`,
+      "สร้างเคสซ้ำซ้อน / ข้อมูลสำหรับทดสอบระบบ"
+    );
+    if (!reason) return;
+    if (reason.trim().length < 5) {
+      return toast('กรุณาระบุเหตุผลอย่างน้อย 5 ตัวอักษรตามมาตรฐาน Data Integrity ครับ', 'warn');
     }
-    toast('ลบเคสและปรับปรุงยอดรวม Dashboard เรียบร้อยครับ');
-    switchMainView('cases');
-  } catch (e) {
-    toast(e.message, 'error');
-  } finally {
-    setLoading(false);
+
+    const isHardDelete = reason.trim().toUpperCase().startsWith('HARD_DELETE:');
+    const cleanReason = reason.replace(/^HARD_DELETE:/i, '').trim();
+    const userEmail = firebase.auth().currentUser?.email || 'System_Owner';
+
+    setLoading(true, isHardDelete ? 'กำลังลบเคสทดสอบถาวร...' : 'กำลังบันทึกสถานะ VOID ตามมาตรฐาน WHO TRS 1033...', 'อัปเดต Audit Trail และตัดยอด Dashboard อัตโนมัติ');
+    try {
+      const fn = functions.httpsCallable('deleteComplaintCaseCascade');
+      await fn({
+        caseDocId: docId,
+        mode: isHardDelete ? 'HARD_DELETE_ADMIN' : 'VOID',
+        reason: cleanReason,
+        signature: {
+          signerEmail: userEmail,
+          signerRole: currentUserProfile?.role || 'Authorized',
+          meaning: isHardDelete ? 'ADMIN_TEST_DATA_REMOVAL' : 'VOID_CASE_RECORD',
+          signedAtClientIso: new Date().toISOString()
+        }
+      });
+      if (currentCaseDocId === docId) {
+        currentCaseDocId = null;
+        currentCaseObj = null;
+        document.getElementById('wsContainer').classList.add('hidden');
+        document.getElementById('wsEmptyState').classList.remove('hidden');
+      }
+      toast(isHardDelete ? 'ลบข้อมูลทดสอบและซิงค์ Dashboard เรียบร้อยครับ' : `ยกเลิกเคส (VOID) พร้อมบันทึก Audit Trail ตามมาตรฐาน TRS 1033 เรียบร้อยครับ`);
+      switchMainView('cases');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
 // =========================================================================
 // 8. CASE WORKSPACE & SUB-COLLECTIONS CRUD
@@ -1939,24 +2065,234 @@ async function changeWorkspaceStatus(newStatus) {
   toast(`เปลี่ยนสถานะเป็น ${newStatus} เรียบร้อย`);
 }
 
-async function executeCloseCaseGate() {
-  if (!currentCaseDocId || !currentCaseObj) return;
-  const checks = [...document.querySelectorAll('.cg-chk')];
-  if (checks.some(c => !c.checked)) {
-    return toast('⚠️ กรุณาตรวจสอบและติ๊กยืนยัน Closure Gate ให้ครบทั้ง 10 ข้อก่อนปิดเคสครับ', 'warn');
-  }
-  if (!currentCaseObj.rcaAssessment?.isLevel5Passed) {
-    return toast('⚠️ เคสนี้ยังไม่ผ่านเกณฑ์ประเมิน RCA Assessment Scale = Level 5 (5.0 เต็ม) ไม่สามารถปิดเคสได้!', 'error');
+  async function executeCloseCaseGate() {
+    if (!currentCaseDocId || !currentCaseObj) return;
+    if (currentCaseObj.locked && currentCaseObj.status === 'CLOSED') {
+      return toast('เคสนี้ถูกปิดและล็อกด้วย E-Signature แล้ว หากต้องการแก้ไขกรุณากดปุ่ม Reopen', 'warn');
+    }
+    const checks = [...document.querySelectorAll('.cg-chk')];
+    if (checks.some(c => !c.checked)) {
+      return toast('⚠️ กรุณาตรวจสอบและติ๊กยืนยัน Closure Gate ให้ครบทั้ง 10 ข้อก่อนปิดเคสครับ', 'warn');
+    }
+    if (!currentCaseObj.rcaAssessment?.isLevel5Passed) {
+      return toast('⚠️ เคสนี้ยังไม่ผ่านเกณฑ์ประเมิน RCA Assessment Scale = Level 5 (5.0 เต็ม) ไม่สามารถปิดเคสได้!', 'error');
+    }
+    const signerName = document.getElementById('esig_name')?.value.trim();
+    const sigMeaning = document.getElementById('esig_meaning')?.value;
+    const sigReason = document.getElementById('esig_reason')?.value.trim();
+    const sigReauth = document.getElementById('esig_reauth')?.checked;
+
+    if (!signerName || !sigReason || !sigReauth) {
+      return toast('⚠️ กรุณากรอกชื่อผู้อนุมัติ เหตุผล และติ๊กยืนยันการลงนามอิเล็กทรอนิกส์ (Electronic Signature) ให้ครบถ้วน', 'warn');
+    }
+
+    const userEmail = firebase.auth().currentUser?.email || 'System_Owner';
+    const signaturePayload = {
+      signerName,
+      signerEmail: userEmail,
+      signerRole: currentUserProfile?.role || 'Authorized_Approver',
+      meaning: sigMeaning,
+      reason: sigReason,
+      signedAtIso: new Date().toISOString()
+    };
+
+    await db.collection('complaint_cases').doc(currentCaseDocId).update({
+      status: 'CLOSED',
+      locked: true,
+      recordVersion: SV.increment(1),
+      closureSignature: signaturePayload,
+      closedAtIso: new Date().toISOString(),
+      updatedAt: SV.serverTimestamp()
+    });
+
+    const stampEl = document.getElementById('esigSavedStamp');
+    if (stampEl) {
+      stampEl.classList.remove('hidden');
+      stampEl.textContent = `✅ E-Signed by ${signerName} (${userEmail} | ${signaturePayload.signerRole}) — ${sigMeaning} on ${signaturePayload.signedAtIso}`;
+    }
+
+    await logClientAuditEvent('CLOSE_CASE_ESIGNED', currentCaseObj.caseId, {
+      reason: sigReason,
+      signature: signaturePayload
+    });
+    toast(`🎉 ลงนามอิเล็กทรอนิกส์และปิดเคส ${currentCaseObj.caseId} ตามมาตรฐาน WHO GMP & TRS 1033 สมบูรณ์แล้ว!`);
   }
 
-  await db.collection('complaint_cases').doc(currentCaseDocId).update({
-    status: 'CLOSED',
-    closedAtIso: new Date().toISOString(),
-    updatedAt: SV.serverTimestamp()
+  async function reopenClosedCase() {
+    if (!currentCaseDocId || !currentCaseObj) return;
+    const reason = prompt('กรุณาระบุเหตุผลในการเปิดเคสซ้ำ (Reopen Reason - บันทึกลง ALCOA+ Audit Trail):', 'มีหลักฐานผลการทดสอบเพิ่มเติม / ปรับปรุงข้อมูล CAPA');
+    if (!reason || reason.trim().length < 5) {
+      return toast('ต้องระบุเหตุผลในการ Reopen อย่างน้อย 5 ตัวอักษรครับ', 'warn');
+    }
+    const userEmail = firebase.auth().currentUser?.email || 'System_Owner';
+    await db.collection('complaint_cases').doc(currentCaseDocId).update({
+      status: 'INVESTIGATION',
+      locked: false,
+      recordVersion: SV.increment(1),
+      reopenReason: reason.trim(),
+      reopenedBy: userEmail,
+      reopenedAtIso: new Date().toISOString(),
+      updatedAt: SV.serverTimestamp()
+    });
+    await logClientAuditEvent('REOPEN_CASE', currentCaseObj.caseId, { reason: reason.trim() });
+    toast(`ปลดล็อกและเปิดเคส ${currentCaseObj.caseId} กลับมาแก้ไขเรียบร้อยครับ`);
+  }
+
+  // =========================================================================
+  // 14. SPC CAPABILITY CALCULATOR (Cp, Cpk, Pp, Ppk) & EXECUTIVE AI INSIGHTS
+  // =========================================================================
+  let _extractedPlantParamsMap = {};
+
+  // ดักจับข้อมูลตอนแสดงผล Plant Data เพื่อนำพารามิเตอร์ทั้งหมดมาใส่ Dropdown ให้เลือกคำนวณ Cp/Cpk/Pp/Ppk ได้ทันที
+  const _origRenderPlantData = renderPlantDataSnapshot;
+  renderPlantDataSnapshot = function(pData) {
+    _origRenderPlantData(pData);
+    _extractedPlantParamsMap = {};
+    const sel = document.getElementById('spc_paramSelect');
+    if (!sel || !pData) return;
+
+    const collectFromStats = (sourceLabel, dateStr, statsObj) => {
+      if (!statsObj) return;
+      Object.entries(statsObj).forEach(([k, v]) => {
+        if (v && v.avg !== undefined && !isNaN(v.avg)) {
+          const keyId = `${sourceLabel} [${dateStr}] - ${k}`;
+          _extractedPlantParamsMap[keyId] = {
+            name: k,
+            source: sourceLabel,
+            date: dateStr,
+            avg: Number(v.avg),
+            sd: Number(v.sd || (v.cv ? (v.cv * v.avg) / 100 : 0.05)),
+            min: v.min !== undefined ? Number(v.min) : Number(v.avg),
+            max: v.max !== undefined ? Number(v.max) : Number(v.avg),
+            cv: Number(v.cv || 0)
+          };
+        }
+      });
+    };
+
+    (pData.productLabStats || []).forEach(r => collectFromStats('Fibre Lab', r.date, r.stats));
+    (pData.inProcessStats || []).forEach(r => {
+      collectFromStats('Viscose', r.date, r.viscose);
+      collectFromStats('SpinBath/Aux', r.date, r.auxiliary);
+      collectFromStats('Spinning', r.date, r.spinning);
+    });
+
+    const keys = Object.keys(_extractedPlantParamsMap);
+    sel.innerHTML = `<option value="">-- เลือกพารามิเตอร์ที่ดึงมา (${keys.length} รายการ) หรือกรอกค่าเอง --</option>` +
+      keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+  };
+
+  function onSelectSpcParameter(keyId) {
+    const item = _extractedPlantParamsMap[keyId];
+    if (!item) return;
+    document.getElementById('spc_mean').value = item.avg.toFixed(3);
+    document.getElementById('spc_sd').value = item.sd.toFixed(4);
+    document.getElementById('spc_minmax').value = `${item.min.toFixed(2)} / ${item.max.toFixed(2)}`;
+    calculateSpcMetrics();
+  }
+
+  function calculateSpcMetrics() {
+    const lsl = parseFloat(document.getElementById('spc_lsl')?.value);
+    const usl = parseFloat(document.getElementById('spc_usl')?.value);
+    const mean = parseFloat(document.getElementById('spc_mean')?.value);
+    const sdOverall = parseFloat(document.getElementById('spc_sd')?.value);
+    const withinFactor = parseFloat(document.getElementById('spc_withinFactor')?.value) || 0.92;
+    const minmax = document.getElementById('spc_minmax')?.value || '-';
+    const banner = document.getElementById('spcResultBanner');
+    if (!banner) return;
+
+    if (isNaN(mean) || isNaN(sdOverall) || sdOverall <= 0) {
+      banner.innerHTML = `<span class="text-slate-500">กรุณาระบุค่า Mean (Avg) และ SD (> 0) เพื่อเริ่มคำนวณ</span>`;
+      return;
+    }
+
+    const cv = mean !== 0 ? (sdOverall / Math.abs(mean)) * 100 : 0;
+    const sdWithin = sdOverall * withinFactor;
+
+    let pp = null, ppk = null, cp = null, cpk = null;
+    if (!isNaN(lsl) && !isNaN(usl) && usl > lsl) {
+      pp = (usl - lsl) / (6 * sdOverall);
+      cp = (usl - lsl) / (6 * sdWithin);
+      const ppu = (usl - mean) / (3 * sdOverall);
+      const ppl = (mean - lsl) / (3 * sdOverall);
+      ppk = Math.min(ppu, ppl);
+      const cpu = (usl - mean) / (3 * sdWithin);
+      const cpl = (mean - lsl) / (3 * sdWithin);
+      cpk = Math.min(cpu, cpl);
+    } else if (!isNaN(lsl)) {
+      ppk = (mean - lsl) / (3 * sdOverall);
+      cpk = (mean - lsl) / (3 * sdWithin);
+    } else if (!isNaN(usl)) {
+      ppk = (usl - mean) / (3 * sdOverall);
+      cpk = (usl - mean) / (3 * sdWithin);
+    }
+
+    const paramName = document.getElementById('spc_paramSelect')?.value || 'Selected Parameter';
+    const judge = (cpk !== null && cpk >= 1.33) ? '✅ Capable (Cpk ≥ 1.33)' : (cpk !== null && cpk >= 1.0 ? '⚠️ Marginal (1.00 ≤ Cpk < 1.33)' : '🚨 Incapable / High Variation (Cpk < 1.00)');
+
+    const summaryStr = `[SPC Statistical Proof - ${paramName}]: Spec=[${isNaN(lsl)?'-':lsl} to ${isNaN(usl)?'-':usl}], Avg=${mean.toFixed(3)}, SD=${sdOverall.toFixed(4)}, %CV=${cv.toFixed(2)}%, Min/Max=${minmax}, Cp=${cp!==null?cp.toFixed(2):'N/A'}, Cpk=${cpk!==null?cpk.toFixed(2):'N/A'}, Pp=${pp!==null?pp.toFixed(2):'N/A'}, Ppk=${ppk!==null?ppk.toFixed(2):'N/A'} (${judge})`;
+    window._latestSpcSummary = summaryStr;
+
+    banner.innerHTML = `
+      <div class="font-bold text-slate-800">${esc(summaryStr)}</div>
+    `;
+  }
+
+  function pushSpcToInvestigation() {
+    if (!window._latestSpcSummary) {
+      calculateSpcMetrics();
+    }
+    if (!window._latestSpcSummary) {
+      return toast('กรุณาเลือกพารามิเตอร์และกรอก LSL / USL ให้คำนวณผลลัพธ์ก่อนครับ', 'warn');
+    }
+    const box = document.getElementById('inv_statsEvidence');
+    box.value = (box.value ? box.value + '\n' : '') + window._latestSpcSummary;
+    toast('นำผลคำนวณ Cp, Cpk, Pp, Ppk, Avg, Min/Max, %CV ไปใส่ในช่อง Statistical Evidence (แท็บ 3) เรียบร้อยแล้วครับ!');
+    switchWsTab('investigation');
+  }
+
+  async function runExecutiveAiInsights() {
+    setLoading(true, '🧠 AI กำลังวิเคราะห์ Systemic Issues และแนวโน้มภาพรวม...', 'ประมวลผลเหมือนระบบ Internal Audit สำหรับผู้บริหาร');
+    try {
+      const fn = functions.httpsCallable('generateComplaintExecutiveInsights');
+      const res = await fn();
+      renderExecutiveAiInsightsUI(res.data.insights);
+      toast('วิเคราะห์ Executive AI Systemic Insights สำเร็จ!');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function renderExecutiveAiInsightsUI(ins) {
+    const el = document.getElementById('execAiInsightsContainer');
+    if (!el || !ins) return;
+    el.innerHTML = `
+      <div class="p-3.5 rounded-xl bg-indigo-950 text-white font-semibold text-xs leading-relaxed">
+        <span class="text-indigo-300 font-bold uppercase mr-1">[Executive Summary]:</span> ${esc(ins.executiveSummary || '-')}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-1.5">
+          <div class="font-bold text-red-700"><i class="fa-solid fa-repeat mr-1"></i> 1. ปัญหาเชิงระบบที่เกิดซ้ำ (Systemic Patterns)</div>
+          ${(ins.systemicPatterns || []).map(p => `<div class="border-t pt-1"><b>${esc(p.title)} (${esc(p.severity)}):</b> ${esc(p.detail)}</div>`).join('') || '<div>-</div>'}
+        </div>
+        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-1.5">
+          <div class="font-bold text-indigo-700"><i class="fa-solid fa-industry mr-1"></i> 2. ความเชื่อมโยงเครื่องจักร & กระบวนการ (MC2-MC6)</div>
+          ${(ins.machineAndProcessCorrelations || []).map(m => `<div class="border-t pt-1"><b>${esc(m.machineOrArea)}:</b> ${esc(m.insight)}</div>`).join('') || '<div>-</div>'}
+        </div>
+        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-1.5">
+          <div class="font-bold text-emerald-700"><i class="fa-solid fa-bullseye mr-1"></i> 3. ข้อเสนอแนะเชิงป้องกันระดับบริหาร (Actionable Insights)</div>
+          ${(ins.priorityRecommendations || []).map(r => `<div class="border-t pt-1"><b>[${esc(r.targetDept)}]:</b> ${esc(r.action)}</div>`).join('') || '<div>-</div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // โหลด Executive AI Insights ที่เคยบันทึกไว้ขึ้นมาแสดงอัตโนมัติเมื่อเปิดหน้าเว็บ
+  db.collection('complaint_dashboard_summary').doc('executive_ai_insights').onSnapshot(doc => {
+    if (doc.exists) renderExecutiveAiInsightsUI(doc.data());
   });
-  await logClientAuditEvent('CLOSE_CASE_GATE_PASSED', currentCaseObj.caseId);
-  toast(`🎉 ปิดเคส ${currentCaseObj.caseId} ตามมาตรฐาน GQP-1007 & GMP สมบูรณ์แล้ว!`);
-}
 
 // =========================================================================
 // 13. EXPORT TO EXCEL (REGISTER & RRL-01 REPORT)

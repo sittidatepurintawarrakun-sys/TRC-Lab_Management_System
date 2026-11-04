@@ -69,12 +69,13 @@ const firebaseConfig={
   apiKey:"AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
   authDomain:"lab-trc-management-system.firebaseapp.com",
   projectId:"lab-trc-management-system",
-  storageBucket:"lab-trc-management-system.appspot.com",
+  storageBucket:"lab-trc-management-system.firebasestorage.app",
   messagingSenderId:"43919979160",
   appId:"1:43919979160:web:779cb9de75cd4b9fce56ed"
 };
 firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth(), db=firebase.firestore(), functions=firebase.app().functions('asia-southeast1'), storage=firebase.storage();
+  const auth=firebase.auth(), db=firebase.firestore(), functions=firebase.app().functions('asia-southeast1'), storage=firebase.storage();
+  storage.setMaxUploadRetryTime(30000); // หยุดรอภายใน 30 วินาที แทนการค้างเงียบ
   try {
     db.settings({ experimentalForceLongPolling: true, merge: true });
     // เปิดใช้งาน Local Cache: ช่วยให้การ Refresh หน้าจอไม่ต้องดึงข้อมูลจาก Server ใหม่ (ลด Read ฟรีๆ)
@@ -138,7 +139,86 @@ function showModal(html){document.getElementById('modalBody').innerHTML=html;doc
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 window.addEventListener('online',updateNetwork);window.addEventListener('offline',updateNetwork);function updateNetwork(){const b=document.getElementById('onlineBadge');b.textContent=navigator.onLine?'Online':'Offline';b.className=`text-xs px-3 py-1 rounded-full font-semibold ${navigator.onLine?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}
 
-async function auditEvent(action,entityType,entityId,details={}){try{await db.collection('audit_events').add({action,entityType,entityId,details,userId:state.user.uid,userEmail:state.user.email,createdAt:SV.serverTimestamp()})}catch(e){console.warn('Audit event',e)}}
+  async function auditEvent(action,entityType,entityId,details={}){try{await db.collection('audit_events').add({action,entityType,entityId,details,userId:state.user.uid,userEmail:state.user.email,createdAt:SV.serverTimestamp()})}catch(e){console.warn('Audit event',e)}}
+
+  // 🟢 [เพิ่มใหม่] ฟังก์ชันถามเหตุผลการแก้ไข (GMP Reason for Change)
+  function promptReason(actionTitle, defaultReason = '') {
+    const r = prompt(`📝 [GMP Audit Trail] กรุณาระบุเหตุผลสำหรับการดำเนินการ: "${actionTitle}"`, defaultReason);
+    if (r === null) return null; // กดยกเลิก
+    if (!r.trim()) {
+      toast('⚠️ จำเป็นต้องระบุเหตุผลในการเปลี่ยนแปลงข้อมูล (Reason for Change) ตามมาตรฐาน GMP', 'warn');
+      return null;
+    }
+    return r.trim();
+  }
+
+  // 🟢 [เพิ่มใหม่] ฟังก์ชัน Electronic Signature (Re-authentication + Meaning) ตาม WHO TRS 1033 ข้อ 11.13 - 11.14
+  function requireESignature({ title, meaning, requireReason = false, reasonLabel = 'เหตุผลในการดำเนินการ (Reason)' }) {
+    return new Promise((resolve) => {
+      const modalHtml = `
+        <form id="eSignForm" class="p-6 space-y-4 max-w-lg mx-auto">
+          <div class="flex items-center gap-3 border-b pb-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg"><i class="fa-solid fa-file-signature"></i></div>
+            <div>
+              <h3 class="font-bold text-lg text-slate-800">${esc(title)}</h3>
+              <p class="text-xs text-slate-500">GMP Electronic Signature Verification (WHO TRS 1033)</p>
+            </div>
+          </div>
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
+            <p class="font-bold mb-1">ความหมายของการลงนาม (Meaning of Signature):</p>
+            <p class="italic">"${esc(meaning)}"</p>
+          </div>
+          <label class="flex items-start gap-2.5 cursor-pointer bg-slate-50 p-3 rounded-lg border">
+            <input type="checkbox" id="esignConfirmChk" required class="mt-1 w-4 h-4 text-blue-600 rounded">
+            <span class="text-xs font-bold text-slate-700">ข้าพเจ้ายืนยันว่าได้ทบทวนข้อมูลครบถ้วนแล้ว และตกลงลงนามอิเล็กทรอนิกส์ตามความหมายข้างต้น</span>
+          </label>
+          ${requireReason ? `
+          <label class="block text-sm font-bold text-slate-700">${esc(reasonLabel)} <span class="text-red-500">*</span>
+            <textarea id="esignReason" required rows="2" class="w-full border rounded-lg p-2.5 mt-1 font-normal" placeholder="ระบุเหตุผล..."></textarea>
+          </label>` : ''}
+          <div class="grid grid-cols-1 gap-3 pt-2 border-t">
+            <label class="block text-xs font-bold text-slate-600">User (Email)
+              <input type="email" id="esignEmail" value="${esc(state.user?.email || '')}" readonly class="w-full border rounded-lg p-2.5 mt-1 bg-slate-100 text-slate-600 font-semibold">
+            </label>
+            <label class="block text-xs font-bold text-slate-700">Password (ยืนยันรหัสผ่านอีกครั้งเพื่อลงนาม) <span class="text-red-500">*</span>
+              <input type="password" id="esignPassword" required class="w-full border rounded-lg p-2.5 mt-1 focus:border-blue-500 outline-none" placeholder="กรอกรหัสผ่านของคุณ">
+            </label>
+          </div>
+          <div class="flex justify-end gap-2 pt-3">
+            <button type="button" id="esignCancelBtn" class="px-4 py-2 rounded-lg border font-bold text-slate-600 hover:bg-slate-50">ยกเลิก</button>
+            <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow"><i class="fa-solid fa-check-double mr-2"></i>Verify & Sign</button>
+          </div>
+        </form>
+      `;
+      showModal(modalHtml);
+      document.getElementById('esignCancelBtn').onclick = () => { closeModal(); resolve(null); };
+      document.getElementById('eSignForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const pwd = document.getElementById('esignPassword').value;
+        const reason = requireReason ? document.getElementById('esignReason').value.trim() : 'Approved as per standard workflow';
+        loading(true, 'กำลังยืนยันตัวตนเพื่อลงนามอิเล็กทรอนิกส์...');
+        try {
+          const cred = firebase.auth.EmailAuthProvider.credential(state.user.email, pwd);
+          await state.user.reauthenticateWithCredential(cred);
+          const sigPayload = {
+            signedByUid: state.user.uid,
+            signedByEmail: state.user.email,
+            signedByName: state.profile?.displayName || state.user.email,
+            role: state.profile?.role || 'Auditor',
+            meaning: meaning,
+            reason: reason,
+            clientTimestamp: new Date().toISOString()
+          };
+          closeModal();
+          resolve(sigPayload);
+        } catch (err) {
+          toast('❌ รหัสผ่านไม่ถูกต้อง ไม่สามารถลงนามอิเล็กทรอนิกส์ได้', 'error');
+        } finally {
+          loading(false);
+        }
+      };
+    });
+  }
 async function loadProfile(user){const ref=db.collection('users').doc(user.uid);const s=await ref.get();if(s.exists)return s.data();const p={email:user.email,displayName:user.displayName||user.email,role:'Auditor',active:true,createdAt:SV.serverTimestamp()};await ref.set(p,{merge:true});return p}
 
     function setupLiveData(){
@@ -221,9 +301,28 @@ function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view
 
       // 🟢 เพิ่มตัวแปรนี้: แปลง 'All' จาก Dropdown หน้าเว็บ ให้เป็น 'ALL' ตัวใหญ่ เพื่อให้ตรงกับฐานข้อมูล
         const queryDept = fDept === 'All' ? 'ALL' : fDept;
+        const allDeptsInYear = state.dashboardStats?.years?.[fYear]?.departments || {};
+        let rawStats = allDeptsInYear[queryDept] ? JSON.parse(JSON.stringify(allDeptsInYear[queryDept])) : {};
 
-        // 1. ดึงข้อมูลดิบมาจาก Firestore (ถ้ามีข้อมูลแต่ไม่ครบทุกฟิลด์ จะเก็บไว้ใน rawStats ก่อน)
-        const rawStats = state.dashboardStats?.years?.[fYear]?.departments?.[queryDept] || {};
+        // ถ้าเลือกแผนกเดี่ยว แต่ข้อมูลถูกเก็บไว้ในชื่อแผนกควบรวม (มีเครื่องหมาย +) ให้ดึงมารวมกันอัตโนมัติ
+        if (fDept !== 'All' && Object.keys(rawStats).length === 0) {
+          Object.entries(allDeptsInYear).forEach(([deptKey, statsObj]) => {
+            const splitDepts = deptKey.split('+').map(s => s.trim());
+            if (splitDepts.includes(fDept)) {
+              ['audit_total','audit_completed','findings_total','findings_open','findings_minor','findings_major','findings_obs','risk_score','chk_total','chk_conform','chk_obs','chk_minor','chk_major'].forEach(k => {
+                rawStats[k] = (rawStats[k] || 0) + (statsObj[k] || 0);
+              });
+              if (statsObj.standards) {
+                if (!rawStats.standards) rawStats.standards = {};
+                Object.entries(statsObj.standards).forEach(([std, sVal]) => {
+                  if (!rawStats.standards[std]) rawStats.standards[std] = { total: 0, pass: 0 };
+                  rawStats.standards[std].total += (sVal.total || 0);
+                  rawStats.standards[std].pass += (sVal.pass || 0);
+                });
+              }
+            }
+          });
+        }
 
         // ดักจับและแปลงค่าที่ไม่มี (undefined) ให้กลายเป็น 0 ให้หมดเพื่อป้องกัน NaN
         const globalStats = {
@@ -263,11 +362,11 @@ function render(){if(!state.user)return;const info=NAV.find(n=>n[0]===state.view
         .map(([d, s]) => [d, s.risk_score || 0]);
 
     // 4. Overdue CAPA และ Recent Findings (ดึงข้อมูลแบบไดนามิกจากเวลาปัจจุบัน)
-    const filteredFindings = state.findings.filter(f => {
-      const matchYear = fYear === 'All' || (f.auditYear === fYear) || (f.findingNo && f.findingNo.includes(fYear));
-      const matchDept = fDept === 'All' || f.department === fDept;
-      return matchYear && matchDept && f.status !== 'VOID';
-    });
+        const filteredFindings = state.findings.filter(f => {
+          const matchYear = fYear === 'All' || (f.auditYear === fYear) || (f.findingNo && f.findingNo.includes(fYear));
+          const matchDept = fDept === 'All' || (f.department && f.department.split('+').map(s => s.trim()).includes(fDept)) || f.department === fDept;
+          return matchYear && matchDept && f.status !== 'VOID';
+        });
     const openFindingsList = filteredFindings.filter(f => f.status !== 'CLOSED');
     const overCapaCount = openFindingsList.filter(f => f.targetDate && f.targetDate < nowISO()).length;
     const dueSoonCount = openFindingsList.filter(f => f.targetDate && f.targetDate >= nowISO() && f.targetDate <= new Date(Date.now() + 7*86400000).toISOString().slice(0,10)).length;
@@ -766,13 +865,21 @@ async function saveGeneratedChecklist() {
   const incompleteIndex = state.generated.findIndex(item => (!String(item.clause || '').trim() || !String(item.question || '').trim() || !String(item.expectedEvidence || '').trim()));
   if (incompleteIndex >= 0) { toast(`Checklist ลำดับที่ ${incompleteIndex + 1} ยังระบุ Clause, Question หรือ Expected Evidence ไม่ครบ`, 'warn'); return; }
 
-  const department = document.getElementById('planDept')?.value || '';
-  const selectedStandards = [...document.querySelectorAll('[name=std]:checked')].map(element => element.value);
-  loading(true, 'Saving approved checklist...');
+    const department = document.getElementById('planDept')?.value || '';
+    const selectedStandards = [...document.querySelectorAll('[name=std]:checked')].map(element => element.value);
 
-  try {
-    const fn = functions.httpsCallable('saveAuditPlan');
-    await fn({ auditId, department, standards: selectedStandards, questions: state.generated });
+    // 🟢 บังคับ Electronic Signature ก่อนบันทึก Checklist ที่สร้างโดย AI
+    const signature = await requireESignature({
+      title: 'Approve Audit Checklist',
+      meaning: 'I confirm that I have reviewed all AI-generated and manual checklist items, and approve this audit plan for execution.',
+      requireReason: false
+    });
+    if (!signature) return;
+
+    loading(true, 'Saving approved checklist...');
+    try {
+      const fn = functions.httpsCallable('saveAuditPlan');
+      await fn({ auditId, department, standards: selectedStandards, questions: state.generated, signature, reason: 'Initial checklist approval' });
     state.generated = []; toast('Checklist approved and saved'); state.view = 'execution'; buildNav(); render();
   } catch (error) { toast(error.message, 'error'); } finally { loading(false); }
 }
@@ -964,12 +1071,24 @@ function renderAuditRoom(){
     };
   }
 
-async function deleteExecutionItem(auditId, index) {
-  if(!confirm('ยืนยันลบ Manual Checkpoint นี้?')) return;
-  const a = state.audits.find(x => x.id === auditId), checklist = [...(a.checklist || [])]; checklist.splice(index, 1);
-  loading(true, 'Deleting Checkpoint...');
-  try { await db.collection('audit_campaigns').doc(auditId).update({ checklist, 'summary.totalCheckpoints': checklist.length }); state.selectedAudit.checklist = checklist; render(); toast('ลบรายการสำเร็จ', 'ok'); } catch(err) { toast(err.message, 'error'); } finally { loading(false); }
-}
+  async function deleteExecutionItem(auditId, index) {
+    const reason = promptReason('ลบรายการตรวจ Manual Checkpoint');
+    if (!reason) return;
+    const a = state.audits.find(x => x.id === auditId), checklist = [...(a.checklist || [])];
+    const removedItem = checklist.splice(index, 1)[0];
+    loading(true, 'Deleting Checkpoint...');
+    try {
+      await db.collection('audit_campaigns').doc(auditId).update({
+        checklist,
+        'summary.totalCheckpoints': checklist.length,
+        lastChangeReason: reason,
+        lastAction: 'DELETE_CHECKPOINT',
+        updatedBy: state.user.email,
+        updatedAt: SV.serverTimestamp()
+      });
+      state.selectedAudit.checklist = checklist; render(); toast('ลบรายการพร้อมบันทึก Audit Trail สำเร็จ', 'ok');
+    } catch(err) { toast(err.message, 'error'); } finally { loading(false); }
+  }
 
   function openAICoach(auditId) {
     const a = state.audits.find(x => x.id === auditId);
@@ -1086,19 +1205,35 @@ async function deleteExecutionItem(auditId, index) {
       }
   };
 
-async function saveCheckpoint(id,i){
-  const a=state.audits.find(x=>x.id===id),q=[...(a.checklist||[])];
-  const resVal = document.getElementById(`res-${i}`).value, eviVal = document.getElementById(`evi-${i}`).value;
-  if (['Major NC', 'Minor NC', 'OBSERVATION'].includes(resVal) && !eviVal.trim()) return toast('⚠️ กรุณาระบุ "Objective Evidence (สิ่งที่พบ)" ก่อนบันทึก NC หรือ Observation', 'warn');
-  q[i]={...q[i],evidence:eviVal,result:resVal,comment:document.getElementById(`com-${i}`).value,updatedBy:state.user.email,updatedAt:new Date().toISOString()};
-  loading(true,'Saving checkpoint...');
-  try{
-    const fn=functions.httpsCallable('updateAuditCheckpoint'); await fn({auditId:id,index:i,checkpoint:q[i]});
-    if(q[i].result.includes('NC')||q[i].result==='OBSERVATION') await openFindingDraft(id,i,q[i]);
-    if(state.selectedAudit&&state.selectedAudit.id===id){state.selectedAudit.checklist[i]=q[i];}
-    render();toast('Checkpoint saved', 'ok')
-  }catch(x){toast(x.message,'error')}finally{loading(false)}
-}
+  async function saveCheckpoint(id,i){
+    const a=state.audits.find(x=>x.id===id),q=[...(a.checklist||[])];
+    const oldItem = q[i] || {};
+    const resVal = document.getElementById(`res-${i}`).value, eviVal = document.getElementById(`evi-${i}`).value, comVal = document.getElementById(`com-${i}`).value;
+    if (['Major NC', 'Minor NC', 'OBSERVATION'].includes(resVal) && !eviVal.trim()) return toast('⚠️ กรุณาระบุ "Objective Evidence (สิ่งที่พบ)" ก่อนบันทึก NC หรือ Observation', 'warn');
+
+    // 🟢 ถ้าเคยประเมินไปแล้ว และมีการเปลี่ยนผลลัพธ์หรือแก้ไขหลักฐาน ต้องระบุ Reason for Change
+    let changeReason = 'Initial evaluation';
+    const isModified = oldItem.result && oldItem.result !== 'NOT_EVALUATED' && (oldItem.result !== resVal || oldItem.evidence !== eviVal || oldItem.comment !== comVal);
+    if (isModified) {
+      changeReason = promptReason(`แก้ไขผลตรวจข้อ ${oldItem.itemId || (i+1)} (จาก ${oldItem.result} เป็น ${resVal})`);
+      if (!changeReason) return;
+    }
+
+    const updatedItem = {...oldItem, evidence:eviVal, result:resVal, comment:comVal, lastChangeReason:changeReason, updatedBy:state.user.email, updatedAt:new Date().toISOString()};
+    loading(true,'Saving checkpoint...');
+    try{
+      const fn=functions.httpsCallable('updateAuditCheckpoint'); 
+      await fn({auditId:id, index:i, checkpoint:updatedItem, reason:changeReason});
+      q[i] = updatedItem;
+      if(updatedItem.result.includes('NC')||updatedItem.result==='OBSERVATION') await openFindingDraft(id,i,updatedItem,changeReason);
+      if(state.selectedAudit&&state.selectedAudit.id===id){state.selectedAudit.checklist[i]=updatedItem;}
+      render();
+      toast('Checkpoint saved', 'ok');
+    }catch(x){
+      console.error("Save Checkpoint Error:", x);
+      toast(x.message,'error');
+    }finally{loading(false)}
+  }
 
 async function openFindingDraft(auditId, checkpointIndex, checkpoint) {
   const audit = state.audits.find(item => item.id === auditId); if (!audit) throw new Error('Audit campaign not found.');
@@ -1112,39 +1247,108 @@ async function openFindingDraft(auditId, checkpointIndex, checkpoint) {
   await auditEvent(existingSnapshot.exists ? 'UPDATE' : 'CREATE', 'FINDING', findingDocumentId, { auditId: auditReference, findingNo, checkpointIndex, checklistItemId });
 }
 
-function attachEvidence(id,i){const input=document.getElementById('fileInput');input.value='';input.onchange=async()=>{if(!input.files[0])return;loading(true,'Uploading evidence...');try{const f=input.files[0],path=`audit-evidence/${id}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`,ref=storage.ref(path);await ref.put(f,{customMetadata:{uploadedBy:state.user.email,auditId:id}});const url=await ref.getDownloadURL();const fn=functions.httpsCallable('updateAuditCheckpoint');await fn({auditId:id,index:i,checkpoint:{...(state.selectedAudit.checklist[i]),attachmentUrl:url,attachmentPath:path}});toast('Evidence uploaded')}catch(x){toast(x.message,'error')}finally{loading(false)}};input.click()}
+  function attachEvidence(id, i) {
+    // กันข้อความหาย: ถ้ามีการแก้ในหน้าจอแต่ยังไม่ได้ Save ให้เตือนก่อน
+    const saved = (state.selectedAudit?.checklist || [])[i] || {};
+    const eviNow = document.getElementById(`evi-${i}`)?.value ?? '';
+    const resNow = document.getElementById(`res-${i}`)?.value ?? '';
+    const comNow = document.getElementById(`com-${i}`)?.value ?? '';
+    if (eviNow !== (saved.evidence || '') || resNow !== (saved.result || 'NOT_EVALUATED') || comNow !== (saved.comment || '')) {
+      return toast('⚠️ กรุณากด "Save checkpoint" ก่อนแนบไฟล์ เพื่อไม่ให้ข้อมูลที่พิมพ์ไว้หาย', 'warn');
+    }
 
-async function finalizeAudit(id){
-  if(!confirm('Finalize this audit and lock the execution record? (หากมี NC ระบบจะให้ AI เขียนสรุปให้ผู้บริหารอัตโนมัติ)'))return;
-  loading(true,'Finalizing audit and generating insights...');
-  try{
-    const fn=functions.httpsCallable('finalizeAuditCampaign');
-    await fn({auditId:id});
-    toast('Audit finalized successfully');
-    state.selectedAudit=null;
-    render();
-  }catch(x){
-    toast(x.message,'error');
-  }finally{
-    loading(false);
-  }
-}
+    const input = document.getElementById('fileInput');
+    input.value = '';
+    input.onchange = async () => {
+      const f = input.files[0];
+      if (!f) return;
+      if (f.size > 20 * 1024 * 1024) return toast('ไฟล์ใหญ่เกิน 20 MB', 'warn');
 
-async function reopenAudit(id) {
-  if (!confirm('ยืนยันการเปิด Audit นี้ใหม่? (สถานะจะเปลี่ยนกลับเป็น In Progress)')) return;
-  loading(true, 'กำลังเปิด Audit ใหม่อีกครั้ง...');
-  try {
-    const fn = functions.httpsCallable('reopenAuditCampaign');
-    await fn({ auditId: id });
-    toast('เปิด Audit เรียบร้อยแล้ว สามารถแก้ไขได้เลยครับ', 'ok');
-    state.selectedAudit.meta.status = 'IN_PROGRESS';
-    render();
-  } catch (x) {
-    toast('ไม่สามารถเปิดได้: ' + x.message, 'error');
-  } finally {
-    loading(false);
+      const path = `audit-evidence/${id}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const ref = storage.ref(path);
+      loading(true, 'Uploading evidence... 0%');
+      try {
+        const task = ref.put(f, {
+          contentType: f.type || 'application/octet-stream',
+          customMetadata: { uploadedBy: state.user.email, auditId: id }
+        });
+        task.on('state_changed', s => {
+          const t = document.getElementById('loadingText');
+          if (t && s.totalBytes) t.textContent = `Uploading evidence... ${Math.round(s.bytesTransferred / s.totalBytes * 100)}%`;
+        });
+        await task;
+        const url = await ref.getDownloadURL();
+
+        loading(true, 'Saving attachment link...');
+        const current = (state.selectedAudit?.checklist || [])[i] || {};
+        await functions.httpsCallable('updateAuditCheckpoint')({
+          auditId: id,
+          index: i,
+          checkpoint: { ...current, attachmentUrl: url, attachmentPath: path },
+          reason: 'Attach objective evidence'
+        });
+        toast('Evidence uploaded', 'ok');
+      } catch (x) {
+        console.error('Upload error:', x.code, x.message, x.serverResponse);
+        const msg = {
+          'storage/unauthorized': 'ไม่มีสิทธิ์อัปโหลด — ตรวจ Storage Rules',
+          'storage/bucket-not-found': 'ไม่พบ Bucket — ตรวจค่า storageBucket',
+          'storage/project-not-found': 'Project ยังไม่ได้เปิดใช้ Storage',
+          'storage/retry-limit-exceeded': 'อัปโหลดไม่สำเร็จ (timeout) — ตรวจ bucket หรือ network',
+          'storage/canceled': 'ยกเลิกการอัปโหลด'
+        }[x.code];
+        toast(msg || x.message, 'error');
+      } finally {
+        loading(false);
+      }
+    };
+    input.click();
   }
-}
+
+  async function finalizeAudit(id){
+    const signature = await requireESignature({
+      title: 'Final Assessment Approval',
+      meaning: 'I confirm this audit record is complete and represents the approved final assessment.',
+      requireReason: false
+    });
+    if (!signature) return;
+
+    loading(true,'Finalizing audit and generating insights...');
+    try{
+      const fn=functions.httpsCallable('finalizeAuditCampaign');
+      await fn({ auditId: id, signature, reason: 'Final assessment approval' });
+      toast('Audit finalized with Electronic Signature');
+      state.selectedAudit=null;
+      render();
+    }catch(x){
+        console.error('Finalize error:', x.code, x.message);
+        const snap = await db.collection('audit_campaigns').doc(id).get().catch(() => null);
+        if (snap?.data()?.meta?.status === 'COMPLETED') {
+          toast('Audit ปิดเรียบร้อยแล้ว (AI สรุปผลอาจใช้เวลาเพิ่มเติม)', 'warn');
+          state.selectedAudit = null; render();
+        } else {
+          toast(x.message, 'error');
+        }
+      }finally{ loading(false); }
+    }
+    async function reopenAudit(id) {
+    const signature = await requireESignature({
+      title: 'Re-open Finalized Audit',
+      meaning: 'I authorize re-opening this locked audit record for amendment.',
+      requireReason: true,
+      reasonLabel: 'เหตุผลในการเปิดแก้ไขรายงานที่ปิดแล้ว (Reason for Re-opening)'
+    });
+    if (!signature) return;
+
+    loading(true, 'กำลังเปิด Audit ใหม่อีกครั้ง...');
+    try {
+      const fn = functions.httpsCallable('reopenAuditCampaign');
+      await fn({ auditId: id, signature, reason: signature.reason });
+      toast('เปิด Audit เรียบร้อยแล้ว สามารถแก้ไขได้เลยครับ', 'ok');
+      state.selectedAudit.meta.status = 'IN_PROGRESS';
+      render();
+    } catch (x) { toast('ไม่สามารถเปิดได้: ' + x.message, 'error'); } finally { loading(false); }
+  }
 
 function renderFindings(data = state.findings) {
   const fYear = state.globalFilter.year, fDept = state.globalFilter.department, fStatus = state.globalFilter.status;
@@ -1236,7 +1440,12 @@ function editFinding(id) {
            <span class="text-sm font-bold text-indigo-900">ฉันได้ทบทวน แก้ไข และยืนยันความถูกต้องของข้อมูลจาก AI แล้ว (Human Verified)</span>
          </label>
       </div>
-
+      <div class="mt-6 bg-amber-50 border border-amber-200 p-4 rounded-xl">
+        <label class="block text-sm font-bold text-amber-900">
+          <i class="fa-solid fa-pen-to-square mr-1"></i> เหตุผลในการบันทึก/แก้ไขข้อมูล (Reason for Change) <span class="text-red-500">*</span>
+          <input name="changeReason" required class="w-full border border-amber-300 bg-white p-2.5 rounded-lg mt-1.5 outline-none focus:border-amber-500 font-normal" placeholder="ระบุเหตุผล เช่น บันทึกแผน CAPA ครั้งแรก, หรือ อนุมัติปิดประเด็น">
+        </label>
+      </div>
       <!-- 🟢 โซนกลุ่มปุ่มกดด้านล่าง (มี Export, Reject และ Save เรียงกัน) -->
       <div class="flex gap-4 mt-8 border-t border-slate-200 pt-6">
         ${['CAPA_SUBMITTED', 'VERIFICATION'].includes(f.status) ? `<button type="button" onclick="rejectCapa('${id}')" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-5 py-3.5 rounded-xl font-bold shadow-sm transition text-base"><i class="fa-solid fa-rotate-left mr-2"></i>Reject</button>` : ''}
@@ -1256,37 +1465,75 @@ function editFinding(id) {
     </form>
   `);
 
-    document.getElementById('findingForm').onsubmit = async e => {
+  document.getElementById('findingForm').onsubmit = async e => {
     e.preventDefault(); 
     const data = Object.fromEntries(new FormData(e.target)); 
+
     if ((data.status === 'CLOSED' || data.status === 'VOID') && !hasRole('Admin', 'Lead Auditor')) {
-        return toast('⚠️ ไม่อนุญาตให้บันทึก: เฉพาะ Admin หรือ Lead Auditor เท่านั้นที่สามารถปิด (CLOSED) หรือยกเลิก (VOID) ข้อบกพร่องได้', 'error');
+      return toast('⚠️ ไม่อนุญาตให้บันทึก: เฉพาะ Admin หรือ Lead Auditor เท่านั้นที่สามารถปิด (CLOSED) หรือยกเลิก (VOID) ข้อบกพร่องได้', 'error');
     }
 
-  // 🟢 เช็คว่าได้กดยืนยัน Human Verified หรือยัง (ถ้าวิเคราะห์ด้วย AI)
-  const verifySec = document.getElementById('ai-verify-section');
-  if (verifySec && !verifySec.classList.contains('hidden')) {
-      const isVerified = document.getElementById('human-verified').checked;
-      if (!isVerified) {
-          return toast('⚠️ กรุณากดยืนยันการทบทวนข้อมูลจาก AI (Human Verified) ก่อนบันทึก', 'warn');
+    const verifySec = document.getElementById('ai-verify-section');
+    if (verifySec && !verifySec.classList.contains('hidden')) {
+      if (!document.getElementById('human-verified').checked) {
+        return toast('⚠️ กรุณากดยืนยันการทบทวนข้อมูลจาก AI (Human Verified) ก่อนบันทึก', 'warn');
       }
-  }
+    }
 
-  delete data.id;
+    // 🟢 ตรวจสอบว่ากรอกเหตุผลการแก้ไขแล้วหรือยัง
+    const changeReason = (data.changeReason || '').trim();
+    if (!changeReason) return toast('⚠️ กรุณาระบุเหตุผลในการแก้ไข (Reason for Change)', 'warn');
 
-  // 🟢 ดึง Raw Draft ที่พักไว้มาแนบใส่ data เพื่อส่งไป Firestore
-  if (window.tempAiRawDraft) {
+    delete data.id;
+    delete data.changeReason;
+
+    // 🟢 บังคับ Electronic Signature เมื่อเปลี่ยนสถานะเป็นการ ปิด CAPA (CLOSED) หรือยกเลิก (VOID)
+    if (data.status === 'CLOSED' && f.status !== 'CLOSED') {
+      const signature = await requireESignature({
+        title: 'CAPA Verification & Closure Approval',
+        meaning: 'I confirm that the corrective and preventive actions have been verified for effectiveness and this finding is officially closed.',
+        requireReason: false
+      });
+      if (!signature) return; // ถ้ายกเลิกการลงนาม ให้หยุดการทำงาน
+
+      data.verifiedBy = signature.signedByName;
+      data.actualVerificationDate = data.actualVerificationDate || new Date().toISOString().slice(0, 10);
+      data.closureSignature = signature;
+    } else if (data.status === 'VOID' && f.status !== 'VOID') {
+      const signature = await requireESignature({
+        title: 'Void Finding Record',
+        meaning: 'I authorize voiding this finding record based on the documented justification.',
+        requireReason: false
+      });
+      if (!signature) return;
+      data.voidSignature = signature;
+    }
+
+    if (window.tempAiRawDraft) {
       data.ai_raw_draft = window.tempAiRawDraft;
       data.humanVerified = true;
-      window.tempAiRawDraft = null; // เคลียร์ค่า
-  }
+      window.tempAiRawDraft = null;
+    }
 
-  if (data.status === 'DRAFT') data.status = 'ISSUED';
+    if (data.status === 'DRAFT') data.status = 'ISSUED';
     if (data.status === 'ISSUED' && (data.rootCause || data.correctiveAction)) data.status = 'CAPA_SUBMITTED';
-    data.condition = data.objectiveEvidence; data.updatedAt = SV.serverTimestamp(); data.updatedBy = state.user.email;
-    if (!f.findingNo && f.auditId) { const a = state.audits.find(x => x.id === f.auditId); if (a) { data.findingNo = `${a.auditId || a.id}-CHK-${String(f.checkpointIndex + 1).padStart(3, '0')}`; data.auditYear = a.auditId ? a.auditId.substring(4,8) : new Date().getFullYear().toString(); data.title = f.title || f.clause; } }
+
+    data.condition = data.objectiveEvidence; 
+    data.lastChangeReason = changeReason; // 🟢 เก็บเหตุผลการแก้ลง Database
+    data.updatedAt = SV.serverTimestamp(); 
+    data.updatedBy = state.user.email;
+    data.updatedByUid = state.user.uid;
+
     loading(true, 'Saving finding...');
-    try { await db.collection('findings').doc(id).update(data); await auditEvent('UPDATE', 'FINDING', id, { status: data.status, classification: data.classification }); closeModal(); toast('Finding updated successfully', 'ok'); render(); } catch (x) { toast(x.message, 'error'); } finally { loading(false); }
+    try { 
+      await db.collection('findings').doc(id).update(data); 
+      toast('Finding updated successfully', 'ok'); 
+      render(); 
+    } catch (x) { 
+      toast(x.message, 'error'); 
+    } finally { 
+      loading(false); 
+    }
   };
 }
 
@@ -1334,8 +1581,47 @@ window.closeModal=closeModal; window.openProgramForm=openProgramForm; window.ope
 
 updateNetwork();
 
-async function deleteAudit(id) {if (!confirm('ยืนยันการลบ Audit Campaign นี้? ข้อมูลจะถูกลบทิ้งอย่างถาวร')) return; loading(true, 'กำลังลบข้อมูล Audit...'); try { await db.collection('audit_campaigns').doc(id).delete(); await auditEvent('DELETE', 'AUDIT', id); toast('ลบเรียบร้อย', 'ok'); } catch (error) { toast(error.message, 'error'); } finally { loading(false); }}
-async function deleteFinding(id) {if (!confirm('ยืนยันการลบ Finding นี้? ข้อมูลจะหายไปอย่างถาวร')) return; loading(true, 'กำลังลบข้อมูล Finding...'); try { await db.collection('findings').doc(id).delete(); await auditEvent('DELETE', 'FINDING', id); toast('ลบเรียบร้อย', 'ok'); } catch (error) { toast(error.message, 'error'); } finally { loading(false); }}
+  async function deleteAudit(id) {
+    const signature = await requireESignature({
+      title: 'Void Audit Campaign',
+      meaning: 'I authorize marking this audit campaign as VOID. The record will be retained in the immutable audit trail.',
+      requireReason: true,
+      reasonLabel: 'เหตุผลในการยกเลิก Audit Campaign (Reason for VOID)'
+    });
+    if (!signature) return;
+    loading(true, 'กำลังยกเลิกข้อมูล Audit (VOID)...');
+    try {
+      await db.collection('audit_campaigns').doc(id).update({
+        'meta.status': 'VOID',
+        lastChangeReason: signature.reason,
+        voidSignature: signature,
+        updatedBy: state.user.email,
+        updatedAt: SV.serverTimestamp()
+      });
+      toast('ยกเลิกรายการ (VOID) และบันทึก Audit Trail เรียบร้อย', 'ok');
+    } catch (error) { toast(error.message, 'error'); } finally { loading(false); }
+  }
+
+  async function deleteFinding(id) {
+    const signature = await requireESignature({
+      title: 'Void Finding Record',
+      meaning: 'I authorize marking this finding record as VOID. The record will be retained in the immutable audit trail.',
+      requireReason: true,
+      reasonLabel: 'เหตุผลในการยกเลิก Finding (Reason for VOID)'
+    });
+    if (!signature) return;
+    loading(true, 'กำลังยกเลิกข้อมูล Finding (VOID)...');
+    try {
+      await db.collection('findings').doc(id).update({
+        status: 'VOID',
+        lastChangeReason: signature.reason,
+        voidSignature: signature,
+        updatedBy: state.user.email,
+        updatedAt: SV.serverTimestamp()
+      });
+      toast('ยกเลิก Finding (VOID) และบันทึก Audit Trail เรียบร้อย', 'ok');
+    } catch (error) { toast(error.message, 'error'); } finally { loading(false); }
+  }
 
 // 🟢 ฟังก์ชันสำหรับปุ่ม Analyze Now (ดึงข้อมูลเข้าสู่ window)
 async function triggerSystemicAnalysis() {
@@ -1353,23 +1639,38 @@ async function triggerSystemicAnalysis() {
 }
 window.triggerSystemicAnalysis = triggerSystemicAnalysis;
   window.rejectCapa = async function(id) {
-    const reason = prompt('ระบุเหตุผลที่ตีกลับ CAPA นี้ (จะถูกบันทึกลงในช่อง Effectiveness Criteria):');
-    if(!reason) return;
+    const f = state.findings.find(x => x.id === id);
+    if (!f) return toast('ไม่พบข้อมูล Finding', 'error');
+
+    // เก็บค่าจากฟอร์มไว้ก่อน (หน้าต่างลงนามจะแทนที่ฟอร์มเดิม)
+    const existingEff = document.getElementById('finding-effectivenessCriteria')?.value || f.effectivenessCriteria || '';
+
+    // 🔐 ยืนยันตัวตน + เหตุผล (รูปแบบเดียวกับ Close / Void)
+    const signature = await requireESignature({
+      title: 'Reject CAPA Submission',
+      meaning: 'I reject this CAPA submission and return it to the responsible person for revision based on the documented reason.',
+      requireReason: true,
+      reasonLabel: 'เหตุผลที่ตีกลับ CAPA (Reason for Rejection)'
+    });
+    if (!signature) return; // ผู้ใช้กดยกเลิก
+    const reason = (signature.reason || '').trim();
+    if (!reason) return toast('⚠️ กรุณาระบุเหตุผลที่ตีกลับ CAPA', 'warn');
+
     loading(true, 'Rejecting CAPA...');
     try {
-      const f = state.findings.find(x => x.id === id);
-      const existingEff = document.getElementById('finding-effectivenessCriteria')?.value || f.effectivenessCriteria || '';
-      const updateData = {
-          status: 'ISSUED', // ถอยสถานะกลับไปให้แก้ไข
-          effectivenessCriteria: `[${fmtDate(new Date())} - REJECTED]: ${reason}\n\n` + existingEff,
-          updatedAt: SV.serverTimestamp(),
-          updatedBy: state.user.email
-      };
-      await db.collection('findings').doc(id).update(updateData);
-      await auditEvent('REJECT_CAPA', 'FINDING', id, { reason });
+      await db.collection('findings').doc(id).update({
+        status: 'ISSUED', // ถอยสถานะกลับไปให้แก้ไข
+        effectivenessCriteria: `[${fmtDate(new Date())} - REJECTED by ${signature.signedByName}]: ${reason}\n\n` + existingEff,
+        lastChangeReason: `Reject CAPA: ${reason}`,
+        rejectSignature: signature,
+        updatedAt: SV.serverTimestamp(),
+        updatedBy: state.user.email,
+        updatedByUid: state.user.uid
+      });
+      await auditEvent('REJECT_CAPA', 'FINDING', id, { reason, signedBy: signature.signedByEmail, signedAt: signature.clientTimestamp });
       closeModal();
       toast('ตีกลับ CAPA ให้ผู้รับผิดชอบแก้ไขใหม่แล้ว', 'ok');
-    } catch(e) {
+    } catch (e) {
       toast(e.message, 'error');
     } finally {
       loading(false);
@@ -1437,7 +1738,15 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
                     <div><b>Lead Auditor:</b> ${lead}</div>
                     <div><b>Standards:</b> ${standardsText}</div>
                   </div>
-                  <table><tr><th width="10%">Item</th><th width="30%">Question / Standard</th><th width="30%">Expected Evidence</th><th width="30%">Notes (สิ่งที่พบ)</th></tr>`;
+    <style>
+      table.chk { width:100%; border-collapse:collapse; }
+      table.chk thead { display:table-header-group; }   /* หัวตารางซ้ำทุกหน้า */
+      table.chk tr { page-break-inside:avoid; break-inside:avoid; } /* ไม่ตัดแถวกลางหน้า */
+      table.chk th { background:#f1f5f9 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    </style>
+    <table class="chk">
+      <thead><tr><th width="10%">Item</th><th width="30%">Question / Standard</th><th width="30%">Expected Evidence</th><th width="30%">Notes (สิ่งที่พบ)</th></tr></thead>
+      <tbody>`;
       (a.checklist || []).forEach(x => {
           html += `<tr>
               <td><b>${x.itemId}</b></td>
@@ -1446,8 +1755,8 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
               <td></td>
           </tr>`;
       });
-      html += `</table>`;
-      openPrintWindow(`Checklist_${a.auditId || a.id}`, html);
+    html += `</tbody></table>`;
+    openPrintWindow(`Checklist_${a.auditId || a.id}`, html);
   };
 
   // 2. Export Audit Report
@@ -1478,12 +1787,21 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
 
       loading(true, `Translating Report to ${lang.toUpperCase()}...`);
       try {
-          const fn = functions.httpsCallable('translateDocument');
-          const res = await fn({ content: JSON.stringify(auditData), targetLang: lang });
-          auditData = typeof res.data.data === 'string' ? JSON.parse(res.data.data) : res.data.data;
-      } catch(e) { 
-          console.error("Translation Error:", e);
-          toast('Translate error, using original text.', 'warn'); 
+        const original = JSON.parse(JSON.stringify(auditData)); // เก็บต้นฉบับไว้
+            const fn = functions.httpsCallable('translateDocument');
+            const res = await fn({ content: JSON.stringify(auditData), targetLang: lang });
+            auditData = typeof res.data.data === 'string' ? JSON.parse(res.data.data) : res.data.data;
+            // 🔒 ALCOA+: ห้าม AI แก้ไขข้อมูลบันทึกต้นฉบับ — คืนค่า ID, Result, Evidence, Score เดิม
+            auditData.complianceScore = original.complianceScore;
+            auditData.date = original.date;
+            auditData.leadAuditor = original.leadAuditor;
+            auditData.findings = original.findings.map((o, i) => ({
+                ...o,
+                question: auditData.findings?.[i]?.question || o.question // แปลได้เฉพาะคำถาม
+            }));
+        } catch(e) { 
+            console.error("Translation Error:", e);
+            toast('Translate error, using original text.', 'warn'); 
       } finally { 
           loading(false); 
       }
@@ -1515,12 +1833,29 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
                 <td><b>Q:</b> ${f.question || '-'}<br/><br/><b>Found:</b> ${f.evidence}</td>
               </tr>`;
           });
-      } else {
-          html += `<tr><td colspan="3" style="text-align:center;">No findings reported.</td></tr>`;
-      }
-      html += `</table>`;
+    } else {
+        html += `<tr><td colspan="3" style="text-align:center;">No findings reported.</td></tr>`;
+    }
+    html += `</table>`;
 
-      openPrintWindow(`Audit_Report_${a.auditId}`, html);
+    // 🟢 [เพิ่มใหม่] แสดงบล็อกลายเซ็นอิเล็กทรอนิกส์ท้ายรายงาน Audit
+    const sig = a.finalApprovalSignature;
+    if (sig) {
+      html += `
+        <div style="margin-top:30px; border:2px solid #1e293b; border-radius:8px; padding:15px; background:#f8fafc;">
+          <div style="font-weight:bold; font-size:14px; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:8px;">
+            🔒 GMP ELECTRONIC APPROVAL (WHO TRS 1033 COMPLIANT)
+          </div>
+          <div style="font-size:13px;">
+            <b>Final Assessment Approved by:</b> ${esc(sig.signedByName || sig.signedByEmail)}<br/>
+            <b>Role:</b> ${esc(sig.role || 'Lead Auditor')}<br/>
+            <b>Date/Time:</b> ${fmtDate(sig.signedAt || a.finalizedAt)}<br/>
+            <b>Meaning of Signature:</b> <i>"${esc(sig.meaning)}"</i>
+          </div>
+        </div>`;
+    }
+
+    openPrintWindow(`Audit_Report_${a.auditId}`, html);
   };
 
   // 3. Export CAPA Report
@@ -1575,12 +1910,29 @@ window.triggerSystemicAnalysis = triggerSystemicAnalysis;
     <tr><th>Corrective Action</th><td>${capaData.correctiveAction || '-'}</td></tr>
             <tr><th>Effectiveness Criteria</th><td>${capaData.effectivenessCriteria || '-'}</td></tr>
         </table>
-        <h2>3. Effectiveness Review & Verification</h2>
+    <h2>3. Effectiveness Review & Verification</h2>
         <table>
             <tr><th width="20%">Verification Result</th><td colspan="3">${capaData.verificationResult || '-'}</td></tr>
             <tr><th width="20%">Verified By</th><td>${capaData.verifiedBy || '-'}</td><th width="20%">Date</th><td>${capaData.actualVerificationDate || '-'}</td></tr>
         </table>
     `;
+
+      // 🟢 [เพิ่มใหม่] แสดงบล็อกลายเซ็นอิเล็กทรอนิกส์การปิด CAPA ท้ายรายงาน
+      const cSig = f.closureSignature;
+      if (cSig) {
+        html += `
+          <div style="margin-top:30px; border:2px solid #15803d; border-radius:8px; padding:15px; background:#f0fdf4;">
+            <div style="font-weight:bold; font-size:14px; color:#166534; border-bottom:1px solid #bbf7d0; padding-bottom:6px; margin-bottom:8px;">
+              🔒 ELECTRONIC CAPA CLOSURE SIGNATURE (WHO TRS 1033 COMPLIANT)
+            </div>
+            <div style="font-size:13px;">
+              <b>Verified and Closed by:</b> ${esc(cSig.signedByName || cSig.signedByEmail)} — <b>Role:</b> ${esc(cSig.role || 'Lead Auditor')}<br/>
+              <b>Date/Time:</b> ${esc(cSig.clientTimestamp || f.updatedAt)}<br/>
+              <b>Meaning of Approval:</b> <i>"${esc(cSig.meaning)}"</i>
+            </div>
+          </div>`;
+      }
+
       openPrintWindow(`CAPA_Report_${f.findingNo}`, html);
   };
 </script>
