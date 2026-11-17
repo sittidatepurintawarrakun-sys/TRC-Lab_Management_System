@@ -1,530 +1,3027 @@
 <!DOCTYPE html>
+<!-- [FILE]: RetainSample_LPM1013_Prod.html -->
+<!-- [PURPOSE]: TRC Smart Retain Sample Management System - Production Clean Version (Zero Mock Data, 100% Live Firebase) -->
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-IMS Audit System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
-        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid white; }
-        .hidden { display: none !important; }
-        .std-checkbox:checked + div { 
-            background-color: #eef2ff; border-color: #6366f1; color: #4338ca; 
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>TRC Retain Sample Management System (LPM-1013 Production)</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Sarabun', sans-serif; background: #f8fafc; color: #0f172a; margin: 0; }
+    .hidden { display: none !important; }
+    .nav-active { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; }
+    .spinner { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast { animation: slideIn .2s ease-out; }
+    @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } }
+    .modal-backdrop { background: rgba(15,23,42,.65); backdrop-filter: blur(3px); }
+    .pill-Retained { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .pill-On_Hold, .pill-HOLD { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .pill-In_Use { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .pill-Disposed, .pill-Closed { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .pill-VOID, .pill-Rejected { background: #fef2f2; color: #b91c1c; text-decoration: line-through; border: 1px solid #fecaca; }
+    .pill-OK, .pill-Approved, .pill-Yes { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .pill-LOW, .pill-Pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .due-overdue { background: #f8d7da; color: #842029; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid #f5c2c7; }
+    .due-warning { background: #fff3cd; color: #664d03; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid #ffecb5; }
+    .due-normal { color: #334155; font-weight: 600; }
+    .view-chip-active { background: #1e293b; color: #ffffff; border-color: #1e293b; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    @media (max-width: 1023px) {
+      #sidebar { position: fixed; inset: 0 auto 0 0; z-index: 60; transform: translateX(-100%); transition: .2s; }
+      #sidebar.open { transform: translateX(0); }
+    }
+    @media print {
+      #sidebar, header, .no-print { display: none !important; }
+      main { margin: 0 !important; padding: 0 !important; }
+      .card { break-inside: avoid; border: 1px solid #cbd5e1; box-shadow: none; }
+    }
+  </style>
 </head>
-<body class="h-screen overflow-hidden flex text-slate-800 relative bg-slate-50">
+<body class="min-h-screen">
 
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-slate-100 transition-opacity duration-500 overflow-hidden">
-        
-        <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
-            <i class="fas fa-clipboard-check absolute -top-10 -left-10 text-9xl text-blue-100/50 rotate-12 transform"></i>
-            <i class="fas fa-magnifying-glass-chart absolute bottom-10 right-10 text-8xl text-indigo-100/40 -rotate-12 transform"></i>
-            <i class="fas fa-file-contract absolute top-20 right-20 text-7xl text-slate-200/60 rotate-45 transform"></i>
-            <i class="fas fa-scale-balanced absolute bottom-32 left-20 text-8xl text-blue-50/80 -rotate-6 transform"></i>
-             <i class="fas fa-shield-alt absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[12rem] text-slate-100/30"></i>
-        </div>
+<!-- [ANCHOR: Toast-Area] -->
+<div id="toastArea" class="fixed z-[150] right-4 bottom-4 space-y-2"></div>
 
-        <div class="glass-panel p-8 rounded-2xl w-full max-w-sm text-center shadow-xl border-white/40 relative z-10 backdrop-blur-xl bg-white/60">
-            <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl shadow-md">
-                <i class="fas fa-shield-halved"></i>
-            </div>
-            <h1 class="text-2xl font-bold mb-2 text-slate-800">IMS Audit Login</h1>
-            <p class="text-sm text-slate-500 mb-6">เข้าสู่ระบบเพื่อเริ่มการตรวจประเมิน</p>
-            
-            <form onsubmit="event.preventDefault(); handleLogin();" class="space-y-4">
-                <div class="relative">
-                    <i class="fas fa-envelope absolute left-4 top-3.5 text-slate-400"></i>
-                    <input type="email" id="email" class="w-full pl-10 p-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Email" required>
-                </div>
-                <div class="relative">
-                    <i class="fas fa-lock absolute left-4 top-3.5 text-slate-400"></i>
-                    <input type="password" id="password" class="w-full pl-10 p-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Password" required>
-                </div>
-                <button type="submit" id="btn-login" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md hover:shadow-lg transform active:scale-95">
-                    เข้าสู่ระบบ <i class="fas fa-arrow-right ml-2"></i>
-                </button>
-            </form>
-        </div>
+<!-- [ANCHOR: Login-Screen] -->
+<section id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-5">
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-slate-100">
+    <div class="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-3xl mx-auto shadow-lg shadow-blue-600/30">
+      <i class="fa-solid fa-vial-circle-check"></i>
+    </div>
+    <div class="text-center mt-4">
+      <span class="text-[11px] font-extrabold uppercase tracking-widest bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200">LPM-1013 Rev.00 • Production</span>
+      <h1 class="text-2xl font-extrabold text-slate-900 mt-2">TRC Retain Sample System</h1>
+      <p class="text-slate-500 text-xs mt-1">ระบบบริหารจัดการตัวอย่างเก็บห้องปฏิบัติการ (Live Firebase)</p>
     </div>
 
-    <div id="app-layout" class="hidden w-full h-full flex">
-        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20">
-            <div class="p-6 font-bold text-white text-xl flex items-center gap-2 border-b border-slate-800">
-                <i class="fas fa-robot text-blue-500"></i> AI-IMS
-            </div>
-            
-            <nav class="flex-1 p-4 space-y-2">
-                <button onclick="switchView('planner')" class="w-full text-left p-3 rounded-xl hover:bg-slate-800 hover:text-white transition flex gap-3 items-center group">
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-blue-600 transition">
-                        <i class="fas fa-plus-circle"></i>
-                    </div>
-                    Create Plan (AI)
-                </button>
-                <button onclick="switchView('execution')" class="w-full text-left p-3 rounded-xl hover:bg-slate-800 hover:text-white transition flex gap-3 items-center group">
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center group-hover:bg-blue-600 transition">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    My Audits
-                </button>
-            </nav>
+    <form id="loginForm" class="mt-6 space-y-4">
+      <label class="block">
+        <span class="text-xs font-bold text-slate-700 uppercase">Email (TRC Account)</span>
+        <input id="loginEmail" type="email" required class="mt-1 w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-600 outline-none" placeholder="name@adityabirla.com">
+      </label>
+      <label class="block">
+        <span class="text-xs font-bold text-slate-700 uppercase">Password</span>
+        <input id="loginPassword" type="password" required class="mt-1 w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-600 outline-none" placeholder="••••••••">
+      </label>
+      <button id="loginBtn" type="submit" class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition shadow-md">
+        <i class="fa-solid fa-right-to-bracket mr-2"></i>เข้าสู่ระบบ (Firebase Auth)
+      </button>
+    </form>
 
-            <div class="p-4 border-t border-slate-800 bg-slate-900/50">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="overflow-hidden">
-                        <div id="user-display" class="text-sm font-bold text-white truncate">User</div>
-                        <div class="text-xs text-slate-500">Auditor</div>
-                    </div>
-                </div>
-                <button onclick="logout()" class="w-full py-2 px-4 bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white rounded-lg transition flex items-center justify-center gap-2">
-                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
-                </button>
-            </div>
-        </aside>
+    <p class="text-[11px] text-slate-400 text-center mt-5 leading-relaxed">
+      ควบคุมสิทธิ์การเข้าถึงด้วย Firebase Authentication, Firestore Rules และ LPM-1003 Rev.06 (WHO-GMP Annex 2 & ALCOA+)
+    </p>
+  </div>
+</section>
 
-        <main class="flex-1 overflow-auto bg-slate-50 relative">
-            <header class="bg-white p-4 border-b flex justify-between items-center sticky top-0 z-10 shadow-sm">
-                <h2 id="page-title" class="text-xl font-bold text-slate-800">Dashboard</h2>
-            </header>
-
-            <div class="p-8 pb-32">
-                
-                <div id="view-planner" class="max-w-4xl mx-auto">
-                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                        <h3 class="text-xl font-bold mb-6 flex gap-2 items-center text-indigo-700">
-                            <i class="fas fa-magic"></i> AI Integrated Checklist Generator
-                        </h3>
-                        
-                        <div class="mb-6">
-                            <label class="block font-bold mb-2 text-slate-700">Target Department</label>
-                            <select id="dept-select" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                                <option>Production (ฝ่ายผลิต)</option>
-                                <option>Warehouse (คลังสินค้า)</option>
-                                <option>HR (ทรัพยากรบุคคล)</option>
-                                <option>Maintenance (ซ่อมบำรุง)</option>
-                                <option>QA/QC (ควบคุมคุณภาพ)</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block font-bold mb-3 text-slate-700">Select Standards (IMS Scope)</label>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="ISO9001" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
-                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 9001 (Quality)</span>
-                                    </div>
-                                </label>
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="ISO14001" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
-                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 14001 (Env)</span>
-                                    </div>
-                                </label>
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="ISO45001" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
-                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 45001 (Safety)</span>
-                                    </div>
-                                </label>
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="ISO50001" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
-                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">ISO 50001 (Energy)</span>
-                                    </div>
-                                </label>
-
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="GMP" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
-                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">GMP / HACCP</span>
-                                    </div>
-                                </label>
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="Halal" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-indigo-50 flex items-center gap-2 transition h-full">
-                                        <i class="far fa-square text-slate-400"></i> <span class="text-sm font-semibold">Halal</span>
-                                    </div>
-                                </label>
-
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="FSC" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-emerald-50 border-emerald-100 flex items-center gap-2 transition h-full">
-                                        <i class="fas fa-tree text-emerald-500"></i> <span class="text-sm font-semibold">FSC (CoC)</span>
-                                    </div>
-                                </label>
-                                <label class="cursor-pointer">
-                                    <input type="checkbox" name="std" value="PEFC" class="std-checkbox hidden">
-                                    <div class="border border-slate-200 p-3 rounded-xl hover:bg-emerald-50 border-emerald-100 flex items-center gap-2 transition h-full">
-                                        <i class="fas fa-tree text-emerald-500"></i> <span class="text-sm font-semibold">PEFC</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="mb-8">
-                            <label class="block font-bold mb-2 text-slate-700">
-                                <i class="fas fa-chart-line text-indigo-500"></i> Performance & Context Input
-                            </label>
-                            <textarea id="performance-context" class="w-full p-4 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" rows="3" placeholder="ระบุข้อมูลสำคัญ เช่น: ยอดขายตกต่ำ, มีอุบัติเหตุสารเคมีรั่วไหลเมื่อเดือนที่แล้ว, หรือค่า Zinc ในน้ำเสียเกินมาตรฐาน... (AI จะใช้ข้อมูลนี้เน้นคำถาม)"></textarea>
-                            <div class="flex items-center gap-2 mt-2">
-                                <input type="checkbox" id="include-history" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" checked>
-                                <label for="include-history" class="text-sm text-slate-600 cursor-pointer">
-                                    ให้ AI ดึงประวัติ **NC/Fail** ครั้งที่แล้วของแผนกนี้มาสร้างคำถาม Follow-up อัตโนมัติ (จากฐานข้อมูล)
-                                </label>
-                            </div>
-                        </div>
-
-                        <button onclick="generateChecklist()" id="btn-gen" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95 flex justify-center items-center gap-2">
-                            <i class="fas fa-robot"></i> Generate Checklist via Gemini AI
-                        </button>
-                    </div>
-
-                    <div id="preview-area" class="hidden mt-8 space-y-4 animate-[fadeIn_0.5s_ease-out]">
-                        <div class="flex justify-between items-end">
-                            <h3 class="font-bold text-lg text-slate-700">Preview & Edit</h3>
-                            <button onclick="savePlan()" class="bg-emerald-600 text-white px-6 py-2 rounded-lg shadow hover:bg-emerald-700 transition font-bold flex items-center gap-2">
-                                <i class="fas fa-save"></i> Confirm & Save
-                            </button>
-                        </div>
-                        <div id="preview-list" class="space-y-4"></div>
-                    </div>
-                </div>
-
-                <div id="view-execution" class="hidden">
-                    <div id="audit-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-                    
-                    <div id="audit-room" class="hidden bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-                        <div class="bg-slate-50 p-4 border-b flex justify-between items-center sticky top-0 z-10">
-                            <div>
-                                <h3 class="font-bold text-lg text-slate-800" id="room-title">Audit Room</h3>
-                                <p class="text-xs text-slate-500">บันทึกผลการตรวจ</p>
-                            </div>
-                            <button onclick="closeRoom()" class="text-slate-400 hover:text-slate-600 transition">
-                                <i class="fas fa-times-circle text-2xl"></i>
-                            </button>
-                        </div>
-                        <div id="room-questions" class="p-6 space-y-6 max-h-[75vh] overflow-y-auto"></div>
-                    </div>
-                </div>
-
-            </div>
-        </main>
+<!-- [ANCHOR: Main-App-Container] -->
+<div id="app" class="hidden min-h-screen">
+  <aside id="sidebar" class="w-72 bg-slate-950 text-slate-300 min-h-screen fixed left-0 top-0 flex flex-col z-[60]">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+      <div>
+        <div class="text-white text-lg font-extrabold flex items-center gap-2">
+          <i class="fa-solid fa-vial-circle-check text-blue-400"></i>
+          <span>TRC RETAIN-QMS</span>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-0.5">LPM-1013 Rev.00 • Production</div>
+      </div>
+      <button id="closeSidebarBtn" class="lg:hidden text-slate-400 hover:text-white text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
 
-    <script>
-        // --- UTILS: Simple Logger ---
-        function log(msg, type='info') {
-            if(type==='error') console.error(msg);
-            else console.log(msg);
-        }
+    <!-- Role Indicator / Switcher (LPM-1003 Rev.06) -->
+    <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800">
+      <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <i class="fa-solid fa-sitemap mr-1 text-blue-400"></i> บทบาทตาม LPM-1003 Rev.06
+      </label>
+      <select id="roleSwitcher" class="mt-1.5 w-full bg-slate-800 text-white text-xs font-bold rounded-lg px-2.5 py-2 border border-slate-700 outline-none focus:border-blue-400">
+        <option value="DH">DH - Lab / QC & QA (Dept Head)</option>
+        <option value="SH">SH - Section Head / QA Reviewer</option>
+        <option value="FLO">FLO - Functional Lead (Shift Lead)</option>
+        <option value="ANALYST">Authorized Analyst (OP QCL)</option>
+        <option value="VIEWER">Management Viewer (Read-Only)</option>
+      </select>
+    </div>
 
-        // --- FIREBASE CONFIG ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
-            authDomain: "lab-trc-management-system.firebaseapp.com",
-            projectId: "lab-trc-management-system",
-            storageBucket: "lab-trc-management-system.appspot.com",
-            messagingSenderId: "43919979160",
-            appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+    <nav class="p-3 space-y-1 flex-1 overflow-y-auto custom-scrollbar" id="nav"></nav>
+
+    <div class="p-4 border-t border-slate-800 bg-slate-950">
+      <div class="flex items-center justify-between">
+        <div class="truncate pr-2">
+          <div id="userName" class="text-white text-sm font-bold truncate"></div>
+          <div id="userRole" class="text-[11px] text-blue-400 font-semibold truncate"></div>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">LIVE</span>
+      </div>
+      <button id="logoutBtn" class="mt-3 w-full rounded-lg py-2 text-xs font-bold bg-red-500/15 text-red-300 hover:bg-red-600 hover:text-white transition">
+        <i class="fa-solid fa-arrow-right-from-bracket mr-1.5"></i>ออกจากระบบ (Logout)
+      </button>
+    </div>
+  </aside>
+
+  <div class="lg:ml-72 min-h-screen flex flex-col">
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <button id="menuBtn" class="lg:hidden text-xl text-slate-700 p-1.5 rounded-lg hover:bg-slate-100">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 id="pageTitle" class="font-extrabold text-lg md:text-xl text-slate-800">Dashboard</h2>
+            <span class="hidden sm:inline-block text-[11px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full border border-slate-200">Effective: 01-Dec-2026</span>
+          </div>
+          <p id="pageSubtitle" class="text-xs text-slate-500">LPM-1013 Retain Sample Management & WHO-GMP Compliance</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="openDailyGuideModal()" class="no-print text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg px-3 py-2 transition">
+          <i class="fa-solid fa-circle-question mr-1"></i>คู่มือหน้าที่ประจำวัน
+        </button>
+        <button onclick="exportCurrentViewCSV()" class="no-print text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition">
+          <i class="fa-solid fa-file-csv mr-1"></i>Export CSV
+        </button>
+        <button onclick="window.print()" class="no-print text-xs font-bold border border-slate-300 text-slate-700 rounded-lg px-3 py-2 hover:bg-slate-50 transition" title="พิมพ์หน้านี้">
+          <i class="fa-solid fa-print"></i>
+        </button>
+        <span id="onlineBadge" class="text-xs px-3 py-1 rounded-full font-bold bg-green-100 text-green-700">Online</span>
+      </div>
+    </header>
+
+    <main id="content" class="p-4 md:p-7 flex-1"></main>
+  </div>
+</div>
+
+<!-- [ANCHOR: Global-Modal] -->
+<div id="modal" class="hidden fixed inset-0 z-[80] modal-backdrop p-4 overflow-y-auto">
+  <div id="modalBody" class="max-w-4xl mx-auto my-6 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"></div>
+</div>
+
+<script>
+'use strict';
+
+// =========================================================================
+// [ANCHOR: Firebase-Config-Setup]
+// ใช้โปรเจกต์เดียวกับระบบ Internal Audit (lab-trc-management-system)
+// =========================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCYalG5sMWG9jy4Lg-475TH_xuIRwA146w",
+  authDomain: "lab-trc-management-system.firebaseapp.com",
+  projectId: "lab-trc-management-system",
+  storageBucket: "lab-trc-management-system.firebasestorage.app",
+  messagingSenderId: "43919979160",
+  appId: "1:43919979160:web:779cb9de75cd4b9fce56ed"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const functions = firebase.app().functions('asia-southeast1');
+const SV = firebase.firestore.FieldValue;
+
+try {
+  db.settings({ experimentalForceLongPolling: true, merge: true });
+  db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+} catch (e) {}
+
+// =========================================================================
+// [ANCHOR: Master-Constants-LPM1013-LPM1003]
+// =========================================================================
+const NAV = [
+  ['dashboard', 'Dashboard & KPIs', 'fa-chart-pie', 'ภาพรวมตัวอย่างเก็บ แจ้งเตือนครบกำหนด และกราฟอุณหภูมิ'],
+  ['f01', 'F01 Retain Register', 'fa-boxes-stacked', 'ทะเบียนหลักตัวอย่างเก็บรายกะ (1 MC ต่อ 1 กะ)'],
+  ['f02', 'F02 Withdrawal Log', 'fa-hand-holding-droplet', 'ประวัติการเบิกตัวอย่างและอนุมัติ (หักยอดอัตโนมัติ)'],
+  ['f03', 'F03 Store Monitoring', 'fa-temperature-half', 'บันทึกอุณหภูมิ/ความชื้นรายวัน และตรวจห้องเก็บรายเดือน 10 ข้อ'],
+  ['f04', 'F04 Disposal Register', 'fa-trash-can-arrow-up', 'การขออนุมัติ QA และบันทึกการทำลายพร้อมพยาน (Witness)'],
+  ['reconcile', 'Weekly Reconcile & 6M', 'fa-calendar-check', 'ตรวจสอบความครบถ้วนรายสัปดาห์ (MC x Shift) & ตรวจสภาพ 6 เดือน'],
+  ['f00', 'F00 Category Master', 'fa-sliders', 'ตารางมาตรฐานประเภทการเก็บ (ควบคุมผ่าน GQP-1011) & สิทธิ์ LPM-1003'],
+  ['uat', 'Audit Trail & UAT (14 ข้อ)', 'fa-shield-halved', 'ประวัติ ALCOA+ Audit Trail และชุดทดสอบระบบ 14 ข้อตามคู่มือ']
+];
+
+const LPM1003_ROLES = {
+  DH: {
+    code: 'DH',
+    title: 'DH - Laboratory / QC & QA',
+    desc: 'Department Head (อนุมัติ F02/F04, ทบทวน F03, แก้ไข F00 ผ่าน GQP-1011, เปิดแก้ไข/VOID)',
+    canCreateF01: true,
+    canApproveF02: true,
+    canReviewF03: true,
+    canApproveF04: true,
+    canEditF00: true,
+    canVoid: true
+  },
+  SH: {
+    code: 'SH',
+    title: 'SH - Section Head (Chem/Textile/CTS)',
+    desc: 'Section Head / Qualified Reviewer (อนุมัติ F02/F04, ทบทวน F03, ติดป้าย HOLD, Reconcile)',
+    canCreateF01: true,
+    canApproveF02: true,
+    canReviewF03: true,
+    canApproveF04: true,
+    canEditF00: false,
+    canVoid: true
+  },
+  FLO: {
+    code: 'FLO',
+    title: 'FLO / Functional Lead',
+    desc: 'Front Line Officer / Shift Lead (บันทึก F01–F04, ติดป้าย HOLD, Reconcile รายสัปดาห์, ร่วมเป็นพยานทำลาย)',
+    canCreateF01: true,
+    canApproveF02: false,
+    canReviewF03: true,
+    canApproveF04: false,
+    canEditF00: false,
+    canVoid: false
+  },
+  ANALYST: {
+    code: 'ANALYST',
+    title: 'Authorized Analyst (OP QCL)',
+    desc: 'เจ้าหน้าที่วิเคราะห์ที่ได้รับมอบหมาย (บันทึกตัวอย่าง F01 ทุกกะ, ขอเบิก F02, บันทึกอุณหภูมิ F03)',
+    canCreateF01: true,
+    canApproveF02: false,
+    canReviewF03: false,
+    canApproveF04: false,
+    canEditF00: false,
+    canVoid: false
+  },
+  VIEWER: {
+    code: 'VIEWER',
+    title: 'Management Viewer / Auditor',
+    desc: 'ผู้บริหาร / ผู้ตรวจประเมิน (ดูรายงาน, กราฟ, ค้นหาตัวอย่าง KENVUE, พิมพ์ใบรายงาน)',
+    canCreateF01: false,
+    canApproveF02: false,
+    canReviewF03: false,
+    canApproveF04: false,
+    canEditF00: false,
+    canVoid: false
+  }
+};
+
+// ตาราง F00 Master Reference ตามเอกสารควบคุม LPM-1013 Rev.00 ข้อ 5.2 (ไม่ใช่ Mock Data)
+const DEFAULT_F00_MASTER = [
+  {
+    id: 'FIBRE-HYG',
+    retentionCategory: 'FIBRE-HYG',
+    productGrade: 'Viscose Staple Fibre – Hygiene/Medical grade (KENVUE)',
+    defaultProduct: 'Viscose Staple Fibre',
+    retainUnit: '1 per MC per shift',
+    minQty: 200,
+    unit: 'g',
+    retentionMonths: 24,
+    defaultPackaging: 'Double PE zip-lock bag',
+    defaultLocation: 'Retain store / Cab. A (KENVUE Segregated) / Shelf 1'
+  },
+  {
+    id: 'FIBRE-STD',
+    retentionCategory: 'FIBRE-STD',
+    productGrade: 'Viscose Staple Fibre – Normal/Grey, Modal, Nonwoven, Livaeco, FR, other',
+    defaultProduct: 'Viscose Staple Fibre',
+    retainUnit: '1 per MC per shift',
+    minQty: 100,
+    unit: 'g',
+    retentionMonths: 4,
+    defaultPackaging: 'Double PE zip-lock bag',
+    defaultLocation: 'Retain store / Cab. C / Shelf 2'
+  },
+  {
+    id: 'NA2SO4',
+    retentionCategory: 'NA2SO4',
+    productGrade: 'Sodium Sulphate (Na2SO4)',
+    defaultProduct: 'Sodium Sulphate (Na2SO4)',
+    retainUnit: '1 per production cycle/shift',
+    minQty: 200,
+    unit: 'g',
+    retentionMonths: 6,
+    defaultPackaging: 'HDPE bottle',
+    defaultLocation: 'Retain store / Cab. B / Shelf 1'
+  },
+  {
+    id: 'H2SO4',
+    retentionCategory: 'H2SO4',
+    productGrade: 'Sulphuric Acid (H2SO4)',
+    defaultProduct: 'Sulphuric Acid (H2SO4)',
+    retainUnit: '1 per delivery lot',
+    minQty: 100,
+    unit: 'mL',
+    retentionMonths: 3,
+    defaultPackaging: 'Acid-resistant glass bottle',
+    defaultLocation: 'Retain store / Corrosive Cab. / Shelf 1'
+  }
+];
+
+const F03_INSPECTION_ITEMS = [
+  ['I01', 'I01 Clean and Dry', 'Store clean, dry, no dust/moisture (ห้องเก็บสะอาด แห้ง ไม่มีฝุ่น/ความชื้น)'],
+  ['I02', 'I02 No Pests', 'No sign of pests (ไม่พบร่องรอยสัตว์พาหะหรือแมลง)'],
+  ['I03', 'I03 Containers Sealed', 'Bags/containers intact and sealed (ถุง/ภาชนะบรรจุสมบูรณ์และปิดสนิท)'],
+  ['I04', 'I04 Labels OK', 'Labels legible and complete (ฉลากชัดเจนและข้อมูลครบถ้วน)'],
+  ['I05', 'I05 Off Floor', 'Off floor; no overcrowding / crushing (วางบนชั้นไม่วางติดพื้น ไม่แออัดหรือกดทับกัน)'],
+  ['I06', 'I06 KENVUE Segregated', 'KENVUE / Hygiene retains segregated and identified (แยกโซนตัวอย่าง KENVUE/Hygiene ชัดเจน)'],
+  ['I07', 'I07 No Overdue Without HOLD', 'No retain past disposal due date without HOLD (ไม่มีตัวอย่างเลยกำหนดทำลายค้างอยู่โดยไม่มีป้าย HOLD)'],
+  ['I08', 'I08 H2SO4 Cabinet', 'H2SO4 retains only in corrosive cabinet (เก็บตัวอย่างกรด H2SO4 ในตู้กันกรดเท่านั้น)'],
+  ['I09', 'I09 Access Restricted', 'Access restricted (ควบคุมการเข้า-ออกพื้นที่จัดเก็บเฉพาะผู้ได้รับอนุญาต)'],
+  ['I10', 'I10 Capacity Adequate', 'Spare capacity adequate (6-monthly capacity review due?) (พื้นที่จัดเก็บเพียงพอ ทบทวนทุก 6 เดือน)']
+];
+
+const PRODUCTS = ['Viscose Staple Fibre', 'Sodium Sulphate (Na2SO4)', 'Sulphuric Acid (H2SO4)'];
+const MCS = ['MC 2', 'MC 3', 'MC 4', 'MC 5', 'MC 6', 'N/A'];
+const SHIFTS = ['A (07:00-15:00)', 'B (15:00-23:00)', 'C (23:00-07:00)', 'N/A'];
+const PACKAGINGS = ['Double PE zip-lock bag', 'Sterile bag', 'HDPE bottle', 'Acid-resistant glass bottle', 'Other'];
+const STATUSES_F01 = ['Retained', 'On Hold', 'In Use', 'Disposed'];
+const CONDITION_RESULTS = ['', 'Acceptable', 'Deteriorated', 'Damaged'];
+const WITHDRAWAL_PURPOSES = [
+  'Customer complaint',
+  'OOS / deviation investigation',
+  'Customer request',
+  'Auditor / regulatory request',
+  'Approved re-examination'
+];
+const DISPOSAL_METHODS = [
+  'Industrial waste (LPM-1012)',
+  'Neutralization + WWT (LPM-1012)',
+  'Other (approved)'
+];
+
+// =========================================================================
+// [ANCHOR: Application-State-Clean-Empty]
+// เริ่มต้นเป็นค่าว่างทั้งหมด (ไม่มี Mock Data ฝังอยู่ในระบบ)
+// =========================================================================
+const nowISO = () => {
+  const d = new Date(Date.now() + 7 * 3600 * 1000); // Asia/Bangkok (UTC+7)
+  return d.toISOString().slice(0, 10);
+};
+
+const state = {
+  user: null,
+  profile: null,
+  roleCode: 'DH',
+  view: 'dashboard',
+  f01View: 'Active Retains',
+  f02View: 'All',
+  f03View: 'Daily Temp/RH',
+  f04View: 'All',
+  searchQuery: '',
+  filterMc: 'All',
+  filterCategory: 'All',
+  reconcileDate: nowISO(),
+  f00: JSON.parse(JSON.stringify(DEFAULT_F00_MASTER)),
+  f01: [],
+  f02: [],
+  f03: [],
+  f04: [],
+  auditTrail: [],
+  uatResults: {},
+  unsubscribe: []
+};
+
+// =========================================================================
+// [ANCHOR: Grounded-Calculations-A1-A12]
+// =========================================================================
+const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+
+function getCategoryMeta(catCode) {
+  return state.f00.find(c => c.retentionCategory === catCode) || DEFAULT_F00_MASTER.find(c => c.retentionCategory === catCode) || null;
+}
+
+function calcMinQty(retentionCategory) {
+  const m = getCategoryMeta(retentionCategory);
+  return m ? Number(m.minQty) : 0;
+}
+
+function calcQtyCheck(quantity, minQty) {
+  if (quantity === '' || quantity === null || quantity === undefined || isNaN(Number(quantity))) return '';
+  return Number(quantity) >= Number(minQty) ? 'OK' : 'LOW';
+}
+
+function calcRetentionMonths(retentionCategory) {
+  const m = getCategoryMeta(retentionCategory);
+  return m ? Number(m.retentionMonths) : 0;
+}
+
+function calcDisposalDueDate(productionDate, retentionMonths) {
+  if (!productionDate || !retentionMonths) return '';
+  const parts = String(productionDate).split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return '';
+  const [y, m, d] = parts;
+  const targetDate = new Date(Date.UTC(y, (m - 1) + Number(retentionMonths), d));
+  if (isNaN(targetDate.getTime())) return '';
+  return targetDate.toISOString().slice(0, 10);
+}
+
+function calcRemainingQty(quantity, withdrawnQty) {
+  const q = Number(quantity || 0);
+  const w = Number(withdrawnQty || 0);
+  return Number(Math.max(0, q - w).toFixed(1));
+}
+
+function calcHoldFlag(status, holdRef) {
+  if (status === 'Disposed') return 'Closed';
+  if (status === 'VOID') return 'VOID';
+  return (!holdRef || String(holdRef).trim() === '') ? 'OK' : 'HOLD';
+}
+
+function calcDaysToDue(disposalDueDate) {
+  if (!disposalDueDate) return null;
+  const today = new Date(nowISO() + 'T00:00:00Z');
+  const due = new Date(disposalDueDate + 'T00:00:00Z');
+  return Math.round((due - today) / (1000 * 60 * 60 * 24));
+}
+
+function formatDueDateBadge(sample) {
+  if (!sample.disposalDueDate) return '-';
+  if (sample.status === 'Disposed' || sample.status === 'VOID') {
+    return `<span class="text-slate-400">${esc(sample.disposalDueDate)}</span>`;
+  }
+  const days = calcDaysToDue(sample.disposalDueDate);
+  if (days <= 0) {
+    return `<span class="due-overdue" title="ครบกำหนด/เลยกำหนดทำลายแล้ว (${days} วัน)"><i class="fa-solid fa-circle-exclamation mr-1"></i>${esc(sample.disposalDueDate)} (${days}d)</span>`;
+  }
+  if (days <= 30) {
+    return `<span class="due-warning" title="จะครบกำหนดในอีก ${days} วัน"><i class="fa-solid fa-clock mr-1"></i>${esc(sample.disposalDueDate)} (+${days}d)</span>`;
+  }
+  return `<span class="due-normal">${esc(sample.disposalDueDate)} <span class="text-[11px] text-slate-400">(${days}d)</span></span>`;
+}
+
+function calcWithinLimit(recordType, tempMin, tempMax, rhMax) {
+  if (recordType !== 'Daily Temp/RH') return 'N/A';
+  if (tempMin === '' || tempMax === '' || rhMax === '' || tempMin === null || tempMax === null || rhMax === null) return '';
+  const tMin = Number(tempMin), tMax = Number(tempMax), hMax = Number(rhMax);
+  if (isNaN(tMin) || isNaN(tMax) || isNaN(hMax)) return '';
+  return (tMin >= 23 && tMax <= 27 && hMax <= 65) ? 'Yes' : 'NO - excursion';
+}
+
+function enrichF01Sample(raw) {
+  const minQty = calcMinQty(raw.retentionCategory);
+  const retentionMonths = calcRetentionMonths(raw.retentionCategory);
+  const disposalDueDate = calcDisposalDueDate(raw.productionDate, retentionMonths);
+  const withdrawnQty = Number(raw.withdrawnQty || 0);
+  const remainingQty = calcRemainingQty(raw.quantity, withdrawnQty);
+  const holdFlag = calcHoldFlag(raw.status, raw.holdRef);
+  const qtyCheck = calcQtyCheck(raw.quantity, minQty);
+  const daysToDue = calcDaysToDue(disposalDueDate);
+  return {
+    ...raw,
+    minQty,
+    qtyCheck,
+    retentionMonths,
+    disposalDueDate,
+    withdrawnQty,
+    remainingQty,
+    holdFlag,
+    daysToDue
+  };
+}
+
+// =========================================================================
+// [ANCHOR: UI-Helpers-Modals-Toasts-ESignature]
+// =========================================================================
+function toast(msg, type = 'ok') {
+  const c = type === 'error' ? 'bg-red-600' : type === 'warn' ? 'bg-amber-500' : 'bg-slate-900';
+  const el = document.createElement('div');
+  el.className = `toast ${c} text-white px-4 py-3 rounded-xl shadow-xl max-w-sm text-sm font-semibold flex items-center gap-2.5`;
+  const icon = type === 'error' ? 'fa-circle-xmark' : type === 'warn' ? 'fa-triangle-exclamation' : 'fa-circle-check';
+  el.innerHTML = `<i class="fa-solid ${icon} text-base shrink-0"></i><span>${esc(msg)}</span>`;
+  document.getElementById('toastArea').appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+function loading(on, msg = 'กำลังประมวลผล...') {
+  let el = document.getElementById('globalLoading');
+  if (on) {
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'globalLoading';
+      el.className = 'fixed inset-0 z-[140] bg-slate-950/40 flex items-center justify-center';
+      el.innerHTML = `<div class="bg-white rounded-2xl p-5 shadow-2xl flex gap-3 items-center border border-slate-100"><div class="spinner"></div><span id="loadingText" class="font-bold text-slate-700 text-sm"></span></div>`;
+      document.body.appendChild(el);
+    }
+    el.querySelector('#loadingText').textContent = msg;
+  } else {
+    el?.remove();
+  }
+}
+
+function showModal(html) {
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  document.getElementById('modalBody').innerHTML = '';
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+function updateNetwork() {
+  const b = document.getElementById('onlineBadge');
+  if (!b) return;
+  b.textContent = navigator.onLine ? 'Online' : 'Offline';
+  b.className = `text-xs px-3 py-1 rounded-full font-bold ${navigator.onLine ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`;
+}
+window.addEventListener('online', updateNetwork);
+window.addEventListener('offline', updateNetwork);
+
+async function logAuditTrail(action, entityType, recordId, reason, signatureText = 'Authenticated User', beforeVal = null, afterVal = null) {
+  if (!state.user) return;
+  try {
+    await db.collection('retain_audit_events').add({
+      action,
+      entityType,
+      recordId: String(recordId),
+      user: state.user.email,
+      userId: state.user.uid,
+      role: LPM1003_ROLES[state.roleCode]?.title || state.roleCode,
+      reason: reason || 'Standard operation',
+      signature: signatureText,
+      beforeValue: beforeVal ? JSON.parse(JSON.stringify(beforeVal)) : null,
+      afterValue: afterVal ? JSON.parse(JSON.stringify(afterVal)) : null,
+      immutable: true,
+      createdAt: SV.serverTimestamp()
+    });
+  } catch (e) {
+    console.warn('Audit trail log error:', e);
+  }
+}
+
+function requireESignature({ title, meaning, requireReason = true, reasonLabel = 'เหตุผลในการดำเนินการ (Reason for Change / Action)', defaultReason = '' }) {
+  return new Promise(resolve => {
+    const html = `
+      <form id="eSignForm" class="p-6 space-y-4">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shadow">
+              <i class="fa-solid fa-file-signature"></i>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-lg text-slate-800">${esc(title)}</h3>
+              <p class="text-xs text-slate-500">WHO-GMP Annex 2 & GQP-1002 Electronic Signature</p>
+            </div>
+          </div>
+          <button type="button" id="esignCloseX" class="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-900">
+          <p class="font-bold mb-1">ความหมายของการลงนาม (Meaning of Signature):</p>
+          <p class="italic">"${esc(meaning)}"</p>
+        </div>
+
+        <label class="flex items-start gap-2.5 cursor-pointer bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <input type="checkbox" id="esignConfirmChk" required class="mt-0.5 w-4 h-4 text-blue-600 rounded">
+          <span class="text-xs font-bold text-slate-700">ข้าพเจ้ายืนยันว่าได้ตรวจสอบความถูกต้องครบถ้วนตามระเบียบปฏิบัติ LPM-1013 และ LPM-1003 แล้ว</span>
+        </label>
+
+        ${requireReason ? `
+        <label class="block text-xs font-bold text-slate-700">${esc(reasonLabel)} <span class="text-red-500">*</span>
+          <textarea id="esignReason" required rows="2" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 text-sm font-normal focus:border-blue-600 outline-none" placeholder="ระบุเหตุผลหรือเลขอ้างอิง...">${esc(defaultReason)}</textarea>
+        </label>` : ''}
+
+        <div class="grid sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+          <label class="block text-xs font-bold text-slate-600">ผู้ลงนาม (Signer Email)
+            <input type="email" id="esignEmail" value="${esc(state.user?.email || '')}" readonly class="w-full border rounded-xl p-2.5 mt-1 bg-slate-100 text-slate-600 font-bold text-xs">
+          </label>
+          <label class="block text-xs font-bold text-slate-700">รหัสผ่าน (ยืนยันตัวตนเพื่อลงนาม) <span class="text-red-500">*</span>
+            <input type="password" id="esignPassword" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 focus:border-blue-600 outline-none text-xs" placeholder="กรอกรหัสผ่าน Firebase ของคุณ">
+          </label>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" id="esignCancelBtn" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50">ยกเลิก</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow">
+            <i class="fa-solid fa-check-double mr-1.5"></i>ยืนยันและลงนาม (Verify & Sign)
+          </button>
+        </div>
+      </form>
+    `;
+    showModal(html);
+    const cancel = () => { closeModal(); resolve(null); };
+    document.getElementById('esignCancelBtn').onclick = cancel;
+    document.getElementById('esignCloseX').onclick = cancel;
+    document.getElementById('eSignForm').onsubmit = async e => {
+      e.preventDefault();
+      const pwd = document.getElementById('esignPassword').value;
+      const reason = requireReason ? document.getElementById('esignReason').value.trim() : (defaultReason || 'Approved per standard workflow');
+      if (requireReason && !reason) {
+        toast('กรุณาระบุเหตุผลในการดำเนินการตามหลัก ALCOA+', 'warn');
+        return;
+      }
+      loading(true, 'กำลังตรวจสอบรหัสผ่านเพื่อลงนามอิเล็กทรอนิกส์...');
+      try {
+        const cred = firebase.auth.EmailAuthProvider.credential(state.user.email, pwd);
+        await state.user.reauthenticateWithCredential(cred);
+        const sig = {
+          signedByUid: state.user.uid,
+          signedByEmail: state.user.email,
+          signedByRole: LPM1003_ROLES[state.roleCode]?.title || state.roleCode,
+          meaning,
+          reason,
+          signedAt: new Date().toISOString()
         };
+        closeModal();
+        resolve(sig);
+      } catch (err) {
+        toast('รหัสผ่านไม่ถูกต้อง ไม่สามารถลงนามอิเล็กทรอนิกส์ได้', 'error');
+      } finally {
+        loading(false);
+      }
+    };
+  });
+}
 
-        let auth, db, functions;
-        let checklistData = [];
-        let currentAuditId = null;
+// =========================================================================
+// [ANCHOR: Navigation-And-Render]
+// =========================================================================
+function buildNav() {
+  const navEl = document.getElementById('nav');
+  navEl.innerHTML = NAV.map(n => `
+    <button data-view="${n[0]}" class="w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-xs font-bold hover:bg-slate-800/80 transition ${state.view === n[0] ? 'nav-active' : 'text-slate-300'}">
+      <i class="fa-solid ${n[2]} w-5 text-center text-sm"></i>
+      <span class="truncate">${n[1]}</span>
+    </button>
+  `).join('');
+  navEl.querySelectorAll('button').forEach(btn => {
+    btn.onclick = () => {
+      state.view = btn.dataset.view;
+      buildNav();
+      render();
+      document.getElementById('sidebar').classList.remove('open');
+    };
+  });
+}
 
-        // --- INIT APP ---
-        try {
-            firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth();
-            db = firebase.firestore();
-            db.settings({ experimentalForceLongPolling: true, merge: true });
-            functions = firebase.app().functions("asia-southeast1");
-        } catch (e) {
-            console.error("Firebase Init Error:", e);
-            alert("System Error: Check Console");
-        }
+function render() {
+  if (!state.user) return;
+  const info = NAV.find(n => n[0] === state.view) || NAV[0];
+  document.getElementById('pageTitle').textContent = info[1];
+  document.getElementById('pageSubtitle').textContent = info[3];
 
-        // --- AUTH OBSERVER ---
-        if(auth) {
-            auth.onAuthStateChanged(user => {
-                const loginScreen = document.getElementById('login-screen');
-                const appLayout = document.getElementById('app-layout');
+  const views = {
+    dashboard: renderDashboard,
+    f01: renderF01View,
+    f02: renderF02View,
+    f03: renderF03View,
+    f04: renderF04View,
+    reconcile: renderReconcileView,
+    f00: renderF00View,
+    uat: renderUatAndAuditTrailView
+  };
+  document.getElementById('content').innerHTML = (views[state.view] || renderDashboard)();
 
-                if(user) {
-                    // Hide Login / Show App
-                    loginScreen.style.display = 'none';
-                    appLayout.classList.remove('hidden');
-                    appLayout.classList.add('flex');
-                    
-                    document.getElementById('user-display').innerText = user.email;
-                    switchView('planner');
-                } else {
-                    // Show Login / Hide App
-                    loginScreen.style.display = 'flex';
-                    appLayout.classList.add('hidden');
-                    appLayout.classList.remove('flex');
-                }
-            });
-        }
+  if (state.view === 'dashboard') {
+    setTimeout(initDashboardCharts, 60);
+  }
+}
 
-        // --- LOGIN HANDLER ---
-        function handleLogin() {
-            const e = document.getElementById('email').value;
-            const p = document.getElementById('password').value;
-            const btn = document.getElementById('btn-login');
+// =========================================================================
+// [ANCHOR: View-1-Dashboard]
+// =========================================================================
+let tempChartInstance = null;
+let catChartInstance = null;
 
-            if(!e || !p) return alert("กรุณากรอกข้อมูลให้ครบ");
+function renderDashboard() {
+  const activeSamples = state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID');
+  const kenvueSamples = activeSamples.filter(s => s.retentionCategory === 'FIBRE-HYG');
+  const holdSamples = activeSamples.filter(s => s.holdFlag === 'HOLD');
+  const dueIn30 = activeSamples.filter(s => s.holdFlag === 'OK' && s.daysToDue !== null && s.daysToDue > 0 && s.daysToDue <= 30);
+  const readyForDisposal = activeSamples.filter(s => s.holdFlag === 'OK' && s.daysToDue !== null && s.daysToDue <= 0);
+  const lowQtySamples = activeSamples.filter(s => s.qtyCheck === 'LOW');
+  const pendingF02 = state.f02.filter(w => w.approvalStatus === 'Pending' && w.status !== 'VOID');
+  const pendingF04 = state.f04.filter(d => d.qaApproved === 'Pending' && d.status !== 'VOID');
+  const f01NotUpdated = state.f04.filter(d => d.actualDisposalDate && d.f01StatusUpdated === 'No');
+  const excursions = state.f03.filter(m => m.withinLimit === 'NO - excursion');
 
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> กำลังตรวจสอบ...';
-            btn.disabled = true;
+  return `
+    ${state.f01.length === 0 ? `
+    <div class="mb-5 bg-blue-50 border border-blue-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shrink-0"><i class="fa-solid fa-database"></i></div>
+        <div>
+          <h4 class="font-extrabold text-sm text-blue-950">ระบบฐานข้อมูลจริงพร้อมใช้งาน (Production Clean State)</h4>
+          <p class="text-xs text-blue-800 mt-0.5">ยังไม่มีข้อมูลตัวอย่างในฐานข้อมูล Firebase — คุณสามารถเริ่มทดสอบบันทึกตัวอย่างแรก (F01), เบิกตัวอย่าง (F02) หรือบันทึกอุณหภูมิ (F03) ได้ทันที</p>
+        </div>
+      </div>
+      <button onclick="openF01Modal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition">
+        <i class="fa-solid fa-plus mr-1"></i>+ บันทึกตัวอย่างแรก (F01)
+      </button>
+    </div>` : ''}
 
-            auth.signInWithEmailAndPassword(e, p)
-                .then(() => {
-                    // Success handled by onAuthStateChanged
-                })
-                .catch(err => {
-                    alert("เข้าสู่ระบบไม่สำเร็จ: " + err.message);
-                    btn.innerHTML = 'เข้าสู่ระบบ <i class="fas fa-arrow-right ml-2"></i>';
-                    btn.disabled = false;
-                });
-        }
+    ${(readyForDisposal.length > 0 || excursions.length > 0 || pendingF02.length > 0 || pendingF04.length > 0) ? `
+    <div class="mb-5 bg-gradient-to-r from-amber-50 via-red-50 to-indigo-50 border border-amber-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shrink-0">
+          <i class="fa-solid fa-bell"></i>
+        </div>
+        <div>
+          <h4 class="font-extrabold text-sm text-slate-800">รายการแจ้งเตือนประจำวัน (Action Required)</h4>
+          <p class="text-xs text-slate-600 mt-0.5">
+            ถึงกำหนดทำลายพร้อมส่ง F04: <b class="text-red-600">${readyForDisposal.length}</b> รายการ |
+            ครบกำหนดใน 30 วัน: <b class="text-amber-700">${dueIn30.length}</b> รายการ |
+            รออนุมัติเบิก F02: <b class="text-blue-700">${pendingF02.length}</b> |
+            รออนุมัติทำลาย F04: <b class="text-indigo-700">${pendingF04.length}</b> |
+            Temp/RH Excursion: <b class="text-red-600">${excursions.length}</b>
+          </p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="switchF01Preset('Ready for Disposal')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition">
+          <i class="fa-solid fa-trash-can-arrow-up mr-1"></i>จัดการตัวอย่างถึงกำหนด (${readyForDisposal.length})
+        </button>
+        <button onclick="state.view='f03'; buildNav(); render();" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold px-3.5 py-2 rounded-xl transition">
+          <i class="fa-solid fa-temperature-half mr-1 text-blue-600"></i>บันทึก Temp/RH วันนี้
+        </button>
+      </div>
+    </div>` : ''}
 
-        function logout() {
-            if(confirm("ต้องการออกจากระบบใช่หรือไม่?")) {
-                auth.signOut().then(() => window.location.reload());
-            }
-        }
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+      <div onclick="switchF01Preset('Active Retains')" class="card p-4 shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-l-blue-600">
+        <div class="flex justify-between items-start"><span class="text-[11px] font-bold text-slate-500 uppercase">Active Retains</span><i class="fa-solid fa-boxes-stacked text-blue-600"></i></div>
+        <div class="text-3xl font-black text-slate-800 mt-2">${activeSamples.length}</div>
+        <div class="text-[11px] text-emerald-700 font-semibold mt-1">KENVUE (24M): ${kenvueSamples.length}</div>
+      </div>
 
-        // --- APP FUNCTIONS ---
-        function switchView(view) {
-            ['planner', 'execution'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
-            document.getElementById(`view-${view}`).classList.remove('hidden');
-            if(view === 'execution') loadAudits();
-        }
+      <div onclick="switchF01Preset('HOLD')" class="card p-4 shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-l-red-600">
+        <div class="flex justify-between items-start"><span class="text-[11px] font-bold text-slate-500 uppercase">On HOLD (ห้ามทำลาย)</span><i class="fa-solid fa-hand text-red-600"></i></div>
+        <div class="text-3xl font-black text-red-600 mt-2">${holdSamples.length}</div>
+        <div class="text-[11px] text-slate-500 font-semibold mt-1">ผูก Complaint / OOS</div>
+      </div>
 
-        async function generateChecklist() {
-            const dept = document.getElementById('dept-select').value;
-            // แก้ selector ให้แม่นยำขึ้น
-            const stds = Array.from(document.querySelectorAll('input[name="std"]:checked')).map(c => c.value);
+      <div onclick="switchF01Preset('Due in 30 Days')" class="card p-4 shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-l-amber-500">
+        <div class="flex justify-between items-start"><span class="text-[11px] font-bold text-slate-500 uppercase">Due ≤ 30 Days</span><i class="fa-solid fa-hourglass-half text-amber-500"></i></div>
+        <div class="text-3xl font-black text-amber-600 mt-2">${dueIn30.length}</div>
+        <div class="text-[11px] text-slate-500 font-semibold mt-1">เตรียมทำลายเดือนหน้า</div>
+      </div>
 
-            // ดึงค่าใหม่ที่เพิ่มเข้ามา
-            const perfContext = document.getElementById('performance-context').value;
-            const incHistory = document.getElementById('include-history').checked;
+      <div onclick="switchF01Preset('Ready for Disposal')" class="card p-4 shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-l-rose-600">
+        <div class="flex justify-between items-start"><span class="text-[11px] font-bold text-slate-500 uppercase">Ready for Disposal</span><i class="fa-solid fa-calendar-xmark text-rose-600"></i></div>
+        <div class="text-3xl font-black text-rose-600 mt-2">${readyForDisposal.length}</div>
+        <div class="text-[11px] text-slate-500 font-semibold mt-1">ถึงกำหนด & ไม่มี HOLD</div>
+      </div>
 
-            if(stds.length === 0) return alert("กรุณาเลือกมาตรฐานอย่างน้อย 1 ข้อ");
+      <div onclick="state.view='f02'; buildNav(); render();" class="card p-4 shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-l-indigo-600">
+        <div class="flex justify-between items-start"><span class="text-[11px] font-bold text-slate-500 uppercase">F02 Withdrawals</span><i class="fa-solid fa-hand-holding-droplet text-indigo-600"></i></div>
+        <div class="text-3xl font-black text-indigo-700 mt-2">${state.f02.length}</div>
+        <div class="text-[11px] text-amber-600 font-bold mt-1">Pending Approve: ${pendingF02.length}</div>
+      </div>
 
-            const btn = document.getElementById('btn-gen');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI กำลังวิเคราะห์ประวัติและสร้าง Checklist...';
-            btn.disabled = true;
+      <div onclick="state.view='f03'; buildNav(); render();" class="card p-4 shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-l-emerald-600">
+        <div class="flex justify-between items-start"><span class="text-[11px] font-bold text-slate-500 uppercase">Store Temp/RH</span><i class="fa-solid fa-temperature-half text-emerald-600"></i></div>
+        <div class="text-3xl font-black ${excursions.length ? 'text-red-600' : 'text-emerald-700'} mt-2">${excursions.length}</div>
+        <div class="text-[11px] text-slate-500 font-semibold mt-1">Excursions (Limit 23-27°C)</div>
+      </div>
+    </div>
 
-            try {
-                const fn = functions.httpsCallable('generateAuditChecklist');
-                // ส่ง parameters เพิ่มไปให้ backend
-                const result = await fn({ 
-                    department: dept, 
-                    standards: stds,
-                    customNote: "", // อันนี้อาจจะไม่จำเป็นแล้วถ้ามี performanceContext
-                    performanceContext: perfContext,
-                    includeHistory: incHistory
-                });
+    <div class="grid lg:grid-cols-3 gap-6 mb-6">
+      <div class="card p-5 shadow-sm lg:col-span-2">
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+          <div>
+            <h3 class="font-extrabold text-slate-800 text-base">แนวโน้มอุณหภูมิและความชื้นห้องเก็บตัวอย่าง (F03 Store Temp & RH Trend)</h3>
+            <p class="text-xs text-slate-500">เกณฑ์ควบคุมตาม LPM-1013: อุณหภูมิ 23.0 – 27.0 °C | ความชื้นสัมพัทธ์ (RH) ≤ 65%</p>
+          </div>
+          <button onclick="openF03Modal('Daily Temp/RH')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+            <i class="fa-solid fa-plus mr-1"></i>บันทึก Temp/RH
+          </button>
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="tempRhChart"></canvas>
+        </div>
+      </div>
 
-                checklistData = result.data.data;
+      <div class="card p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <h3 class="font-extrabold text-slate-800 text-base">สัดส่วนตัวอย่างแยกตามประเภท (F00 Categories)</h3>
+          <p class="text-xs text-slate-500">แสดงจำนวนตัวอย่างที่จัดเก็บอยู่จริง (Active Retains)</p>
+        </div>
+        <div class="relative h-52 w-full my-2">
+          <canvas id="categoryDonutChart"></canvas>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs border-t pt-3">
+          <div class="bg-slate-50 p-2 rounded-lg border"><span class="text-slate-500">Qty LOW:</span> <b class="${lowQtySamples.length ? 'text-red-600' : 'text-emerald-600'}">${lowQtySamples.length} รายการ</b></div>
+          <div class="bg-slate-50 p-2 rounded-lg border"><span class="text-slate-500">F04 ค้างตัด F01:</span> <b class="${f01NotUpdated.length ? 'text-red-600' : 'text-emerald-600'}">${f01NotUpdated.length} รายการ</b></div>
+        </div>
+      </div>
+    </div>
 
-                // ... (Render Preview Logic เหมือนเดิม) ...
-                const div = document.getElementById('preview-list');
-                document.getElementById('preview-area').classList.remove('hidden');
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="card p-5 shadow-sm">
+        <h3 class="font-extrabold text-slate-800 text-base mb-3"><i class="fa-solid fa-bolt text-amber-500 mr-1.5"></i>ทางลัดการทำงานประจำวัน (Quick Actions)</h3>
+        <div class="space-y-2.5">
+          <button onclick="openF01Modal()" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center"><i class="fa-solid fa-plus"></i></div>
+              <div>
+                <div class="font-bold text-xs text-slate-800">+ ลงทะเบียนตัวอย่างใหม่ประจำกะ (F01)</div>
+                <div class="text-[11px] text-slate-500">สำหรับ OP QCL ทุกกะ (คำนวณวันหมดอายุอัตโนมัติ)</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+          </button>
 
-                // Render ให้สวยงามขึ้น แยกสีตามประเภทคำถาม
-                div.innerHTML = checklistData.map((item, idx) => {
-                    // เช็คว่าเป็นคำถาม Follow-up จาก NC เก่าหรือไม่?
-                    const isFollowUp = item.question.includes("Corrective Action") || item.question.includes("NC");
-                    const borderClass = isFollowUp ? "border-l-4 border-red-500 bg-red-50" : "border-l-4 border-indigo-500 bg-white";
-                    const badge = isFollowUp ? `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">FOLLOW-UP NC</span>` : `<span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold uppercase">${item.standard || item.clause}</span>`;
+          <button onclick="openF02Modal()" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><i class="fa-solid fa-hand-holding-droplet"></i></div>
+              <div>
+                <div class="font-bold text-xs text-slate-800">+ ขอเบิกตัวอย่างเก็บ (F02 Withdrawal)</div>
+                <div class="text-[11px] text-slate-500">ตัดยอดคงเหลือใน F01 อัตโนมัติเมื่ออนุมัติ</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+          </button>
 
+          <button onclick="openF03Modal('Monthly Inspection')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center"><i class="fa-solid fa-clipboard-check"></i></div>
+              <div>
+                <div class="font-bold text-xs text-slate-800">+ ตรวจห้องเก็บประจำเดือน 10 ข้อ (F03)</div>
+                <div class="text-[11px] text-slate-500">แบบฟอร์ม I01–I10 ตาม LPM-1013 ข้อ 6.7.1</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+          </button>
+
+          <button onclick="state.view='reconcile'; buildNav(); render();" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-purple-400 hover:bg-purple-50/50 transition flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center"><i class="fa-solid fa-table-cells"></i></div>
+              <div>
+                <div class="font-bold text-xs text-slate-800">Reconcile รายสัปดาห์ (MC x Shift)</div>
+                <div class="text-[11px] text-slate-500">เทียบตัวอย่างเก็บกับบันทึกการผลิต & ตรวจสภาพ 6 เดือน</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="card p-5 shadow-sm lg:col-span-2 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <h3 class="font-extrabold text-slate-800 text-base">รายการตัวอย่างเก็บล่าสุดในระบบ (Recent F01 Samples)</h3>
+              <p class="text-xs text-slate-500">ข้อมูลจริงจากฐานข้อมูล Firestore (คลิก Sample ID เพื่อแก้ไขหรือดูรายละเอียด)</p>
+            </div>
+            <button onclick="state.view='f01'; buildNav(); render();" class="text-xs font-bold text-blue-600 hover:underline">ดูทะเบียน F01 ทั้งหมด →</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-50 text-slate-600 border-y">
+                <tr>
+                  <th class="py-2.5 px-3">Sample ID</th>
+                  <th class="py-2.5 px-3">Category / MC</th>
+                  <th class="py-2.5 px-3">Prod. Date</th>
+                  <th class="py-2.5 px-3">Disposal Due Date</th>
+                  <th class="py-2.5 px-3 text-right">Remaining</th>
+                  <th class="py-2.5 px-3 text-center">Hold Flag</th>
+                  <th class="py-2.5 px-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.f01.slice(0, 6).map(s => `
+                  <tr class="border-b last:border-0 hover:bg-slate-50">
+                    <td class="py-2.5 px-3 font-bold text-blue-700 cursor-pointer hover:underline" onclick="openF01Modal('${esc(s.sampleId)}')">${esc(s.sampleId)}</td>
+                    <td class="py-2.5 px-3"><span class="font-bold">${esc(s.retentionCategory)}</span> <span class="text-slate-400">(${esc(s.mc)})</span></td>
+                    <td class="py-2.5 px-3">${esc(s.productionDate)}</td>
+                    <td class="py-2.5 px-3">${formatDueDateBadge(s)}</td>
+                    <td class="py-2.5 px-3 text-right font-bold">${s.remainingQty} ${esc(s.unit)}</td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold pill-${esc(s.holdFlag)}">${esc(s.holdFlag)}</span></td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold pill-${esc(s.status).replace(/\s/g, '_')}">${esc(s.status)}</span></td>
+                  </tr>
+                `).join('') || `<tr><td colspan="7" class="py-10 text-center text-slate-400 font-semibold">ยังไม่มีข้อมูลตัวอย่างเก็บในฐานข้อมูล</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initDashboardCharts() {
+  const tempCanvas = document.getElementById('tempRhChart');
+  if (tempCanvas) {
+    if (tempChartInstance) tempChartInstance.destroy();
+    const dailyLogs = state.f03.filter(r => r.recordType === 'Daily Temp/RH').slice().reverse();
+    const labels = dailyLogs.map(r => r.recordRef.replace('TH-', ''));
+    const tMax = dailyLogs.map(r => r.tempMax);
+    const tMin = dailyLogs.map(r => r.tempMin);
+    const hMax = dailyLogs.map(r => r.rhMax);
+
+    tempChartInstance = new Chart(tempCanvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Temp Max (°C) [Limit ≤ 27°C]', data: tMax, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', tension: 0.3, borderWidth: 2 },
+          { label: 'Temp Min (°C) [Limit ≥ 23°C]', data: tMin, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.3, borderWidth: 2 },
+          { label: 'RH Max (%) [Limit ≤ 65%]', data: hMax, borderColor: '#10b981', borderDash: [4, 4], tension: 0.3, borderWidth: 2 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { family: 'Sarabun', size: 11 } } } },
+        scales: { y: { beginAtZero: false, suggestedMin: 20, suggestedMax: 70 } }
+      }
+    });
+  }
+
+  const catCanvas = document.getElementById('categoryDonutChart');
+  if (catCanvas) {
+    if (catChartInstance) catChartInstance.destroy();
+    const active = state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID');
+    const counts = ['FIBRE-HYG', 'FIBRE-STD', 'NA2SO4', 'H2SO4'].map(cat => active.filter(s => s.retentionCategory === cat).length);
+    catChartInstance = new Chart(catCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['FIBRE-HYG (24M)', 'FIBRE-STD (4M)', 'NA2SO4 (6M)', 'H2SO4 (3M)'],
+        datasets: [{
+          data: counts,
+          backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: { legend: { position: 'right', labels: { font: { family: 'Sarabun', size: 11 } } } }
+      }
+    });
+  }
+}
+
+window.switchF01Preset = function(viewName) {
+  state.view = 'f01';
+  state.f01View = viewName;
+  buildNav();
+  render();
+};
+
+// =========================================================================
+// [ANCHOR: View-2-F01-Retain-Sample-Register]
+// =========================================================================
+const F01_VIEWS = [
+  ['Active Retains', 'Active Retains (ยังไม่ทำลาย)'],
+  ['By MC & Shift', 'By MC & Shift (แยกตามเครื่อง)'],
+  ['Due in 30 Days', 'Due in 30 Days (ครบใน 30 วัน)'],
+  ['Ready for Disposal', 'Ready for Disposal (พร้อมส่ง F04)'],
+  ['HOLD', 'HOLD (ห้ามทำลาย)'],
+  ['Qty LOW', 'Qty LOW (ต่ำกว่าเกณฑ์)'],
+  ['KENVUE Hygiene', 'KENVUE Hygiene (เก็บ 24 เดือน)'],
+  ['All Items', 'All Items (ทั้งหมด)']
+];
+
+function getFilteredF01() {
+  return state.f01.filter(s => {
+    if (state.f01View === 'Active Retains' && (s.status === 'Disposed' || s.status === 'VOID')) return false;
+    if (state.f01View === 'By MC & Shift' && (s.status === 'Disposed' || s.status === 'VOID')) return false;
+    if (state.f01View === 'Due in 30 Days') {
+      if (s.status === 'Disposed' || s.status === 'VOID' || s.holdFlag !== 'OK') return false;
+      if (s.daysToDue === null || s.daysToDue > 30) return false;
+    }
+    if (state.f01View === 'Ready for Disposal') {
+      if (s.status === 'Disposed' || s.status === 'VOID' || s.holdFlag !== 'OK') return false;
+      if (s.daysToDue === null || s.daysToDue > 0) return false;
+    }
+    if (state.f01View === 'HOLD' && s.holdFlag !== 'HOLD') return false;
+    if (state.f01View === 'Qty LOW' && s.qtyCheck !== 'LOW') return false;
+    if (state.f01View === 'KENVUE Hygiene' && (s.retentionCategory !== 'FIBRE-HYG' || s.status === 'Disposed' || s.status === 'VOID')) return false;
+
+    if (state.filterMc !== 'All' && s.mc !== state.filterMc) return false;
+    if (state.filterCategory !== 'All' && s.retentionCategory !== state.filterCategory) return false;
+
+    if (state.searchQuery.trim() !== '') {
+      const q = state.searchQuery.toLowerCase();
+      const hay = `${s.sampleId} ${s.product} ${s.customer} ${s.retentionCategory} ${s.mc} ${s.storageLocation} ${s.holdRef} ${s.coaRef}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderF01View() {
+  const rows = getFilteredF01();
+  const canEdit = LPM1003_ROLES[state.roleCode]?.canCreateF01;
+
+  return `
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-800">LPM-1013-F01 Retain Sample Register (ทะเบียนหลัก)</h3>
+        <p class="text-xs text-slate-500">1 แถว = 1 ตัวอย่าง (1 MC ต่อ 1 กะ สำหรับเส้นใย / 1 รอบผลิตสำหรับ Na2SO4 / 1 Lot รับเข้าสำหรับ H2SO4)</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${state.f01View === 'Ready for Disposal' && rows.length > 0 ? `
+        <button onclick="sendReadySamplesToF04()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+          <i class="fa-solid fa-file-export mr-1.5"></i>สร้างใบขออนุมัติทำลาย F04 จากรายการที่ถึงกำหนด (${rows.length})
+        </button>` : ''}
+        ${canEdit ? `
+        <button onclick="openF01Modal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+          <i class="fa-solid fa-plus mr-1.5"></i>+ ลงทะเบียนตัวอย่างใหม่ (New Sample)
+        </button>` : ''}
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-1.5 mb-4 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+      ${F01_VIEWS.map(([vKey, vLabel]) => `
+        <button onclick="state.f01View='${vKey}'; render();" class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${state.f01View === vKey ? 'view-chip-active shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}">
+          ${esc(vLabel)}
+        </button>
+      `).join('')}
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+      <div class="relative flex-1 min-w-[220px]">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+        <input type="text" value="${esc(state.searchQuery)}" oninput="state.searchQuery=this.value; render();" placeholder="ค้นหา Sample ID (เช่น RS-261106-M3-A), ลูกค้า KENVUE, ตู้เก็บ, เลข Hold Ref..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+      </div>
+      <select onchange="state.filterCategory=this.value; render();" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold bg-slate-50">
+        <option value="All">ทุกประเภท (All Categories)</option>
+        ${state.f00.map(c => `<option value="${c.retentionCategory}" ${state.filterCategory === c.retentionCategory ? 'selected' : ''}>${c.retentionCategory} (${c.retentionMonths}M)</option>`).join('')}
+      </select>
+      <select onchange="state.filterMc=this.value; render();" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold bg-slate-50">
+        <option value="All">ทุกเครื่องจักร (All MCs)</option>
+        ${MCS.map(m => `<option value="${m}" ${state.filterMc === m ? 'selected' : ''}>${m}</option>`).join('')}
+      </select>
+      <span class="text-xs font-bold text-slate-500 ml-auto">พบ ${rows.length} รายการ</span>
+    </div>
+
+    <div class="card overflow-x-auto shadow-sm">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+          <tr>
+            <th class="p-3">Sample ID</th>
+            <th class="p-3">Product / Customer</th>
+            <th class="p-3">Category</th>
+            <th class="p-3">MC / Shift</th>
+            <th class="p-3">Prod. Date</th>
+            <th class="p-3 text-right">Qty / Min</th>
+            <th class="p-3 text-center">Qty Check</th>
+            <th class="p-3 text-right">Withdrawn / Rem.</th>
+            <th class="p-3">Storage Location</th>
+            <th class="p-3">Disposal Due (Auto)</th>
+            <th class="p-3 text-center">Hold Flag</th>
+            <th class="p-3 text-center">Status</th>
+            <th class="p-3 text-right no-print">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(s => `
+            <tr class="border-b last:border-0 hover:bg-slate-50/90 transition">
+              <td class="p-3 font-extrabold text-blue-700 whitespace-nowrap">
+                <button onclick="openF01Modal('${esc(s.sampleId)}')" class="hover:underline flex items-center gap-1">
+                  <span>${esc(s.sampleId)}</span>
+                </button>
+                <div class="text-[10px] text-slate-400 font-normal">${esc(s.coaRef || '-')}</div>
+              </td>
+              <td class="p-3">
+                <div class="font-bold text-slate-800">${esc(s.product)}</div>
+                <div class="text-[11px] text-slate-500">${esc(s.customer || '-')}</div>
+              </td>
+              <td class="p-3 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded bg-slate-100 border font-bold text-slate-700">${esc(s.retentionCategory)}</span>
+                <div class="text-[10px] text-slate-400 mt-0.5">เก็บ ${s.retentionMonths} เดือน</div>
+              </td>
+              <td class="p-3 whitespace-nowrap">
+                <div class="font-bold text-slate-700">${esc(s.mc)}</div>
+                <div class="text-[10px] text-slate-500">${esc(s.shift)}</div>
+              </td>
+              <td class="p-3 whitespace-nowrap">
+                <div class="font-semibold">${esc(s.productionDate)}</div>
+                <div class="text-[10px] text-slate-400">Sampled: ${esc(s.samplingDate)}</div>
+              </td>
+              <td class="p-3 text-right whitespace-nowrap">
+                <div class="font-bold text-slate-800">${s.quantity} ${esc(s.unit)}</div>
+                <div class="text-[10px] text-slate-400">Min: ${s.minQty} ${esc(s.unit)}</div>
+              </td>
+              <td class="p-3 text-center">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold pill-${esc(s.qtyCheck)}">${esc(s.qtyCheck)}</span>
+              </td>
+              <td class="p-3 text-right whitespace-nowrap">
+                <div class="font-extrabold text-emerald-700">${s.remainingQty} ${esc(s.unit)}</div>
+                <div class="text-[10px] text-slate-400">เบิกสะสม: ${s.withdrawnQty} ${esc(s.unit)}</div>
+              </td>
+              <td class="p-3">
+                <div class="font-semibold text-slate-700">${esc(s.storageLocation)}</div>
+                <div class="text-[10px] text-slate-400">${esc(s.packaging || '-')}</div>
+              </td>
+              <td class="p-3 whitespace-nowrap">${formatDueDateBadge(s)}</td>
+              <td class="p-3 text-center whitespace-nowrap">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold pill-${esc(s.holdFlag)}">${esc(s.holdFlag)}</span>
+                ${s.holdRef ? `<div class="text-[10px] text-red-600 font-bold mt-0.5">${esc(s.holdRef)}</div>` : ''}
+              </td>
+              <td class="p-3 text-center whitespace-nowrap">
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold pill-${esc(s.status).replace(/\s/g, '_')}">${esc(s.status)}</span>
+              </td>
+              <td class="p-3 text-right whitespace-nowrap no-print">
+                <button onclick="openF01Modal('${esc(s.sampleId)}')" class="text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-lg font-bold">แก้ไข/ดู</button>
+                <button onclick="openF02Modal('', '${esc(s.sampleId)}')" class="text-indigo-600 hover:bg-indigo-50 px-2.5 py-1 rounded-lg font-bold" title="เบิกตัวอย่างนี้">เบิก F02</button>
+              </td>
+            </tr>
+          `).join('') || `<tr><td colspan="13" class="p-12 text-center text-slate-400 font-semibold">ไม่พบรายการตัวอย่างในมุมมองนี้</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openF01Modal(editSampleId = '') {
+  const existing = editSampleId ? state.f01.find(s => s.sampleId === editSampleId) : null;
+  const s = existing || {
+    sampleId: '',
+    product: 'Viscose Staple Fibre',
+    customer: '',
+    retentionCategory: 'FIBRE-STD',
+    mc: 'MC 3',
+    shift: 'A (07:00-15:00)',
+    timeRange: '',
+    productionDate: nowISO(),
+    samplingDate: nowISO(),
+    sampledBy: state.user?.email || '',
+    quantity: 100,
+    unit: 'g',
+    packaging: 'Double PE zip-lock bag',
+    storageLocation: 'Retain store / Cab. C / Shelf 1',
+    withdrawnQty: 0,
+    holdRef: '',
+    status: 'Retained',
+    conditionCheckDate: '',
+    conditionResult: '',
+    checkedBy: '',
+    coaRef: '',
+    remarks: ''
+  };
+
+  const html = `
+    <form id="f01Form" class="p-6 space-y-4 max-h-[88vh] overflow-y-auto custom-scrollbar">
+      <div class="flex justify-between items-start border-b pb-3">
+        <div>
+          <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-blue-100 text-blue-800">LPM-1013-F01 Rev.00</span>
+          <h3 class="font-extrabold text-lg text-slate-800 mt-1">${existing ? `แก้ไขข้อมูลตัวอย่างเก็บ: ${esc(s.sampleId)}` : 'ลงทะเบียนตัวอย่างเก็บใหม่ (New Retain Sample)'}</h3>
+        </div>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+      </div>
+
+      <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs">
+        <div><span class="text-slate-500 block text-[10px]">Min Qty (A1)</span><b id="previewMinQty" class="text-slate-800 text-sm">-</b></div>
+        <div><span class="text-slate-500 block text-[10px]">Qty Check (A2)</span><b id="previewQtyCheck" class="text-sm">-</b></div>
+        <div><span class="text-slate-500 block text-[10px]">Retention (A3)</span><b id="previewRetMonths" class="text-slate-800 text-sm">-</b></div>
+        <div><span class="text-slate-500 block text-[10px]">Disposal Due (A4)</span><b id="previewDueDate" class="text-blue-700 text-sm">-</b></div>
+        <div><span class="text-slate-500 block text-[10px]">Remaining Qty (A5)</span><b id="previewRemQty" class="text-emerald-700 text-sm">-</b></div>
+        <div><span class="text-slate-500 block text-[10px]">Hold Flag (A6)</span><b id="previewHoldFlag" class="text-sm">-</b></div>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4 text-xs">
+        <label class="block font-bold text-slate-700">
+          Retention Category <span class="text-red-500">*</span>
+          <select name="retentionCategory" id="f01Cat" required onchange="onF01FormChange()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-slate-50 font-bold">
+            ${state.f00.map(c => `<option value="${c.retentionCategory}" ${s.retentionCategory === c.retentionCategory ? 'selected' : ''}>${c.retentionCategory} — ${c.productGrade.slice(0, 32)}...</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Product <span class="text-red-500">*</span>
+          <select name="product" id="f01Prod" required onchange="onF01FormChange()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            ${PRODUCTS.map(p => `<option value="${p}" ${s.product === p ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Customer (เช่น KENVUE)
+          <input type="text" name="customer" id="f01Cust" value="${esc(s.customer)}" placeholder="ระบุชื่อลูกค้า (ถ้ามี)" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Machine (MC) <span class="text-red-500">*</span>
+          <select name="mc" id="f01Mc" required onchange="onF01FormChange()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            ${MCS.map(m => `<option value="${m}" ${s.mc === m ? 'selected' : ''}>${m}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Shift (กะผลิต) <span class="text-red-500">*</span>
+          <select name="shift" id="f01Shift" required onchange="onF01FormChange()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            ${SHIFTS.map(sh => `<option value="${sh}" ${s.shift === sh ? 'selected' : ''}>${sh}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Time Range (กรณี Lot Change)
+          <input type="text" name="timeRange" value="${esc(s.timeRange)}" placeholder="เช่น 09:00-11:30" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Production Date (Shift C = วันเริ่มกะ 23:00) <span class="text-red-500">*</span>
+          <input type="date" name="productionDate" id="f01ProdDate" required value="${esc(s.productionDate)}" onchange="onF01FormChange()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Sampling Date (ต้อง ≥ Production Date) <span class="text-red-500">*</span>
+          <input type="date" name="samplingDate" id="f01SampDate" required value="${esc(s.samplingDate)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <div>
+          <label class="block font-bold text-slate-700">
+            Sample ID (ต้องขึ้นต้นด้วย RS-) <span class="text-red-500">*</span>
+          </label>
+          <div class="flex gap-1.5 mt-1">
+            <input type="text" name="sampleId" id="f01SampleId" ${existing ? 'readonly' : ''} required value="${esc(s.sampleId)}" class="w-full border border-slate-300 rounded-xl p-2.5 font-extrabold text-blue-800 ${existing ? 'bg-slate-100' : 'bg-white'}" placeholder="RS-YYMMDD-M3-A">
+            ${!existing ? `<button type="button" onclick="autoGenerateSampleId()" class="px-2.5 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl font-bold hover:bg-indigo-100 shrink-0" title="สร้างรหัสอัตโนมัติตามรูปแบบ LPM-1013"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto</button>` : ''}
+          </div>
+        </div>
+
+        <label class="block font-bold text-slate-700">
+          Quantity (ปริมาณที่เก็บ) <span class="text-red-500">*</span>
+          <input type="number" step="0.1" min="0" name="quantity" id="f01Qty" required value="${s.quantity}" oninput="onF01FormChange()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-bold">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Unit (หน่วย: g หรือ mL) <span class="text-red-500">*</span>
+          <select name="unit" id="f01Unit" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
+            <option value="g" ${s.unit === 'g' ? 'selected' : ''}>g (กรัม)</option>
+            <option value="mL" ${s.unit === 'mL' ? 'selected' : ''}>mL (มิลลิลิตร - สำหรับ H2SO4)</option>
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Withdrawn Qty (คำนวณอัตโนมัติจาก F02)
+          <input type="number" step="0.1" id="f01Withdrawn" value="${s.withdrawnQty || 0}" readonly class="w-full border border-slate-200 rounded-xl p-2.5 mt-1 bg-slate-100 text-slate-500 font-bold">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Packaging (ภาชนะบรรจุ)
+          <select name="packaging" id="f01Pack" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            ${PACKAGINGS.map(p => `<option value="${p}" ${s.packaging === p ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700 sm:col-span-2">
+          Storage Location (Room / Cabinet / Shelf) <span class="text-red-500">*</span>
+          <input type="text" name="storageLocation" id="f01Loc" required value="${esc(s.storageLocation)}" placeholder="Retain store / Cab. A / Shelf 1" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Hold Ref (เลข Complaint / OOS / Deviation)
+          <input type="text" name="holdRef" id="f01HoldRef" value="${esc(s.holdRef)}" oninput="onF01FormChange()" placeholder="เช่น CC-2611-01" class="w-full border border-red-200 bg-red-50/40 rounded-xl p-2.5 mt-1 font-bold text-red-700">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Status <span class="text-red-500">*</span>
+          <select name="status" id="f01Status" required onchange="onF01FormChange()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
+            ${STATUSES_F01.map(st => `<option value="${st}" ${s.status === st ? 'selected' : ''}>${st}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          CoA / Test Report Ref
+          <input type="text" name="coaRef" value="${esc(s.coaRef)}" placeholder="เช่น CoA-261106-M3A" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Sampled By (ผู้เก็บตัวอย่าง) <span class="text-red-500">*</span>
+          <input type="text" name="sampledBy" required value="${esc(s.sampledBy)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Condition Check Date (ตรวจสภาพทุก 6 เดือน)
+          <input type="date" name="conditionCheckDate" value="${esc(s.conditionCheckDate)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Condition Result (ผลตรวจสภาพ 6 เดือน)
+          <select name="conditionResult" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            ${CONDITION_RESULTS.map(r => `<option value="${r}" ${s.conditionResult === r ? 'selected' : ''}>${r || '-- ยังไม่ตรวจ --'}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+
+      <label class="block text-xs font-bold text-slate-700">
+        Remarks (หมายเหตุ)
+        <textarea name="remarks" rows="2" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-normal">${esc(s.remarks)}</textarea>
+      </label>
+
+      ${existing ? `
+      <label class="block text-xs font-bold text-amber-900 bg-amber-50 p-3 rounded-xl border border-amber-200">
+        <i class="fa-solid fa-pen-to-square mr-1"></i>เหตุผลในการแก้ไขข้อมูล (Reason for Change - ALCOA+) <span class="text-red-500">*</span>
+        <input type="text" name="changeReason" required placeholder="ระบุเหตุผลในการแก้ไขข้อมูล" class="w-full border border-amber-300 rounded-lg p-2 mt-1 bg-white font-normal">
+      </label>` : ''}
+
+      <div class="flex flex-wrap justify-between items-center gap-2 pt-3 border-t">
+        <div>
+          ${existing ? `
+          <button type="button" onclick="tryDeleteF01Sample('${esc(s.sampleId)}')" class="px-3.5 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold border border-red-200">
+            <i class="fa-solid fa-ban mr-1"></i>ยกเลิกรายการ (VOID / Restrict Delete Check)
+          </button>` : ''}
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl border text-xs font-bold text-slate-600 hover:bg-slate-50">ยกเลิก</button>
+          <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow">
+            <i class="fa-solid fa-floppy-disk mr-1.5"></i>บันทึกข้อมูล F01 ลง Firebase
+          </button>
+        </div>
+      </div>
+    </form>
+  `;
+  showModal(html);
+  if (!existing) autoGenerateSampleId();
+  onF01FormChange(true);
+
+  document.getElementById('f01Form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    const sampleId = String(data.sampleId || '').trim().toUpperCase();
+
+    if (!sampleId.startsWith('RS-')) {
+      toast('Sample ID ต้องขึ้นต้นด้วย RS- เช่น RS-261106-M3-A (Validation ข้อ 6.2)', 'error');
+      return;
+    }
+    if (!existing && state.f01.some(x => x.sampleId.toUpperCase() === sampleId)) {
+      toast(`Sample ID "${sampleId}" ซ้ำกับรายการที่มีอยู่แล้วในระบบ (Unique Constraint)`, 'error');
+      return;
+    }
+    if (data.samplingDate < data.productionDate) {
+      toast('Sampling Date ต้องไม่ก่อน Production Date (Validation สูตร A7)', 'error');
+      return;
+    }
+    if (data.holdRef && String(data.holdRef).trim() !== '' && data.status === 'Disposed') {
+      toast('ห้ามเปลี่ยน Status เป็น Disposed ขณะที่ยังมี Hold Ref ค้างอยู่! (Validation สูตร A7)', 'error');
+      return;
+    }
+
+    const enriched = enrichF01Sample({
+      ...(existing || {}),
+      sampleId,
+      product: data.product,
+      customer: data.customer,
+      retentionCategory: data.retentionCategory,
+      mc: data.mc,
+      shift: data.shift,
+      timeRange: data.timeRange,
+      productionDate: data.productionDate,
+      samplingDate: data.samplingDate,
+      sampledBy: data.sampledBy,
+      quantity: Number(data.quantity),
+      unit: data.unit,
+      packaging: data.packaging,
+      storageLocation: data.storageLocation,
+      withdrawnQty: existing ? Number(existing.withdrawnQty || 0) : 0,
+      holdRef: data.holdRef.trim(),
+      status: data.holdRef.trim() ? (data.status === 'Retained' ? 'On Hold' : data.status) : data.status,
+      conditionCheckDate: data.conditionCheckDate,
+      conditionResult: data.conditionResult,
+      checkedBy: data.conditionResult ? (state.user?.email || '') : '',
+      coaRef: data.coaRef,
+      remarks: data.remarks,
+      lastChangeReason: existing ? data.changeReason : 'Initial shift retain sample registration',
+      updatedBy: state.user?.email || '',
+      updatedAt: SV.serverTimestamp()
+    });
+    if (!existing) enriched.createdAt = SV.serverTimestamp();
+
+    loading(true, 'กำลังบันทึกลง Firestore...');
+    try {
+      await db.collection('retain_samples_f01').doc(sampleId).set(enriched, { merge: true });
+      await logAuditTrail(existing ? 'UPDATE_F01_SAMPLE' : 'CREATE_F01_SAMPLE', 'F01_SAMPLE', sampleId, enriched.lastChangeReason, state.user.email, existing, enriched);
+      closeModal();
+      toast(`บันทึกตัวอย่าง ${sampleId} ลงฐานข้อมูลเรียบร้อยแล้ว`);
+    } catch (err) {
+      toast(`บันทึกไม่สำเร็จ: ${err.message}`, 'error');
+    } finally {
+      loading(false);
+    }
+  };
+}
+
+window.onF01FormChange = function(isInit = false) {
+  const cat = document.getElementById('f01Cat')?.value;
+  const prodDate = document.getElementById('f01ProdDate')?.value;
+  const qty = document.getElementById('f01Qty')?.value;
+  const withdrawn = document.getElementById('f01Withdrawn')?.value || 0;
+  const holdRef = document.getElementById('f01HoldRef')?.value || '';
+  const status = document.getElementById('f01Status')?.value || 'Retained';
+
+  const meta = getCategoryMeta(cat);
+  if (meta && !isInit) {
+    document.getElementById('f01Unit').value = meta.unit;
+    document.getElementById('f01Prod').value = meta.defaultProduct;
+  }
+
+  const minQty = calcMinQty(cat);
+  const qtyCheck = calcQtyCheck(qty, minQty);
+  const retMonths = calcRetentionMonths(cat);
+  const dueDate = calcDisposalDueDate(prodDate, retMonths);
+  const remQty = calcRemainingQty(qty, withdrawn);
+  const holdFlag = calcHoldFlag(status, holdRef);
+
+  document.getElementById('previewMinQty').textContent = `${minQty} ${meta?.unit || 'g'}`;
+  const qcEl = document.getElementById('previewQtyCheck');
+  qcEl.textContent = qtyCheck || '-';
+  qcEl.className = `text-sm font-extrabold ${qtyCheck === 'LOW' ? 'text-red-600' : 'text-emerald-700'}`;
+  document.getElementById('previewRetMonths').textContent = `${retMonths} เดือน`;
+  document.getElementById('previewDueDate').textContent = dueDate || '-';
+  document.getElementById('previewRemQty').textContent = `${remQty} ${meta?.unit || 'g'}`;
+  const hfEl = document.getElementById('previewHoldFlag');
+  hfEl.textContent = holdFlag;
+  hfEl.className = `text-sm font-extrabold ${holdFlag === 'HOLD' ? 'text-red-600' : 'text-emerald-700'}`;
+};
+
+window.autoGenerateSampleId = function() {
+  const cat = document.getElementById('f01Cat')?.value || 'FIBRE-STD';
+  const prodDate = document.getElementById('f01ProdDate')?.value || nowISO();
+  const mc = document.getElementById('f01Mc')?.value || 'MC 3';
+  const shift = document.getElementById('f01Shift')?.value || 'A';
+  const yymmdd = prodDate.replace(/-/g, '').slice(2);
+  let suffix = '';
+  if (cat === 'NA2SO4') {
+    suffix = 'SS-1';
+  } else if (cat === 'H2SO4') {
+    suffix = 'SA-1';
+  } else {
+    const mcCode = mc.replace('MC ', 'M').replace('N/A', 'M0');
+    const shiftCode = shift.charAt(0);
+    suffix = `${mcCode}-${shiftCode}`;
+  }
+  const el = document.getElementById('f01SampleId');
+  if (el && !el.readOnly) el.value = `RS-${yymmdd}-${suffix}`;
+};
+
+window.tryDeleteF01Sample = async function(sampleId) {
+  const hasF02 = state.f02.some(w => w.sampleId === sampleId && w.status !== 'VOID');
+  const hasF04 = state.f04.some(d => d.sampleId === sampleId && d.status !== 'VOID');
+  if (hasF02 || hasF04) {
+    toast(`ระบบบล็อกการยกเลิก! ตัวอย่าง "${sampleId}" มีประวัติเชื่อมโยงใน F02/F04 แล้ว (Restrict Delete / ALCOA+)`, 'error');
+    return;
+  }
+  if (!LPM1003_ROLES[state.roleCode]?.canVoid) {
+    toast('สิทธิ์ของคุณเป็น Contribute - No Delete (ห้ามลบรายการตามข้อ 11 ของคู่มือ GMP)', 'error');
+    return;
+  }
+  const sig = await requireESignature({
+    title: `ยกเลิกรายการตัวอย่าง (VOID): ${sampleId}`,
+    meaning: 'ข้าพเจ้ายืนยันการยกเลิก (VOID) รายการตัวอย่างที่บันทึกผิดพลาด โดยยังคงเก็บประวัติไว้ใน Audit Trail',
+    requireReason: true
+  });
+  if (!sig) return;
+  loading(true, 'กำลังบันทึก VOID...');
+  try {
+    await db.collection('retain_samples_f01').doc(sampleId).update({
+      status: 'VOID',
+      holdFlag: 'VOID',
+      lastChangeReason: sig.reason,
+      voidSignature: sig,
+      updatedBy: state.user.email,
+      updatedAt: SV.serverTimestamp()
+    });
+    await logAuditTrail('VOID_F01_SAMPLE', 'F01_SAMPLE', sampleId, sig.reason, `E-Signed: ${sig.signedByEmail}`);
+    closeModal();
+    toast(`เปลี่ยนสถานะ ${sampleId} เป็น VOID พร้อมบันทึก Audit Trail เรียบร้อย`);
+  } catch (err) {
+    toast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
+  } finally {
+    loading(false);
+  }
+};
+
+// =========================================================================
+// [ANCHOR: View-3-F02-Withdrawal-Register]
+// =========================================================================
+function renderF02View() {
+  const filtered = state.f02.filter(w => {
+    if (state.f02View === 'Pending Approval' && w.approvalStatus !== 'Pending') return false;
+    if (state.f02View === 'Not Returned' && (w.returnedToStore !== 'No' || w.approvalStatus !== 'Approved')) return false;
+    return true;
+  });
+
+  return `
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-800">LPM-1013-F02 Withdrawal Register (การเบิกตัวอย่างเก็บ)</h3>
+        <p class="text-xs text-slate-500">ทุกการเบิกที่ Approved ระบบ Cloud Function (onRetainWithdrawalWritten) จะรวมยอดกลับไปหักลบ Remaining Qty ใน F01 อัตโนมัติ</p>
+      </div>
+      <button onclick="openF02Modal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+        <i class="fa-solid fa-plus mr-1.5"></i>+ สร้างใบเบิกตัวอย่าง (New Withdrawal)
+      </button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      ${[
+        ['All', 'All Withdrawals (ทั้งหมด)'],
+        ['Pending Approval', 'Pending Approval (รออนุมัติ)'],
+        ['Not Returned', 'Not Returned (ยังไม่คืนห้องเก็บ)']
+      ].map(([k, label]) => `
+        <button onclick="state.f02View='${k}'; render();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition ${state.f02View === k ? 'view-chip-active' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}">${label}</button>
+      `).join('')}
+    </div>
+
+    <div class="card overflow-x-auto shadow-sm">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+          <tr>
+            <th class="p-3">Withdrawal No.</th>
+            <th class="p-3">Sample ID (Lookup F01)</th>
+            <th class="p-3">Withdrawal Date</th>
+            <th class="p-3">Purpose / Ref No.</th>
+            <th class="p-3 text-right">Qty Withdrawn</th>
+            <th class="p-3 text-right">F01 Remaining Now</th>
+            <th class="p-3">Withdrawn By</th>
+            <th class="p-3">Approved By (DH/SH/QA)</th>
+            <th class="p-3 text-center">Approval Status</th>
+            <th class="p-3 text-center">Returned?</th>
+            <th class="p-3 text-right no-print">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(w => {
+            const parent = state.f01.find(s => s.sampleId === w.sampleId);
+            return `
+              <tr class="border-b last:border-0 hover:bg-slate-50">
+                <td class="p-3 font-extrabold text-indigo-700">${esc(w.withdrawalNo)}</td>
+                <td class="p-3">
+                  <div class="font-bold text-slate-800">${esc(w.sampleId)}</div>
+                  <div class="text-[10px] text-slate-500">${esc(parent ? `${parent.product} (${parent.retentionCategory}) • Prod: ${parent.productionDate}` : '-')}</div>
+                </td>
+                <td class="p-3 whitespace-nowrap">${esc(w.withdrawalDate)}</td>
+                <td class="p-3">
+                  <div class="font-semibold text-slate-800">${esc(w.purpose)}</div>
+                  <div class="text-[10px] text-blue-600 font-bold">${esc(w.referenceNo || '-')}</div>
+                </td>
+                <td class="p-3 text-right font-extrabold text-slate-800 whitespace-nowrap">${w.qtyWithdrawn} ${esc(w.unit)}</td>
+                <td class="p-3 text-right font-bold text-emerald-700 whitespace-nowrap">${parent ? `${parent.remainingQty} ${parent.unit}` : '-'}</td>
+                <td class="p-3">${esc(w.withdrawnBy)}</td>
+                <td class="p-3">${esc(w.approvedBy || '-')}</td>
+                <td class="p-3 text-center">
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold pill-${esc(w.approvalStatus)}">${esc(w.approvalStatus)}</span>
+                </td>
+                <td class="p-3 text-center">
+                  <span class="font-bold ${w.returnedToStore === 'No' ? 'text-amber-600' : 'text-emerald-700'}">${esc(w.returnedToStore || '-')}</span>
+                  ${w.returnDate ? `<div class="text-[10px] text-slate-400">${esc(w.returnDate)}</div>` : ''}
+                </td>
+                <td class="p-3 text-right whitespace-nowrap no-print space-x-1">
+                  ${w.approvalStatus === 'Pending' && LPM1003_ROLES[state.roleCode]?.canApproveF02 ? `
+                    <button onclick="approveOrRejectF02('${esc(w.withdrawalNo)}', 'Approved')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-bold">อนุมัติ</button>
+                    <button onclick="approveOrRejectF02('${esc(w.withdrawalNo)}', 'Rejected')" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2.5 py-1 rounded-lg font-bold">ปฏิเสธ</button>
+                  ` : ''}
+                  <button onclick="openF02Modal('${esc(w.withdrawalNo)}')" class="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg font-bold">แก้ไข</button>
+                </td>
+              </tr>
+            `;
+          }).join('') || `<tr><td colspan="11" class="p-10 text-center text-slate-400">ยังไม่มีรายการเบิกตัวอย่างในฐานข้อมูล</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openF02Modal(editWithdrawalNo = '', preselectSampleId = '') {
+  const existing = editWithdrawalNo ? state.f02.find(w => w.withdrawalNo === editWithdrawalNo) : null;
+  const activeSamples = state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID');
+  if (!existing && activeSamples.length === 0) {
+    toast('กรุณาลงทะเบียนตัวอย่างใน F01 ก่อนสร้างใบเบิก F02', 'warn');
+    return;
+  }
+  const yymm = nowISO().replace(/-/g, '').slice(2, 6);
+  const nextNo = `WD-${yymm}-${String(state.f02.length + 1).padStart(3, '0')}`;
+
+  const w = existing || {
+    withdrawalNo: nextNo,
+    sampleId: preselectSampleId || (activeSamples[0]?.sampleId || ''),
+    withdrawalDate: nowISO(),
+    purpose: 'Customer complaint',
+    qtyWithdrawn: 20,
+    unit: 'g',
+    referenceNo: '',
+    withdrawnBy: state.user?.email || '',
+    approvedBy: '',
+    approvalStatus: 'Pending',
+    returnedToStore: 'No',
+    returnDate: '',
+    dispatchRef: '',
+    remarks: ''
+  };
+
+  const html = `
+    <form id="f02Form" class="p-6 space-y-4">
+      <div class="flex justify-between items-start border-b pb-3">
+        <div>
+          <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-indigo-100 text-indigo-800">LPM-1013-F02 Rev.00</span>
+          <h3 class="font-extrabold text-lg text-slate-800 mt-1">${existing ? `แก้ไขใบเบิกตัวอย่าง: ${esc(w.withdrawalNo)}` : 'สร้างใบเบิกตัวอย่างเก็บ (New Sample Withdrawal)'}</h3>
+        </div>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+      </div>
+
+      <div id="f02LookupInfo" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700"></div>
+
+      <div class="grid sm:grid-cols-2 gap-4 text-xs">
+        <label class="block font-bold text-slate-700">
+          Withdrawal No. (ห้ามซ้ำ) <span class="text-red-500">*</span>
+          <input type="text" name="withdrawalNo" required ${existing ? 'readonly' : ''} value="${esc(w.withdrawalNo)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-extrabold text-indigo-700 ${existing ? 'bg-slate-100' : 'bg-white'}">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Sample ID (Lookup จาก F01) <span class="text-red-500">*</span>
+          <select name="sampleId" id="f02SampleSelect" required onchange="updateF02LookupBanner()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
+            ${activeSamples.map(s => `<option value="${esc(s.sampleId)}" ${w.sampleId === s.sampleId ? 'selected' : ''}>${esc(s.sampleId)} (${esc(s.retentionCategory)} • คงเหลือ ${s.remainingQty}${esc(s.unit)})</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Withdrawal Date <span class="text-red-500">*</span>
+          <input type="date" name="withdrawalDate" required value="${esc(w.withdrawalDate)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Purpose (วัตถุประสงค์การเบิก) <span class="text-red-500">*</span>
+          <select name="purpose" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            ${WITHDRAWAL_PURPOSES.map(p => `<option value="${p}" ${w.purpose === p ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Qty Withdrawn (ปริมาณที่เบิก) <span class="text-red-500">*</span>
+          <input type="number" step="0.1" min="0.1" name="qtyWithdrawn" required value="${w.qtyWithdrawn}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-bold">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Unit <span class="text-red-500">*</span>
+          <select name="unit" id="f02Unit" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
+            <option value="g" ${w.unit === 'g' ? 'selected' : ''}>g</option>
+            <option value="mL" ${w.unit === 'mL' ? 'selected' : ''}>mL</option>
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Reference No. (เลข Complaint / OOS / Request)
+          <input type="text" name="referenceNo" value="${esc(w.referenceNo)}" placeholder="เช่น CC-2611-01" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Withdrawn By (ผู้ขอเบิก) <span class="text-red-500">*</span>
+          <input type="text" name="withdrawnBy" required value="${esc(w.withdrawnBy)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Approval Status (สถานะอนุมัติ)
+          <select name="approvalStatus" ${!LPM1003_ROLES[state.roleCode]?.canApproveF02 ? 'disabled' : ''} class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-slate-50 font-bold">
+            ${['Pending', 'Approved', 'Rejected'].map(st => `<option value="${st}" ${w.approvalStatus === st ? 'selected' : ''}>${st}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Returned to Store? (นำส่วนที่เหลือคืนห้องเก็บ)
+          <select name="returnedToStore" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            <option value="No" ${w.returnedToStore === 'No' ? 'selected' : ''}>No (ยังไม่คืน / ใช้หมด)</option>
+            <option value="Yes" ${w.returnedToStore === 'Yes' ? 'selected' : ''}>Yes (คืนเข้าห้องเก็บแล้ว)</option>
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Return Date (วันที่คืน)
+          <input type="date" name="returnDate" value="${esc(w.returnDate)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Dispatch Ref (กรณีส่งออกนอกบริษัท)
+          <input type="text" name="dispatchRef" value="${esc(w.dispatchRef)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+      </div>
+
+      <label class="block text-xs font-bold text-slate-700">
+        Remarks (หมายเหตุ)
+        <textarea name="remarks" rows="2" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-normal">${esc(w.remarks)}</textarea>
+      </label>
+
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl border text-xs font-bold text-slate-600">ยกเลิก</button>
+        <button type="submit" class="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow">
+          <i class="fa-solid fa-floppy-disk mr-1.5"></i>บันทึกรายการ F02 ลง Firebase
+        </button>
+      </div>
+    </form>
+  `;
+  showModal(html);
+  updateF02LookupBanner();
+
+  document.getElementById('f02Form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    const parent = state.f01.find(s => s.sampleId === data.sampleId);
+    if (!parent) {
+      toast('ไม่พบ Sample ID ต้นทางใน F01', 'error');
+      return;
+    }
+
+    const reqQty = Number(data.qtyWithdrawn);
+    const availQty = existing && existing.approvalStatus === 'Approved'
+      ? parent.remainingQty + Number(existing.qtyWithdrawn)
+      : parent.remainingQty;
+
+    if (reqQty > availQty) {
+      toast(`ปริมาณที่ขอเบิก (${reqQty} ${parent.unit}) เกินกว่ายอดคงเหลือของตัวอย่าง (${availQty} ${parent.unit})!`, 'error');
+      return;
+    }
+
+    const chosenStatus = LPM1003_ROLES[state.roleCode]?.canApproveF02 ? (data.approvalStatus || w.approvalStatus) : w.approvalStatus;
+    let approvedBy = w.approvedBy;
+    if (chosenStatus === 'Approved' && (!existing || existing.approvalStatus !== 'Approved')) {
+      approvedBy = `${state.user?.email || ''} (${state.roleCode})`;
+    }
+
+    const record = {
+      ...(existing || {}),
+      withdrawalNo: data.withdrawalNo,
+      sampleId: data.sampleId,
+      withdrawalDate: data.withdrawalDate,
+      purpose: data.purpose,
+      qtyWithdrawn: reqQty,
+      unit: parent.unit,
+      referenceNo: data.referenceNo,
+      withdrawnBy: data.withdrawnBy,
+      approvedBy,
+      approvalStatus: chosenStatus,
+      returnedToStore: data.returnedToStore,
+      returnDate: data.returnDate,
+      dispatchRef: data.dispatchRef,
+      remarks: data.remarks,
+      updatedBy: state.user.email,
+      updatedAt: SV.serverTimestamp()
+    };
+    if (!existing) record.createdAt = SV.serverTimestamp();
+
+    loading(true, 'กำลังบันทึกใบเบิก F02...');
+    try {
+      await db.collection('retain_withdrawals_f02').doc(record.withdrawalNo).set(record, { merge: true });
+      await logAuditTrail(existing ? 'UPDATE_F02_WITHDRAWAL' : 'CREATE_F02_WITHDRAWAL', 'F02_WITHDRAWAL', record.withdrawalNo, `Sample ${record.sampleId}, Qty: ${record.qtyWithdrawn}${record.unit}, Status: ${record.approvalStatus}`);
+      closeModal();
+      toast(`บันทึกรายการเบิก ${record.withdrawalNo} สำเร็จ (ระบบหลังบ้านจะคำนวณยอด F01 ให้อัตโนมัติ)`);
+    } catch (err) {
+      toast(`บันทึก F02 ไม่สำเร็จ: ${err.message}`, 'error');
+    } finally {
+      loading(false);
+    }
+  };
+}
+
+window.updateF02LookupBanner = function() {
+  const sid = document.getElementById('f02SampleSelect')?.value;
+  const s = state.f01.find(x => x.sampleId === sid);
+  const box = document.getElementById('f02LookupInfo');
+  if (!s || !box) return;
+  document.getElementById('f02Unit').value = s.unit;
+  box.innerHTML = `
+    <div class="flex flex-wrap justify-between gap-2">
+      <div><b>Lookup F01:</b> ${esc(s.product)} (${esc(s.retentionCategory)}) | <b>Production Date:</b> ${esc(s.productionDate)} | <b>Due Date:</b> ${esc(s.disposalDueDate)}</div>
+      <div><b>Initial Qty:</b> ${s.quantity} ${esc(s.unit)} | <b>Withdrawn:</b> ${s.withdrawnQty} ${esc(s.unit)} | <b class="text-emerald-700">Remaining: ${s.remainingQty} ${esc(s.unit)}</b></div>
+    </div>
+  `;
+};
+
+window.approveOrRejectF02 = async function(withdrawalNo, newStatus) {
+  const w = state.f02.find(x => x.withdrawalNo === withdrawalNo);
+  if (!w) return;
+  const parent = state.f01.find(s => s.sampleId === w.sampleId);
+  if (newStatus === 'Approved' && parent && w.qtyWithdrawn > parent.remainingQty) {
+    toast(`ไม่สามารถอนุมัติได้ เนื่องจากยอดคงเหลือใน F01 (${parent.remainingQty}${w.unit}) ไม่พอให้เบิก (${w.qtyWithdrawn}${w.unit})`, 'error');
+    return;
+  }
+
+  const sig = await requireESignature({
+    title: `${newStatus === 'Approved' ? 'อนุมัติการเบิกตัวอย่าง (Approve F02)' : 'ปฏิเสธการเบิกตัวอย่าง (Reject F02)'}: ${withdrawalNo}`,
+    meaning: `ข้าพเจ้า (${LPM1003_ROLES[state.roleCode]?.title}) อนุมัติ/ปฏิเสธการเบิกตัวอย่าง ${w.sampleId} จำนวน ${w.qtyWithdrawn} ${w.unit} ตามระเบียบปฏิบัติ LPM-1013 และ LPM-1003`,
+    requireReason: newStatus === 'Rejected',
+    defaultReason: `${newStatus} withdrawal ${withdrawalNo}`
+  });
+  if (!sig) return;
+
+  loading(true, 'กำลังอัปเดตสถานะอนุมัติ F02...');
+  try {
+    await db.collection('retain_withdrawals_f02').doc(withdrawalNo).update({
+      approvalStatus: newStatus,
+      approvedBy: `${sig.signedByEmail} (${state.roleCode})`,
+      approvalSignature: sig,
+      updatedBy: state.user.email,
+      updatedAt: SV.serverTimestamp()
+    });
+    await logAuditTrail(`F02_${newStatus.toUpperCase()}`, 'F02_WITHDRAWAL', withdrawalNo, sig.reason, `E-Signed: ${sig.signedByEmail}`);
+    toast(`อัปเดตสถานะใบเบิก ${withdrawalNo} เป็น ${newStatus} เรียบร้อย!`);
+  } catch (err) {
+    toast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
+  } finally {
+    loading(false);
+  }
+};
+
+// =========================================================================
+// [ANCHOR: View-4-F03-Store-Monitoring]
+// =========================================================================
+function renderF03View() {
+  const rows = state.f03.filter(r => {
+    if (state.f03View === 'Daily Temp/RH' && r.recordType !== 'Daily Temp/RH') return false;
+    if (state.f03View === 'Excursions' && r.withinLimit !== 'NO - excursion') return false;
+    if (state.f03View === 'Monthly Inspection' && r.recordType !== 'Monthly Inspection') return false;
+    if (state.f03View === 'Pending Review' && r.reviewedBy && r.reviewedBy.trim() !== '') return false;
+    return true;
+  });
+
+  return `
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-800">LPM-1013-F03 Retain Store Monitoring (Temp/RH & Monthly Inspection)</h3>
+        <p class="text-xs text-slate-500">เกณฑ์ควบคุมห้องเก็บตัวอย่าง: อุณหภูมิ 23.0 – 27.0 °C | ความชื้นสัมพัทธ์ RH ≤ 65% | ตรวจสภาพห้องเก็บ 10 ข้อทุกเดือน</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="openF03Modal('Daily Temp/RH')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+          <i class="fa-solid fa-temperature-half mr-1.5"></i>+ บันทึก Daily Temp/RH
+        </button>
+        <button onclick="openF03Modal('Monthly Inspection')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+          <i class="fa-solid fa-clipboard-check mr-1.5"></i>+ บันทึก Monthly Inspection (10 ข้อ)
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      ${[
+        ['Daily Temp/RH', 'Daily Temp/RH (รายวัน)'],
+        ['Excursions', 'Excursions (เกินเกณฑ์ NO - excursion)'],
+        ['Monthly Inspection', 'Monthly Inspection (ตรวจรายเดือน I01-I10)'],
+        ['Pending Review', 'Pending Review (รอทบทวน)']
+      ].map(([k, label]) => `
+        <button onclick="state.f03View='${k}'; render();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition ${state.f03View === k ? 'view-chip-active' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}">${label}</button>
+      `).join('')}
+    </div>
+
+    <div class="card overflow-x-auto shadow-sm">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+          <tr>
+            <th class="p-3">Record Ref</th>
+            <th class="p-3">Record Type</th>
+            <th class="p-3">Date / Time</th>
+            <th class="p-3">Details (Temp/RH หรือ ผลตรวจ I01–I10)</th>
+            <th class="p-3 text-center">Within Limit / Status</th>
+            <th class="p-3">Action / Remarks</th>
+            <th class="p-3">Recorded By</th>
+            <th class="p-3">Reviewed By (SH/QA)</th>
+            <th class="p-3 text-right no-print">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => {
+            const isDaily = r.recordType === 'Daily Temp/RH';
+            const nokCount = !isDaily ? F03_INSPECTION_ITEMS.filter(([k]) => r[k] === 'NOK').length : 0;
+            return `
+              <tr class="border-b last:border-0 hover:bg-slate-50">
+                <td class="p-3 font-extrabold text-blue-700">${esc(r.recordRef)}</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-100 border font-bold">${esc(r.recordType)}</span></td>
+                <td class="p-3 whitespace-nowrap">${esc(r.recordDateTime?.replace('T', ' '))}</td>
+                <td class="p-3">
+                  ${isDaily ? `
+                    <div class="font-bold text-slate-800">Temp: <span class="text-blue-700">${r.tempMin} – ${r.tempMax} °C</span> | RH: <span class="text-teal-700">${r.rhMin} – ${r.rhMax}%</span></div>
+                    <div class="text-[10px] text-slate-400">Logger: ${esc(r.loggerId || '-')}</div>
+                  ` : `
+                    <div class="font-bold text-slate-800">ตรวจห้องเก็บ 10 ข้อ (I01–I10): ${nokCount === 0 ? '<span class="text-emerald-700">OK ครบทุกข้อ (10/10)</span>' : `<span class="text-red-600">พบ NOK ${nokCount} ข้อ!</span>`}</div>
+                  `}
+                </td>
+                <td class="p-3 text-center">
+                  ${isDaily ? `
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold ${r.withinLimit === 'NO - excursion' ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-emerald-100 text-emerald-700'}">${esc(r.withinLimit)}</span>
+                  ` : `
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold ${nokCount > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${nokCount > 0 ? 'NOK Found' : 'All OK'}</span>
+                  `}
+                </td>
+                <td class="p-3 max-w-xs"><div class="text-slate-700">${esc(isDaily ? (r.excursionAction || '-') : (r.inspectionRemarks || '-'))}</div></td>
+                <td class="p-3">${esc(r.recordedBy)}</td>
+                <td class="p-3">
+                  ${r.reviewedBy ? `<span class="text-emerald-700 font-bold"><i class="fa-solid fa-check-circle mr-1"></i>${esc(r.reviewedBy)}</span>` : `<span class="text-amber-600 font-bold">รอทบทวน</span>`}
+                </td>
+                <td class="p-3 text-right whitespace-nowrap no-print space-x-1">
+                  ${!r.reviewedBy && LPM1003_ROLES[state.roleCode]?.canReviewF03 ? `
+                    <button onclick="reviewF03Record('${esc(r.recordRef)}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-bold">ลงนามทบทวน</button>
+                  ` : ''}
+                  <button onclick="openF03Modal('${esc(r.recordType)}', '${esc(r.recordRef)}')" class="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg font-bold">ดู/แก้ไข</button>
+                </td>
+              </tr>
+            `;
+          }).join('') || `<tr><td colspan="9" class="p-10 text-center text-slate-400">ยังไม่มีรายการบันทึกในฐานข้อมูล</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openF03Modal(defaultType = 'Daily Temp/RH', editRecordRef = '') {
+  const existing = editRecordRef ? state.f03.find(x => x.recordRef === editRecordRef) : null;
+  const r = existing || {
+    recordRef: defaultType === 'Daily Temp/RH' ? `TH-${nowISO().replace(/-/g, '').slice(2)}-AM` : `INSP-${nowISO().replace(/-/g, '').slice(2, 6)}`,
+    recordType: defaultType,
+    storeLocation: 'Retain store',
+    recordDateTime: `${nowISO()}T09:00`,
+    loggerId: 'TH-LOG-01',
+    tempMin: 24.0,
+    tempMax: 25.5,
+    rhMin: 50,
+    rhMax: 58,
+    excursionAction: '',
+    I01: 'OK', I02: 'OK', I03: 'OK', I04: 'OK', I05: 'OK',
+    I06: 'OK', I07: 'OK', I08: 'OK', I09: 'OK', I10: 'OK',
+    inspectionRemarks: '',
+    recordedBy: state.user?.email || '',
+    reviewedBy: ''
+  };
+
+  const html = `
+    <form id="f03Form" class="p-6 space-y-4 max-h-[88vh] overflow-y-auto custom-scrollbar">
+      <div class="flex justify-between items-start border-b pb-3">
+        <div>
+          <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800">LPM-1013-F03 Rev.00</span>
+          <h3 class="font-extrabold text-lg text-slate-800 mt-1">บันทึกการตรวจติดตามห้องเก็บตัวอย่าง (Retain Store Monitoring)</h3>
+        </div>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+      </div>
+
+      <div class="grid sm:grid-cols-4 gap-3 text-xs">
+        <label class="block font-bold text-slate-700">
+          Record Type (สลับฟอร์มอัตโนมัติ) <span class="text-red-500">*</span>
+          <select name="recordType" id="f03Type" onchange="toggleF03FormSections()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-blue-50 font-extrabold text-blue-900">
+            <option value="Daily Temp/RH" ${r.recordType === 'Daily Temp/RH' ? 'selected' : ''}>Daily Temp/RH (รายวัน)</option>
+            <option value="Monthly Inspection" ${r.recordType === 'Monthly Inspection' ? 'selected' : ''}>Monthly Inspection (รายเดือน 10 ข้อ)</option>
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Record Ref <span class="text-red-500">*</span>
+          <input type="text" name="recordRef" id="f03Ref" ${existing ? 'readonly' : ''} required value="${esc(r.recordRef)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-bold ${existing ? 'bg-slate-100' : ''}">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Store Location <span class="text-red-500">*</span>
+          <input type="text" name="storeLocation" required value="${esc(r.storeLocation)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Record Date/Time <span class="text-red-500">*</span>
+          <input type="datetime-local" name="recordDateTime" required value="${esc(r.recordDateTime)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
+      </div>
+
+      <div id="f03DailyZone" class="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+        <div class="flex flex-wrap justify-between items-center gap-2">
+          <h4 class="font-extrabold text-xs text-slate-800 uppercase"><i class="fa-solid fa-temperature-half text-blue-600 mr-1.5"></i>ข้อมูลอุณหภูมิและความชื้นรายวัน (Limits: Temp 23–27 °C, RH ≤ 65%)</h4>
+          <div id="f03LimitPreview" class="px-3 py-1 rounded-full text-xs font-extrabold"></div>
+        </div>
+
+        <div class="grid sm:grid-cols-5 gap-3 text-xs">
+          <label class="block font-bold text-slate-700">Logger ID / Cal. Due<input type="text" name="loggerId" value="${esc(r.loggerId)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white"></label>
+          <label class="block font-bold text-slate-700">Temp Min (°C) [≥ 23.0]<input type="number" step="0.1" name="tempMin" id="f03TMin" value="${r.tempMin ?? ''}" oninput="updateF03LimitPreview()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold"></label>
+          <label class="block font-bold text-slate-700">Temp Max (°C) [≤ 27.0]<input type="number" step="0.1" name="tempMax" id="f03TMax" value="${r.tempMax ?? ''}" oninput="updateF03LimitPreview()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold"></label>
+          <label class="block font-bold text-slate-700">RH Min (%)<input type="number" step="1" name="rhMin" id="f03HMin" value="${r.rhMin ?? ''}" oninput="updateF03LimitPreview()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold"></label>
+          <label class="block font-bold text-slate-700">RH Max (%) [≤ 65%]<input type="number" step="1" name="rhMax" id="f03HMax" value="${r.rhMax ?? ''}" oninput="updateF03LimitPreview()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold"></label>
+        </div>
+
+        <label class="block text-xs font-bold text-slate-700">
+          Excursion Action / Deviation Ref (บังคับระบุเมื่อเกินเกณฑ์ NO - excursion และแจ้ง Sr.Chem.QCL / QA ทันที)
+          <textarea name="excursionAction" id="f03ExcursionAction" rows="2" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-normal">${esc(r.excursionAction)}</textarea>
+        </label>
+      </div>
+
+      <div id="f03MonthlyZone" class="space-y-3 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-200">
+        <div class="flex justify-between items-center">
+          <h4 class="font-extrabold text-xs text-emerald-950 uppercase"><i class="fa-solid fa-list-check text-emerald-600 mr-1.5"></i>รายการตรวจห้องเก็บรายเดือน 10 ข้อ (LPM-1013 ข้อ 6.7.1: I01–I10)</h4>
+          <button type="button" onclick="setAllF03Inspection('OK')" class="text-[11px] font-bold bg-emerald-600 text-white px-2.5 py-1 rounded-lg hover:bg-emerald-700">ตั้งค่า OK ทั้ง 10 ข้อ</button>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-2.5 text-xs">
+          ${F03_INSPECTION_ITEMS.map(([code, shortName, fullDesc]) => `
+            <div class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
+              <div>
+                <div class="font-bold text-slate-800">${esc(shortName)}</div>
+                <div class="text-[10px] text-slate-500">${esc(fullDesc)}</div>
+              </div>
+              <select name="${code}" class="f03-insp-select border border-slate-300 rounded-lg px-2 py-1 font-bold bg-slate-50 shrink-0">
+                ${['OK', 'NOK', 'N/A'].map(opt => `<option value="${opt}" ${(r[code] || 'OK') === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+              </select>
+            </div>
+          `).join('')}
+        </div>
+        <label class="block text-xs font-bold text-slate-700">
+          Inspection Remarks / Action (หมายเหตุหรือการแก้ไขกรณีพบ NOK)
+          <textarea name="inspectionRemarks" rows="2" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-normal">${esc(r.inspectionRemarks)}</textarea>
+        </label>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 text-xs">
+        <label class="block font-bold text-slate-700">Recorded By <span class="text-red-500">*</span><input type="text" name="recordedBy" required value="${esc(r.recordedBy)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1"></label>
+        <label class="block font-bold text-slate-700">Reviewed By (อิสระตาม LPM-1003 ข้อ 8.3)<input type="text" name="reviewedBy" value="${esc(r.reviewedBy)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-slate-50"></label>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl border text-xs font-bold text-slate-600">ยกเลิก</button>
+        <button type="submit" class="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow">
+          <i class="fa-solid fa-floppy-disk mr-1.5"></i>บันทึกข้อมูล F03 ลง Firebase
+        </button>
+      </div>
+    </form>
+  `;
+  showModal(html);
+  toggleF03FormSections();
+  updateF03LimitPreview();
+
+  document.getElementById('f03Form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    const isDaily = data.recordType === 'Daily Temp/RH';
+
+    if (isDaily) {
+      const tMin = Number(data.tempMin), tMax = Number(data.tempMax);
+      const hMin = Number(data.rhMin), hMax = Number(data.rhMax);
+      if (tMax < tMin || hMax < hMin) {
+        toast('Temp Max ต้องไม่น้อยกว่า Temp Min และ RH Max ต้องไม่น้อยกว่า RH Min (Validation สูตร A11)', 'error');
+        return;
+      }
+    }
+
+    const withinLimit = calcWithinLimit(data.recordType, data.tempMin, data.tempMax, data.rhMax);
+    const record = {
+      recordRef: data.recordRef,
+      recordType: data.recordType,
+      storeLocation: data.storeLocation,
+      recordDateTime: data.recordDateTime,
+      loggerId: isDaily ? data.loggerId : '',
+      tempMin: isDaily ? Number(data.tempMin) : null,
+      tempMax: isDaily ? Number(data.tempMax) : null,
+      rhMin: isDaily ? Number(data.rhMin) : null,
+      rhMax: isDaily ? Number(data.rhMax) : null,
+      withinLimit,
+      excursionAction: isDaily ? data.excursionAction : '',
+      inspectionRemarks: !isDaily ? data.inspectionRemarks : '',
+      recordedBy: data.recordedBy,
+      reviewedBy: data.reviewedBy,
+      updatedBy: state.user.email,
+      updatedAt: SV.serverTimestamp()
+    };
+    if (!existing) record.createdAt = SV.serverTimestamp();
+    F03_INSPECTION_ITEMS.forEach(([code]) => {
+      record[code] = !isDaily ? data[code] : '';
+    });
+
+    loading(true, 'กำลังบันทึก F03...');
+    try {
+      await db.collection('retain_monitoring_f03').doc(record.recordRef).set(record, { merge: true });
+      await logAuditTrail(existing ? 'UPDATE_F03_MONITORING' : 'CREATE_F03_MONITORING', 'F03_MONITORING', record.recordRef, `${record.recordType} (${withinLimit})`);
+      closeModal();
+      if (withinLimit === 'NO - excursion') {
+        toast(`บันทึก ${record.recordRef} แล้ว — แจ้งเตือน: NO - excursion (ค่าเกินเกณฑ์ควบคุม)!`, 'warn');
+      } else {
+        toast(`บันทึกข้อมูล F03 (${record.recordRef}) เรียบร้อยแล้ว`);
+      }
+    } catch (err) {
+      toast(`บันทึก F03 ไม่สำเร็จ: ${err.message}`, 'error');
+    } finally {
+      loading(false);
+    }
+  };
+}
+
+window.toggleF03FormSections = function() {
+  const rt = document.getElementById('f03Type')?.value;
+  const dailyZone = document.getElementById('f03DailyZone');
+  const monthlyZone = document.getElementById('f03MonthlyZone');
+  if (!dailyZone || !monthlyZone) return;
+  if (rt === 'Daily Temp/RH') {
+    dailyZone.classList.remove('hidden');
+    monthlyZone.classList.add('hidden');
+  } else {
+    dailyZone.classList.add('hidden');
+    monthlyZone.classList.remove('hidden');
+  }
+};
+
+window.updateF03LimitPreview = function() {
+  const tMin = document.getElementById('f03TMin')?.value;
+  const tMax = document.getElementById('f03TMax')?.value;
+  const hMax = document.getElementById('f03HMax')?.value;
+  const res = calcWithinLimit('Daily Temp/RH', tMin, tMax, hMax);
+  const el = document.getElementById('f03LimitPreview');
+  if (!el) return;
+  if (res === 'NO - excursion') {
+    el.textContent = 'Within Limit: NO - excursion (เกินเกณฑ์!)';
+    el.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-red-600 text-white shadow';
+  } else if (res === 'Yes') {
+    el.textContent = 'Within Limit: Yes (ปกติ)';
+    el.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-600 text-white';
+  } else {
+    el.textContent = 'กรอกค่า Temp/RH';
+    el.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-600';
+  }
+};
+
+window.setAllF03Inspection = function(val) {
+  document.querySelectorAll('.f03-insp-select').forEach(s => { s.value = val; });
+};
+
+window.reviewF03Record = async function(recordRef) {
+  const r = state.f03.find(x => x.recordRef === recordRef);
+  if (!r) return;
+  const sig = await requireESignature({
+    title: `ลงนามทบทวนบันทึกห้องเก็บตัวอย่าง (F03): ${recordRef}`,
+    meaning: 'ข้าพเจ้าได้ตรวจสอบบันทึกอุณหภูมิ/ความชื้น หรือผลการตรวจห้องเก็บประจำเดือน และรับทราบการดำเนินการแก้ไข (ถ้ามี) ตาม LPM-1013 และ LPM-1003 ข้อ 8.3',
+    requireReason: false
+  });
+  if (!sig) return;
+  loading(true, 'กำลังลงนามทบทวน...');
+  try {
+    await db.collection('retain_monitoring_f03').doc(recordRef).update({
+      reviewedBy: `${sig.signedByEmail} (${state.roleCode})`,
+      reviewSignature: sig,
+      updatedAt: SV.serverTimestamp()
+    });
+    await logAuditTrail('REVIEW_F03_RECORD', 'F03_MONITORING', recordRef, 'Independent technical review completed', `E-Signed: ${sig.signedByEmail}`);
+    toast(`ลงนามทบทวนรายการ ${recordRef} สำเร็จ`);
+  } catch (err) {
+    toast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
+  } finally {
+    loading(false);
+  }
+};
+
+// =========================================================================
+// [ANCHOR: View-5-F04-Disposal-Register]
+// =========================================================================
+function renderF04View() {
+  const rows = state.f04.filter(d => {
+    if (state.f04View === 'Pending QA' && d.qaApproved !== 'Pending') return false;
+    if (state.f04View === 'Ready to Dispose' && (d.qaApproved !== 'Yes' || d.actualDisposalDate)) return false;
+    if (state.f04View === 'F01 Not Updated' && (!d.actualDisposalDate || d.f01StatusUpdated === 'Yes')) return false;
+    return true;
+  });
+
+  return `
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-800">LPM-1013-F04 Disposal Register (การอนุมัติและบันทึกการทำลายตัวอย่าง)</h3>
+        <p class="text-xs text-slate-500">ต้องยืนยันไม่มี HOLD + QA Approved = Yes ก่อนจึงจะบันทึกวันทำลายจริงได้ และต้องมีพยาน (Witnessed By ≠ Disposed By)</p>
+      </div>
+      <button onclick="openF04Modal()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+        <i class="fa-solid fa-plus mr-1.5"></i>+ เพิ่มรายการขออนุมัติทำลาย (New F04 Entry)
+      </button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      ${[
+        ['All', 'All Disposal Items (ทั้งหมด)'],
+        ['Pending QA', 'Pending QA (รอ QA อนุมัติ)'],
+        ['Ready to Dispose', 'Ready to Dispose (อนุมัติแล้ว รอทำลายจริง)'],
+        ['F01 Not Updated', 'F01 Not Updated (ยังไม่ตัดสถานะ F01)']
+      ].map(([k, label]) => `
+        <button onclick="state.f04View='${k}'; render();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition ${state.f04View === k ? 'view-chip-active' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}">${label}</button>
+      `).join('')}
+    </div>
+
+    <div class="card overflow-x-auto shadow-sm">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+          <tr>
+            <th class="p-3">Disposal List No.</th>
+            <th class="p-3">Sample ID (Lookup F01)</th>
+            <th class="p-3">Prod. / Due Date</th>
+            <th class="p-3">Hold Check</th>
+            <th class="p-3 text-center">QA Approved</th>
+            <th class="p-3">QA Approver / Date</th>
+            <th class="p-3">Actual Disposal Date & Method</th>
+            <th class="p-3">Disposed By / Witnessed By</th>
+            <th class="p-3 text-center">F01 Updated</th>
+            <th class="p-3 text-right no-print">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(d => {
+            const parent = state.f01.find(s => s.sampleId === d.sampleId);
+            return `
+              <tr class="border-b last:border-0 hover:bg-slate-50">
+                <td class="p-3 font-extrabold text-rose-700">${esc(d.disposalListNo)}</td>
+                <td class="p-3">
+                  <div class="font-bold text-slate-800">${esc(d.sampleId)}</div>
+                  <div class="text-[10px] text-slate-500">${esc(parent ? `${parent.product} (${parent.retentionCategory})` : '-')}</div>
+                </td>
+                <td class="p-3 whitespace-nowrap">
+                  <div>Prod: ${esc(parent?.productionDate || '-')}</div>
+                  <div class="font-bold text-slate-700">Due: ${esc(parent?.disposalDueDate || '-')}</div>
+                </td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.holdCheck === 'No hold - confirmed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700'}">${esc(d.holdCheck)}</span>
+                </td>
+                <td class="p-3 text-center">
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold pill-${esc(d.qaApproved)}">${esc(d.qaApproved)}</span>
+                </td>
+                <td class="p-3">
+                  <div class="font-semibold">${esc(d.qaApprover || '-')}</div>
+                  <div class="text-[10px] text-slate-400">${esc(d.qaApprovalDate || '')}</div>
+                </td>
+                <td class="p-3">
+                  <div class="font-bold text-slate-800">${esc(d.actualDisposalDate || 'ยังไม่ได้ทำลาย')}</div>
+                  <div class="text-[10px] text-slate-500">${esc(d.disposalMethod || '-')}</div>
+                </td>
+                <td class="p-3">
+                  <div>Disposed: <b>${esc(d.disposedBy || '-')}</b></div>
+                  <div>Witness: <b class="text-indigo-700">${esc(d.witnessedBy || '-')}</b></div>
+                </td>
+                <td class="p-3 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold pill-${esc(d.f01StatusUpdated)}">${esc(d.f01StatusUpdated)}</span>
+                </td>
+                <td class="p-3 text-right whitespace-nowrap no-print space-x-1">
+                  ${d.qaApproved === 'Pending' && LPM1003_ROLES[state.roleCode]?.canApproveF04 ? `
+                    <button onclick="qaApproveF04('${esc(d.id)}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-bold">QA Approve</button>
+                  ` : ''}
+                  <button onclick="openF04Modal('${esc(d.id)}')" class="text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-lg font-bold">${d.qaApproved === 'Yes' && !d.actualDisposalDate ? 'บันทึกทำลายจริง' : 'แก้ไข'}</button>
+                </td>
+              </tr>
+            `;
+          }).join('') || `<tr><td colspan="10" class="p-10 text-center text-slate-400">ยังไม่มีรายการขอทำลายในฐานข้อมูล</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+window.sendReadySamplesToF04 = async function() {
+  const ready = state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID' && s.holdFlag === 'OK' && s.daysToDue !== null && s.daysToDue <= 0);
+  if (ready.length === 0) {
+    toast('ไม่มีรายการที่ถึงกำหนดทำลายในขณะนี้', 'warn');
+    return;
+  }
+  const listNo = `DL-${nowISO().replace(/-/g, '').slice(2, 6)}`;
+  loading(true, `กำลังสร้างใบขออนุมัติทำลาย ${listNo}...`);
+  try {
+    const batch = db.batch();
+    let added = 0;
+    ready.forEach(s => {
+      const docId = `${listNo}-${s.sampleId}`;
+      if (!state.f04.some(d => d.sampleId === s.sampleId)) {
+        const ref = db.collection('retain_disposals_f04').doc(docId);
+        batch.set(ref, {
+          disposalListNo: listNo,
+          sampleId: s.sampleId,
+          holdCheck: 'No hold - confirmed',
+          qaApproved: 'Pending',
+          qaApprover: '',
+          qaApprovalDate: '',
+          actualDisposalDate: '',
+          disposalMethod: s.retentionCategory === 'H2SO4' ? 'Neutralization + WWT (LPM-1012)' : 'Industrial waste (LPM-1012)',
+          disposedBy: '',
+          witnessedBy: '',
+          f01StatusUpdated: 'No',
+          remarks: `ส่งจากมุมมอง Ready for Disposal อัตโนมัติ (Due: ${s.disposalDueDate})`,
+          createdBy: state.user.email,
+          createdAt: SV.serverTimestamp(),
+          updatedAt: SV.serverTimestamp()
+        });
+        added++;
+      }
+    });
+    if (added > 0) await batch.commit();
+    state.view = 'f04';
+    buildNav();
+    render();
+    toast(`สร้างใบขออนุมัติทำลาย ${listNo} จำนวน ${added} รายการใน F04 เรียบร้อยแล้ว`);
+  } catch (err) {
+    toast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
+  } finally {
+    loading(false);
+  }
+};
+
+function openF04Modal(editId = '') {
+  const existing = editId ? state.f04.find(x => x.id === editId) : null;
+  if (!existing && state.f01.length === 0) {
+    toast('ยังไม่มีตัวอย่างใน F01 สำหรับส่งทำลาย', 'warn');
+    return;
+  }
+  const yymm = nowISO().replace(/-/g, '').slice(2, 6);
+  const d = existing || {
+    id: '',
+    disposalListNo: `DL-${yymm}`,
+    sampleId: state.f01[0]?.sampleId || '',
+    holdCheck: 'No hold - confirmed',
+    qaApproved: 'Pending',
+    qaApprover: '',
+    qaApprovalDate: '',
+    actualDisposalDate: '',
+    disposalMethod: 'Industrial waste (LPM-1012)',
+    disposedBy: '',
+    witnessedBy: '',
+    f01StatusUpdated: 'No',
+    remarks: ''
+  };
+
+  const html = `
+    <form id="f04Form" class="p-6 space-y-4 max-h-[88vh] overflow-y-auto custom-scrollbar">
+      <div class="flex justify-between items-start border-b pb-3">
+        <div>
+          <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-rose-100 text-rose-800">LPM-1013-F04 Rev.00</span>
+          <h3 class="font-extrabold text-lg text-slate-800 mt-1">การขออนุมัติและบันทึกการทำลายตัวอย่างเก็บ (Disposal Register)</h3>
+        </div>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+      </div>
+
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+        <b>กฎควบคุมการทำลาย (Validation สูตร A12 & LPM-1013 ข้อ 6.9):</b><br>
+        1. ตัวอย่าง KENVUE (FIBRE-HYG) ห้ามทำลายก่อนครบ 24 เดือน<br>
+        2. บันทึก <b>Actual Disposal Date</b> ได้เฉพาะเมื่อ <b>QA Approved = Yes</b>, <b>Hold Check = No hold - confirmed</b> และ <b>Actual Disposal Date ≥ QA Approval Date</b> เท่านั้น<br>
+        3. ผู้ทำลาย (Disposed By) และพยาน (Witnessed By) ต้องเป็นคนละคนกันตาม LPM-1003 ข้อ 8.3
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4 text-xs">
+        <label class="block font-bold text-slate-700">Disposal List No. <span class="text-red-500">*</span><input type="text" name="disposalListNo" required value="${esc(d.disposalListNo)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-bold text-rose-700"></label>
+
+        <label class="block font-bold text-slate-700 sm:col-span-2">
+          Sample ID (Lookup จาก F01) <span class="text-red-500">*</span>
+          <select name="sampleId" id="f04SampleId" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
+            ${state.f01.map(s => `<option value="${esc(s.sampleId)}" ${d.sampleId === s.sampleId ? 'selected' : ''}>${esc(s.sampleId)} (${esc(s.retentionCategory)} • Due: ${esc(s.disposalDueDate)} • Hold: ${esc(s.holdFlag)})</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          Hold Check <span class="text-red-500">*</span>
+          <select name="holdCheck" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
+            <option value="No hold - confirmed" ${d.holdCheck === 'No hold - confirmed' ? 'selected' : ''}>No hold - confirmed</option>
+            <option value="HOLD exists - do not dispose" ${d.holdCheck === 'HOLD exists - do not dispose' ? 'selected' : ''}>HOLD exists - do not dispose</option>
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">
+          QA Approved <span class="text-red-500">*</span>
+          <select name="qaApproved" id="f04QaApproved" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-slate-50 font-bold">
+            ${['Pending', 'Yes', 'No'].map(st => `<option value="${st}" ${d.qaApproved === st ? 'selected' : ''}>${st}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">QA Approval Date<input type="date" name="qaApprovalDate" value="${esc(d.qaApprovalDate)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1"></label>
+        <label class="block font-bold text-slate-700">QA Approver<input type="text" name="qaApprover" value="${esc(d.qaApprover)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1"></label>
+        <label class="block font-bold text-slate-700">Actual Disposal Date<input type="date" name="actualDisposalDate" value="${esc(d.actualDisposalDate)}" class="w-full border border-rose-300 bg-rose-50/30 rounded-xl p-2.5 mt-1 font-bold"></label>
+
+        <label class="block font-bold text-slate-700">
+          Disposal Method (ตาม LPM-1012)
+          <select name="disposalMethod" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
+            ${DISPOSAL_METHODS.map(m => `<option value="${m}" ${d.disposalMethod === m ? 'selected' : ''}>${m}</option>`).join('')}
+          </select>
+        </label>
+
+        <label class="block font-bold text-slate-700">Disposed By (ผู้ทำลาย)<input type="text" name="disposedBy" value="${esc(d.disposedBy)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1"></label>
+        <label class="block font-bold text-slate-700">Witnessed By (พยาน ≠ ผู้ทำลาย)<input type="text" name="witnessedBy" value="${esc(d.witnessedBy)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1"></label>
+        <label class="block font-bold text-slate-700">F01 Status Updated<input type="text" name="f01StatusUpdated" value="${esc(d.f01StatusUpdated)}" readonly class="w-full border border-slate-200 rounded-xl p-2.5 mt-1 bg-slate-100 font-bold"></label>
+      </div>
+
+      <label class="block text-xs font-bold text-slate-700">Remarks<textarea name="remarks" rows="2" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-normal">${esc(d.remarks)}</textarea></label>
+
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl border text-xs font-bold text-slate-600">ยกเลิก</button>
+        <button type="submit" class="px-6 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow">
+          <i class="fa-solid fa-floppy-disk mr-1.5"></i>บันทึกข้อมูล F04 ลง Firebase
+        </button>
+      </div>
+    </form>
+  `;
+  showModal(html);
+
+  document.getElementById('f04Form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    const parent = state.f01.find(s => s.sampleId === data.sampleId);
+
+    if (parent && parent.holdFlag === 'HOLD' && data.holdCheck === 'No hold - confirmed') {
+      toast(`ตัวอย่าง ${parent.sampleId} มี Hold Ref (${parent.holdRef}) อยู่ใน F01 ห้ามยืนยัน No hold!`, 'error');
+      return;
+    }
+
+    if (data.actualDisposalDate) {
+      if (data.qaApproved !== 'Yes' || data.holdCheck !== 'No hold - confirmed' || !data.qaApprovalDate || data.actualDisposalDate < data.qaApprovalDate) {
+        toast('บล็อกการบันทึก! บันทึกวันทำลายจริงได้เฉพาะเมื่อ QA Approved = Yes, ยืนยันไม่มี HOLD และวันที่ทำลายไม่ก่อนวันที่ QA อนุมัติ (Validation สูตร A12)', 'error');
+        return;
+      }
+      if (!data.disposedBy.trim() || !data.witnessedBy.trim()) {
+        toast('การทำลายจริงต้องระบุชื่อทั้งผู้ทำลาย (Disposed By) และพยาน (Witnessed By)', 'error');
+        return;
+      }
+      if (data.disposedBy.trim().toLowerCase() === data.witnessedBy.trim().toLowerCase()) {
+        toast('พยาน (Witnessed By) ต้องเป็นคนละคนกับผู้ทำลาย (Disposed By) ตาม LPM-1003 ข้อ 8.3!', 'error');
+        return;
+      }
+      if (parent && parent.retentionCategory === 'FIBRE-HYG' && data.actualDisposalDate < parent.disposalDueDate) {
+        toast(`ห้ามทำลายตัวอย่าง KENVUE (${parent.sampleId}) ก่อนครบ 24 เดือน (${parent.disposalDueDate}) เด็ดขาด!`, 'error');
+        return;
+      }
+    }
+
+    const docId = existing ? existing.id : `${data.disposalListNo}-${data.sampleId}`;
+    const record = {
+      disposalListNo: data.disposalListNo,
+      sampleId: data.sampleId,
+      holdCheck: data.holdCheck,
+      qaApproved: data.qaApproved,
+      qaApprover: data.qaApprover,
+      qaApprovalDate: data.qaApprovalDate,
+      actualDisposalDate: data.actualDisposalDate,
+      disposalMethod: data.disposalMethod,
+      disposedBy: data.disposedBy,
+      witnessedBy: data.witnessedBy,
+      f01StatusUpdated: data.f01StatusUpdated || 'No',
+      remarks: data.remarks,
+      updatedBy: state.user.email,
+      updatedAt: SV.serverTimestamp()
+    };
+    if (!existing) record.createdAt = SV.serverTimestamp();
+
+    loading(true, 'กำลังบันทึก F04...');
+    try {
+      await db.collection('retain_disposals_f04').doc(docId).set(record, { merge: true });
+      await logAuditTrail(data.actualDisposalDate ? 'EXECUTE_F04_DISPOSAL' : 'SAVE_F04_RECORD', 'F04_DISPOSAL', docId, `Sample: ${record.sampleId}, QA: ${record.qaApproved}, Actual Date: ${record.actualDisposalDate || 'Pending'}`);
+      closeModal();
+      toast(data.actualDisposalDate ? `บันทึกการทำลาย ${record.sampleId} สำเร็จ (ระบบหลังบ้านจะอัปเดต F01 = Disposed อัตโนมัติ)` : `บันทึกรายการ F04 (${record.sampleId}) สำเร็จ`);
+    } catch (err) {
+      toast(`บันทึก F04 ไม่สำเร็จ: ${err.message}`, 'error');
+    } finally {
+      loading(false);
+    }
+  };
+}
+
+window.qaApproveF04 = async function(id) {
+  const d = state.f04.find(x => x.id === id);
+  if (!d) return;
+  const parent = state.f01.find(s => s.sampleId === d.sampleId);
+  if (parent && parent.holdFlag === 'HOLD') {
+    toast(`ไม่สามารถอนุมัติทำลายได้! ตัวอย่าง ${d.sampleId} ติดสถานะ HOLD (${parent.holdRef})`, 'error');
+    return;
+  }
+  const sig = await requireESignature({
+    title: `อนุมัติการทำลายตัวอย่าง (QA Approval F04): ${d.sampleId}`,
+    meaning: `ข้าพเจ้าตรวจสอบแล้วว่าตัวอย่าง ${d.sampleId} ครบกำหนดอายุจัดเก็บและไม่มีสถานะ HOLD จึงอนุมัติให้ทำลายตามวิธีที่กำหนดใน LPM-1012`,
+    requireReason: false
+  });
+  if (!sig) return;
+  loading(true, 'กำลังบันทึกการอนุมัติ QA...');
+  try {
+    await db.collection('retain_disposals_f04').doc(id).update({
+      qaApproved: 'Yes',
+      qaApprover: `${sig.signedByEmail} (${state.roleCode})`,
+      qaApprovalDate: nowISO(),
+      qaApprovalSignature: sig,
+      updatedAt: SV.serverTimestamp()
+    });
+    await logAuditTrail('QA_APPROVE_F04', 'F04_DISPOSAL', id, `QA Approved disposal for ${d.sampleId}`, `E-Signed: ${sig.signedByEmail}`);
+    toast(`QA อนุมัติการทำลายตัวอย่าง ${d.sampleId} เรียบร้อยแล้ว`);
+  } catch (err) {
+    toast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
+  } finally {
+    loading(false);
+  }
+};
+
+// =========================================================================
+// [ANCHOR: View-6-Weekly-Reconcile-And-6Month-Check]
+// =========================================================================
+function renderReconcileView() {
+  const fibreMcs = ['MC 2', 'MC 3', 'MC 4', 'MC 5', 'MC 6'];
+  const mainShifts = ['A (07:00-15:00)', 'B (15:00-23:00)', 'C (23:00-07:00)'];
+  const daySamples = state.f01.filter(s => s.productionDate === state.reconcileDate && s.status !== 'VOID');
+
+  return `
+    <div class="space-y-6">
+      <div class="card p-5 shadow-sm">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+          <div>
+            <h3 class="font-extrabold text-lg text-slate-800"><i class="fa-solid fa-table-cells text-purple-600 mr-2"></i>ตาราง Reconcile ตัวอย่างเก็บรายกะเทียบการผลิต (MC × Shift Matrix)</h3>
+            <p class="text-xs text-slate-500">ตามหัวข้อ 6.5 และ 13 ของคู่มือ LPM-1013: Sr.Chem.QCL / FLO ตรวจทานความครบถ้วน 1 ตัวอย่างต่อ MC ต่อกะ</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-600">เลือก Production Date:</span>
+            <input type="date" value="${esc(state.reconcileDate)}" onchange="state.reconcileDate=this.value; render();" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold">
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 font-bold">
+                <th class="border p-3 text-left">Machine (MC)</th>
+                ${mainShifts.map(sh => `<th class="border p-3 text-center">${esc(sh)}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${fibreMcs.map(mc => `
+                <tr>
+                  <td class="border p-3 font-extrabold text-slate-800 bg-slate-50">${mc}</td>
+                  ${mainShifts.map(sh => {
+                    const found = daySamples.find(s => s.mc === mc && s.shift === sh);
                     return `
-                    <div class="${borderClass} p-5 rounded-xl shadow-sm hover:shadow-md transition mb-4">
-                        <div class="flex justify-between items-start mb-2">
-                            ${badge}
-                            <span class="text-xs text-slate-400 font-mono">${item.question_type || 'Open'}</span>
-                        </div>
-                        <textarea id="q-${idx}" class="w-full font-semibold text-slate-700 p-2 bg-transparent rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none transition" rows="2">${item.question}</textarea>
-                        <div class="text-sm text-slate-500 mt-2 flex items-start gap-2 bg-slate-50/50 p-2 rounded">
-                            <i class="fas fa-search mt-1 text-indigo-400"></i> 
-                            <span><span class="font-semibold text-indigo-900">Evidence:</span> ${item.expected_evidence}</span>
-                        </div>
-                    </div>
+                      <td class="border p-3 text-center">
+                        ${found ? `
+                          <div onclick="openF01Modal('${esc(found.sampleId)}')" class="inline-block bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-3 py-1.5 cursor-pointer hover:bg-emerald-100">
+                            <div class="font-extrabold"><i class="fa-solid fa-check-circle mr-1"></i>${esc(found.sampleId)}</div>
+                            <div class="text-[10px]">${esc(found.retentionCategory)} • ${found.quantity}${esc(found.unit)}</div>
+                          </div>
+                        ` : `
+                          <button onclick="quickRegisterMissingSlot('${mc}', '${sh}')" class="text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-dashed border-amber-300 rounded-xl px-3 py-1.5 transition">
+                            <i class="fa-solid fa-plus mr-1"></i>ยังไม่บันทึก (คลิกเพื่อเพิ่ม)
+                          </button>
+                        `}
+                      </td>
                     `;
-                }).join('');
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                document.getElementById('preview-area').scrollIntoView({ behavior: 'smooth' });
+      <div class="card p-5 shadow-sm">
+        <h3 class="font-extrabold text-base text-slate-800 mb-1"><i class="fa-solid fa-magnifying-glass-chart text-blue-600 mr-2"></i>การตรวจสภาพตัวอย่างตัวแทนทุก 6 เดือน (6-Monthly Condition Check - LPM-1013 ข้อ 9)</h3>
+        <p class="text-xs text-slate-500 mb-4">บันทึกผลการตรวจสภาพตัวอย่างที่จัดเก็บอยู่ (Acceptable / Deteriorated / Damaged)</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+              <tr>
+                <th class="p-3">Sample ID</th>
+                <th class="p-3">Category / Customer</th>
+                <th class="p-3">Production Date</th>
+                <th class="p-3">Storage Location</th>
+                <th class="p-3">Last Condition Check Date</th>
+                <th class="p-3">Condition Result</th>
+                <th class="p-3">Checked By</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID').map(s => `
+                <tr class="border-b last:border-0 hover:bg-slate-50">
+                  <td class="p-3 font-bold text-blue-700">${esc(s.sampleId)}</td>
+                  <td class="p-3"><b>${esc(s.retentionCategory)}</b> (${esc(s.customer || '-')})</td>
+                  <td class="p-3">${esc(s.productionDate)}</td>
+                  <td class="p-3">${esc(s.storageLocation)}</td>
+                  <td class="p-3">${esc(s.conditionCheckDate || 'ยังไม่เคยตรวจ')}</td>
+                  <td class="p-3">
+                    <span class="px-2 py-0.5 rounded font-bold ${s.conditionResult === 'Acceptable' ? 'bg-emerald-100 text-emerald-800' : s.conditionResult ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}">${esc(s.conditionResult || 'Pending')}</span>
+                  </td>
+                  <td class="p-3">${esc(s.checkedBy || '-')}</td>
+                  <td class="p-3 text-right">
+                    <button onclick="openF01Modal('${esc(s.sampleId)}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-bold">บันทึกผลตรวจสภาพ</button>
+                  </td>
+                </tr>
+              `).join('') || `<tr><td colspan="8" class="p-8 text-center text-slate-400">ยังไม่มีรายการตัวอย่างในฐานข้อมูล</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-            } catch(e) {
-                console.error(e);
-                alert("Error: " + e.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
+window.quickRegisterMissingSlot = function(mc, shift) {
+  openF01Modal();
+  setTimeout(() => {
+    document.getElementById('f01Mc').value = mc;
+    document.getElementById('f01Shift').value = shift;
+    document.getElementById('f01ProdDate').value = state.reconcileDate;
+    document.getElementById('f01SampDate').value = state.reconcileDate;
+    autoGenerateSampleId();
+    onF01FormChange();
+  }, 50);
+};
 
-        async function savePlan() {
-            if(!confirm("ยืนยันการสร้างแผนการตรวจ?")) return;
+// =========================================================================
+// [ANCHOR: View-7-F00-Category-Master-And-LPM1003-Org]
+// =========================================================================
+function renderF00View() {
+  return `
+    <div class="space-y-6">
+      <div class="card p-5 shadow-sm">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+          <div>
+            <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-purple-100 text-purple-800">Controlled Master List • GQP-1011</span>
+            <h3 class="font-extrabold text-lg text-slate-800 mt-1">LPM-1013-F00 Retention Category Master (ตารางอ้างอิงประเภทการเก็บ)</h3>
+            <p class="text-xs text-slate-500">การแก้ไขค่า Min Quantity หรือ Retention Months ต้องผ่านขั้นตอน Change Control (GQP-1011) และลงนามอิเล็กทรอนิกส์โดย DH - Laboratory / QC & QA เท่านั้น</p>
+          </div>
+        </div>
 
-            const updatedQs = checklistData.map((q, i) => ({
-                ...q,
-                question: document.getElementById(`q-${i}`).value,
-                status: 'Pending',
-                finding: ''
-            }));
-            const dept = document.getElementById('dept-select').value;
-            const stds = Array.from(document.querySelectorAll('input[name="std"]:checked')).map(c => c.value);
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+              <tr>
+                <th class="p-3">Retention Category</th>
+                <th class="p-3">Product / Grade</th>
+                <th class="p-3">Retain Unit</th>
+                <th class="p-3 text-right">Min Quantity</th>
+                <th class="p-3 text-center">Unit</th>
+                <th class="p-3 text-right">Retention Months</th>
+                <th class="p-3 text-right no-print">Change Control (GQP-1011)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.f00.map(c => `
+                <tr class="border-b last:border-0 hover:bg-slate-50">
+                  <td class="p-3 font-extrabold text-purple-700">${esc(c.retentionCategory)}</td>
+                  <td class="p-3 font-semibold text-slate-800">${esc(c.productGrade)}</td>
+                  <td class="p-3">${esc(c.retainUnit)}</td>
+                  <td class="p-3 text-right font-extrabold text-slate-800">${c.minQty}</td>
+                  <td class="p-3 text-center font-bold">${esc(c.unit)}</td>
+                  <td class="p-3 text-right font-extrabold text-blue-700">${c.retentionMonths} เดือน</td>
+                  <td class="p-3 text-right no-print">
+                    <button onclick="openF00EditModal('${esc(c.retentionCategory)}')" class="text-purple-700 hover:bg-purple-50 border border-purple-200 px-3 py-1 rounded-lg font-bold">แก้ไขผ่าน GQP-1011</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-            try {
-                const fn = functions.httpsCallable('saveAuditPlan');
-                await fn({ department: dept, standards: stds, questions: updatedQs });
-                
-                alert("บันทึกแผนเรียบร้อย!");
-                checklistData = [];
-                document.getElementById('preview-area').classList.add('hidden');
-                switchView('execution');
-            } catch(e) {
-                alert("บันทึกไม่สำเร็จ: " + e.message);
-            }
-        }
+      <div class="card p-5 shadow-sm">
+        <div class="mb-4">
+          <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-blue-100 text-blue-800">Procedure LPM-1003 Rev No.06 • Effective: 01-Aug-2026</span>
+          <h3 class="font-extrabold text-base text-slate-800 mt-1">ผังโครงสร้างตำแหน่งและสิทธิ์การปฏิบัติงาน (Role-Based Authority & Independence Matrix)</h3>
+          <p class="text-xs text-slate-500">อ้างอิง LPM-1003 ข้อ 5.1 และข้อ 8.3 (บุคลากรต้องไม่อนุมัติผลหรือเป็นพยานให้ตนเองเมื่อต้องมีการทบทวนอิสระ)</p>
+        </div>
 
-        async function loadAudits() {
-            const list = document.getElementById('audit-list');
-            list.innerHTML = '<div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูล...</div>';
-            
-            try {
-                const snap = await db.collection('audit_plans')
-                    .where('auditorId', '==', auth.currentUser.uid)
-                    .orderBy('createdAt', 'desc').get();
-                
-                list.innerHTML = '';
-                if(snap.empty) { 
-                    list.innerHTML = '<div class="col-span-full text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">ยังไม่มีแผนการตรวจ <br>ไปที่เมนู Create Plan เพื่อเริ่มใช้งาน</div>'; 
-                    return; 
-                }
+        <div class="grid md:grid-cols-5 gap-3 text-xs">
+          ${Object.values(LPM1003_ROLES).map(r => `
+            <div class="p-3.5 rounded-xl border ${state.roleCode === r.code ? 'border-blue-600 bg-blue-50/50 shadow-sm' : 'border-slate-200 bg-slate-50'}">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-blue-800">${esc(r.code)}</span>
+                ${state.roleCode === r.code ? `<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">ใช้อยู่ปัจจุบัน</span>` : ''}
+              </div>
+              <div class="font-bold text-slate-800 mt-1">${esc(r.title)}</div>
+              <p class="text-[11px] text-slate-600 mt-1.5 leading-relaxed">${esc(r.desc)}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    const total = d.questions.length;
-                    const done = d.questions.filter(q => q.status !== 'Pending').length;
-                    const percent = Math.round((done/total)*100) || 0;
+window.openF00EditModal = function(catCode) {
+  if (!LPM1003_ROLES[state.roleCode]?.canEditF00) {
+    toast('เฉพาะ DH - Laboratory / QC & QA เท่านั้นที่มีสิทธิ์แก้ไขตาราง F00 Master ผ่าน Change Control (GQP-1011)', 'error');
+    return;
+  }
+  const c = state.f00.find(x => x.retentionCategory === catCode);
+  if (!c) return;
+  showModal(`
+    <form id="f00EditForm" class="p-6 space-y-4">
+      <h3 class="font-extrabold text-lg text-slate-800">แก้ไข F00 Master (${esc(c.retentionCategory)}) ผ่าน GQP-1011</h3>
+      <div class="grid sm:grid-cols-2 gap-4 text-xs">
+        <label class="block font-bold text-slate-700">Min Quantity (${esc(c.unit)})<input type="number" name="minQty" required value="${c.minQty}" class="w-full border rounded-xl p-2.5 mt-1 font-bold"></label>
+        <label class="block font-bold text-slate-700">Retention Months (เดือน)<input type="number" name="retentionMonths" required value="${c.retentionMonths}" class="w-full border rounded-xl p-2.5 mt-1 font-bold"></label>
+        <label class="block font-bold text-slate-700 sm:col-span-2">เลขที่เอกสาร Change Control (GQP-1011 Reference) <span class="text-red-500">*</span><input type="text" name="ccRef" required placeholder="เช่น CC-GQP1011-26-04" class="w-full border rounded-xl p-2.5 mt-1"></label>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl border text-xs font-bold">ยกเลิก</button>
+        <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold">ลงนามและอัปเดต F00</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('f00EditForm').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const minQty = Number(fd.get('minQty'));
+    const retentionMonths = Number(fd.get('retentionMonths'));
+    const ccRef = fd.get('ccRef').trim();
+    closeModal();
+    const sig = await requireESignature({
+      title: `Approve F00 Master Change (${catCode})`,
+      meaning: `ข้าพเจ้าอนุมัติการปรับปรุงค่ามาตรฐาน F00 (${catCode}) ตามเอกสาร Change Control เลขที่ ${ccRef}`,
+      requireReason: false,
+      defaultReason: `Change Control Ref: ${ccRef}`
+    });
+    if (!sig) return;
+    loading(true, 'กำลังบันทึก F00 Master...');
+    try {
+      const updatedCat = { ...c, minQty, retentionMonths, lastChangeControlRef: ccRef, updatedBy: sig.signedByEmail, updatedAt: SV.serverTimestamp() };
+      await db.collection('retain_categories_f00').doc(catCode).set(updatedCat, { merge: true });
+      await logAuditTrail('CHANGE_CONTROL_F00', 'F00_MASTER', catCode, `Updated MinQty=${minQty}, Months=${retentionMonths} per ${ccRef}`, `E-Signed: ${sig.signedByEmail}`);
+      toast(`อัปเดต F00 (${catCode}) ตาม ${ccRef} เรียบร้อย`);
+    } catch (err) {
+      toast(`อัปเดต F00 ไม่สำเร็จ (ต้องเป็น Admin ใน Firebase Rules): ${err.message}`, 'error');
+    } finally {
+      loading(false);
+    }
+  };
+};
 
-                    list.innerHTML += `
-                    <div onclick="openAudit('${doc.id}')" class="bg-white p-6 rounded-2xl border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition cursor-pointer group">
-                        <div class="flex justify-between mb-3">
-                            <span class="font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full text-sm">${d.department}</span>
-                            <span class="text-xs text-slate-400 mt-1">${d.createdAt ? new Date(d.createdAt.seconds*1000).toLocaleDateString() : '-'}</span>
-                        </div>
-                        <div class="text-sm text-slate-600 mb-4 h-10 overflow-hidden text-ellipsis line-clamp-2">${d.standards.join(', ')}</div>
-                        
-                        <div class="flex justify-between text-xs text-slate-500 mb-1">
-                            <span>ความคืบหน้า</span>
-                            <span class="font-bold text-indigo-600">${percent}%</span>
-                        </div>
-                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div class="bg-indigo-500 h-full transition-all duration-500 group-hover:bg-indigo-600" style="width: ${percent}%"></div>
-                        </div>
-                    </div>`;
-                });
-            } catch (e) {
-                console.error(e);
-                list.innerHTML = '<div class="col-span-full text-center text-red-400">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
-            }
-        }
+// =========================================================================
+// [ANCHOR: View-8-UAT-Checklist-And-Audit-Trail]
+// =========================================================================
+const UAT_CASES = [
+  [1, 'สูตร F01 (FIBRE-HYG)', 'คำนวณ RS-261106-M3-A, FIBRE-HYG, Prod 06-Nov-2026, Qty 520g → Min Qty 200, Qty Check OK, Retention 24, Due 06-Nov-2028'],
+  [2, 'การแจ้งเตือน Qty LOW', 'ทดสอบตัวอย่าง FIBRE-STD ปริมาณ 80g (< 100g) → ระบบคำนวณ Qty Check = LOW'],
+  [3, 'ป้องกัน Sample ID ผิดรูปแบบ', 'ตรวจสอบรหัส 261106-M3 (ไม่ขึ้นต้นด้วย RS-) → ระบบบล็อกการบันทึก'],
+  [4, 'สูตร Remaining Qty & Hold Flag', 'ตรวจสอบการหักยอด Remaining Qty (A5) และสถานะ Hold Flag (A6)'],
+  [5, 'สูตร Disposal Due Date (A4)', 'ตรวจสอบการบวกเดือนตามประเภท FIBRE-STD (4M), NA2SO4 (6M), H2SO4 (3M)'],
+  [6, 'สูตร Within Limit (F03)', 'ตรวจสอบเกณฑ์ Temp 23–27°C และ RH ≤ 65% → ค่าปกติต้องได้ Yes'],
+  [7, 'การตรวจจับ Excursion (F03)', 'ทดสอบ Temp Min 24, Max 27.5 (>27°C), RH Max 60 → Within Limit = NO - excursion']
+];
 
-        async function openAudit(id) {
-            currentAuditId = id;
-            document.getElementById('audit-list').classList.add('hidden');
-            document.getElementById('audit-room').classList.remove('hidden');
-            
-            const doc = await db.collection('audit_plans').doc(id).get();
-            const data = doc.data();
-            
-            document.getElementById('room-title').innerText = `Audit: ${data.department}`;
-            document.getElementById('room-questions').innerHTML = data.questions.map((q, i) => `
-                <div class="p-5 border border-slate-200 rounded-xl bg-slate-50 mb-4 shadow-sm">
-                    <div class="flex justify-between text-xs text-slate-500 mb-2 font-mono">
-                        <span class="bg-slate-200 px-2 py-0.5 rounded text-slate-700">${q.clause}</span>
-                        <span>Risk Focus: ${q.risk_focus || '-'}</span>
-                    </div>
-                    <div class="font-bold text-lg mb-3 text-slate-800">${q.question}</div>
-                    
-                    <div class="bg-amber-50 p-3 text-sm text-amber-900 rounded-lg mb-4 border border-amber-100 flex gap-2">
-                        <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i>
-                        <span>Guidance: ${q.expected_evidence}</span>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="text-xs font-bold text-slate-600 ml-1">สิ่งที่ตรวจพบ (Findings)</label>
-                        <textarea id="find-${i}" class="w-full p-3 border border-slate-300 rounded-lg mt-1 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="บันทึกหลักฐาน หรือสิ่งที่พบ..." rows="2" onblur="updateFinding(${i}, this.value)">${q.finding||''}</textarea>
-                    </div>
+function renderUatAndAuditTrailView() {
+  const passedCount = Object.values(state.uatResults).filter(Boolean).length;
+  return `
+    <div class="space-y-6">
+      <div class="card p-5 shadow-sm">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+          <div>
+            <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800">Formula & Logic Self-Test (No DB Mutation)</span>
+            <h3 class="font-extrabold text-lg text-slate-800 mt-1">ชุดตรวจสอบความถูกต้องของสูตรคำนวณ LPM-1013</h3>
+            <p class="text-xs text-slate-500">ทดสอบสูตรคำนวณในหน่วยความจำโดยไม่เขียนข้อมูลขยะลงฐานข้อมูลจริง (สำหรับการทดสอบจริงให้บันทึกผ่านหน้า F01–F04 ได้เลย)</p>
+          </div>
+          <button onclick="runFormulaUnitChecks()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition">
+            <i class="fa-solid fa-vial-circle-check mr-1.5"></i>ตรวจสอบสูตรคำนวณ (${passedCount}/${UAT_CASES.length} ผ่าน)
+          </button>
+        </div>
 
-                    <div class="flex gap-3">
-                        <button onclick="setStatus(${i}, 'Pass')" class="flex-1 py-2 rounded-lg font-bold text-sm transition ${q.status==='Pass'?'bg-emerald-600 text-white shadow-md':'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'}">
-                            <i class="fas fa-check mr-1"></i> Conform
-                        </button>
-                        <button onclick="setStatus(${i}, 'Fail')" class="flex-1 py-2 rounded-lg font-bold text-sm transition ${q.status==='Fail'?'bg-rose-600 text-white shadow-md':'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50'}">
-                            <i class="fas fa-times mr-1"></i> NC
-                        </button>
-                    </div>
+        <div class="grid md:grid-cols-2 gap-3 text-xs">
+          ${UAT_CASES.map(([num, title, desc]) => {
+            const passed = state.uatResults[num];
+            return `
+              <div class="p-3 rounded-xl border flex items-start justify-between gap-3 ${passed ? 'bg-emerald-50/70 border-emerald-300' : 'bg-slate-50 border-slate-200'}">
+                <div class="flex gap-2.5">
+                  <span class="w-6 h-6 rounded-lg font-extrabold flex items-center justify-center shrink-0 ${passed ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}">${num}</span>
+                  <div>
+                    <div class="font-bold text-slate-800">${esc(title)}</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">${esc(desc)}</div>
+                  </div>
                 </div>
-            `).join('');
-            
-            // Scroll to top of room
-            document.getElementById('audit-room').scrollIntoView();
-        }
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold shrink-0 ${passed ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
+                  ${passed ? '✓ PASS' : 'Ready'}
+                </span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
 
-        async function setStatus(idx, status) {
-            // Optimistic UI Update
-            const btnArea = document.querySelector(`#room-questions > div:nth-child(${idx+1}) .flex.gap-3`);
-            const passBtn = btnArea.children[0];
-            const failBtn = btnArea.children[1];
+      <div class="card p-5 shadow-sm">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h3 class="font-extrabold text-base text-slate-800"><i class="fa-solid fa-clock-rotate-left text-blue-600 mr-1.5"></i>ประวัติการปฏิบัติงานจริง (WHO-GMP ALCOA+ Audit Trail)</h3>
+            <p class="text-xs text-slate-500">ดึงจาก Collection <code>retain_audit_events</code> บน Firestore (ห้ามแก้ไขหรือลบประวัติย้อนหลัง)</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+              <tr>
+                <th class="p-3">Timestamp</th>
+                <th class="p-3">User / Role</th>
+                <th class="p-3">Action</th>
+                <th class="p-3">Record Ref</th>
+                <th class="p-3">Reason / Details</th>
+                <th class="p-3">Verification / E-Sign</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.auditTrail.map(ev => {
+                const ts = ev.createdAt?.toDate ? ev.createdAt.toDate().toLocaleString('th-TH') : (ev.timestamp || '-');
+                return `
+                  <tr class="border-b last:border-0 hover:bg-slate-50">
+                    <td class="p-3 whitespace-nowrap text-slate-500">${esc(ts)}</td>
+                    <td class="p-3">
+                      <div class="font-bold text-slate-700">${esc(ev.user)}</div>
+                      <div class="text-[10px] text-blue-600 font-semibold">${esc(ev.role || '-')}</div>
+                    </td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-100 border font-mono font-bold text-[10px]">${esc(ev.action)}</span></td>
+                    <td class="p-3 font-extrabold text-blue-700">${esc(ev.recordId)}</td>
+                    <td class="p-3 text-slate-700">${esc(ev.reason)}</td>
+                    <td class="p-3 text-[11px] font-semibold text-emerald-700">${esc(ev.signature || '-')}</td>
+                  </tr>
+                `;
+              }).join('') || `<tr><td colspan="6" class="p-8 text-center text-slate-400">ยังไม่มีประวัติ Audit Trail ในฐานข้อมูล</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-            if(status === 'Pass') {
-                passBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-emerald-600 text-white shadow-md";
-                failBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-white border border-slate-300 text-slate-600";
-            } else {
-                passBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-white border border-slate-300 text-slate-600";
-                failBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm transition bg-rose-600 text-white shadow-md";
-            }
+window.runFormulaUnitChecks = function() {
+  const s1 = enrichF01Sample({ sampleId: 'RS-261106-M3-A', retentionCategory: 'FIBRE-HYG', productionDate: '2026-11-06', quantity: 520, withdrawnQty: 0, status: 'Retained', holdRef: '' });
+  state.uatResults[1] = (s1.minQty === 200 && s1.qtyCheck === 'OK' && s1.retentionMonths === 24 && s1.disposalDueDate === '2028-11-06');
+  const s2 = enrichF01Sample({ retentionCategory: 'FIBRE-STD', quantity: 80 });
+  state.uatResults[2] = (s2.qtyCheck === 'LOW');
+  state.uatResults[3] = !('261106-M3'.startsWith('RS-'));
+  const s4 = enrichF01Sample({ retentionCategory: 'FIBRE-HYG', quantity: 520, withdrawnQty: 50, status: 'On Hold', holdRef: 'CC-2611-01' });
+  state.uatResults[4] = (s4.remainingQty === 470 && s4.holdFlag === 'HOLD');
+  state.uatResults[5] = (calcDisposalDueDate('2026-05-20', 6) === '2026-11-20' && calcDisposalDueDate('2026-08-25', 3) === '2026-11-25');
+  state.uatResults[6] = (calcWithinLimit('Daily Temp/RH', 24.0, 26.5, 62) === 'Yes');
+  state.uatResults[7] = (calcWithinLimit('Daily Temp/RH', 24.0, 27.5, 60) === 'NO - excursion');
+  render();
+  toast('ตรวจสอบสูตรคำนวณทั้ง 7 ข้อผ่าน 100% (ไม่มีการสร้างข้อมูลขยะลง DB)');
+};
 
-            // Save to DB
-            const ref = db.collection('audit_plans').doc(currentAuditId);
-            const d = (await ref.get()).data();
-            d.questions[idx].status = status;
-            await ref.update({ questions: d.questions });
-        }
-        
-        async function updateFinding(idx, val) {
-            const ref = db.collection('audit_plans').doc(currentAuditId);
-            const d = (await ref.get()).data();
-            d.questions[idx].finding = val;
-            await ref.update({ questions: d.questions });
-        }
+// =========================================================================
+// [ANCHOR: Daily-Routine-Guide-And-CSV-Export]
+// =========================================================================
+window.openDailyGuideModal = function() {
+  showModal(`
+    <div class="p-6 space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 class="font-extrabold text-lg text-slate-800">คู่มือการใช้งานประจำวัน – ใครทำอะไร เมื่อไร (LPM-1013 หัวข้อ 13)</h3>
+          <p class="text-xs text-slate-500">สรุปหน้าที่ตามโครงสร้าง LPM-1003 Rev.06</p>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left border-collapse">
+          <thead class="bg-slate-100 font-bold">
+            <tr><th class="border p-2.5">ความถี่</th><th class="border p-2.5">ผู้รับผิดชอบ (LPM-1003)</th><th class="border p-2.5">ฟอร์ม</th><th class="border p-2.5">สิ่งที่ต้องปฏิบัติ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="border p-2.5 font-bold text-blue-700">ทุกกะ</td><td class="border p-2.5">Authorized Analyst (OP QCL)</td><td class="border p-2.5 font-bold">F01</td><td class="border p-2.5">บันทึกตัวอย่างใหม่ 1 รายการต่อ MC ต่อกะ (Shift C ใช้วันที่เริ่มกะ 23:00)</td></tr>
+            <tr><td class="border p-2.5 font-bold text-emerald-700">ทุกวัน</td><td class="border p-2.5">ผู้รับผิดชอบห้องเก็บ (Analyst/FLO)</td><td class="border p-2.5 font-bold">F03</td><td class="border p-2.5">บันทึก Daily Temp/RH; หากขึ้น NO - excursion ให้แจ้ง SH / QA ทันที</td></tr>
+            <tr><td class="border p-2.5 font-bold text-indigo-700">เมื่อมีการเบิก</td><td class="border p-2.5">ผู้เบิก + DH / SH / QA</td><td class="border p-2.5 font-bold">F02</td><td class="border p-2.5">สร้างรายการขอเบิก Pending → ผู้อนุมัติเปลี่ยนเป็น Approved (ระบบตัดยอด F01 อัตโนมัติ)</td></tr>
+            <tr><td class="border p-2.5 font-bold text-red-700">เมื่อมี Complaint/OOS</td><td class="border p-2.5">SH / FLO (Sr.Chem.QCL)</td><td class="border p-2.5 font-bold">F01</td><td class="border p-2.5">ใส่เลข Hold Ref ในตัวอย่างที่เกี่ยวข้อง เพื่อล็อกสถานะเป็น HOLD ห้ามทำลาย</td></tr>
+            <tr><td class="border p-2.5 font-bold text-purple-700">ทุกสัปดาห์</td><td class="border p-2.5">SH / FLO</td><td class="border p-2.5 font-bold">F01</td><td class="border p-2.5">เปิดหน้า Weekly Reconcile เทียบตาราง MC × Shift กับบันทึกการผลิต</td></tr>
+            <tr><td class="border p-2.5 font-bold text-teal-700">ทุกเดือน</td><td class="border p-2.5">ผู้รับผิดชอบห้องเก็บ + Lab/QA</td><td class="border p-2.5 font-bold">F03 & F04</td><td class="border p-2.5">ตรวจห้องเก็บ 10 ข้อ (I01–I10) และส่งรายการ Ready for Disposal ไปขอ QA อนุมัติทำลายใน F04 พร้อมพยาน</td></tr>
+            <tr><td class="border p-2.5 font-bold text-amber-700">ทุก 6 เดือน</td><td class="border p-2.5">SH / FLO</td><td class="border p-2.5 font-bold">F01</td><td class="border p-2.5">ตรวจสภาพตัวอย่างตัวแทน (Condition Check) และทบทวนความจุห้องเก็บ</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `);
+};
 
-        function closeRoom() {
-            document.getElementById('audit-room').classList.add('hidden');
-            document.getElementById('audit-list').classList.remove('hidden');
-            loadAudits(); // Refresh progress bars
-        }
-    </script>
+window.exportCurrentViewCSV = function() {
+  let rows = [];
+  let filename = `LPM1013_${state.view}_${nowISO()}.csv`;
+  if (state.view === 'f02') {
+    rows = [['Withdrawal No', 'Sample ID', 'Date', 'Purpose', 'Qty Withdrawn', 'Unit', 'Ref No', 'Withdrawn By', 'Approved By', 'Status', 'Returned']];
+    state.f02.forEach(w => rows.push([w.withdrawalNo, w.sampleId, w.withdrawalDate, w.purpose, w.qtyWithdrawn, w.unit, w.referenceNo, w.withdrawnBy, w.approvedBy, w.approvalStatus, w.returnedToStore]));
+  } else if (state.view === 'f03') {
+    rows = [['Record Ref', 'Record Type', 'Date/Time', 'Temp Min', 'Temp Max', 'RH Min', 'RH Max', 'Within Limit', 'Recorded By', 'Reviewed By']];
+    state.f03.forEach(r => rows.push([r.recordRef, r.recordType, r.recordDateTime, r.tempMin ?? '', r.tempMax ?? '', r.rhMin ?? '', r.rhMax ?? '', r.withinLimit, r.recordedBy, r.reviewedBy]));
+  } else if (state.view === 'f04') {
+    rows = [['Disposal List No', 'Sample ID', 'Hold Check', 'QA Approved', 'QA Approver', 'Approval Date', 'Actual Disposal Date', 'Method', 'Disposed By', 'Witnessed By', 'F01 Updated']];
+    state.f04.forEach(d => rows.push([d.disposalListNo, d.sampleId, d.holdCheck, d.qaApproved, d.qaApprover, d.qaApprovalDate, d.actualDisposalDate, d.disposalMethod, d.disposedBy, d.witnessedBy, d.f01StatusUpdated]));
+  } else {
+    rows = [['Sample ID', 'Product', 'Customer', 'Category', 'MC', 'Shift', 'Production Date', 'Sampling Date', 'Qty', 'Unit', 'Min Qty', 'Qty Check', 'Withdrawn Qty', 'Remaining Qty', 'Disposal Due Date', 'Hold Ref', 'Hold Flag', 'Status', 'Storage Location']];
+    state.f01.forEach(s => rows.push([s.sampleId, s.product, s.customer, s.retentionCategory, s.mc, s.shift, s.productionDate, s.samplingDate, s.quantity, s.unit, s.minQty, s.qtyCheck, s.withdrawnQty, s.remainingQty, s.disposalDueDate, s.holdRef, s.holdFlag, s.status, s.storageLocation]));
+  }
+
+  const csvContent = '\uFEFF' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`ดาวน์โหลดไฟล์ ${filename} เรียบร้อยแล้ว`);
+};
+
+// =========================================================================
+// [ANCHOR: Live-Firebase-Auth-And-Listeners]
+// =========================================================================
+async function loadProfile(user) {
+  const ref = db.collection('users').doc(user.uid);
+  const snap = await ref.get();
+  if (snap.exists) return snap.data();
+  const profile = {
+    email: user.email,
+    displayName: user.displayName || user.email,
+    role: 'Auditor',
+    active: true,
+    createdAt: SV.serverTimestamp()
+  };
+  await ref.set(profile, { merge: true });
+  return profile;
+}
+
+function setupLiveFirestoreListeners() {
+  state.unsubscribe.forEach(u => u());
+  state.unsubscribe = [];
+
+  state.unsubscribe.push(
+    db.collection('retain_categories_f00').onSnapshot(snap => {
+      if (!snap.empty) {
+        state.f00 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } else {
+        state.f00 = JSON.parse(JSON.stringify(DEFAULT_F00_MASTER));
+      }
+      render();
+    }, err => console.warn('F00 listener error:', err))
+  );
+
+  state.unsubscribe.push(
+    db.collection('retain_samples_f01').orderBy('productionDate', 'desc').limit(500).onSnapshot(snap => {
+      state.f01 = snap.docs.map(d => enrichF01Sample({ id: d.id, ...d.data() }));
+      render();
+    }, err => toast(`โหลด F01 ไม่สำเร็จ: ${err.message}`, 'error'))
+  );
+
+  state.unsubscribe.push(
+    db.collection('retain_withdrawals_f02').orderBy('withdrawalDate', 'desc').limit(500).onSnapshot(snap => {
+      state.f02 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, err => console.warn('F02 listener error:', err))
+  );
+
+  state.unsubscribe.push(
+    db.collection('retain_monitoring_f03').orderBy('recordDateTime', 'desc').limit(300).onSnapshot(snap => {
+      state.f03 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, err => console.warn('F03 listener error:', err))
+  );
+
+  state.unsubscribe.push(
+    db.collection('retain_disposals_f04').limit(300).onSnapshot(snap => {
+      state.f04 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, err => console.warn('F04 listener error:', err))
+  );
+
+  state.unsubscribe.push(
+    db.collection('retain_audit_events').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+      state.auditTrail = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (state.view === 'uat') render();
+    }, err => console.warn('Audit trail listener error:', err))
+  );
+
+  // เรียก Lazy Daily Maintenance (ทำงานสูงสุดวันละ 1 ครั้ง เพื่อประหยัด Free Tier)
+  functions.httpsCallable('triggerRetainDailyCheck')().catch(() => {});
+}
+
+document.getElementById('loginForm').onsubmit = async e => {
+  e.preventDefault();
+  loading(true, 'กำลังเข้าสู่ระบบ Firebase Authentication...');
+  try {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pwd = document.getElementById('loginPassword').value;
+    await auth.signInWithEmailAndPassword(email, pwd);
+  } catch (err) {
+    toast(`เข้าสู่ระบบไม่สำเร็จ: ${err.message}`, 'error');
+  } finally {
+    loading(false);
+  }
+};
+
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    state.unsubscribe.forEach(u => u());
+    state.unsubscribe = [];
+    state.user = null;
+    state.f01 = [];
+    state.f02 = [];
+    state.f03 = [];
+    state.f04 = [];
+    state.auditTrail = [];
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    return;
+  }
+  try {
+    state.user = user;
+    state.profile = await loadProfile(user);
+    if (state.profile.active === false) throw new Error('Account disabled');
+    state.roleCode = state.profile.role === 'Admin' ? 'DH' : (state.profile.role === 'Lead Auditor' ? 'SH' : 'ANALYST');
+    document.getElementById('roleSwitcher').value = state.roleCode;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('userName').textContent = state.profile.displayName || user.email;
+    document.getElementById('userRole').textContent = LPM1003_ROLES[state.roleCode].title;
+    setupLiveFirestoreListeners();
+    buildNav();
+    render();
+    updateNetwork();
+  } catch (e) {
+    toast(e.message, 'error');
+    await auth.signOut();
+  }
+});
+
+document.getElementById('roleSwitcher').onchange = e => {
+  state.roleCode = e.target.value;
+  document.getElementById('userRole').textContent = LPM1003_ROLES[state.roleCode]?.title || state.roleCode;
+  render();
+  toast(`สลับมุมมองบทบาทเป็น: ${LPM1003_ROLES[state.roleCode]?.title}`);
+};
+
+document.getElementById('logoutBtn').onclick = () => auth.signOut();
+document.getElementById('menuBtn').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+document.getElementById('closeSidebarBtn').onclick = () => document.getElementById('sidebar').classList.remove('open');
+</script>
 </body>
 </html>

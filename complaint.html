@@ -25,10 +25,41 @@
     .subtab-active { border-bottom: 3px solid #2563eb; color: #1d4ed8; font-weight: 700; background: #eff6ff; }
     .spinner { width: 20px; height: 20px; border: 3px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    /* [FILE]: Complaint.html */
+    /* [PURPOSE]: A4 RCA/CAPA report, direct print and PDF Save-as-PDF */
+    @page { size: A4; margin: 15mm 12mm 18mm; }
+    #printReportRoot { display: none; }
+    .need-verify { background:#fee2e2; color:#991b1b; font-weight:700; }
     @media print {
-      #sidebar, header, .no-print { display: none !important; }
-      main { margin: 0 !important; padding: 0 !important; }
+      body.printing-report #appMainLayout,
+      body.printing-report #loginScreen,
+      body.printing-report #toastArea,
+      body.printing-report #loadingOverlay { display:none !important; }
+      body.printing-report #printReportRoot {
+        display:block !important; color:#111827; background:#fff;
+        font-family:'Sarabun',sans-serif; font-size:10.5pt; line-height:1.35;
+      }
+      .rpt-document { position:relative; }
+      .rpt-header { display:flex; justify-content:space-between; gap:16px; border-bottom:2px solid #1e3a8a; padding-bottom:8px; margin-bottom:10px; }
+      .rpt-header h1 { margin:0; font-size:17pt; color:#1e3a8a; }
+      .rpt-section { margin:10px 0; break-inside:auto; }
+      .rpt-section h2 { margin:0 0 5px; padding:4px 7px; font-size:11.5pt; background:#e2e8f0; color:#0f172a; }
+      .rpt-section h3 { font-size:10.5pt; margin:8px 0 4px; }
+      .rpt-section p { white-space:pre-wrap; margin:4px 0; }
+      .rpt-section table { width:100%; border-collapse:collapse; table-layout:fixed; }
+      .rpt-section th, .rpt-section td { border:1px solid #94a3b8; padding:4px 5px; vertical-align:top; word-break:break-word; }
+      .rpt-section th { background:#f1f5f9; font-weight:700; }
+      thead { display:table-header-group; }
+      tr, .rpt-signature, .rpt-photo, .rpt-chart { break-inside:avoid; }
+      .rpt-photo { display:inline-block; width:48%; margin:4px 1%; vertical-align:top; }
+      .rpt-photo img, .rpt-chart { width:100%; max-height:90mm; object-fit:contain; }
+      .rpt-photo figcaption { font-size:8pt; color:#475569; }
+      .rpt-warning { padding:7px; border:1px solid #f59e0b; background:#fffbeb; }
+      .rpt-watermark { position:fixed; inset:42% auto auto 18%; transform:rotate(-30deg); font-size:72pt; color:rgba(220,38,38,.13); font-weight:800; z-index:0; }
+      .rpt-footer { position:fixed; bottom:-12mm; left:0; right:0; display:flex; justify-content:space-between; gap:8px; border-top:1px solid #94a3b8; padding-top:3px; font-size:7.5pt; color:#475569; }
+      .rpt-page-no::after { content:'Page ' counter(page) ' / ' counter(pages); }
     }
+
   </style>
 </head>
 <body class="min-h-screen">
@@ -100,7 +131,7 @@
         <i class="fa-solid fa-wand-magic-sparkles w-5"></i> AI Intake & Matching
       </button>
       <button onclick="switchMainView('cases')" data-view="cases" class="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition">
-        <i class="fa-solid fa-folder-tree w-5"></i> Case Register (RRL-01)
+        <i class="fa-solid fa-folder-tree w-5"></i> Case Register
       </button>
       <button onclick="switchMainView('workspace')" data-view="workspace" class="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 hover:bg-slate-800 transition">
         <i class="fa-solid fa-microscope w-5"></i> Case Workspace (5M+CAPA)
@@ -196,9 +227,9 @@
             <div class="text-[11px] text-slate-500 mt-2">เคสติดธง GMP หรือเกิน SLA 15 วัน</div>
           </div>
           <div class="card p-5 border-l-4 border-l-indigo-600">
-            <div class="text-xs font-bold text-slate-400 uppercase">Level-5 RCA Verified</div>
+            <div class="text-xs font-bold text-slate-400 uppercase">RCA Gate Passed</div>
             <div id="kpiLevel5" class="text-3xl font-black text-indigo-600 mt-1">0</div>
-            <div class="text-[11px] text-slate-500 mt-2">ผ่านเกณฑ์ประเมิน A-G = 5.0 เต็ม</div>
+            <div class="text-[11px] text-slate-500 mt-2">ผ่าน RCA Gate A-G ≥ 4 ทุกข้อ</div>
           </div>
           <div class="card p-5 border-l-4 border-l-emerald-600">
             <div class="text-xs font-bold text-slate-400 uppercase">Closed Cases</div>
@@ -355,10 +386,13 @@
                     <option value="UNKNOWN">Other / Unknown</option>
                   </select>
                 </label>
-                <label class="font-bold text-slate-700">เกรด (Grade / Denier x Cut)
-                  <input type="text" id="f_grade" placeholder="e.g. 1.2D x 38mm" class="w-full border rounded-lg p-2 mt-1 bg-white">
-                </label>
-                <label class="font-bold text-slate-700">เครื่องจักร (Machine Line)
+                  <label class="font-bold text-slate-700">เกรด (Grade / Denier x Cut)
+                  <input type="text" id="f_grade" data-id="intake-grade" placeholder="e.g. 1.2D x 38mm" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                  </label>
+                  <label class="font-bold text-slate-700">Material Code
+                  <input type="text" id="f_materialCode" data-id="intake-material-code" placeholder="รหัส Material จาก Invoice/DO" class="w-full border rounded-lg p-2 mt-1 bg-white">
+                  </label>
+                  <label class="font-bold text-slate-700">เครื่องจักร (Machine Line)
                   <input type="text" id="f_machines" placeholder="MC2, MC3, MC5, MC6" class="w-full border rounded-lg p-2 mt-1 bg-white">
                 </label>
                 <label class="font-bold text-slate-700">วันที่ผลิต (Prod Dates: YYYY-MM-DD)
@@ -373,14 +407,27 @@
                 <label class="font-bold text-slate-700">Delivery Order (DO No.)
                   <input type="text" id="f_dos" placeholder="คั่นด้วยลูกน้ำ (,)" class="w-full border rounded-lg p-2 mt-1 bg-white">
                 </label>
-                <label class="font-bold text-slate-700">ปริมาณที่ร้องเรียน (Qty & Unit)
+                <label class="font-bold text-slate-700">Supplied Quantity
                   <div class="flex gap-1 mt-1">
-                    <input type="number" step="0.01" id="f_qty" placeholder="0.00" class="w-2/3 border rounded-lg p-2 bg-white">
-                    <input type="text" id="f_unit" placeholder="MT" value="MT" class="w-1/3 border rounded-lg p-2 bg-white">
+                    <input type="number" step="0.01" id="f_suppliedQty" data-id="intake-supplied-qty" placeholder="0.00" class="w-2/3 border rounded-lg p-2 bg-white">
+                    <input type="text" id="f_suppliedUnit" data-id="intake-supplied-unit" value="MT" class="w-1/3 border rounded-lg p-2 bg-white">
+                  </div>
+                </label>
+                <label class="font-bold text-slate-700">Complaint Quantity
+                  <div class="flex gap-1 mt-1">
+                    <input type="number" step="0.01" id="f_qty" data-id="intake-complaint-qty" placeholder="0.00" class="w-2/3 border rounded-lg p-2 bg-white">
+                    <input type="text" id="f_unit" data-id="intake-complaint-unit" value="MT" class="w-1/3 border rounded-lg p-2 bg-white">
+                  </div>
+                </label>
+                <label class="font-bold text-slate-700">Compensation
+                  <div class="grid grid-cols-2 gap-1 mt-1">
+                    <select id="f_compType" data-id="intake-comp-type" class="border rounded-lg p-2 bg-white"><option value="NONE">NONE</option><option value="CREDIT_NOTE">CREDIT NOTE</option><option value="REPLACEMENT">REPLACEMENT</option><option value="OTHER">OTHER</option></select>
+                    <input type="number" step="0.01" id="f_compAmount" data-id="intake-comp-amount" placeholder="Amount" class="border rounded-lg p-2 bg-white">
+                    <input type="text" id="f_compCurrency" data-id="intake-comp-currency" value="USD" class="border rounded-lg p-2 bg-white">
+                    <input type="text" id="f_compRemark" data-id="intake-comp-remark" placeholder="Remark" class="border rounded-lg p-2 bg-white">
                   </div>
                 </label>
               </div>
-
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <label class="font-bold text-slate-700">หมวดปัญหาหลัก (Defect Category)
                   <select id="f_defectCategory" class="w-full border rounded-lg p-2 mt-1 bg-white font-bold">
@@ -402,10 +449,12 @@
 
               <div class="text-xs">
                 <label class="font-bold text-slate-700">อาการและรายละเอียดที่ลูกค้าร้องเรียน (Symptom & Customer Allegation) *
-                  <textarea id="f_symptom" rows="2" required class="w-full border rounded-lg p-2 mt-1"></textarea>
-                </label>
+              <textarea id="f_symptom" data-id="intake-symptom" rows="2" required class="w-full border rounded-lg p-2 mt-1"></textarea>
+              </label>
+              <label class="block font-bold text-slate-700 mt-3">Customer Request / Expected Resolution
+              <textarea id="f_customerRequest" data-id="intake-customer-request" rows="2" class="w-full border rounded-lg p-2 mt-1" placeholder="สิ่งที่ลูกค้าต้องการให้ตอบ/ชดเชย/ดำเนินการ"></textarea>
+              </label>
               </div>
-
               <!-- Risk Flags (GQP-1007 / GMP-001) -->
               <div class="p-3 rounded-xl bg-red-50/60 border border-red-200 space-y-2">
                 <div class="text-xs font-bold text-red-900"><i class="fa-solid fa-triangle-exclamation mr-1"></i> การคัดกรองความเสี่ยงตามมาตรฐาน GMP & GQP-1007 (Risk Screening Flags)</div>
@@ -445,7 +494,7 @@
               <option value="ALL">ทุกสถานะ (All Statuses)</option>
               <option value="REGISTERED">REGISTERED</option>
               <option value="INVESTIGATION">INVESTIGATION</option>
-              <option value="RCA_LEVEL5_PASSED">RCA_LEVEL5_PASSED</option>
+              <option value="RCA_GATE_PASSED">RCA_GATE_PASSED</option>
               <option value="CAPA_IMPLEMENTATION">CAPA_IMPLEMENTATION</option>
               <option value="EFFECTIVENESS_REVIEW">EFFECTIVENESS_REVIEW</option>
               <option value="CLOSED">CLOSED</option>
@@ -465,7 +514,7 @@
                 <th class="p-4">Product / Line / Lot</th>
                 <th class="p-4">Defect & Symptom</th>
                 <th class="p-4 text-center">SLA (15d)</th>
-                <th class="p-4 text-center">Level-5 Score</th>
+                <th class="p-4 text-center">Gate / CTS Score</th>
                 <th class="p-4 text-center">Status</th>
                 <th class="p-4 text-right">Actions</th>
               </tr>
@@ -497,11 +546,18 @@
               <p id="wsMetaLine" class="text-xs text-slate-500 mt-1">-</p>
             </div>
             <div class="flex flex-wrap gap-2 no-print">
-              <select id="wsStatusSelect" onchange="changeWorkspaceStatus(this.value)" class="border rounded-lg px-3 py-2 text-xs font-bold bg-slate-50">
+                <select id="reportModeSelect" data-id="report-mode" data-allow-locked="true" class="border rounded-lg px-3 py-2 text-xs font-bold bg-white">
+                  <option value="CTS">CTS / Customer Report</option>
+                  <option value="INTERNAL">Internal Report + Gate/CTS/Audit Appendix</option>
+                </select>
+                <button type="button" data-id="btn-export-report" data-allow-locked="true" onclick="printCurrentRcaReport()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold">
+                  <i class="fa-solid fa-file-pdf mr-1"></i> Export / Print RCA-CAPA
+                </button>
+                <select id="wsStatusSelect" onchange="changeWorkspaceStatus(this.value)" class="border rounded-lg px-3 py-2 text-xs font-bold bg-slate-50">
                 <option value="REGISTERED">REGISTERED</option>
                 <option value="CONTAINMENT">CONTAINMENT (กักกัน/RRL-01)</option>
                 <option value="INVESTIGATION">INVESTIGATION (สืบสวน 5M+E)</option>
-                <option value="RCA_LEVEL5_PASSED">RCA_LEVEL5_PASSED (ผ่านเกณฑ์ 5.0)</option>
+                <option value="RCA_GATE_PASSED">RCA_GATE_PASSED (A-G ≥ 4)</option>
                 <option value="CAPA_IMPLEMENTATION">CAPA_IMPLEMENTATION</option>
                 <option value="EFFECTIVENESS_REVIEW">EFFECTIVENESS_REVIEW</option>
                 <option value="CLOSED">CLOSED (ปิดเคส)</option>
@@ -524,7 +580,7 @@
               <i class="fa-solid fa-sitemap mr-1"></i> 3. สืบสวน 5M+E & 5 Whys
             </button>
             <button onclick="switchWsTab('rcascale')" data-wstab="rcascale" class="ws-tab-btn px-4 py-3.5">
-              <i class="fa-solid fa-award mr-1"></i> 4. ประเมิน RCA Scale (Level 5 A-G)
+              <i class="fa-solid fa-award mr-1"></i> 4. ประเมิน RCA Gate (A-G ≥ 4)
             </button>
             <button onclick="switchWsTab('capa')" data-wstab="capa" class="ws-tab-btn px-4 py-3.5">
               <i class="fa-solid fa-screwdriver-wrench mr-1"></i> 5. CAPA & Effectiveness
@@ -543,21 +599,38 @@
                   <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการแก้ไข
                 </button>
               </div>
-              <div class="grid grid-cols-2 gap-3 text-xs">
-                <label class="font-bold">ลูกค้า (Customer)<input id="e_customer" class="w-full border rounded p-2 mt-1"></label>
-                <label class="font-bold">Customer Ref / SAP QM01<input id="e_custRef" class="w-full border rounded p-2 mt-1"></label>
-                <label class="font-bold">เกรด (Grade)<input id="e_grade" class="w-full border rounded p-2 mt-1"></label>
-                <label class="font-bold">เครื่องจักร (MC2/MC3/MC5/MC6)<input id="e_machines" class="w-full border rounded p-2 mt-1"></label>
-                <label class="font-bold">วันที่ผลิต (YYYY-MM-DD)<input id="e_prodDates" class="w-full border rounded p-2 mt-1"></label>
-                <label class="font-bold">Lot / Batch No.<input id="e_lots" class="w-full border rounded p-2 mt-1"></label>
-                <label class="font-bold">Invoice No.<input id="e_invoices" class="w-full border rounded p-2 mt-1"></label>
-                <label class="font-bold">DO No. / RRL-01 No.<input id="e_rrl" class="w-full border rounded p-2 mt-1"></label>
+              <div class="grid grid-cols-2 gap-3 text-xs" data-id="case-master-fields">
+                <label class="font-bold">Customer<input id="e_customer" data-id="case-customer" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Customer Ref / SAP QM01<input id="e_custRef" data-id="case-customer-ref" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Grade<input id="e_grade" data-id="case-grade" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Material Code<input id="e_materialCode" data-id="case-material-code" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Machine<input id="e_machines" data-id="case-machines" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Production Date / Month<input id="e_prodDates" data-id="case-production-dates" placeholder="YYYY-MM-DD, YYYY-MM, Dec 2025" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Lot / Batch No.<input id="e_lots" data-id="case-lots" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Invoice No.<input id="e_invoices" data-id="case-invoices" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">DO No.<input id="e_dos" data-id="case-dos" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">RRL-01 No.<input id="e_rrl" data-id="case-rrl" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Supplied Qty / Unit<div class="flex gap-1"><input id="e_suppliedQty" type="number" step="0.01" class="w-2/3 border rounded p-2 mt-1"><input id="e_suppliedUnit" class="w-1/3 border rounded p-2 mt-1"></div></label>
+                <label class="font-bold">Complaint Qty / Unit<div class="flex gap-1"><input id="e_complaintQty" type="number" step="0.01" class="w-2/3 border rounded p-2 mt-1"><input id="e_complaintUnit" class="w-1/3 border rounded p-2 mt-1"></div></label>
+                <label class="font-bold">Compensation Type<input id="e_compType" data-id="case-comp-type" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Amount / Currency<div class="flex gap-1"><input id="e_compAmount" type="number" step="0.01" class="w-2/3 border rounded p-2 mt-1"><input id="e_compCurrency" class="w-1/3 border rounded p-2 mt-1"></div></label>
+                <label class="font-bold col-span-2">Compensation Remark<input id="e_compRemark" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Sponsor<input id="e_teamSponsor" data-id="team-sponsor" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Team Leader<input id="e_teamLeader" data-id="team-leader" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold col-span-2">Members (comma separated)<input id="e_teamMembers" data-id="team-members" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold col-span-2">Departments (comma separated)<input id="e_teamDepartments" data-id="team-departments" placeholder="QA, Production, Maintenance" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Proposed By<input id="e_approvalProposed" data-id="approval-proposed" placeholder="Mr. Sittidate P." class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Recommended By<input id="e_approvalRecommended" data-id="approval-recommended" placeholder="Mr. Chetan J., Mr. Udai M." class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Approved By<input id="e_approvalApproved" data-id="approval-approved" placeholder="Mr. Sushil" class="w-full border rounded p-2 mt-1"></label>
+                <label class="font-bold">Approval Date<input id="e_approvalDate" type="date" data-id="approval-date" class="w-full border rounded p-2 mt-1"></label>
               </div>
               <label class="block text-xs font-bold">อาการ/ปัญหาที่แจ้ง (Symptom)
-                <textarea id="e_symptom" rows="3" class="w-full border rounded p-2 mt-1 text-xs"></textarea>
-              </label>
+            <textarea id="e_symptom" data-id="case-symptom" rows="3" class="w-full border rounded p-2 mt-1 text-xs"></textarea>
+            </label>
+            <label class="block text-xs font-bold">Customer Request
+            <textarea id="e_customerRequest" data-id="case-customer-request" rows="2" class="w-full border rounded p-2 mt-1 text-xs"></textarea>
+            </label>
             </div>
-
             <!-- Communication & Evidence Timeline (Add / Delete) -->
             <div class="lg:col-span-6 card p-5 space-y-4">
               <h3 class="font-bold text-sm text-slate-800 border-b pb-2">ประวัติการสื่อสารและหลักฐานเพิ่มเติม (Communication Timeline)</h3>
@@ -614,8 +687,8 @@
                 <label class="font-bold text-slate-700">Min / Max
                   <input type="text" id="spc_minmax" placeholder="Min / Max" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
                 </label>
-                <label class="font-bold text-slate-700">Within SD Factor
-                  <input type="number" step="0.01" id="spc_withinFactor" value="0.92" oninput="calculateSpcMetrics()" title="สัดส่วน Within-subgroup SD ต่อ Overall SD (ปกติ 0.85-0.95)" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
+                <label class="font-bold text-slate-700">Within-subgroup SD (trusted source only)
+                <input type="number" step="any" id="spc_sdWithin" data-id="spc-sd-within" oninput="calculateSpcMetrics()" placeholder="เว้นว่างถ้าไม่มีค่าจริง" class="w-full border rounded-lg p-2 mt-1 bg-white font-mono">
                 </label>
               </div>
               <div id="spcResultBanner" class="p-3 rounded-xl bg-white border border-emerald-200 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -700,7 +773,7 @@
               <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-3">
                 <div>
                   <h3 class="font-bold text-base text-slate-800"><i class="fa-solid fa-gavel text-indigo-600 mr-2"></i>การตรวจประเมินคุณภาพ RCA & CAPA ตามเกณฑ์ธุรกิจ (RCA_Assessment_Scale_Ver-0)</h3>
-                  <p class="text-xs text-slate-500">กฎเหล็ก: ทุกหัวข้อ (A ถึง G) ต้องได้คะแนน <b>5 / 5 เท่านั้น</b> จึงจะผ่านเกณฑ์อนุมัติ (Level 5 Verified)</p>
+                  <p class="text-xs text-slate-500">RCA Gate: ทุกหัวข้อ A-G ต้องได้คะแนนจากกฎบน Server <b>อย่างน้อย 4 / 5</b>; AI มีหน้าที่วิจารณ์และร่างคำตอบเท่านั้น</p>
                 </div>
                 <div class="flex gap-2">
                   <button onclick="runAiRcaEvaluation('ASSESS_ONLY')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">
@@ -712,8 +785,29 @@
                 </div>
               </div>
 
-              <div id="rcaScaleScoreboard" class="grid grid-cols-1 md:grid-cols-7 gap-2 text-center text-xs"></div>
-              <div id="rcaScaleDetailsBox" class="space-y-3 text-xs"></div>
+            <div id="rcaScaleScoreboard" data-id="rca-rule-gate-scoreboard" class="grid grid-cols-1 md:grid-cols-7 gap-2 text-center text-xs"></div>
+            <div id="rcaScaleDetailsBox" data-id="rca-rule-gate-details" class="space-y-3 text-xs"></div>
+
+            <!-- [FILE]: Complaint.html -->
+            <!-- [PURPOSE]: Record actual A-G scores returned by CTS after submission -->
+            <div class="mt-5 p-4 rounded-xl border border-violet-200 bg-violet-50/40 space-y-3" data-id="cts-score-panel">
+              <div class="flex justify-between items-center"><div><h4 class="font-bold text-violet-950">Actual CTS Score A-G</h4><p class="text-xs text-violet-700">บันทึกคะแนนจริงที่ CTS ตอบกลับมาเพื่อเทียบกับ Rule Gate</p></div><div id="cts_average" class="font-black text-xl text-violet-700">-</div></div>
+              <div class="grid grid-cols-2 md:grid-cols-7 gap-2 text-xs">
+                <label>A<input id="cts_A" data-allow-locked="true" type="number" min="1" max="5" step="0.1" class="w-full border rounded p-2"></label>
+                <label>B<input id="cts_B" data-allow-locked="true" type="number" min="1" max="5" step="0.1" class="w-full border rounded p-2"></label>
+                <label>C<input id="cts_C" data-allow-locked="true" type="number" min="1" max="5" step="0.1" class="w-full border rounded p-2"></label>
+                <label>D<input id="cts_D" data-allow-locked="true" type="number" min="1" max="5" step="0.1" class="w-full border rounded p-2"></label>
+                <label>E<input id="cts_E" data-allow-locked="true" type="number" min="1" max="5" step="0.1" class="w-full border rounded p-2"></label>
+                <label>F<input id="cts_F" data-allow-locked="true" type="number" min="1" max="5" step="0.1" class="w-full border rounded p-2"></label>
+                <label>G<input id="cts_G" data-allow-locked="true" type="number" min="1" max="5" step="0.1" class="w-full border rounded p-2"></label>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                <label>Date<input id="cts_date" data-allow-locked="true" type="date" class="w-full border rounded p-2"></label>
+                <label>CTS Reference<input id="cts_ref" data-allow-locked="true" class="w-full border rounded p-2"></label>
+                <label>Remark<input id="cts_remark" data-allow-locked="true" class="w-full border rounded p-2"></label>
+              </div>
+              <button type="button" data-id="btn-save-cts-score" data-allow-locked="true" onclick="saveCtsScore()" class="bg-violet-700 text-white px-4 py-2 rounded-lg text-xs font-bold">บันทึก Actual CTS Score</button>
+            </div>
             </div>
           </div>
 
@@ -742,6 +836,7 @@
                 </label>
                 <label class="font-bold">สถานะ (Status)
                   <select id="capa_status" class="w-full border rounded p-2 mt-1 bg-white font-bold">
+                    <option value="PROPOSED_BY_AI">PROPOSED_BY_AI (ต้องมี Human Confirmation)</option>
                     <option value="OPEN">OPEN</option>
                     <option value="IN_PROGRESS">IN_PROGRESS</option>
                     <option value="COMPLETED">COMPLETED</option>
@@ -812,7 +907,7 @@
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 1. ยืนยันการจำแนกประเภทและระดับความรุนแรง (Severity) แล้ว</label>
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 2. ระบุขอบเขต Lot / Batch / Bale และตรวจ Retain Sample แล้ว</label>
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 3. ดึงข้อมูล In-Process / Lab ประกอบการสืบสวน 5M+E ครบถ้วน</label>
-                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 4. ผลการประเมิน RCA Assessment Scale ผ่านเกณฑ์ Level 5 ครบ A-G</label>
+                <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 4. ผลการประเมิน RCA Gate ผ่านเกณฑ์ ≥ 4 ครบ A-G</label>
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 5. ดำเนินการ CAPA เสร็จสิ้นและมีหลักฐานแนบครบถ้วน</label>
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 6. ทวนสอบประสิทธิผล (Effectiveness Check) ผ่านตามเกณฑ์</label>
                 <label class="flex items-center gap-2"><input type="checkbox" class="cg-chk"> 7. บันทึกจดหมายตอบลูกค้า (Interim / Final Reply) ในระบบแล้ว</label>
@@ -884,6 +979,9 @@
     </main>
   </div>
 </div>
+    <!-- [FILE]: Complaint.html -->
+    <!-- [PURPOSE]: Hidden professional RCA/CAPA print surface -->
+    <div id="printReportRoot" data-id="print-report-root" aria-hidden="true"></div>
 
 <script>
 'use strict';
@@ -916,8 +1014,62 @@ let currentCaseObj = null;
 let latestAiProposal = null;
 let pendingIntakeFiles = [];
 let pendingInlineImages = [];
-let pendingAttachmentsText = "";
-let chartInstances = {};
+  let pendingAttachmentsText = "";
+  let chartInstances = {};
+  let currentCapaActions = [];
+  let currentAttachments = [];
+
+  // [FILE]: Complaint.html
+  // [PURPOSE]: P0 locked-record guard and deterministic RCA helpers
+  function caseGatePassed(c = currentCaseObj) {
+    return Boolean(c?.rcaAssessment?.isGatePassed ?? c?.rcaAssessment?.isLevel5Passed);
+  }
+  function assertCaseEditable(action = 'แก้ไขข้อมูล') {
+    if (!currentCaseObj?.locked) return true;
+    toast(`เคส ${currentCaseObj.caseId} ถูก LOCK แล้ว ไม่สามารถ${action}ได้ กรุณา Reopen พร้อมระบุเหตุผลก่อน`, 'error');
+    return false;
+  }
+  function applyWorkspaceLockState(c) {
+    const root = document.getElementById('wsContainer');
+    if (!root) return;
+    const locked = Boolean(c?.locked);
+    const selector = [
+      '#wsStatusSelect', '#wstab-overview input', '#wstab-overview textarea', '#wstab-overview select',
+      '#wstab-investigation input', '#wstab-investigation textarea', '#wstab-investigation select',
+      '#wstab-capa input', '#wstab-capa textarea', '#wstab-capa select', '#wstab-capa button',
+      '[onclick*="saveOverviewEdits"]', '[onclick*="saveInvestigationData"]', '[onclick*="applyAiProposal"]',
+      '[onclick*="runAiRcaEvaluation"]', '[onclick*="pullPlantData"]', '[onclick*="changeWorkspaceStatus"]',
+      '[onclick*="addCommunication"]', '[onclick*="deleteCommItem"]', '[onclick*="deleteCaseCascade"]'
+    ].join(',');
+    root.querySelectorAll(selector).forEach(el => {
+      if (el.dataset.allowLocked === 'true') return;
+      el.disabled = locked;
+      el.classList.toggle('opacity-50', locked);
+      el.classList.toggle('cursor-not-allowed', locked);
+    });
+  }
+  function normalizeComplaintMc(mcStr) {
+    if (!mcStr) return '';
+    const s = String(mcStr).toUpperCase().replace(/\s|-/g, '');
+    if (s.includes('2')) return 'MC2';
+    if (s.includes('3')) return 'MC3';
+    if (s.includes('5')) return 'MC5';
+    if (s.includes('6')) return 'MC6';
+    return s;
+  }
+  // [ANCHOR: NEED-VERIFY-SCOPE] ตรวจเฉพาะเนื้อหาที่ส่งจริง ไม่รวมร่าง AI ที่เก็บไว้
+  function caseNeedsVerify(c, capa = []) {
+    const scope = { investigation: c?.investigation || {}, reply: c?.customerReplyDraft || {}, capa };
+    return /\[NEED_VERIFY\]/i.test(JSON.stringify(scope));
+  }
+  function parseWhyChainText(text) {
+    return String(text || '').split(/\n+/).map((line, index) => {
+      const clean = line.replace(/^\s*(?:why\s*)?\d+[.)-]?\s*/i, '').trim();
+      if (!clean) return null;
+      const parts = clean.split(/\s*(?::|=>|->|because)\s*/i);
+      return { q: `Why ${index + 1}`, a: parts.slice(1).join(' ') || parts[0] };
+    }).filter(Boolean);
+  }
 
 // =========================================================================
 // 2. UI UTILITIES & HELPERS
@@ -1069,7 +1221,7 @@ function renderDashboardUI() {
   const openCount = total - closedCount;
   const gmpCount = filtered.filter(c => c.riskFlags?.gmpRelevant || c.riskFlags?.productSafetyPotential || c.riskFlags?.contaminationPotential).length;
   const overdueCount = filtered.filter(c => c.status !== 'CLOSED' && c.dueDates?.interimReplyDue && c.dueDates.interimReplyDue < todayISO).length;
-  const lv5Count = filtered.filter(c => c.rcaAssessment?.isLevel5Passed === true).length;
+  const lv5Count = filtered.filter(c => caseGatePassed(c)).length;
 
   document.getElementById('kpiTotal').textContent = total;
   document.getElementById('kpiSplit').textContent = `Complaint: ${compCount} | Feedback: ${fbCount}`;
@@ -1200,6 +1352,10 @@ async function runAiIntakeAnalysis() {
     document.getElementById('f_customerRef').value = ext.customerComplaintRef || '';
     document.getElementById('f_productFamily').value = ext.productFamily || 'VISCOSE_STAPLE_FIBRE';
     document.getElementById('f_grade').value = ext.grade || '';
+    document.getElementById('f_materialCode').value = ext.materialCode || '';
+    document.getElementById('f_suppliedQty').value = ext.suppliedQuantity ?? '';
+    document.getElementById('f_suppliedUnit').value = ext.unit || 'MT';
+    document.getElementById('f_customerRequest').value = ext.customerRequest || '';
     document.getElementById('f_machines').value = (ext.machineNumbers || []).join(', ');
     document.getElementById('f_prodDates').value = (ext.productionDates || []).join(', ');
     document.getElementById('f_lots').value = [...(ext.lotNumbers || []), ...(ext.batchNumbers || [])].join(', ');
@@ -1277,7 +1433,7 @@ async function runAiIntakeAnalysis() {
 
     toast('AI สกัดข้อมูลและตรวจสอบเคสซ้ำเสร็จสมบูรณ์');
   } catch (e) {
-    toast(e.message, 'error');
+    reportError(e);
   } finally {
     setLoading(false);
   }
@@ -1300,7 +1456,7 @@ async function appendIntakeToExistingCase(targetDocId) {
     toast('เพิ่มข้อมูลเข้าสู่เคสเดิมเรียบร้อยครับ');
     openCaseWorkspace(targetDocId);
   } catch (e) {
-    toast(e.message, 'error');
+    reportError(e);
   } finally {
     setLoading(false);
   }
@@ -1331,23 +1487,35 @@ async function saveConfirmedIntakeCase(event) {
     },
     productSummary: {
       family: document.getElementById('f_productFamily').value,
-      grade: document.getElementById('f_grade').value.trim()
+      grade: document.getElementById('f_grade').value.trim(),
+      materialCode: document.getElementById('f_materialCode').value.trim()
     },
     productionSummary: {
-      machineNumbers: mcs.length ? mcs : ['MC2'],
+      machineNumbers: mcs,
       productionDates: splitClean('f_prodDates'),
       lotNumbers: splitClean('f_lots')
     },
     supplySummary: {
       invoiceNumbers: splitClean('f_invoices'),
       doNumbers: splitClean('f_dos'),
-      complaintQuantity: parseFloat(document.getElementById('f_qty').value) || 0,
-      unit: document.getElementById('f_unit').value.trim() || 'MT'
+      suppliedQuantity: document.getElementById('f_suppliedQty').value === '' ? null : Number(document.getElementById('f_suppliedQty').value),
+      suppliedUnit: document.getElementById('f_suppliedUnit').value.trim() || 'MT',
+      complaintQuantity: document.getElementById('f_qty').value === '' ? null : Number(document.getElementById('f_qty').value),
+      unit: document.getElementById('f_unit').value.trim() || 'MT',
+      compensation: {
+        type: document.getElementById('f_compType').value,
+        amount: document.getElementById('f_compAmount').value === '' ? null : Number(document.getElementById('f_compAmount').value),
+        currency: document.getElementById('f_compCurrency').value.trim(),
+        remark: document.getElementById('f_compRemark').value.trim()
+      }
     },
     issueSummary: {
       defectCategory: document.getElementById('f_defectCategory').value,
       symptom: document.getElementById('f_symptom').value.trim()
     },
+    customerRequest: document.getElementById('f_customerRequest').value.trim(),
+    team: { sponsor: '', leader: '', members: [], departments: [] },
+    approvals: { proposed: { name: '', signedAt: '' }, recommended: [], approved: { name: '', signedAt: '' } },
     riskFlags: {
       gmpRelevant: document.getElementById('rf_gmp').checked,
       contaminationPotential: document.getElementById('rf_contam').checked,
@@ -1365,11 +1533,14 @@ async function saveConfirmedIntakeCase(event) {
       statsEvidence: '',
       fiveME: { man: '', machine: '', material: '', method: '', measurement: '', environment: '' },
       fiveWhys: '',
+      whyChain: [],
       rootCause: '',
       escapePoint: ''
     },
     rcaAssessment: null,
     customerReplyDraft: { subject: '', bodyText: '' },
+    ctsScore: null,
+    recordVersion: 1,
     rawSourceText: document.getElementById('intakeRawText').value,
     humanConfirmed: true,
     createdAtIso: new Date().toISOString(),
@@ -1391,6 +1562,8 @@ async function saveConfirmedIntakeCase(event) {
         name: file.name,
         storagePath,
         url,
+        includeInReport: true,
+        uploadedBy: firebase.auth().currentUser?.email || 'System_Owner',
         uploadedAtIso: new Date().toISOString()
       });
     }
@@ -1408,7 +1581,7 @@ async function saveConfirmedIntakeCase(event) {
     toast(`สร้างเคส ${newCase.caseId} สำเร็จ!`);
     openCaseWorkspace(docRef.id);
   } catch (e) {
-    toast(e.message, 'error');
+    reportError(e);
   } finally {
     setLoading(false);
   }
@@ -1448,8 +1621,9 @@ function renderCaseRegisterTable() {
   tbody.innerHTML = filtered.map(c => {
     const due15 = c.dueDates?.interimReplyDue || '-';
     const isOverdue = c.status !== 'CLOSED' && due15 !== '-' && due15 < todayISO;
-    const lv5 = c.rcaAssessment?.isLevel5Passed;
+    const gatePassed = caseGatePassed(c);
     const avgScore = c.rcaAssessment?.overallAverage ? Number(c.rcaAssessment.overallAverage).toFixed(1) : '-';
+    const ctsAvg = c.ctsScore?.average ? Number(c.ctsScore.average).toFixed(1) : '-';
 
     return `<tr class="hover:bg-slate-50 transition">
       <td class="p-4">
@@ -1474,9 +1648,10 @@ function renderCaseRegisterTable() {
         ${isOverdue ? '<div class="text-[10px] text-red-600 font-bold">⚠️ Overdue</div>' : ''}
       </td>
       <td class="p-4 text-center">
-        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${lv5 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
-          ${lv5 ? '⭐ 5.0 PASS' : `${avgScore} / 5.0`}
-        </span>
+        <div class="space-y-1 text-xs">
+  <span class="block px-2.5 py-1 rounded-full font-bold ${gatePassed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">Gate: ${avgScore}/5 ${gatePassed ? 'PASS' : 'PENDING'}</span>
+  <span class="block px-2.5 py-1 rounded-full font-bold bg-violet-100 text-violet-700">CTS: ${ctsAvg}/5</span>
+</div>
       </td>
       <td class="p-4 text-center">
         <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">${esc(c.status)}</span>
@@ -1505,7 +1680,10 @@ function renderCaseRegisterTable() {
       return toast('กรุณาระบุเหตุผลอย่างน้อย 5 ตัวอักษรตามมาตรฐาน Data Integrity ครับ', 'warn');
     }
 
-    const isHardDelete = reason.trim().toUpperCase().startsWith('HARD_DELETE:');
+    const requestedHardDelete = reason.trim().toUpperCase().startsWith('HARD_DELETE:');
+    const isAdmin = ['Admin', 'SYSTEM_OWNER'].includes(currentUserProfile?.role);
+    if (requestedHardDelete && !isAdmin) return toast('เฉพาะ Admin/SYSTEM_OWNER เท่านั้นที่ Hard Delete ได้; ให้ VOID แทน', 'error');
+    const isHardDelete = requestedHardDelete && isAdmin;
     const cleanReason = reason.replace(/^HARD_DELETE:/i, '').trim();
     const userEmail = firebase.auth().currentUser?.email || 'System_Owner';
 
@@ -1532,7 +1710,7 @@ function renderCaseRegisterTable() {
       toast(isHardDelete ? 'ลบข้อมูลทดสอบและซิงค์ Dashboard เรียบร้อยครับ' : `ยกเลิกเคส (VOID) พร้อมบันทึก Audit Trail ตามมาตรฐาน TRS 1033 เรียบร้อยครับ`);
       switchMainView('cases');
     } catch (e) {
-      toast(e.message, 'error');
+      reportError(e);
     } finally {
       setLoading(false);
     }
@@ -1569,12 +1747,31 @@ function populateWorkspaceUI(c) {
   document.getElementById('e_customer').value = c.customerNameSnapshot || '';
   document.getElementById('e_custRef').value = c.externalRefs?.customerComplaintRef || '';
   document.getElementById('e_grade').value = c.productSummary?.grade || '';
+  document.getElementById('e_materialCode').value = c.productSummary?.materialCode || '';
   document.getElementById('e_machines').value = (c.productionSummary?.machineNumbers || []).join(', ');
   document.getElementById('e_prodDates').value = (c.productionSummary?.productionDates || []).join(', ');
   document.getElementById('e_lots').value = (c.productionSummary?.lotNumbers || []).join(', ');
   document.getElementById('e_invoices').value = (c.supplySummary?.invoiceNumbers || []).join(', ');
+  document.getElementById('e_dos').value = (c.supplySummary?.doNumbers || []).join(', ');
   document.getElementById('e_rrl').value = c.externalRefs?.rrlRef || '';
+  document.getElementById('e_suppliedQty').value = c.supplySummary?.suppliedQuantity ?? '';
+  document.getElementById('e_suppliedUnit').value = c.supplySummary?.suppliedUnit || 'MT';
+  document.getElementById('e_complaintQty').value = c.supplySummary?.complaintQuantity ?? '';
+  document.getElementById('e_complaintUnit').value = c.supplySummary?.unit || 'MT';
+  document.getElementById('e_compType').value = c.supplySummary?.compensation?.type || 'NONE';
+  document.getElementById('e_compAmount').value = c.supplySummary?.compensation?.amount ?? '';
+  document.getElementById('e_compCurrency').value = c.supplySummary?.compensation?.currency || '';
+  document.getElementById('e_compRemark').value = c.supplySummary?.compensation?.remark || '';
+  document.getElementById('e_teamSponsor').value = c.team?.sponsor || '';
+  document.getElementById('e_teamLeader').value = c.team?.leader || '';
+  document.getElementById('e_teamMembers').value = (c.team?.members || []).join(', ');
+  document.getElementById('e_teamDepartments').value = (c.team?.departments || []).join(', ');
+  document.getElementById('e_approvalProposed').value = c.approvals?.proposed?.name || '';
+  document.getElementById('e_approvalRecommended').value = (c.approvals?.recommended || []).map(x => x.name || x).join(', ');
+  document.getElementById('e_approvalApproved').value = c.approvals?.approved?.name || '';
+  document.getElementById('e_approvalDate').value = c.approvals?.approved?.signedAt || '';
   document.getElementById('e_symptom').value = c.issueSummary?.symptom || '';
+  document.getElementById('e_customerRequest').value = c.customerRequest || '';
 
   // Tab 3: Investigation 5M+E
   const inv = c.investigation || {};
@@ -1602,7 +1799,9 @@ function populateWorkspaceUI(c) {
   // Tab 6: Customer Reply
   document.getElementById('respSubject').value = c.customerReplyDraft?.subject || '';
   document.getElementById('respBody').value = c.customerReplyDraft?.bodyText || '';
-}
+  populateCtsScore(c);
+  applyWorkspaceLockState(c);
+  }
 
 function setupWorkspaceSubListeners(docId) {
   if (unsubComm) unsubComm();
@@ -1626,9 +1825,10 @@ function setupWorkspaceSubListeners(docId) {
   });
 
   // CAPA Actions Listener
-  unsubCapa = caseRef.collection('capa_actions').orderBy('createdAtIso', 'asc').onSnapshot(snap => {
-    const tbody = document.getElementById('capaListTbody');
-    tbody.innerHTML = snap.docs.map(d => {
+      unsubCapa = caseRef.collection('capa_actions').orderBy('createdAtIso', 'asc').onSnapshot(snap => {
+      currentCapaActions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const tbody = document.getElementById('capaListTbody');
+      tbody.innerHTML = snap.docs.map(d => {
       const item = d.data();
       return `<tr class="border-b hover:bg-slate-50">
         <td class="p-3 font-bold text-indigo-700">${esc(item.actionType)}</td>
@@ -1642,23 +1842,48 @@ function setupWorkspaceSubListeners(docId) {
           <button onclick="deleteCapaRow('${d.id}')" class="text-red-600"><i class="fa-solid fa-trash"></i></button>
         </td>
       </tr>`;
-    }).join('') || '<tr><td colspan="7" class="p-6 text-center text-slate-400">ยังไม่มีรายการ CAPA</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="p-6 text-center text-slate-400">ยังไม่มีรายการ CAPA</td></tr>';
   });
-}
+  caseRef.collection('attachments').onSnapshot(snap => {
+    currentAttachments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  });
+  }
 
-async function saveOverviewEdits() {
-  if (!currentCaseDocId) return;
+  async function saveOverviewEdits() {
+  if (!currentCaseDocId || !assertCaseEditable('บันทึกข้อมูลหลัก')) return;
   const splitClean = id => document.getElementById(id).value.split(',').map(s => s.trim()).filter(Boolean);
+  const numberOrNull = id => document.getElementById(id).value === '' ? null : Number(document.getElementById(id).value);
+  const approvalDate = document.getElementById('e_approvalDate').value;
   await db.collection('complaint_cases').doc(currentCaseDocId).update({
     customerNameSnapshot: document.getElementById('e_customer').value.trim(),
     'externalRefs.customerComplaintRef': document.getElementById('e_custRef').value.trim(),
     'externalRefs.rrlRef': document.getElementById('e_rrl').value.trim(),
     'productSummary.grade': document.getElementById('e_grade').value.trim(),
-    'productionSummary.machineNumbers': splitClean('e_machines').map(normalizeComplaintMc),
+    'productSummary.materialCode': document.getElementById('e_materialCode').value.trim(),
+    'productionSummary.machineNumbers': splitClean('e_machines').map(normalizeComplaintMc).filter(Boolean),
     'productionSummary.productionDates': splitClean('e_prodDates'),
     'productionSummary.lotNumbers': splitClean('e_lots'),
     'supplySummary.invoiceNumbers': splitClean('e_invoices'),
+    'supplySummary.doNumbers': splitClean('e_dos'),
+    'supplySummary.suppliedQuantity': numberOrNull('e_suppliedQty'),
+    'supplySummary.suppliedUnit': document.getElementById('e_suppliedUnit').value.trim(),
+    'supplySummary.complaintQuantity': numberOrNull('e_complaintQty'),
+    'supplySummary.unit': document.getElementById('e_complaintUnit').value.trim(),
+    'supplySummary.compensation': {
+      type: document.getElementById('e_compType').value.trim(),
+      amount: numberOrNull('e_compAmount'),
+      currency: document.getElementById('e_compCurrency').value.trim(),
+      remark: document.getElementById('e_compRemark').value.trim()
+    },
     'issueSummary.symptom': document.getElementById('e_symptom').value.trim(),
+    customerRequest: document.getElementById('e_customerRequest').value.trim(),
+    team: { sponsor: document.getElementById('e_teamSponsor').value.trim(), leader: document.getElementById('e_teamLeader').value.trim(), members: splitClean('e_teamMembers'), departments: splitClean('e_teamDepartments') },
+    approvals: {
+      proposed: { name: document.getElementById('e_approvalProposed').value.trim(), signedAt: approvalDate },
+      recommended: splitClean('e_approvalRecommended').map(name => ({ name, signedAt: approvalDate })),
+      approved: { name: document.getElementById('e_approvalApproved').value.trim(), signedAt: approvalDate }
+    },
+    updatedBy: firebase.auth().currentUser?.email || 'System_Owner',
     updatedAt: SV.serverTimestamp()
   });
   await logClientAuditEvent('UPDATE_OVERVIEW', currentCaseObj?.caseId);
@@ -1678,7 +1903,8 @@ async function addCommunicationItem() {
   toast('เพิ่มบันทึกใน Timeline แล้ว');
 }
 
-async function deleteCommItem(commId) {
+  async function deleteCommItem(commId) {
+  if (!assertCaseEditable('ลบบันทึก Timeline')) return;
   if (!confirm('ยืนยันการลบบันทึกนี้?')) return;
   await db.collection('complaint_cases').doc(currentCaseDocId).collection('communications').doc(commId).delete();
   toast('ลบบันทึกเรียบร้อย');
@@ -1689,7 +1915,9 @@ async function deleteCommItem(commId) {
 // =========================================================================
 async function pullPlantDataForCurrentCase() {
   if (!currentCaseObj) return;
-  const mc = (currentCaseObj.productionSummary?.machineNumbers || ['MC2'])[0];
+  if (!assertCaseEditable('ดึงและบันทึกข้อมูลโรงงาน')) return;
+  const mc = (currentCaseObj.productionSummary?.machineNumbers || [])[0] || '';
+  if (!mc) return toast('ไม่พบ Machine — ระบบจะไม่สมมติเป็น MC2 กรุณากรอก Machine ในแท็บข้อมูลหลัก', 'warn');
   const prodDates = currentCaseObj.productionSummary?.productionDates || [];
   const invoiceNo = (currentCaseObj.supplySummary?.invoiceNumbers || [])[0] || '';
   const doNo = (currentCaseObj.supplySummary?.doNumbers || [])[0] || '';
@@ -1698,7 +1926,14 @@ async function pullPlantDataForCurrentCase() {
   setLoading(true, `กำลังดึงข้อมูลโรงงานของเครื่อง ${mc}...`, 'ค้นหาจาก stats_Viscose, stats_Spinning, stats_Product, stats_Projector และ rm_pulp_inspections');
   try {
     const fn = functions.httpsCallable('fetchComplaintPlantData');
-    const res = await fn({ machineId: mc, productionDates: prodDates, invoiceNo, doNo, lotNumbers });
+    const res = await fn({
+      machineId: mc,
+      productionDates: prodDates,
+      invoiceNo,
+      doNo,
+      lotNumbers,
+      defectCategory: currentCaseObj.issueSummary?.defectCategory || ''
+    });
     const pData = res.data.plantData;
 
     await db.collection('complaint_cases').doc(currentCaseDocId).update({
@@ -1709,7 +1944,7 @@ async function pullPlantDataForCurrentCase() {
     renderPlantDataSnapshot(pData);
     toast('ดึงข้อมูล In-Process, Product Lab และ Pulp สำเร็จ!');
   } catch (e) {
-    toast(e.message, 'error');
+    reportError(e);
   } finally {
     setLoading(false);
   }
@@ -1767,16 +2002,22 @@ function renderPlantDataSnapshot(pData) {
           <b>${esc(rm.supplier)}</b> | Batch: ${esc(rm.batchNo)} | Date: ${esc(rm.receivedDate)}
           | Alpha: <b>${esc(rm.parameters?.alphaCellulose?.coa ?? '-')}</b> | Visc: <b>${esc(rm.parameters?.viscosity?.coa ?? '-')}</b>
         </div>
-      `).join('') || '<div class="text-slate-400 p-2">ไม่พบข้อมูล RM Pulp</div>'}
-    </div>
+  `).join('') || '<div class="text-slate-400 p-2">ไม่พบข้อมูล RM Pulp</div>'}
+  </div>
+  <div class="card p-4 space-y-2 lg:col-span-2" data-id="plant-anomaly-summary">
+    <div class="font-bold text-red-800 border-b pb-1">5. Server-calculated Anomaly / Event / Knowledge</div>
+    ${(pData.anomalySummary || []).map(x => `<div class="p-2 border rounded bg-red-50"><b>${esc(x.parameter)}</b> (${esc(x.source)} ${esc(x.date)}): current=${esc(x.current)}, baseline=${esc(x.baselineMean)}, Δ=${esc(x.delta)}, z=${esc(x.zScore ?? 'N/A')} ${x.outOfLimit ? '<b>OUT OF LIMIT</b>' : ''}<br><code>${esc(x.sourceTag)}</code></div>`).join('') || '<div class="text-slate-400">ไม่พบ anomaly ตามเกณฑ์</div>'}
+    <div><b>Production events:</b> ${(pData.productionEvents || []).map(x => esc(x.title || x.event || x.id)).join(' | ') || '-'}</div>
+    <div><b>Incident knowledge:</b> ${(pData.incidentKnowledge || []).map(x => esc(x.title || x.problem || x.id)).join(' | ') || '-'}</div>
+    <div><b>Related closed cases (high CTS first):</b> ${(pData.relatedHighScoreCases || []).map(x => `${esc(x.caseId)} (${esc(x.ctsScoreAverage ?? '-')})`).join(' | ') || '-'}</div>
+  </div>
   `;
 }
-
 // =========================================================================
 // 10. 5M+E INVESTIGATION & LEVEL-5 RCA ASSESSMENT (A-G RUBRIC)
 // =========================================================================
-async function saveInvestigationData() {
-  if (!currentCaseDocId) return;
+  async function saveInvestigationData() {
+  if (!currentCaseDocId || !assertCaseEditable('บันทึกผลสืบสวน')) return;
   const invData = collectCurrentInvestigationForm();
   await db.collection('complaint_cases').doc(currentCaseDocId).update({
     investigation: invData,
@@ -1786,23 +2027,25 @@ async function saveInvestigationData() {
   toast('บันทึกข้อมูลการสืบสวน 5M+E และ 5 Whys เรียบร้อยครับ');
 }
 
-function collectCurrentInvestigationForm() {
-  return {
-    problemStatement: document.getElementById('inv_problem').value.trim(),
-    statsEvidence: document.getElementById('inv_statsEvidence').value.trim(),
-    fiveME: {
-      man: document.getElementById('m_man').value.trim(),
-      machine: document.getElementById('m_machine').value.trim(),
-      material: document.getElementById('m_material').value.trim(),
-      method: document.getElementById('m_method').value.trim(),
-      measurement: document.getElementById('m_measurement').value.trim(),
-      environment: document.getElementById('m_environment').value.trim()
-    },
-    fiveWhys: document.getElementById('inv_fiveWhys').value.trim(),
-    rootCause: document.getElementById('inv_rootCause').value.trim(),
-    escapePoint: document.getElementById('inv_escapePoint').value.trim()
-  };
-}
+  function collectCurrentInvestigationForm() {
+    const fiveWhys = document.getElementById('inv_fiveWhys').value.trim();
+    return {
+      problemStatement: document.getElementById('inv_problem').value.trim(),
+      statsEvidence: document.getElementById('inv_statsEvidence').value.trim(),
+      fiveME: {
+        man: document.getElementById('m_man').value.trim(),
+        machine: document.getElementById('m_machine').value.trim(),
+        material: document.getElementById('m_material').value.trim(),
+        method: document.getElementById('m_method').value.trim(),
+        measurement: document.getElementById('m_measurement').value.trim(),
+        environment: document.getElementById('m_environment').value.trim()
+      },
+      fiveWhys,
+      whyChain: parseWhyChainText(fiveWhys),
+      rootCause: document.getElementById('inv_rootCause').value.trim(),
+      escapePoint: document.getElementById('inv_escapePoint').value.trim()
+    };
+  }
 
 async function runAiRcaEvaluation(mode) {
   if (!currentCaseDocId || !currentCaseObj) return;
@@ -1821,14 +2064,20 @@ async function runAiRcaEvaluation(mode) {
         issue: currentCaseObj.issueSummary,
         riskFlags: currentCaseObj.riskFlags
       },
-      rcaInput: invData,
+      rcaInput: {
+        ...invData,
+        investigation: invData,
+        team: currentCaseObj.team || {},
+        capaActions: currentCapaActions
+      },
       plantDataSnapshot: currentCaseObj.plantDataSnapshot || null
     });
 
     const evalResult = res.data.evaluation;
     latestAiProposal = evalResult.level5UpgradedProposal || null;
 
-    const newStatus = evalResult.isLevel5Passed ? 'RCA_LEVEL5_PASSED' : 'INVESTIGATION';
+    const gatePassed = evalResult.isGatePassed === true;
+    const newStatus = gatePassed ? 'RCA_GATE_PASSED' : 'INVESTIGATION';
     await db.collection('complaint_cases').doc(currentCaseDocId).update({
       investigation: invData,
       rcaAssessment: evalResult,
@@ -1845,66 +2094,53 @@ async function runAiRcaEvaluation(mode) {
 
     renderRcaAssessmentUI(evalResult);
     switchWsTab('rcascale');
-    toast(evalResult.isLevel5Passed ? '🎉 ยินดีด้วย! ผลประเมิน RCA ผ่านเกณฑ์ Level 5 ครบทุกข้อ!' : 'ประเมินเสร็จสิ้น: พบหัวข้อที่ได้ต่ำกว่า Level 5 กรุณาดูคำแนะนำเพื่อยกระดับ');
+    toast(gatePassed ? '✅ ผ่าน RCA Gate: คะแนนจากกฎ A-G ทุกข้อ ≥ 4' : 'ยังไม่ผ่าน RCA Gate: เปิด Gap Analysis และเติมหลักฐานจริง');
   } catch (e) {
-    toast(e.message, 'error');
+    reportError(e);
   } finally {
     setLoading(false);
   }
 }
 
-function renderRcaAssessmentUI(evalResult) {
-  const board = document.getElementById('rcaScaleScoreboard');
-  const details = document.getElementById('rcaScaleDetailsBox');
-  const btnApply = document.getElementById('btnApplyProposal');
-
-  if (evalResult.level5UpgradedProposal) {
-    latestAiProposal = evalResult.level5UpgradedProposal;
-    btnApply.classList.remove('hidden');
+  function renderRcaAssessmentUI(evalResult) {
+    const board = document.getElementById('rcaScaleScoreboard');
+    const details = document.getElementById('rcaScaleDetailsBox');
+    const btnApply = document.getElementById('btnApplyProposal');
+    if (evalResult.level5UpgradedProposal) {
+      latestAiProposal = evalResult.level5UpgradedProposal;
+      btnApply.classList.remove('hidden');
+    }
+    const labels = [
+      ['A_AccuracyPrecision', 'A. Accuracy & Precision'], ['B_DepthOfAnalysis', 'B. Depth (5M+E)'],
+      ['C_DataDriven', 'C. Data-Driven'], ['D_Consistency', 'D. Consistency'],
+      ['E_CrossFunctional', 'E. Cross-Functional'], ['F_CapaMeasures', 'F. CAPA Sustainability'],
+      ['G_ContinuousImprovement', 'G. Continuous Improvement']
+    ];
+    const passed = evalResult.isGatePassed === true;
+    board.innerHTML = labels.map(([key, title]) => {
+      const obj = evalResult.scores?.[key] || { score: 0 };
+      const ok = Number(obj.score) >= 4;
+      return `<div class="p-3 rounded-xl border ${ok ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}">
+        <div class="font-bold text-slate-700 text-[11px]">${esc(title)}</div>
+        <div class="text-2xl font-black mt-1 ${ok ? 'text-emerald-600' : 'text-red-600'}">${esc(obj.score)} / 5</div>
+        <div class="text-[10px] font-bold ${ok ? 'text-emerald-700' : 'text-red-700'}">${ok ? 'PASS (≥4)' : 'BELOW GATE'}</div>
+      </div>`;
+    }).join('');
+    details.innerHTML = `<div class="p-4 rounded-xl ${passed ? 'bg-emerald-600 text-white' : 'bg-amber-50 border border-amber-300 text-amber-950'} font-bold">
+        ${passed ? '✅ ผ่าน RCA Gate: A-G ทุกข้อ ≥ 4' : '⚠️ ยังไม่ผ่าน RCA Gate: ต้องได้อย่างน้อย 4 ทุกข้อ'}
+        <div class="text-xs font-normal mt-1">${esc(evalResult.executiveCritique || '')}</div>
+        ${evalResult.needsVerification ? '<div class="mt-2 p-2 rounded bg-red-100 text-red-800">พบ [NEED_VERIFY] — ห้ามออก Final Report จนกว่าจะยืนยันครบ</div>' : ''}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${labels.map(([key, title]) => {
+        const obj = evalResult.scores?.[key] || {};
+        return `<div class="p-3 rounded-lg border bg-white"><div class="font-bold">${esc(title)} — ${esc(obj.score)}/5</div>
+          <div class="text-slate-600 mt-1"><b>Rule evidence:</b> ${esc(obj.rationale || '')}</div>
+          ${Number(obj.score) < 5 ? `<div class="text-red-600 mt-1"><b>Gap:</b> ${esc(obj.gapToLevel5 || '')}</div>` : ''}</div>`;
+      }).join('')}</div>`;
   }
 
-  const labels = [
-    ['A_AccuracyPrecision', 'A. Accuracy & Precision'],
-    ['B_DepthOfAnalysis', 'B. Depth (5Ms + PpK)'],
-    ['C_DataDriven', 'C. Data-Driven (SPC)'],
-    ['D_Consistency', 'D. Consistency (5Whys)'],
-    ['E_CrossFunctional', 'E. Cross-Functional'],
-    ['F_CapaMeasures', 'F. CAPA Sustainability'],
-    ['G_ContinuousImprovement', 'G. Continuous Imp.']
-  ];
-
-  board.innerHTML = labels.map(([key, title]) => {
-    const obj = evalResult.scores?.[key] || { score: 0 };
-    const is5 = obj.score === 5;
-    return `<div class="p-3 rounded-xl border ${is5 ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}">
-      <div class="font-bold text-slate-700 text-[11px]">${esc(title)}</div>
-      <div class="text-2xl font-black mt-1 ${is5 ? 'text-emerald-600' : 'text-red-600'}">${obj.score} / 5</div>
-      <div class="text-[10px] font-bold ${is5 ? 'text-emerald-700' : 'text-red-700'}">${is5 ? 'PASS (Level 5)' : 'BELOW TARGET'}</div>
-    </div>`;
-  }).join('');
-
-  details.innerHTML = `
-    <div class="p-4 rounded-xl ${evalResult.isLevel5Passed ? 'bg-emerald-600 text-white' : 'bg-amber-50 border border-amber-300 text-amber-950'} font-bold">
-      ${evalResult.isLevel5Passed
-        ? '✅ ผ่านเกณฑ์มาตรฐานสูงสุด (Level 5 Achieved Across All 7 Criteria)'
-        : '⚠️ ยังไม่ผ่านเกณฑ์ Level 5 ครบทุกข้อ! กรุณาปรับปรุงตาม Gap Analysis ด้านล่าง หรือกดปุ่มสีส้ม "นำร่าง Level 5 ของ AI ไปใส่ในฟอร์ม"'}
-      <div class="text-xs font-normal mt-1">${esc(evalResult.executiveCritique)}</div>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      ${labels.map(([key, title]) => {
-        const obj = evalResult.scores?.[key] || {};
-        return `<div class="p-3 rounded-lg border bg-white">
-          <div class="font-bold text-slate-800">${esc(title)} — คะแนน: ${obj.score}/5</div>
-          <div class="text-slate-600 mt-1"><b>เหตุผล:</b> ${esc(obj.rationale)}</div>
-          ${obj.score < 5 ? `<div class="text-red-600 font-semibold mt-1"><b>สิ่งที่ต้องเพิ่มให้ถึง Level 5:</b> ${esc(obj.gapToLevel5)}</div>` : ''}
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-}
-
-async function applyAiProposalToWorkspace() {
-  if (!latestAiProposal || !currentCaseDocId) return;
+  async function applyAiProposalToWorkspace() {
+  if (!latestAiProposal || !currentCaseDocId || !assertCaseEditable('นำร่าง AI มาใช้')) return;
   const p = latestAiProposal;
 
   document.getElementById('inv_problem').value = p.problemStatement || '';
@@ -1915,7 +2151,9 @@ async function applyAiProposalToWorkspace() {
   document.getElementById('m_method').value = p.fiveME?.method || '';
   document.getElementById('m_measurement').value = p.fiveME?.measurement || '';
   document.getElementById('m_environment').value = `${p.fiveME?.environment || ''} | Cross-Functional Team: ${p.crossFunctionalTeam || ''}`;
-  document.getElementById('inv_fiveWhys').value = Array.isArray(p.fiveWhys) ? p.fiveWhys.join('\n') : (p.fiveWhys || '');
+    document.getElementById('inv_fiveWhys').value = Array.isArray(p.fiveWhys)
+    ? p.fiveWhys.map((x, i) => typeof x === 'string' ? x : `Why ${i + 1}: ${x.q || ''} -> ${x.a || ''}`).join('\n')
+    : (p.fiveWhys || '');
   document.getElementById('inv_rootCause').value = p.rootCause || '';
   document.getElementById('inv_escapePoint').value = `${p.systemicAndEscapePoint || ''} | Horizontal Deployment: ${p.preventiveAndHorizontalDeployment || ''}`;
 
@@ -1933,7 +2171,8 @@ async function applyAiProposalToWorkspace() {
         owner: 'QA / Warehouse / Production',
         targetDate: due,
         effectivenessCriteria: p.effectivenessCriteria || '100% affected lots segregated and logged in RRL-01',
-        status: 'COMPLETED',
+        status: 'PROPOSED_BY_AI',
+        requiresHumanConfirmation: true,
         createdAtIso: new Date().toISOString()
       });
     }
@@ -1943,8 +2182,9 @@ async function applyAiProposalToWorkspace() {
         description: p.correctiveActions,
         owner: 'Production LH / Engineering / Lab DH',
         targetDate: due,
-        effectivenessCriteria: p.effectivenessCriteria || 'Zero recurrence & Ppk > 1.33 over 3 months',
-        status: 'IN_PROGRESS',
+        effectivenessCriteria: p.effectivenessCriteria || '',
+        status: 'PROPOSED_BY_AI',
+        requiresHumanConfirmation: true,
         createdAtIso: new Date().toISOString()
       });
     }
@@ -1954,23 +2194,24 @@ async function applyAiProposalToWorkspace() {
         description: p.preventiveAndHorizontalDeployment,
         owner: 'Cross-Functional RCA Task Force / QMR',
         targetDate: due,
-        effectivenessCriteria: p.effectivenessCriteria || 'PFMEA & SOP updated across MC2, MC3, MC5, MC6',
-        status: 'OPEN',
+        effectivenessCriteria: p.effectivenessCriteria || '',
+        status: 'PROPOSED_BY_AI',
+        requiresHumanConfirmation: true,
         createdAtIso: new Date().toISOString()
       });
     }
   }
 
-  toast('นำร่าง Level 5 ของ AI ไปเติมในฟอร์ม 5M+E และสร้างรายการ CAPA เรียบร้อย! กดประเมินซ้ำเพื่อรับคะแนน 5.0 ได้เลยครับ');
+  toast('นำร่าง AI ไปใส่ในฟอร์มแล้ว รายการ CAPA ยังเป็น PROPOSED_BY_AI และต้องมีคนยืนยัน Owner/Date/Evidence ก่อนประเมินซ้ำ');
   switchWsTab('investigation');
 }
 
 // =========================================================================
 // 11. CAPA CRUD (ADD, EDIT, DELETE)
 // =========================================================================
-async function saveCapaItem(event) {
+  async function saveCapaItem(event) {
   event.preventDefault();
-  if (!currentCaseDocId) return;
+  if (!currentCaseDocId || !assertCaseEditable('บันทึก CAPA')) return;
   const editId = document.getElementById('capa_editId').value;
   const payload = {
     actionType: document.getElementById('capa_type').value,
@@ -1979,6 +2220,8 @@ async function saveCapaItem(event) {
     targetDate: document.getElementById('capa_due').value,
     status: document.getElementById('capa_status').value,
     effectivenessCriteria: document.getElementById('capa_eff').value.trim(),
+    requiresHumanConfirmation: document.getElementById('capa_status').value === 'PROPOSED_BY_AI',
+    confirmedBy: firebase.auth().currentUser?.email || '',
     updatedAtIso: new Date().toISOString()
   };
 
@@ -2004,7 +2247,8 @@ function editCapaRow(id, item) {
   document.getElementById('capa_eff').value = item.effectivenessCriteria || '';
 }
 
-async function deleteCapaRow(id) {
+  async function deleteCapaRow(id) {
+  if (!assertCaseEditable('ลบรายการ CAPA')) return;
   if (!confirm('ยืนยันการลบรายการ CAPA นี้?')) return;
   await db.collection('complaint_cases').doc(currentCaseDocId).collection('capa_actions').doc(id).delete();
   toast('ลบรายการ CAPA เรียบร้อย');
@@ -2032,7 +2276,7 @@ async function generateCustomerReply() {
     document.getElementById('respBody').value = res.data.draft.bodyText || '';
     toast('ร่างจดหมายเสร็จสมบูรณ์ กรุณาตรวจสอบก่อนบันทึก');
   } catch (e) {
-    toast(e.message, 'error');
+    reportError(e);
   } finally {
     setLoading(false);
   }
@@ -2051,8 +2295,8 @@ async function saveCustomerReplyDraft() {
   toast('บันทึกสำเนาจดหมายตอบลูกค้าเรียบร้อย');
 }
 
-async function changeWorkspaceStatus(newStatus) {
-  if (!currentCaseDocId) return;
+  async function changeWorkspaceStatus(newStatus) {
+  if (!currentCaseDocId || !assertCaseEditable('เปลี่ยนสถานะ')) return;
   if (newStatus === 'CLOSED') {
     switchWsTab('closure');
     return toast('การปิดเคส (CLOSED) ต้องกดยืนยันผ่าน Closure Gate 10 ข้อในแท็บที่ 6 เท่านั้นครับ', 'warn');
@@ -2074,8 +2318,15 @@ async function changeWorkspaceStatus(newStatus) {
     if (checks.some(c => !c.checked)) {
       return toast('⚠️ กรุณาตรวจสอบและติ๊กยืนยัน Closure Gate ให้ครบทั้ง 10 ข้อก่อนปิดเคสครับ', 'warn');
     }
-    if (!currentCaseObj.rcaAssessment?.isLevel5Passed) {
-      return toast('⚠️ เคสนี้ยังไม่ผ่านเกณฑ์ประเมิน RCA Assessment Scale = Level 5 (5.0 เต็ม) ไม่สามารถปิดเคสได้!', 'error');
+    if (!caseGatePassed(currentCaseObj)) {
+      return toast('⚠️ RCA Gate ยังไม่ผ่าน: คะแนนจากกฎ A-G ต้อง ≥4 ทุกข้อ', 'error');
+    }
+      if (caseNeedsVerify(currentCaseObj, currentCapaActions)) {
+      return toast('⚠️ ยังมี [NEED_VERIFY] อยู่ในเคส ต้องยืนยันหลักฐานจริงก่อนปิดเคส', 'error');
+    }
+    const reportGaps = requiredReportGaps(currentCaseObj, currentCapaActions);
+    if (reportGaps.length) {
+      return toast(`⚠️ ยังขาดข้อมูลตาม Blank Form: ${reportGaps.join(', ')}`, 'error');
     }
     const signerName = document.getElementById('esig_name')?.value.trim();
     const sigMeaning = document.getElementById('esig_meaning')?.value;
@@ -2161,7 +2412,8 @@ async function changeWorkspaceStatus(newStatus) {
             source: sourceLabel,
             date: dateStr,
             avg: Number(v.avg),
-            sd: Number(v.sd || (v.cv ? (v.cv * v.avg) / 100 : 0.05)),
+            sd: Number.isFinite(Number(v.sd)) ? Number(v.sd) : null,
+            sdWithin: Number.isFinite(Number(v.sdWithin)) ? Number(v.sdWithin) : null,
             min: v.min !== undefined ? Number(v.min) : Number(v.avg),
             max: v.max !== undefined ? Number(v.max) : Number(v.avg),
             cv: Number(v.cv || 0)
@@ -2186,56 +2438,48 @@ async function changeWorkspaceStatus(newStatus) {
     const item = _extractedPlantParamsMap[keyId];
     if (!item) return;
     document.getElementById('spc_mean').value = item.avg.toFixed(3);
-    document.getElementById('spc_sd').value = item.sd.toFixed(4);
+    document.getElementById('spc_sd').value = item.sd === null ? '' : item.sd.toFixed(4);
+    document.getElementById('spc_sdWithin').value = item.sdWithin === null ? '' : item.sdWithin.toFixed(4);
     document.getElementById('spc_minmax').value = `${item.min.toFixed(2)} / ${item.max.toFixed(2)}`;
     calculateSpcMetrics();
   }
 
+  function validTrustedNumber(value) {
+    if (value === '' || value === null || value === undefined) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
   function calculateSpcMetrics() {
-    const lsl = parseFloat(document.getElementById('spc_lsl')?.value);
-    const usl = parseFloat(document.getElementById('spc_usl')?.value);
-    const mean = parseFloat(document.getElementById('spc_mean')?.value);
-    const sdOverall = parseFloat(document.getElementById('spc_sd')?.value);
-    const withinFactor = parseFloat(document.getElementById('spc_withinFactor')?.value) || 0.92;
-    const minmax = document.getElementById('spc_minmax')?.value || '-';
+    const lsl = validTrustedNumber(document.getElementById('spc_lsl')?.value);
+    const usl = validTrustedNumber(document.getElementById('spc_usl')?.value);
+    const mean = validTrustedNumber(document.getElementById('spc_mean')?.value);
+    const sdOverall = validTrustedNumber(document.getElementById('spc_sd')?.value);
+    const sdWithin = validTrustedNumber(document.getElementById('spc_sdWithin')?.value);
     const banner = document.getElementById('spcResultBanner');
     if (!banner) return;
-
-    if (isNaN(mean) || isNaN(sdOverall) || sdOverall <= 0) {
-      banner.innerHTML = `<span class="text-slate-500">กรุณาระบุค่า Mean (Avg) และ SD (> 0) เพื่อเริ่มคำนวณ</span>`;
+    if (mean === null || sdOverall === null || sdOverall <= 0) {
+      window._latestSpcSummary = '';
+      banner.innerHTML = '<span class="text-slate-500">ต้องมี Mean และ SD จริงจากระบบ/ห้อง Lab เท่านั้น ระบบจะไม่สร้าง SD สมมติ</span>';
       return;
     }
-
-    const cv = mean !== 0 ? (sdOverall / Math.abs(mean)) * 100 : 0;
-    const sdWithin = sdOverall * withinFactor;
-
+    const cv = mean !== 0 ? (sdOverall / Math.abs(mean)) * 100 : null;
     let pp = null, ppk = null, cp = null, cpk = null;
-    if (!isNaN(lsl) && !isNaN(usl) && usl > lsl) {
-      pp = (usl - lsl) / (6 * sdOverall);
-      cp = (usl - lsl) / (6 * sdWithin);
-      const ppu = (usl - mean) / (3 * sdOverall);
-      const ppl = (mean - lsl) / (3 * sdOverall);
-      ppk = Math.min(ppu, ppl);
-      const cpu = (usl - mean) / (3 * sdWithin);
-      const cpl = (mean - lsl) / (3 * sdWithin);
-      cpk = Math.min(cpu, cpl);
-    } else if (!isNaN(lsl)) {
-      ppk = (mean - lsl) / (3 * sdOverall);
-      cpk = (mean - lsl) / (3 * sdWithin);
-    } else if (!isNaN(usl)) {
-      ppk = (usl - mean) / (3 * sdOverall);
-      cpk = (usl - mean) / (3 * sdWithin);
-    }
-
-    const paramName = document.getElementById('spc_paramSelect')?.value || 'Selected Parameter';
-    const judge = (cpk !== null && cpk >= 1.33) ? '✅ Capable (Cpk ≥ 1.33)' : (cpk !== null && cpk >= 1.0 ? '⚠️ Marginal (1.00 ≤ Cpk < 1.33)' : '🚨 Incapable / High Variation (Cpk < 1.00)');
-
-    const summaryStr = `[SPC Statistical Proof - ${paramName}]: Spec=[${isNaN(lsl)?'-':lsl} to ${isNaN(usl)?'-':usl}], Avg=${mean.toFixed(3)}, SD=${sdOverall.toFixed(4)}, %CV=${cv.toFixed(2)}%, Min/Max=${minmax}, Cp=${cp!==null?cp.toFixed(2):'N/A'}, Cpk=${cpk!==null?cpk.toFixed(2):'N/A'}, Pp=${pp!==null?pp.toFixed(2):'N/A'}, Ppk=${ppk!==null?ppk.toFixed(2):'N/A'} (${judge})`;
-    window._latestSpcSummary = summaryStr;
-
-    banner.innerHTML = `
-      <div class="font-bold text-slate-800">${esc(summaryStr)}</div>
-    `;
+    const calc = sd => {
+      if (lsl !== null && usl !== null && usl > lsl) return {
+        p: (usl - lsl) / (6 * sd), pk: Math.min((usl - mean) / (3 * sd), (mean - lsl) / (3 * sd))
+      };
+      if (lsl !== null) return { p: null, pk: (mean - lsl) / (3 * sd) };
+      if (usl !== null) return { p: null, pk: (usl - mean) / (3 * sd) };
+      return { p: null, pk: null };
+    };
+    ({ p: pp, pk: ppk } = calc(sdOverall));
+    if (sdWithin !== null && sdWithin > 0) ({ p: cp, pk: cpk } = calc(sdWithin));
+    const parameter = document.getElementById('spc_paramSelect')?.value || 'Manual Parameter';
+    const sourceTag = parameter === 'Manual Parameter' ? '[NEED_VERIFY]' : `[DATA: ${parameter}]`;
+    const fmt = v => v === null ? 'N/A' : Number(v).toFixed(2);
+    window._latestSpcSummary = `[SPC - ${parameter}] Avg=${mean.toFixed(3)}, SD(overall)=${sdOverall.toFixed(4)}, SD(within)=${sdWithin === null ? 'N/A' : sdWithin.toFixed(4)}, CV=${cv === null ? 'N/A' : cv.toFixed(2)}%, Cp=${fmt(cp)}, Cpk=${fmt(cpk)}, Pp=${fmt(pp)}, Ppk=${fmt(ppk)} ${sourceTag}`;
+    banner.innerHTML = `<div class="font-bold text-slate-800">${esc(window._latestSpcSummary)}</div>${sdWithin === null ? '<div class="text-amber-700 mt-1">ไม่ได้คำนวณ Cp/Cpk เพราะไม่มี Within-subgroup SD ที่ยืนยันแล้ว</div>' : ''}`;
   }
 
   function pushSpcToInvestigation() {
@@ -2259,7 +2503,7 @@ async function changeWorkspaceStatus(newStatus) {
       renderExecutiveAiInsightsUI(res.data.insights);
       toast('วิเคราะห์ Executive AI Systemic Insights สำเร็จ!');
     } catch (e) {
-      toast(e.message, 'error');
+      reportError(e);
     } finally {
       setLoading(false);
     }
@@ -2297,7 +2541,226 @@ async function changeWorkspaceStatus(newStatus) {
 // =========================================================================
 // 13. EXPORT TO EXCEL (REGISTER & RRL-01 REPORT)
 // =========================================================================
-function exportRegisterExcel() {
+  async function saveCtsScore() {
+    if (!currentCaseDocId) return;
+    const scores = {};
+    for (const key of ['A','B','C','D','E','F','G']) scores[key] = Number(document.getElementById(`cts_${key}`).value);
+    const assessedDate = document.getElementById('cts_date').value;
+    const reference = document.getElementById('cts_ref').value.trim();
+    const remark = document.getElementById('cts_remark').value.trim();
+    if (!assessedDate || Object.values(scores).some(x => !Number.isFinite(x) || x < 1 || x > 5)) return toast('กรอกคะแนน CTS A-G ให้ครบ 1-5 และระบุวันที่', 'warn');
+    try {
+      const fn = functions.httpsCallable('saveComplaintCtsScore');
+      const res = await fn({ caseDocId: currentCaseDocId, scores, assessedDate, reference, remark });
+      toast(`บันทึกคะแนน CTS เฉลี่ย ${res.data.ctsScore.average}/5 แล้ว`);
+    } catch (e) { reportError(e); }
+  }
+
+  function populateCtsScore(c) {
+    const cts = c?.ctsScore || {};
+    for (const key of ['A','B','C','D','E','F','G']) document.getElementById(`cts_${key}`).value = cts.scores?.[key] ?? '';
+    document.getElementById('cts_date').value = cts.assessedDate || '';
+    document.getElementById('cts_ref').value = cts.reference || '';
+    document.getElementById('cts_remark').value = cts.remark || '';
+    document.getElementById('cts_average').textContent = cts.average ? `${Number(cts.average).toFixed(2)} / 5` : '-';
+  }
+
+  function reportValue(value, fallback = '-') {
+    if (Array.isArray(value)) return value.filter(Boolean).join(', ') || fallback;
+    return String(value ?? '').trim() || fallback;
+  }
+
+  function reportRows(items, columns) {
+    if (!items.length) return `<tr><td colspan="${columns.length}">-</td></tr>`;
+    return items.map((item, index) => `<tr>${columns.map(c => `<td>${esc(reportValue(c.get(item, index)))}</td>`).join('')}</tr>`).join('');
+  }
+
+  function requiredReportGaps(c, capa) {
+    const inv = c.investigation || {};
+    const gaps = [];
+    const need = (ok, name) => { if (!ok) gaps.push(name); };
+    need(c.caseId, 'Feedback No.'); need(c.receivedDate, 'Feedback Date');
+    need(c.customerNameSnapshot, 'Customer Name');
+    need(c.productSummary?.materialCode || c.productSummary?.grade, 'Material');
+    need(c.productionSummary?.machineNumbers?.length, 'Machine');
+    need(c.productionSummary?.productionDates?.length, 'Production Date');
+    need(c.supplySummary?.invoiceNumbers?.length, 'Invoice Number');
+    need(c.supplySummary?.complaintQuantity !== null && c.supplySummary?.complaintQuantity !== undefined, 'Complaint Quantity');
+    need(c.customerRequest, 'Customer Request');
+    need(inv.problemStatement, 'Investigation / Observation');
+    need((inv.whyChain || []).length >= 5 || parseWhyChainText(inv.fiveWhys).length >= 5, 'Why-Why Analysis');
+    need(inv.rootCause, 'Root Cause'); need(inv.escapePoint, 'Escape Point');
+    const humanDone = x => x.requiresHumanConfirmation !== true && !['PROPOSED_BY_AI','OPEN','IN_PROGRESS'].includes(x.status);
+    need(capa.some(x => humanDone(x) && x.actionType === 'CONTAINMENT' && x.description && x.owner && x.targetDate && x.effectivenessCriteria), 'Interim Containment + Date + Verification');
+    need(capa.some(x => humanDone(x) && x.actionType === 'CORRECTIVE_ACTION' && x.description && x.owner && x.targetDate), 'Corrective Action + Owner + Target');
+    need(capa.some(x => humanDone(x) && x.actionType === 'PREVENTIVE_HORIZONTAL' && x.description), 'Preventive / Horizontal Deployment');
+    need(c.team?.sponsor && c.team?.leader && (c.team?.members || []).length >= 1, 'Sponsor & Team');
+    need(c.approvals?.proposed?.name && c.approvals?.proposed?.signedAt && c.approvals?.approved?.name && c.approvals?.approved?.signedAt, 'Signed Approval Block');
+    return gaps;
+  }
+
+  async function sha256Hex(text) {
+    const bytes = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function loadReportData() {
+    const caseRef = db.collection('complaint_cases').doc(currentCaseDocId);
+    const [capaSnap, attSnap, auditSnap] = await Promise.all([
+      caseRef.collection('capa_actions').orderBy('createdAtIso', 'asc').get(),
+      caseRef.collection('attachments').get(),
+      db.collection('complaint_audit_events').where('caseId', '==', currentCaseObj.caseId).limit(50).get()
+    ]);
+    return {
+      capa: capaSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+      attachments: attSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.includeInReport !== false),
+      audit: auditSnap.docs.map(d => d.data()).sort((a, b) => String(b.createdAtIso || '').localeCompare(String(a.createdAtIso || ''))).slice(0, 20)
+    };
+  }
+
+  function buildReportHtml(c, extra, mode, hash, draft, gaps) {
+    const inv = c.investigation || {};
+    const why = (inv.whyChain?.length ? inv.whyChain : parseWhyChainText(inv.fiveWhys));
+    const capaOf = type => extra.capa.filter(x => x.actionType === type);
+    const compensation = c.supplySummary?.compensation || {};
+    const scores = c.rcaAssessment?.scores || {};
+    const imageHtml = extra.attachments.filter(x => /\.(png|jpe?g|webp)$/i.test(x.name || '')).map(x => `<figure class="rpt-photo"><img src="${esc(x.url)}" alt="${esc(x.name)}"><figcaption>${esc(x.name)}</figcaption></figure>`).join('');
+    const chartHtml = '';
+    const internalAppendix = mode === 'INTERNAL' ? `<section class="rpt-section"><h2>Internal Appendix — RCA Gate / CTS Score</h2>
+      <table><thead><tr><th>Criterion</th><th>Rule Gate</th><th>CTS</th><th>Rationale</th></tr></thead><tbody>${['A','B','C','D','E','F','G'].map(letter => {
+        const key = Object.keys(scores).find(k => k.startsWith(`${letter}_`)); const s = scores[key] || {};
+        return `<tr><td>${letter}</td><td>${esc(s.score ?? '-')}</td><td>${esc(c.ctsScore?.scores?.[letter] ?? '-')}</td><td>${esc(s.rationale || '-')}</td></tr>`;
+      }).join('')}</tbody></table>
+      <h3>Server Audit Summary</h3><table><thead><tr><th>Action</th><th>User/Actor</th><th>Changed fields</th></tr></thead><tbody>${reportRows(extra.audit, [
+        {get:x=>x.action},{get:x=>x.userEmail || x.actor},{get:x=>(x.changedFields || []).join(', ')}
+      ])}</tbody></table></section>` : '';
+
+    return `<article class="rpt-document">
+      ${draft ? '<div class="rpt-watermark">DRAFT</div>' : ''}
+      <header class="rpt-header"><div><h1>Customer Feedback / RCA & CAPA Report</h1><div>Thai Rayon Pulp & Fibre Business</div></div>
+        <div><b>${esc(c.caseId)}</b><br>Rev ${esc(c.recordVersion || 1)}<br>${esc(c.status)}</div></header>
+      ${gaps.length ? `<div class="rpt-warning"><b>Draft — missing:</b> ${esc(gaps.join(', '))}</div>` : ''}
+      <section class="rpt-section"><h2>1. Feedback Information</h2><table><tbody>
+        <tr><th>Feedback No.</th><td>${esc(reportValue(c.caseId))}</td><th>Invoice Number</th><td>${esc(reportValue(c.supplySummary?.invoiceNumbers))}</td></tr>
+        <tr><th>Feedback Date</th><td>${esc(reportValue(c.receivedDate))}</td><th>Customer Reference</th><td>${esc(reportValue(c.externalRefs?.customerComplaintRef))}</td></tr>
+        <tr><th>Customer Name</th><td>${esc(reportValue(c.customerNameSnapshot))}</td><th>Supplied Quantity</th><td>${esc(reportValue(c.supplySummary?.suppliedQuantity))} ${esc(reportValue(c.supplySummary?.suppliedUnit, ''))}</td></tr>
+        <tr><th>Material</th><td>${esc(reportValue([c.productSummary?.materialCode, c.productSummary?.grade].filter(Boolean)))}</td><th>Complaint Quantity</th><td>${esc(reportValue(c.supplySummary?.complaintQuantity))} ${esc(reportValue(c.supplySummary?.unit, ''))}</td></tr>
+        <tr><th>Machine</th><td>${esc(reportValue(c.productionSummary?.machineNumbers))}</td><th>Compensate</th><td>${esc(reportValue([compensation.type, compensation.amount, compensation.currency, compensation.remark].filter(Boolean)))}</td></tr>
+        <tr><th>Production Date</th><td>${esc(reportValue(c.productionSummary?.productionDates))}</td><th>Feedback Nature</th><td>${esc(reportValue([c.caseType, c.issueSummary?.defectCategory, c.issueSummary?.defectSubcategory].filter(Boolean)))}</td></tr>
+      </tbody></table></section>
+      <section class="rpt-section"><h2>2. Feedback Detail</h2><p>${esc(reportValue(c.issueSummary?.symptom))}</p><p><b>Customer request:</b> ${esc(reportValue(c.customerRequest))}</p>${imageHtml}</section>
+      <section class="rpt-section"><h2>3. Sponsor & Team</h2><p><b>Sponsor:</b> ${esc(reportValue(c.team?.sponsor))} &nbsp; <b>Leader:</b> ${esc(reportValue(c.team?.leader))}</p><p><b>Members:</b> ${esc(reportValue(c.team?.members))}</p></section>
+      <section class="rpt-section"><h2>4. Investigation & Observation Found</h2><p>${esc(reportValue(inv.problemStatement))}</p><p>${esc(reportValue(inv.statsEvidence))}</p>${chartHtml}</section>
+      <section class="rpt-section"><h2>5. Why-Why Analysis</h2><table><thead><tr><th>No.</th><th>Why?</th><th>Because...</th></tr></thead><tbody>${reportRows(why, [{get:(_,i)=>i+1},{get:x=>x.q},{get:x=>x.a}])}</tbody></table></section>
+      <section class="rpt-section"><h2>6. Root Cause & Escape Point</h2><p><b>Root Cause:</b> ${esc(reportValue(inv.rootCause))}</p><p><b>Escape Point:</b> ${esc(reportValue(inv.escapePoint))}</p></section>
+      ${[['7. Interim Containment','CONTAINMENT'],['8. Corrective Action','CORRECTIVE_ACTION'],['9. Preventive Action & Horizontal Deployment','PREVENTIVE_HORIZONTAL']].map(([title,type]) => `<section class="rpt-section"><h2>${title}</h2><table><thead><tr><th>Action</th><th>Owner</th><th>Target</th><th>Status</th><th>Verification / Evidence</th></tr></thead><tbody>${reportRows(capaOf(type), [{get:x=>x.description},{get:x=>x.owner},{get:x=>x.targetDate},{get:x=>x.status},{get:x=>x.effectivenessCriteria}])}</tbody></table></section>`).join('')}
+      <section class="rpt-section rpt-signature"><h2>10. Approval</h2><table><thead><tr><th>Proposed By</th><th>Recommended By</th><th>Approved By</th></tr></thead><tbody><tr><td>${esc(reportValue(c.approvals?.proposed?.name))}<br>${esc(reportValue(c.approvals?.proposed?.signedAt))}</td><td>${esc(reportValue((c.approvals?.recommended || []).map(x=>`${x.name || ''} ${x.signedAt || ''}`)))}</td><td>${esc(reportValue(c.approvals?.approved?.name))}<br>${esc(reportValue(c.approvals?.approved?.signedAt))}</td></tr></tbody></table></section>
+      ${internalAppendix}
+      <footer class="rpt-footer"><span>Internal circulation only | Pulp & Fibre Business</span><span>SHA-256: ${esc(hash)}</span><span class="rpt-page-no"></span></footer>
+    </article>`;
+  }
+
+  async function printCurrentRcaReport() {
+    if (!currentCaseObj || !currentCaseDocId) return toast('กรุณาเปิดเคสก่อน', 'warn');
+    const mode = document.getElementById('reportModeSelect')?.value || 'CTS';
+    setLoading(true, 'กำลังสร้างรายงาน RCA/CAPA...', 'ตรวจความครบถ้วน สร้าง SHA-256 และบันทึก Audit Trail');
+    try {
+      const extra = await loadReportData();
+      const gaps = requiredReportGaps(currentCaseObj, extra.capa);
+      const needsVerify = caseNeedsVerify(currentCaseObj, extra.capa);
+      const gatePassed = caseGatePassed(currentCaseObj);
+      const approvedAndClosed = currentCaseObj.status === 'CLOSED' && Boolean(currentCaseObj.closureSignature);
+      const finalEligible = !gaps.length && !needsVerify && gatePassed && approvedAndClosed;
+      if (!finalEligible && currentCaseObj.status === 'CLOSED') throw new Error(`เคส CLOSED แต่ยังออก Final ไม่ได้: ${[...gaps, needsVerify ? '[NEED_VERIFY]' : '', !gatePassed ? 'RCA Gate A-G ≥4' : ''].filter(Boolean).join(', ')}`);
+      const draft = !finalEligible;
+      if (draft && !confirm(`ข้อมูลยังไม่พร้อมเป็น Final\n${[...gaps, needsVerify ? '[NEED_VERIFY]' : '', !gatePassed ? 'RCA Gate A-G ≥4' : ''].filter(Boolean).join('\n')}\n\nกด OK เพื่อพิมพ์ฉบับ DRAFT`)) return;
+      const payload = { caseId: currentCaseObj.caseId, recordVersion: currentCaseObj.recordVersion || 1, mode, draft, caseData: currentCaseObj, capa: extra.capa, attachments: extra.attachments.map(x => ({name:x.name, includeInReport:x.includeInReport !== false})) };
+      const hash = await sha256Hex(JSON.stringify(payload));
+      const root = document.getElementById('printReportRoot');
+      root.innerHTML = buildReportHtml(currentCaseObj, extra, mode, hash, draft, gaps);
+      const oldTitle = document.title;
+      document.title = `${String(currentCaseObj.caseId).replace(/[^A-Za-z0-9_-]/g, '_')}_RCA_${String(currentCaseObj.customerNameSnapshot || 'Customer').replace(/[^A-Za-z0-9_-]/g, '_')}_Rev${String(currentCaseObj.recordVersion || 1).padStart(2,'0')}`;
+      const auditFn = functions.httpsCallable('recordComplaintReportExport');
+      await auditFn({ caseDocId: currentCaseDocId, caseId: currentCaseObj.caseId, mode, recordVersion: currentCaseObj.recordVersion || 1, reportHash: hash, draft, missingFields: gaps });
+      document.body.classList.add('printing-report');
+      window.addEventListener('afterprint', () => { document.body.classList.remove('printing-report'); document.title = oldTitle; root.innerHTML = ''; }, { once: true });
+        await Promise.all([...root.querySelectorAll('img')].map(img => img.complete ? Promise.resolve() : new Promise(resolve => { img.onload = img.onerror = resolve; })));
+      window.print();
+    } catch (e) { reportError(e); }
+    finally { setLoading(false); }
+  }
+
+  // =========================================================================
+  // [FILE]: Complaint.html
+  // [ANCHOR: ERROR-DETAIL-HANDLER] จับ Error ทุกจุด + แสดงรายละเอียด + เก็บประวัติ
+  // =========================================================================
+  function describeError(err, where) {
+    const e = (err && typeof err === 'object') ? err : { message: String(err) };
+    const stack = String(e.stack || '');
+    const firstFn = stack.split('\n').slice(1).map(s => s.trim()).find(s => s.startsWith('at '))?.split(' ')[1];
+    return {
+      time: new Date().toLocaleString('th-TH'),
+      where: where || firstFn || '-',
+      code: e.code || e.name || 'ERROR',
+      message: e.message || String(err),
+      details: e.details ? JSON.stringify(e.details) : '',
+      stack: stack.split('\n').slice(0, 6).join('\n'),
+      caseId: (typeof currentCaseObj !== 'undefined' && currentCaseObj?.caseId) || '-'
+    };
+  }
+
+  function errorHint(info) {
+    const t = `${info.code} ${info.message} ${info.details}`.toLowerCase();
+    if (t.includes('is not defined')) return 'ฟังก์ชันหรือตัวแปรนี้ยังไม่ได้วางในไฟล์ หรือวางผิดตำแหน่ง (อยู่นอก <script>)';
+    if (t.includes('of null') || t.includes('of undefined')) return 'ไม่พบ element หรือข้อมูล ให้ตรวจ id ใน getElementById ว่ามีอยู่ใน HTML จริง หรือข้อมูลในเคสยังว่าง';
+    if (t.includes('not iterable') || t.includes('is not a function')) return 'ชนิดข้อมูลไม่ตรง ให้ตรวจตัวแปรที่อยู่หน้า .map / .forEach / [...]';
+    if (t.includes('permission-denied') || t.includes('insufficient permissions')) return 'Firestore Rules หรือ Role ของผู้ใช้ไม่อนุญาตให้ทำรายการนี้';
+    if (t.includes('requires an index')) return 'ต้องสร้าง Composite Index: กด F12 › Console แล้วคลิกลิงก์ที่ Firebase ให้มา';
+    if (t.includes('not-found')) return 'Cloud Function ยังไม่ได้ deploy หรือชื่อไม่ตรง หรือเอกสารนี้ไม่มีอยู่แล้ว';
+    if (t.includes('unauthenticated')) return 'Session หมดอายุ ให้ Logout แล้ว Login ใหม่';
+    if (t.includes('deadline-exceeded')) return 'Function ทำงานเกินเวลา ให้ลองใหม่ หรือเพิ่ม timeoutSeconds ใน Backend';
+    if (t.includes('failed to fetch') || t.includes('network')) return 'อินเทอร์เน็ตหรือสัญญาณมีปัญหา';
+    if (t.includes('internal')) return 'Error เกิดฝั่ง Backend: ดู Firebase Console › Functions › Logs ในเวลาเดียวกัน';
+    return 'กด "คัดลอก สืบพิกัด" แล้วส่งมาให้ตรวจ';
+  }
+
+  function reportError(err, where) {
+    const info = describeError(err, where);
+    info.hint = errorHint(info);
+    console.error('[TRC-ERROR]', info, err);
+    try {
+      const log = JSON.parse(localStorage.getItem('trc_complaint_error_log') || '[]');
+      log.unshift(info);
+      localStorage.setItem('trc_complaint_error_log', JSON.stringify(log.slice(0, 20)));
+    } catch (_) {}
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('errWhere', info.where); set('errCode', info.code); set('errCase', info.caseId);
+    set('errTime', info.time); set('errMessage', info.message + (info.details ? ` | ${info.details}` : ''));
+    set('errHint', info.hint); set('errStack', info.stack || '-');
+    document.getElementById('errorDetailPanel')?.classList.remove('hidden');
+    try { if (typeof setLoading === 'function') setLoading(false); } catch (_) {}
+    try { toast(`❌ ${info.message}`, 'error'); } catch (_) {}
+    window.__lastTrcError = info;
+  }
+
+  function copyErrorForSupport() {
+    const i = window.__lastTrcError;
+    if (!i) return;
+    const text = `สืบพิกัด: [${i.code}] ${i.message}\nตำแหน่ง: ${i.where}\nเคส: ${i.caseId} | เวลา: ${i.time}\nรายละเอียด: ${i.details || '-'}\nStack:\n${i.stack}`;
+    navigator.clipboard.writeText(text).then(() => toast('คัดลอกแล้ว วางส่งให้ Copilot ได้เลย'));
+  }
+
+  function showErrorHistory() {
+    const log = JSON.parse(localStorage.getItem('trc_complaint_error_log') || '[]');
+    alert(log.length ? log.map((x, n) => `${n + 1}. ${x.time} | ${x.where} | [${x.code}] ${x.message}`).join('\n') : 'ยังไม่มีประวัติ Error');
+  }
+
+  // จับ Error ที่ไม่มี try/catch รองรับ
+  window.addEventListener('error', ev => reportError(ev.error || new Error(ev.message), `${(ev.filename || '').split('/').pop()}:${ev.lineno}`));
+  window.addEventListener('unhandledrejection', ev => reportError(ev.reason, 'Promise (ไม่มี catch)'));
+  
+  function exportRegisterExcel() {
   if (!allCases.length) return toast('ไม่มีข้อมูลสำหรับ Export', 'warn');
   const rows = allCases.map(c => ({
     "Case ID": c.caseId,
@@ -2318,7 +2781,8 @@ function exportRegisterExcel() {
     "Symptom": c.issueSummary?.symptom || '',
     "GMP Flag": c.riskFlags?.gmpRelevant ? 'YES' : 'NO',
     "Root Cause": c.investigation?.rootCause || '',
-    "Level-5 Verified": c.rcaAssessment?.isLevel5Passed ? 'PASS (5.0)' : 'PENDING',
+    "RCA Gate (A-G ≥ 4)": caseGatePassed(c) ? 'PASS' : 'PENDING',
+    "CTS Avg": c.ctsScore?.average ?? '',
     "15-Day SLA Due": c.dueDates?.interimReplyDue || ''
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -2386,7 +2850,7 @@ function exportRegisterExcel() {
       initRealtimeListeners();
       await logClientAuditEvent('USER_LOGIN', 'SYSTEM', { email: user.email, role: currentUserProfile.role });
     } catch (err) {
-      toast(err.message, 'error');
+      reportError(err);
       await auth.signOut();
     } finally {
       setLoading(false);
@@ -2414,5 +2878,25 @@ function exportRegisterExcel() {
     toast('ออกจากระบบเรียบร้อยแล้ว');
   });
 </script>
+    <!-- [FILE]: Complaint.html | [ANCHOR: ERROR-DETAIL-PANEL] กล่องแสดงรายละเอียด Error -->
+    <div id="errorDetailPanel" data-id="error-detail-panel" class="hidden" style="position:fixed;right:16px;bottom:16px;width:min(520px,92vw);max-height:70vh;overflow:auto;z-index:99999;background:#fff;border:2px solid #dc2626;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:12px;">
+      <div style="background:#dc2626;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <b>❌ เกิดข้อผิดพลาด (Error Detail)</b>
+        <button type="button" onclick="document.getElementById('errorDetailPanel').classList.add('hidden')" style="color:#fff;font-weight:bold;">✕</button>
+      </div>
+      <div style="padding:10px 12px;">
+        <div><b>ตำแหน่ง:</b> <span id="errWhere"></span></div>
+        <div><b>รหัส:</b> <span id="errCode"></span> &nbsp; <b>เคส:</b> <span id="errCase"></span> &nbsp; <b>เวลา:</b> <span id="errTime"></span></div>
+        <div style="margin-top:6px;"><b>ข้อความ:</b> <span id="errMessage" style="color:#b91c1c;"></span></div>
+        <div style="margin-top:6px;background:#fef9c3;padding:6px;border-radius:6px;"><b>💡 สาเหตุที่น่าจะเป็น:</b> <span id="errHint"></span></div>
+        <details style="margin-top:6px;"><summary style="cursor:pointer;">รายละเอียดทางเทคนิค (Stack)</summary>
+          <pre id="errStack" style="white-space:pre-wrap;background:#f1f5f9;padding:6px;border-radius:6px;"></pre>
+        </details>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <button type="button" data-id="btn-copy-error" onclick="copyErrorForSupport()" style="background:#1e293b;color:#fff;padding:4px 10px;border-radius:6px;">📋 คัดลอก "สืบพิกัด"</button>
+          <button type="button" data-id="btn-error-history" onclick="showErrorHistory()" style="background:#e2e8f0;padding:4px 10px;border-radius:6px;">🕘 ประวัติ Error (20 ล่าสุด)</button>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
