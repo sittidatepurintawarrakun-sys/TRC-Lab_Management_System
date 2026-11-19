@@ -356,9 +356,52 @@ const F03_INSPECTION_ITEMS = [
   ['I10', 'I10 Capacity Adequate', 'Spare capacity adequate (6-monthly capacity review due?) (ความจุห้องเก็บเพียงพอ)']
 ];
 
-const PRODUCTS = ['Viscose Staple Fibre', 'Sodium Sulphate (Na2SO4)', 'Sulphuric Acid (H2SO4)'];
-const MCS = ['MC 2', 'MC 3', 'MC 4', 'MC 5', 'MC 6', 'N/A'];
-// [ANCHOR: Shifts-With-Shift-G] เพิ่มกะ G ตามคำขอข้อ 4
+  const PRODUCTS = ['Viscose Staple Fibre', 'Sodium Sulphate (Na2SO4)', 'Sulphuric Acid (H2SO4)'];
+  const MCS = ['MC 2', 'MC 3', 'MC 5', 'MC 6', 'N/A'];
+  // =========================================================================
+  // [ANCHOR: Chemical-Reconcile-Config-Single-Point-Update]
+  // แก้ไขเฉพาะก้อนนี้ในอนาคตเมื่อทราบจำนวนประเภท/จุดเก็บ และความถี่ของ Na2SO4 กับ H2SO4
+  // - frequencyMode: 'SHIFT' (ตรวจครบกะ A, B, C) | 'DAILY' (ตรวจวันละ 1 ตัวอย่าง) | 'SHIFT_WITH_G' (A, B, C, G)
+  // - subTypes: รายการจุดเก็บหรือประเภท (หากมีหลายตัว เช่น ['Calcined Na2SO4 Line A', 'Calcined Na2SO4 Line B'] ให้เพิ่มใน Array ได้เลย)
+  // =========================================================================
+  const CHEMICAL_RECONCILE_CONFIG = {
+    NA2SO4: {
+      category: 'NA2SO4',
+      title: 'Sodium Sulphate (Na2SO4)',
+      frequencyMode: 'SHIFT', // เปลี่ยนเป็น 'DAILY' ได้ทันทีหากเก็บแค่วันละ 1 ครั้ง
+      expectedSlots: ['A', 'B', 'C'], // หาก frequencyMode === 'DAILY' ระบบจะเช็คแค่ว่ามีอย่างน้อย 1 ตัวอย่างต่อวันหรือไม่
+      subTypes: [
+        { code: 'ALL', label: 'Na2SO4 (Composite / รอบผลิต)' }
+        // ตัวอย่างกรณีอนาคตมีหลายประเภท:
+        // { code: 'LINE-1', label: 'Na2SO4 Line 1' },
+        // { code: 'LINE-2', label: 'Na2SO4 Line 2' }
+      ]
+    },
+    H2SO4: {
+      category: 'H2SO4',
+      title: 'Sulphuric Acid (H2SO4)',
+      frequencyMode: 'DAILY', // ค่าเริ่มต้น: ตรวจรายวัน/Lot รับเข้า (เปลี่ยนเป็น 'SHIFT' ได้หากเก็บทุกกะ)
+      expectedSlots: ['DAILY'], // ถ้าเปลี่ยน frequencyMode เป็น 'SHIFT' ให้แก้เป็น ['A', 'B', 'C']
+      subTypes: [
+        { code: 'ALL', label: 'H2SO4 (Incoming / Lot รับเข้า)' }
+      ]
+    }
+  };
+  // พารามิเตอร์บังคับเริ่มต้นสำหรับการตรวจติดตามผลทุก 6 เดือน (Original -> 6M -> 12M -> 18M -> 24M)
+  const DEFAULT_STABILITY_PARAMS = [
+    { name: 'Berger Whiteness', unit: '%', isDefault: true },
+    { name: 'Denier', unit: 'D', isDefault: true },
+    { name: 'Tenacity', unit: 'g/d', isDefault: true },
+    { name: 'Elongation', unit: '%', isDefault: true }
+  ];
+  const STABILITY_INTERVALS = [
+    { key: 'orig', label: 'Original (0M)' },
+    { key: 'm6', label: '6 เดือน (6M)' },
+    { key: 'm12', label: '12 เดือน (12M)' },
+    { key: 'm18', label: '18 เดือน (18M)' },
+    { key: 'm24', label: '24 เดือน (24M)' }
+  ];
+  // [ANCHOR: Shifts-With-Shift-G] เพิ่มกะ G ตามคำขอข้อ 4
 const SHIFTS = [
   'A (07:00-15:00)',
   'B (15:00-23:00)',
@@ -409,6 +452,8 @@ const state = {
   filterMc: 'All',
   filterCategory: 'All',
   reconcileDate: nowISO(),
+  auditExportStart: nowISO().slice(0, 8) + '01',
+  auditExportEnd: nowISO(),
   f00: JSON.parse(JSON.stringify(DEFAULT_F00_MASTER)),
   f01: [],
   f02: [],
@@ -1353,6 +1398,7 @@ window.tryDeleteF01Sample = async function(sampleId) {
 
 // =========================================================================
 // [ANCHOR: View-3-F02-Withdrawal-Register]
+// อัปเกรดตัวเลือก Sample ID แบบกรองตาม ประเภท (Category) + เครื่อง (MC) + กะ (Shift) + วันที่ผลิต เหมือนหน้า F01
 // =========================================================================
 function renderF02View() {
   const filtered = state.f02.filter(w => state.f02View === 'Pending' ? w.approvalStatus === 'Pending' : true);
@@ -1433,23 +1479,77 @@ function openF02Modal(editNo = '', preselectSampleId = '') {
     remarks: ''
   };
 
+  const preSample = state.f01.find(s => s.sampleId === w.sampleId) || activeSamples[0];
+  const initCat = preselectSampleId || existing ? (preSample?.retentionCategory || 'ALL') : 'ALL';
+  const initMc = preselectSampleId || existing ? (preSample?.mc || 'ALL') : 'ALL';
+  const initShift = preselectSampleId || existing ? (preSample?.shift || 'ALL') : 'ALL';
+  const initDate = preselectSampleId ? (preSample?.productionDate || '') : '';
+
   showModal(`
-    <form id="f02Form" class="p-6 space-y-4">
+    <form id="f02Form" class="p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex justify-between items-center border-b pb-3">
         <div>
           <h3 class="font-extrabold text-lg text-slate-800">${existing ? `แก้ไขใบเบิก: ${esc(w.withdrawalNo)}` : 'ขอเบิกตัวอย่าง (F02 Withdrawal & Chain of Custody)'}</h3>
-          <p class="text-xs text-slate-500">อ้างอิงข้อ 7.8.4: ห้ามเบิกจนหมดหรือเหลือน้อยกว่าปริมาณตรวจซ้ำ 1 ครั้ง โดยไม่มีการอนุมัติจาก QA</p>
+          <p class="text-xs text-slate-500">กดเลือกประเภท เครื่อง กะ หรือวันที่ผลิตด้านล่าง เพื่อกรองหา Sample ID ได้อย่างรวดเร็ว</p>
         </div>
-        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
       </div>
+
+      <!-- [ANCHOR: F02-Smart-Sample-Selector] ตัวกรองค้นหา Sample ID แบบกดปุ่มเหมือน F01 -->
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="font-extrabold text-slate-700"><i class="fa-solid fa-filter text-indigo-600 mr-1.5"></i>ตัวช่วยกรองหา Sample ID (เลือกตามประเภท / เครื่อง / กะ / วันผลิต)</span>
+          <button type="button" onclick="resetF02Finder()" class="text-[11px] font-bold text-indigo-600 hover:underline">ล้างตัวกรอง (แสดงทั้งหมด)</button>
+        </div>
+
+        <!-- แถวปุ่มเลือกประเภท (Category) -->
+        <div>
+          <span class="text-[11px] font-bold text-slate-500 block mb-1">1. ประเภทตัวอย่าง:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="setF02Filter('cat', 'ALL')" data-f02cat="ALL" class="f02-cat-btn px-2.5 py-1 rounded-lg border font-bold transition">ทั้งหมด</button>
+            ${state.f00.map(c => `
+              <button type="button" onclick="setF02Filter('cat', '${c.retentionCategory}')" data-f02cat="${c.retentionCategory}" class="f02-cat-btn px-2.5 py-1 rounded-lg border font-bold transition">${esc(c.retentionCategory)}</button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- แถวปุ่มเลือก MC และ กะ (Shift) -->
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 block mb-1">2. เครื่องจักร (MC):</span>
+            <div class="flex flex-wrap gap-1">
+              <button type="button" onclick="setF02Filter('mc', 'ALL')" data-f02mc="ALL" class="f02-mc-btn px-2.5 py-1 rounded-lg border font-bold transition">ทุกเครื่อง</button>
+              ${MCS.map(m => `<button type="button" onclick="setF02Filter('mc', '${m}')" data-f02mc="${m}" class="f02-mc-btn px-2.5 py-1 rounded-lg border font-bold transition">${m}</button>`).join('')}
+            </div>
+          </div>
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 block mb-1">3. กะผลิต (Shift):</span>
+            <div class="flex flex-wrap gap-1">
+              <button type="button" onclick="setF02Filter('shift', 'ALL')" data-f02shift="ALL" class="f02-shift-btn px-2.5 py-1 rounded-lg border font-bold transition">ทุกกะ</button>
+              ${SHIFTS.map(sh => `<button type="button" onclick="setF02Filter('shift', '${sh}')" data-f02shift="${sh}" class="f02-shift-btn px-2.5 py-1 rounded-lg border font-bold transition">${sh.split(' ')[0]}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- แถวเลือกวันที่ผลิต + ผลลัพธ์ Sample ID ที่ตรงเงื่อนไข -->
+        <div class="grid sm:grid-cols-3 gap-3 pt-1">
+          <label class="block font-bold text-slate-700">
+            4. วันที่ผลิต (เว้นว่าง = ทุกวัน)
+            <input type="date" id="f02FilterDate" value="${esc(initDate)}" onchange="refreshF02SampleOptions()" class="w-full border border-slate-300 rounded-xl p-2 mt-1 bg-white">
+          </label>
+          <label class="block font-bold text-indigo-900 sm:col-span-2">
+            5. เลือก Sample ID ที่ต้องการเบิก (<span id="f02MatchCount">0</span> รายการ) <span class="text-red-500">*</span>
+            <select name="sampleId" id="f02SampleSelect" required onchange="onF02SamplePicked()" class="w-full border-2 border-indigo-400 rounded-xl p-2 mt-1 bg-white font-extrabold text-indigo-800"></select>
+          </label>
+        </div>
+
+        <div id="f02SampleDetailBar" class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] text-slate-600 flex flex-wrap justify-between gap-2"></div>
+      </div>
+
+      <!-- ข้อมูลการเบิก -->
       <div class="grid sm:grid-cols-2 gap-3 text-xs">
-        <label class="block font-bold text-slate-700">Sample ID <span class="text-red-500">*</span>
-          <select name="sampleId" id="f02SampleSelect" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
-            ${activeSamples.map(s => `<option value="${esc(s.sampleId)}" ${w.sampleId === s.sampleId ? 'selected' : ''}>${esc(s.sampleId)} (คงเหลือ ${s.remainingQty}${esc(s.unit)})</option>`).join('')}
-          </select>
-        </label>
-        <label class="block font-bold text-slate-700">ปริมาณที่เบิก <span class="text-red-500">*</span>
-          <input type="number" step="0.1" min="0.1" name="qtyWithdrawn" required value="${w.qtyWithdrawn}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-bold">
+        <label class="block font-bold text-slate-700">ปริมาณที่เบิก (<span id="f02UnitText">${esc(w.unit)}</span>) <span class="text-red-500">*</span>
+          <input type="number" step="0.1" min="0.1" name="qtyWithdrawn" required value="${w.qtyWithdrawn}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-extrabold text-blue-700">
         </label>
         <label class="block font-bold text-slate-700">วัตถุประสงค์ (ข้อ 7.8.1) <span class="text-red-500">*</span>
           <select name="purpose" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white">
@@ -1482,12 +1582,77 @@ function openF02Modal(editNo = '', preselectSampleId = '') {
     </form>
   `);
 
+  const f02Filter = { cat: initCat, mc: initMc, shift: initShift };
+
+  window.setF02Filter = (type, val) => {
+    f02Filter[type] = val;
+    refreshF02SampleOptions();
+  };
+
+  window.resetF02Finder = () => {
+    f02Filter.cat = 'ALL';
+    f02Filter.mc = 'ALL';
+    f02Filter.shift = 'ALL';
+    document.getElementById('f02FilterDate').value = '';
+    refreshF02SampleOptions();
+  };
+
+  window.refreshF02SampleOptions = () => {
+    document.querySelectorAll('.f02-cat-btn').forEach(b => {
+      b.className = `f02-cat-btn px-2.5 py-1 rounded-lg border font-bold transition ${b.dataset.f02cat === f02Filter.cat ? 'btn-pick-active' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`;
+    });
+    document.querySelectorAll('.f02-mc-btn').forEach(b => {
+      b.className = `f02-mc-btn px-2.5 py-1 rounded-lg border font-bold transition ${b.dataset.f02mc === f02Filter.mc ? 'btn-pick-active' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`;
+    });
+    document.querySelectorAll('.f02-shift-btn').forEach(b => {
+      b.className = `f02-shift-btn px-2.5 py-1 rounded-lg border font-bold transition ${b.dataset.f02shift === f02Filter.shift ? 'btn-pick-active' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`;
+    });
+
+    const fDate = document.getElementById('f02FilterDate').value;
+    const matched = activeSamples.filter(s => {
+      if (f02Filter.cat !== 'ALL' && s.retentionCategory !== f02Filter.cat) return false;
+      if (f02Filter.mc !== 'ALL' && s.mc !== f02Filter.mc) return false;
+      if (f02Filter.shift !== 'ALL' && s.shift !== f02Filter.shift) return false;
+      if (fDate && s.productionDate !== fDate) return false;
+      return true;
+    });
+
+    document.getElementById('f02MatchCount').textContent = matched.length;
+    const sel = document.getElementById('f02SampleSelect');
+    if (matched.length === 0) {
+      sel.innerHTML = `<option value="">-- ไม่พบ Sample ID ที่ตรงกับเงื่อนไข (ลองกด "ล้างตัวกรอง") --</option>`;
+    } else {
+      sel.innerHTML = matched.map(s => `<option value="${esc(s.sampleId)}" ${s.sampleId === w.sampleId ? 'selected' : ''}>${esc(s.sampleId)} — คงเหลือ ${s.remainingQty}${esc(s.unit)} (${esc(s.storageLocation)})</option>`).join('');
+    }
+    onF02SamplePicked();
+  };
+
+  window.onF02SamplePicked = () => {
+    const sid = document.getElementById('f02SampleSelect')?.value;
+    const s = state.f01.find(x => x.sampleId === sid);
+    const bar = document.getElementById('f02SampleDetailBar');
+    if (!s || !bar) {
+      if (bar) bar.innerHTML = `<span class="text-amber-700 font-bold">กรุณาเลือกประเภท/วันที่/กะที่มีตัวอย่างในระบบ</span>`;
+      return;
+    }
+    document.getElementById('f02UnitText').textContent = s.unit;
+    bar.innerHTML = `
+      <span><b>สินค้า:</b> ${esc(s.product)} (${esc(s.retentionCategory)})</span>
+      <span><b>MC/กะ:</b> ${esc(s.mc)} / ${esc((s.shift || '').split(' ')[0])}</span>
+      <span><b>วันผลิต:</b> ${esc(s.productionDate)}</span>
+      <span><b>ที่เก็บ:</b> ${esc(s.storageLocation)}</span>
+      <span class="text-emerald-700 font-extrabold">คงเหลือพร้อมเบิก: ${s.remainingQty} ${esc(s.unit)}</span>
+    `;
+  };
+
+  refreshF02SampleOptions();
+
   document.getElementById('f02Form').onsubmit = async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
     const data = Object.fromEntries(fd.entries());
     const parent = state.f01.find(s => s.sampleId === data.sampleId);
-    if (!parent) return toast('ไม่พบ Sample ID', 'error');
+    if (!parent) return toast('กรุณาเลือก Sample ID', 'error');
 
     const reqQty = Number(data.qtyWithdrawn);
     const avail = existing && existing.approvalStatus === 'Approved' ? parent.remainingQty + Number(existing.qtyWithdrawn) : parent.remainingQty;
@@ -1555,6 +1720,7 @@ window.approveOrRejectF02 = async function(withdrawalNo, newStatus) {
 
 // =========================================================================
 // [ANCHOR: View-4-F03-Store-Monitoring]
+// อัปเกรด F03 ให้เลือกวันที่ + รอบ (AM / PM / รายเดือน) แล้วสร้างรหัส Record Ref ให้อัตโนมัติ ไม่ต้องพิมพ์เอง
 // =========================================================================
 function renderF03View() {
   const rows = state.f03.filter(r => state.f03View === 'Monthly' ? r.recordType === 'Monthly Inspection' : r.recordType === 'Daily Temp/RH');
@@ -1604,9 +1770,11 @@ function renderF03View() {
 function openF03Modal(defaultType = 'Daily Temp/RH', editRef = '') {
   const existing = editRef ? state.f03.find(x => x.recordRef === editRef) : null;
   const r = existing || {
-    recordRef: defaultType === 'Daily Temp/RH' ? `TH-${nowISO().replace(/-/g, '').slice(2)}-AM` : `INSP-${nowISO().replace(/-/g, '').slice(2, 6)}`,
+    recordRef: '',
     recordType: defaultType,
     storeLocation: 'Retain store',
+    recordDate: nowISO(),
+    session: 'AM',
     recordDateTime: `${nowISO()}T09:00`,
     tempMin: 24.0,
     tempMax: 25.5,
@@ -1619,38 +1787,72 @@ function openF03Modal(defaultType = 'Daily Temp/RH', editRef = '') {
     reviewedBy: ''
   };
 
+  const initDate = existing && existing.recordDateTime ? existing.recordDateTime.slice(0, 10) : nowISO();
+  const initSession = existing && existing.recordRef?.endsWith('-PM') ? 'PM' : 'AM';
+
   showModal(`
     <form id="f03Form" class="p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-extrabold text-lg text-slate-800">บันทึกห้องเก็บตัวอย่าง (F03 - ข้อ 7.5 & 7.6)</h3>
-        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+        <div>
+          <h3 class="font-extrabold text-lg text-slate-800">บันทึกห้องเก็บตัวอย่าง (F03 - ข้อ 7.5 & 7.6)</h3>
+          <p class="text-xs text-slate-500">เลือกประเภท วันที่ และรอบเวลา — ระบบสร้างรหัสอ้างอิง (Record Ref) ให้อัตโนมัติ</p>
+        </div>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
       </div>
-      <div class="grid sm:grid-cols-3 gap-3 text-xs">
-        <label class="block font-bold text-slate-700">ประเภท
-          <select name="recordType" id="f03Type" onchange="toggleF03()" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-blue-50 font-bold">
-            <option value="Daily Temp/RH" ${r.recordType === 'Daily Temp/RH' ? 'selected' : ''}>Daily Temp/RH</option>
-            <option value="Monthly Inspection" ${r.recordType === 'Monthly Inspection' ? 'selected' : ''}>Monthly Inspection (10 ข้อ)</option>
-          </select>
+
+      <!-- 1. ปุ่มเลือกประเภท & รอบเวลา (เหมือน F01 ไม่ต้องพิมพ์รหัสเอง) -->
+      <div class="grid sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+        <div>
+          <span class="font-bold text-slate-700 block mb-1">1. ประเภทการบันทึก</span>
+          <div class="flex gap-1.5">
+            <button type="button" onclick="setF03Type('Daily Temp/RH')" id="f03BtnDaily" class="flex-1 py-2 px-2 rounded-xl border font-bold transition">Temp/RH รายวัน</button>
+            <button type="button" onclick="setF03Type('Monthly Inspection')" id="f03BtnMonthly" class="flex-1 py-2 px-2 rounded-xl border font-bold transition">ตรวจรายเดือน</button>
+          </div>
+          <input type="hidden" name="recordType" id="f03Type" value="${esc(r.recordType)}">
+        </div>
+
+        <label class="block font-bold text-slate-700">
+          2. วันที่บันทึก
+          <input type="date" id="f03Date" required value="${esc(initDate)}" onchange="syncF03AutoRef()" class="w-full border border-slate-300 rounded-xl p-2 mt-1 bg-white">
         </label>
-        <label class="block font-bold text-slate-700">รหัสอ้างอิง<input type="text" name="recordRef" ${existing ? 'readonly' : ''} required value="${esc(r.recordRef)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-bold"></label>
-        <label class="block font-bold text-slate-700">วันที่/เวลา<input type="datetime-local" name="recordDateTime" required value="${esc(r.recordDateTime)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1"></label>
+
+        <div id="f03SessionWrap">
+          <span class="font-bold text-slate-700 block mb-1">3. รอบเวลา / กะ</span>
+          <div class="flex gap-1.5">
+            ${['AM', 'PM'].map(ss => `<button type="button" onclick="setF03Session('${ss}')" data-f03ss="${ss}" class="f03-ss-btn flex-1 py-2 rounded-xl border font-bold transition">${ss === 'AM' ? 'เช้า (AM)' : 'บ่าย (PM)'}</button>`).join('')}
+          </div>
+          <input type="hidden" id="f03Session" value="${esc(initSession)}">
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-3 text-xs">
+        <label class="block font-bold text-slate-700">รหัสอ้างอิง (Record Ref - สร้างอัตโนมัติ)
+          <input type="text" name="recordRef" id="f03Ref" ${existing ? 'readonly' : ''} required value="${esc(r.recordRef)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-extrabold text-blue-800 ${existing ? 'bg-slate-100' : 'bg-blue-50'}">
+        </label>
+        <label class="block font-bold text-slate-700">วันและเวลาบันทึก
+          <input type="datetime-local" name="recordDateTime" id="f03DateTime" required value="${esc(r.recordDateTime)}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
+        </label>
       </div>
 
       <div id="f03DailyZone" class="space-y-3 bg-slate-50 p-4 rounded-xl border text-xs">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <label class="block font-bold">Temp Min (°C)<input type="number" step="0.1" name="tempMin" value="${r.tempMin ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white"></label>
-          <label class="block font-bold">Temp Max (°C)<input type="number" step="0.1" name="tempMax" value="${r.tempMax ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white"></label>
-          <label class="block font-bold">RH Min (%)<input type="number" step="1" name="rhMin" value="${r.rhMin ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white"></label>
-          <label class="block font-bold">RH Max (%)<input type="number" step="1" name="rhMax" value="${r.rhMax ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white"></label>
+          <label class="block font-bold">Temp Min (°C) [≥23]<input type="number" step="0.1" name="tempMin" value="${r.tempMin ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white font-bold"></label>
+          <label class="block font-bold">Temp Max (°C) [≤27]<input type="number" step="0.1" name="tempMax" value="${r.tempMax ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white font-bold"></label>
+          <label class="block font-bold">RH Min (%)<input type="number" step="1" name="rhMin" value="${r.rhMin ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white font-bold"></label>
+          <label class="block font-bold">RH Max (%) [≤65%]<input type="number" step="1" name="rhMax" value="${r.rhMax ?? ''}" class="w-full border rounded-xl p-2 mt-1 bg-white font-bold"></label>
         </div>
         <label class="block font-bold">การประเมินผลกระทบและแก้ไขหากเกินเกณฑ์ (Excursion Assessment - ข้อ 7.6.2)<input type="text" name="excursionAction" value="${esc(r.excursionAction)}" placeholder="ระบุระยะเวลาที่เกินเกณฑ์ ตัวอย่างที่ได้รับผลกระทบ และเลขที่ใบ Deviation (ถ้ามี)" class="w-full border rounded-xl p-2 mt-1 bg-white font-normal"></label>
       </div>
 
       <div id="f03MonthlyZone" class="space-y-2 bg-emerald-50/50 p-4 rounded-xl border text-xs">
+        <div class="flex justify-between items-center mb-1">
+          <span class="font-extrabold text-emerald-900">รายการตรวจห้องเก็บรายเดือน 10 ข้อ</span>
+          <button type="button" onclick="document.querySelectorAll('.f03-insp-sel').forEach(el=>el.value='OK')" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px]">เลือก OK ทั้ง 10 ข้อ</button>
+        </div>
         ${F03_INSPECTION_ITEMS.map(([code, name, desc]) => `
           <div class="flex justify-between items-center bg-white p-2 rounded-lg border">
             <div><div class="font-bold">${esc(name)}</div><div class="text-[10px] text-slate-500">${esc(desc)}</div></div>
-            <select name="${code}" class="border rounded-lg px-2 py-1 font-bold">${['OK', 'NOK', 'N/A'].map(v => `<option value="${v}" ${(r[code] || 'OK') === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
+            <select name="${code}" class="f03-insp-sel border rounded-lg px-2 py-1 font-bold">${['OK', 'NOK', 'N/A'].map(v => `<option value="${v}" ${(r[code] || 'OK') === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
           </div>
         `).join('')}
         <label class="block font-bold pt-1">หมายเหตุ / ทบทวนความจุห้องเก็บทุก 6 เดือน (ข้อ 7.5.5)<input type="text" name="inspectionRemarks" value="${esc(r.inspectionRemarks)}" class="w-full border rounded-xl p-2 mt-1 bg-white font-normal"></label>
@@ -1663,12 +1865,40 @@ function openF03Modal(defaultType = 'Daily Temp/RH', editRef = '') {
     </form>
   `);
 
-  window.toggleF03 = () => {
-    const isDaily = document.getElementById('f03Type').value === 'Daily Temp/RH';
+  window.setF03Type = rt => {
+    document.getElementById('f03Type').value = rt;
+    syncF03AutoRef();
+  };
+
+  window.setF03Session = ss => {
+    document.getElementById('f03Session').value = ss;
+    syncF03AutoRef();
+  };
+
+  window.syncF03AutoRef = () => {
+    const rt = document.getElementById('f03Type').value;
+    const isDaily = rt === 'Daily Temp/RH';
+    const dStr = document.getElementById('f03Date').value || nowISO();
+    const ss = document.getElementById('f03Session').value || 'AM';
+
+    document.getElementById('f03BtnDaily').className = `flex-1 py-2 px-2 rounded-xl border font-bold transition ${isDaily ? 'btn-pick-active' : 'bg-white text-slate-600 border-slate-200'}`;
+    document.getElementById('f03BtnMonthly').className = `flex-1 py-2 px-2 rounded-xl border font-bold transition ${!isDaily ? 'btn-pick-active' : 'bg-white text-slate-600 border-slate-200'}`;
+    document.querySelectorAll('.f03-ss-btn').forEach(b => {
+      b.className = `f03-ss-btn flex-1 py-2 rounded-xl border font-bold transition ${b.dataset.f03ss === ss ? 'btn-pick-active' : 'bg-white text-slate-600 border-slate-200'}`;
+    });
+
+    document.getElementById('f03SessionWrap').classList.toggle('opacity-40', !isDaily);
     document.getElementById('f03DailyZone').classList.toggle('hidden', !isDaily);
     document.getElementById('f03MonthlyZone').classList.toggle('hidden', isDaily);
+
+    if (!existing) {
+      const yymmdd = dStr.replace(/-/g, '').slice(2);
+      const yymm = yymmdd.slice(0, 4);
+      document.getElementById('f03Ref').value = isDaily ? `TH-${yymmdd}-${ss}` : `INSP-${yymm}`;
+      document.getElementById('f03DateTime').value = `${dStr}T${ss === 'PM' ? '14:00' : '09:00'}`;
+    }
   };
-  toggleF03();
+  syncF03AutoRef();
 
   document.getElementById('f03Form').onsubmit = async e => {
     e.preventDefault();
@@ -1729,12 +1959,21 @@ window.reviewF03Record = async function(ref) {
 
 // =========================================================================
 // [ANCHOR: View-5-F04-Disposal-Register]
+// อัปเกรด F04 ให้กรองหา Sample ID ตามประเภท / เครื่อง / กะ / สถานะครบกำหนด เหมือน F02
 // =========================================================================
 function renderF04View() {
+  const readyCount = state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID' && s.holdFlag === 'OK' && s.daysToDue !== null && s.daysToDue <= 0).length;
+
   return `
     <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
       <p class="text-xs text-slate-500">อ้างอิงข้อ 7.10: ต้องได้รับ QA Approved = Yes ก่อน จึงจะกรอกวันที่ทำลายจริงและชื่อพยาน (Witnessed By ≠ Disposed By) ได้</p>
-      <button onclick="openF04Modal()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm">+ เพิ่มรายการทำลาย (F04)</button>
+      <div class="flex gap-2">
+        ${readyCount > 0 ? `
+        <button onclick="sendReadySamplesToF04()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm">
+          <i class="fa-solid fa-bolt mr-1"></i>ดึงรายการครบกำหนดเข้า F04 อัตโนมัติ (${readyCount})
+        </button>` : ''}
+        <button onclick="openF04Modal()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm">+ เพิ่มรายการทำลาย (F04)</button>
+      </div>
     </div>
     <div class="card overflow-x-auto shadow-sm">
       <table class="w-full text-xs text-left">
@@ -1792,25 +2031,53 @@ window.sendReadySamplesToF04 = async function() {
 
 function openF04Modal(editId = '') {
   const existing = editId ? state.f04.find(x => x.id === editId) : null;
-  if (!existing && !state.f01.length) return toast('ยังไม่มีตัวอย่างใน F01', 'warn');
+  const candidateSamples = state.f01.filter(s => (existing && s.sampleId === existing.sampleId) || (s.status !== 'Disposed' && s.status !== 'VOID' && s.holdFlag === 'OK'));
+  if (!existing && !candidateSamples.length) return toast('ไม่มีตัวอย่างที่พร้อมส่งทำลายใน F01', 'warn');
+
   const d = existing || {
-    disposalListNo: `DL-${nowISO().replace(/-/g, '').slice(2, 6)}`, sampleId: state.f01[0]?.sampleId || '',
+    disposalListNo: `DL-${nowISO().replace(/-/g, '').slice(2, 6)}`, sampleId: candidateSamples[0]?.sampleId || '',
     holdCheck: 'No hold - confirmed', qaApproved: 'Pending', qaApprover: '', qaApprovalDate: '',
     actualDisposalDate: '', disposalMethod: 'Industrial waste (LPM-1012)', disposedBy: '', witnessedBy: '', f01StatusUpdated: 'No'
   };
 
   showModal(`
-    <form id="f04Form" class="p-6 space-y-4">
+    <form id="f04Form" class="p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-extrabold text-lg text-slate-800">บันทึกการทำลายตัวอย่าง (F04 - ข้อ 7.10)</h3>
-        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+        <div>
+          <h3 class="font-extrabold text-lg text-slate-800">บันทึกการทำลายตัวอย่าง (F04 - ข้อ 7.10)</h3>
+          <p class="text-xs text-slate-500">เลือกกรองตามสถานะครบกำหนด ประเภท เครื่อง หรือกะ เพื่อค้นหา Sample ID ที่ต้องการทำลาย</p>
+        </div>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
       </div>
+
+      <!-- [ANCHOR: F04-Smart-Sample-Selector] ตัวช่วยกรองหา Sample ID สำหรับทำลาย -->
+      ${!existing ? `
+      <div class="bg-rose-50/50 border border-rose-200 rounded-2xl p-3.5 space-y-2.5 text-xs">
+        <div class="flex flex-wrap justify-between items-center gap-2">
+          <span class="font-extrabold text-rose-900"><i class="fa-solid fa-filter mr-1.5"></i>ตัวช่วยกรองหาตัวอย่างที่จะทำลาย</span>
+          <label class="flex items-center gap-1.5 font-bold text-rose-800 cursor-pointer">
+            <input type="checkbox" id="f04OnlyDueChk" onchange="refreshF04SampleOptions()" class="rounded text-rose-600">
+            แสดงเฉพาะที่ครบกำหนดทำลายแล้ว (Due ≤ 0 วัน)
+          </label>
+        </div>
+
+        <div class="grid sm:grid-cols-3 gap-2">
+          <select id="f04FilterCat" onchange="refreshF04SampleOptions()" class="border border-slate-300 rounded-xl p-2 bg-white font-bold">
+            <option value="ALL">ทุกประเภท (All Categories)</option>
+            ${state.f00.map(c => `<option value="${c.retentionCategory}">${c.retentionCategory} (${c.retentionDisplay})</option>`).join('')}
+          </select>
+          <select id="f04FilterMc" onchange="refreshF04SampleOptions()" class="border border-slate-300 rounded-xl p-2 bg-white font-bold">
+            <option value="ALL">ทุกเครื่อง (All MCs)</option>
+            ${MCS.map(m => `<option value="${m}">${m}</option>`).join('')}
+          </select>
+          <input type="date" id="f04FilterDate" onchange="refreshF04SampleOptions()" class="border border-slate-300 rounded-xl p-2 bg-white" title="กรองตามวันผลิต">
+        </div>
+      </div>` : ''}
+
       <div class="grid sm:grid-cols-2 gap-3 text-xs">
         <label class="block font-bold">Disposal List No.<input type="text" name="disposalListNo" required value="${esc(d.disposalListNo)}" class="w-full border rounded-xl p-2.5 mt-1 font-bold text-rose-700"></label>
-        <label class="block font-bold">Sample ID
-          <select name="sampleId" required class="w-full border rounded-xl p-2.5 mt-1 bg-white font-bold">
-            ${state.f01.map(s => `<option value="${esc(s.sampleId)}" ${d.sampleId === s.sampleId ? 'selected' : ''}>${esc(s.sampleId)} (Due: ${esc(s.disposalDueDate)})</option>`).join('')}
-          </select>
+        <label class="block font-bold">Sample ID (<span id="f04MatchCount">${candidateSamples.length}</span> รายการ) <span class="text-red-500">*</span>
+          <select name="sampleId" id="f04SampleSelect" required class="w-full border-2 border-rose-300 rounded-xl p-2.5 mt-1 bg-white font-extrabold text-slate-800"></select>
         </label>
         <label class="block font-bold">QA Approved
           <select name="qaApproved" class="w-full border rounded-xl p-2.5 mt-1 bg-slate-50 font-bold">
@@ -1830,9 +2097,35 @@ function openF04Modal(editId = '') {
     </form>
   `);
 
+  window.refreshF04SampleOptions = () => {
+    const onlyDue = document.getElementById('f04OnlyDueChk')?.checked;
+    const fCat = document.getElementById('f04FilterCat')?.value || 'ALL';
+    const fMc = document.getElementById('f04FilterMc')?.value || 'ALL';
+    const fDate = document.getElementById('f04FilterDate')?.value || '';
+
+    const matched = candidateSamples.filter(s => {
+      if (existing && s.sampleId === existing.sampleId) return true;
+      if (onlyDue && (s.daysToDue === null || s.daysToDue > 0)) return false;
+      if (fCat !== 'ALL' && s.retentionCategory !== fCat) return false;
+      if (fMc !== 'ALL' && s.mc !== fMc) return false;
+      if (fDate && s.productionDate !== fDate) return false;
+      return true;
+    });
+
+    document.getElementById('f04MatchCount').textContent = matched.length;
+    const sel = document.getElementById('f04SampleSelect');
+    if (matched.length === 0) {
+      sel.innerHTML = `<option value="">-- ไม่พบตัวอย่างที่ตรงเงื่อนไข --</option>`;
+    } else {
+      sel.innerHTML = matched.map(s => `<option value="${esc(s.sampleId)}" ${s.sampleId === d.sampleId ? 'selected' : ''}>${esc(s.sampleId)} (${esc(s.retentionCategory)} • Due: ${esc(s.disposalDueDate)})</option>`).join('');
+    }
+  };
+  refreshF04SampleOptions();
+
   document.getElementById('f04Form').onsubmit = async e => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target).entries());
+    if (!data.sampleId) return toast('กรุณาเลือก Sample ID', 'error');
     const parent = state.f01.find(s => s.sampleId === data.sampleId);
     if (data.actualDisposalDate) {
       if (data.qaApproved !== 'Yes' || !data.qaApprovalDate || data.actualDisposalDate < data.qaApprovalDate) return toast('ต้องได้รับการอนุมัติ QA Approved = Yes ก่อนจึงจะบันทึกวันทำลายจริงได้', 'error');
@@ -1890,229 +2183,590 @@ function getLast7Days(endDateStr) {
   return days;
 }
 
-function renderReconcileView() {
-  const fibreMcs = ['MC 2', 'MC 3', 'MC 4', 'MC 5', 'MC 6'];
-  const mainShifts = ['A', 'B', 'C'];
-  const weekDates = getLast7Days(state.reconcileDate);
-
-  // ตัวอย่างที่เก็บอยู่และเข้าข่ายตรวจสภาพ 6 เดือน (เรียงเอาที่ยังไม่เคยตรวจหรือตรวจนานสุดขึ้นก่อน)
-  const activeSamples = state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID');
-
-  return `
-    <div class="space-y-6">
-      <div class="card p-5 shadow-sm">
-        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-          <div>
-            <h3 class="font-extrabold text-base text-slate-800"><i class="fa-solid fa-table-cells text-purple-600 mr-2"></i>ตาราง Reconcile รายสัปดาห์ 7 วันรวด (MC × Shift Matrix - ข้อ 7.7)</h3>
-            <p class="text-xs text-slate-500">ดูภาพรวมทั้งสัปดาห์ในหน้าเดียวได้เลย (สีเขียว = มีบันทึกแล้ว, <span class="text-amber-700 font-bold">–</span> = ยังไม่มีบันทึก ซึ่งอาจเป็นเครื่องหยุดเดินหรือตกหล่น)</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-600">วันสิ้นสุดสัปดาห์:</span>
-            <input type="date" value="${esc(state.reconcileDate)}" onchange="state.reconcileDate=this.value; render();" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold">
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs border-collapse">
-            <thead>
-              <tr class="bg-slate-100 text-slate-700 font-bold">
-                <th class="border p-2.5 text-left sticky left-0 bg-slate-100 z-10">Machine</th>
-                ${weekDates.map(d => `
-                  <th class="border p-2 text-center min-w-[110px]">
-                    <div class="font-extrabold">${esc(d.slice(5))}</div>
-                    <div class="text-[10px] text-slate-500 font-normal">กะ A | B | C</div>
-                  </th>
-                `).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${fibreMcs.map(mc => `
-                <tr>
-                  <td class="border p-2.5 font-extrabold text-slate-800 bg-slate-50 sticky left-0 z-10 whitespace-nowrap">${mc}</td>
-                  ${weekDates.map(d => {
-                    const dayMcSamples = state.f01.filter(s => s.productionDate === d && s.mc === mc && s.status !== 'VOID');
-                    return `
-                      <td class="border p-2 text-center">
-                        <div class="flex justify-center gap-1">
-                          ${mainShifts.map(shCode => {
-                            const found = dayMcSamples.find(s => (s.shift || '').startsWith(shCode));
-                            return found
-                              ? `<button onclick="openF01QuickModal('${esc(found.sampleId)}')" title="${esc(found.sampleId)} (${found.quantity}${found.unit})" class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[11px] hover:bg-emerald-200 transition">${shCode}</button>`
-                              : `<span title="ยังไม่มีบันทึก ${mc} กะ ${shCode} วันที่ ${d}" class="w-7 h-7 rounded-lg bg-slate-50 text-slate-300 border border-slate-200 flex items-center justify-center text-[11px]">-</span>`;
-                          }).join('')}
-                        </div>
-                      </td>
-                    `;
-                  }).join('')}
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card p-5 shadow-sm">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-          <div>
-            <h3 class="font-extrabold text-base text-slate-800"><i class="fa-solid fa-magnifying-glass-chart text-blue-600 mr-2"></i>การตรวจสภาพตัวอย่างตัวแทนทุก 6 เดือน (6-Monthly Condition Check - ข้อ 7.7)</h3>
-            <p class="text-xs text-slate-500">บันทึกผลลงในฟอร์ม F01 โดยตรง (สุ่มตรวจอย่างน้อย 1 ตัวอย่างต่อเดือนผลิตต่อประเภท: Acceptable / Deteriorated / Damaged)</p>
-          </div>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left">
-            <thead class="bg-slate-50 text-slate-600 border-b font-bold">
-              <tr><th class="p-2.5">Sample ID</th><th class="p-2.5">Category</th><th class="p-2.5">Prod. Date</th><th class="p-2.5">Location</th><th class="p-2.5">Check Date</th><th class="p-2.5">Result</th><th class="p-2.5 text-right">Action</th></tr>
-            </thead>
-            <tbody>
-              ${activeSamples.map(s => {
-                const ageDays = calcDaysToDue(s.productionDate) ? Math.abs(calcDaysToDue(s.productionDate)) : 0;
-                const needs6M = !s.conditionCheckDate && ageDays >= 180;
+  function renderChemicalReconcileRows(weekDates) {
+    return Object.values(CHEMICAL_RECONCILE_CONFIG).map(cfg => {
+      return cfg.subTypes.map(sub => {
+        const modeBadge = cfg.frequencyMode === 'DAILY'
+          ? '<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Daily / Lot</span>'
+          : `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">Shift (${cfg.expectedSlots.join('/')})</span>`;
+        return `
+          <tr>
+            <td class="border p-2.5 font-extrabold text-slate-800 bg-slate-50 sticky left-0 z-10 whitespace-nowrap">
+              <div>${esc(sub.label)}</div>
+              <div class="mt-0.5">${modeBadge}</div>
+            </td>
+            ${weekDates.map(d => {
+              const dayChemSamples = state.f01.filter(s => {
+                if (s.productionDate !== d || s.retentionCategory !== cfg.category || s.status === 'VOID') return false;
+                if (sub.code !== 'ALL' && s.timeRange !== sub.code && s.customer !== sub.code) return false;
+                return true;
+              });
+              if (cfg.frequencyMode === 'DAILY') {
+                if (dayChemSamples.length > 0) {
+                  return `
+                    <td class="border p-2 text-center">
+                      <div class="flex flex-wrap justify-center gap-1">
+                        ${dayChemSamples.map(found => `
+                          <button onclick="openF01QuickModal('${esc(found.sampleId)}')" title="${esc(found.sampleId)} (${found.quantity}${found.unit})" class="px-2 h-7 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[11px] hover:bg-emerald-200 transition">
+                            ✓ ${esc((found.shift || 'G').charAt(0))}${found.timeRange ? `:${esc(found.timeRange)}` : ''}
+                          </button>
+                        `).join('')}
+                      </div>
+                    </td>
+                  `;
+                }
                 return `
-                  <tr class="border-b last:border-0 hover:bg-slate-50">
-                    <td class="p-2.5 font-bold text-blue-700">${esc(s.sampleId)} ${needs6M ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">ครบ 6 เดือน</span>` : ''}</td>
-                    <td class="p-2.5 font-bold">${esc(s.retentionCategory)}</td>
-                    <td class="p-2.5">${esc(s.productionDate)}</td>
-                    <td class="p-2.5">${esc(s.storageLocation)}</td>
-                    <td class="p-2.5">${esc(s.conditionCheckDate || '-')}</td>
-                    <td class="p-2.5"><span class="px-2 py-0.5 rounded font-bold ${s.conditionResult === 'Acceptable' ? 'bg-emerald-100 text-emerald-800' : s.conditionResult ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}">${esc(s.conditionResult || 'Pending')}</span></td>
-                    <td class="p-2.5 text-right"><button onclick="openConditionCheckModal('${esc(s.sampleId)}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-bold">บันทึกผลตรวจ 6M</button></td>
-                  </tr>
+                  <td class="border p-2 text-center">
+                    <span title="ยังไม่มีบันทึก ${esc(sub.label)} วันที่ ${d}" class="w-full h-7 rounded-lg bg-slate-50 text-slate-300 border border-slate-200 flex items-center justify-center text-[11px]">-</span>
+                  </td>
                 `;
-              }).join('') || `<tr><td colspan="7" class="p-8 text-center text-slate-400">ยังไม่มีรายการตัวอย่าง</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
-}
+              }
+              // กรณี frequencyMode === 'SHIFT' หรือ 'SHIFT_WITH_G'
+              return `
+                <td class="border p-2 text-center">
+                  <div class="flex justify-center gap-1">
+                    ${cfg.expectedSlots.map(shCode => {
+                      const found = dayChemSamples.find(s => (s.shift || '').startsWith(shCode));
+                      return found
+                        ? `<button onclick="openF01QuickModal('${esc(found.sampleId)}')" title="${esc(found.sampleId)} (${found.quantity}${found.unit})" class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[11px] hover:bg-emerald-200 transition">${shCode}</button>`
+                        : `<span title="ยังไม่มีบันทึก ${esc(sub.label)} กะ ${shCode} วันที่ ${d}" class="w-7 h-7 rounded-lg bg-slate-50 text-slate-300 border border-slate-200 flex items-center justify-center text-[11px]">-</span>`;
+                    }).join('')}
+                  </div>
+                </td>
+              `;
+            }).join('')}
+          </tr>
+        `;
+      }).join('');
+    }).join('');
+  }
 
-window.openConditionCheckModal = function(sampleId) {
-  const s = state.f01.find(x => x.sampleId === sampleId);
-  if (!s) return;
-  showModal(`
-    <form id="condCheckForm" class="p-6 space-y-4">
-      <div class="flex justify-between items-center border-b pb-3">
-        <div>
-          <h3 class="font-extrabold text-lg text-slate-800">บันทึกผลตรวจสภาพ 6 เดือน: ${esc(s.sampleId)}</h3>
-          <p class="text-xs text-slate-500">บันทึกลงในคอลัมน์ Condition Check ของฟอร์ม F01 (${esc(s.retentionCategory)} • ${esc(s.storageLocation)})</p>
-        </div>
-        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
-      </div>
-      <div class="grid sm:grid-cols-2 gap-3 text-xs">
-        <label class="block font-bold text-slate-700">วันที่ตรวจสภาพ (Condition Check Date) <span class="text-red-500">*</span>
-          <input type="date" name="conditionCheckDate" required value="${esc(s.conditionCheckDate || nowISO())}" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1">
-        </label>
-        <label class="block font-bold text-slate-700">ผลตรวจสภาพ (Condition Result) <span class="text-red-500">*</span>
-          <select name="conditionResult" required class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 bg-white font-bold">
-            <option value="Acceptable" ${s.conditionResult === 'Acceptable' ? 'selected' : ''}>Acceptable (สภาพปกติ สมบูรณ์)</option>
-            <option value="Deteriorated" ${s.conditionResult === 'Deteriorated' ? 'selected' : ''}>Deteriorated (เสื่อมสภาพ/ชื้น/เปลี่ยนสี)</option>
-            <option value="Damaged" ${s.conditionResult === 'Damaged' ? 'selected' : ''}>Damaged (ภาชนะ/ถุงชำรุด)</option>
-          </select>
-        </label>
-        <label class="block font-bold text-slate-700 sm:col-span-2">หมายเหตุเพิ่มเติม (Remarks)
-          <input type="text" name="remarks" value="${esc(s.remarks || '')}" placeholder="ระบุสภาพที่พบ หรือการเปลี่ยนถุง/แจ้ง Sr.Chem.QCL" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-normal">
-        </label>
-      </div>
-      <div class="flex justify-end gap-2 pt-3 border-t">
-        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl border text-xs font-bold">ยกเลิก</button>
-        <button type="submit" class="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow">บันทึกผลลง F01</button>
-      </div>
-    </form>
-  `);
-  document.getElementById('condCheckForm').onsubmit = async e => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target).entries());
-    loading(true, 'กำลังบันทึกผลตรวจสภาพ...');
-    try {
-      await db.collection('retain_samples_f01').doc(sampleId).update({
-        conditionCheckDate: data.conditionCheckDate,
-        conditionResult: data.conditionResult,
-        checkedBy: state.user.email,
-        remarks: data.remarks,
-        lastChangeReason: `6-Monthly Condition Check: ${data.conditionResult}`,
-        updatedBy: state.user.email,
-        updatedAt: SV.serverTimestamp()
-      });
-      await logAuditTrail('CONDITION_CHECK_6M', 'F01', sampleId, `Result: ${data.conditionResult} on ${data.conditionCheckDate}`);
-      closeModal();
-      toast(`บันทึกผลตรวจสภาพ ${sampleId} (${data.conditionResult}) ลงใน F01 เรียบร้อย`);
-    } catch (err) {
-      toast(err.message, 'error');
-    } finally {
-      loading(false);
+  // Helper: สรุปผลทดสอบ Stability สั้นๆ สำหรับแสดงในตาราง 6M
+  function formatStabilitySummaryChip(s) {
+    const params = Array.isArray(s.stabilityTests) ? s.stabilityTests : [];
+    const filled = params.filter(p => p && (p.orig || p.m6 || p.m12 || p.m18 || p.m24));
+    if (filled.length === 0) {
+      return `<span class="text-[11px] text-slate-400">ยังไม่ระบุผลทดสอบ</span>`;
     }
+    return `
+      <div class="flex flex-wrap gap-1">
+        ${filled.map(p => {
+          const stages = [];
+          if (p.orig !== undefined && p.orig !== '') stages.push(`0M:<b>${esc(p.orig)}</b>`);
+          if (p.m6 !== undefined && p.m6 !== '') stages.push(`6M:<b class="text-blue-700">${esc(p.m6)}</b>`);
+          if (p.m12 !== undefined && p.m12 !== '') stages.push(`12M:<b class="text-indigo-700">${esc(p.m12)}</b>`);
+          if (p.m18 !== undefined && p.m18 !== '') stages.push(`18M:<b class="text-purple-700">${esc(p.m18)}</b>`);
+          if (p.m24 !== undefined && p.m24 !== '') stages.push(`24M:<b class="text-emerald-700">${esc(p.m24)}</b>`);
+          return `<span class="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] text-slate-700"><span class="font-bold">${esc(p.name)}:</span> ${stages.join(' → ')}</span>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderReconcileView() {
+    const fibreMcs = ['MC 2', 'MC 3', 'MC 5', 'MC 6'];
+    const mainShifts = ['A', 'B', 'C'];
+    const weekDates = getLast7Days(state.reconcileDate);
+    const activeSamples = state.f01.filter(s => s.status !== 'Disposed' && s.status !== 'VOID');
+    return `
+      <div class="space-y-6">
+        <!-- Part 1: ตาราง Reconcile เส้นใย (MC 2, MC 3, MC 5, MC 6) และ Chemical (Na2SO4 & H2SO4) -->
+        <div class="card p-5 shadow-sm">
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-800"><i class="fa-solid fa-table-cells text-purple-600 mr-2"></i>1. ตาราง Reconcile ตัวอย่างเส้นใยรายสัปดาห์ 7 วันรวด (Fibre MC × Shift Matrix - ข้อ 7.7)</h3>
+              <p class="text-xs text-slate-500">ตรวจสอบความครบถ้วนของตัวอย่างเส้นใยรายกะ (MC 2, MC 3, MC 5, MC 6 — สีเขียว = มีบันทึกแล้ว, <span class="text-amber-700 font-bold">–</span> = ยังไม่มีบันทึก)</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-600">วันสิ้นสุดสัปดาห์:</span>
+              <input type="date" value="${esc(state.reconcileDate)}" onchange="state.reconcileDate=this.value; render();" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold">
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 font-bold">
+                  <th class="border p-2.5 text-left sticky left-0 bg-slate-100 z-10">Machine (Fibre)</th>
+                  ${weekDates.map(d => `
+                    <th class="border p-2 text-center min-w-[110px]">
+                      <div class="font-extrabold">${esc(d.slice(5))}</div>
+                      <div class="text-[10px] text-slate-500 font-normal">กะ A | B | C</div>
+                    </th>
+                  `).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${fibreMcs.map(mc => `
+                  <tr>
+                    <td class="border p-2.5 font-extrabold text-slate-800 bg-slate-50 sticky left-0 z-10 whitespace-nowrap">${mc}</td>
+                    ${weekDates.map(d => {
+                      const dayMcSamples = state.f01.filter(s => s.productionDate === d && s.mc === mc && s.status !== 'VOID');
+                      return `
+                        <td class="border p-2 text-center">
+                          <div class="flex justify-center gap-1">
+                            ${mainShifts.map(shCode => {
+                              const found = dayMcSamples.find(s => (s.shift || '').startsWith(shCode));
+                              return found
+                                ? `<button onclick="openF01QuickModal('${esc(found.sampleId)}')" title="${esc(found.sampleId)} (${found.quantity}${found.unit})" class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[11px] hover:bg-emerald-200 transition">${shCode}</button>`
+                                : `<span title="ยังไม่มีบันทึก ${mc} กะ ${shCode} วันที่ ${d}" class="w-7 h-7 rounded-lg bg-slate-50 text-slate-300 border border-slate-200 flex items-center justify-center text-[11px]">-</span>`;
+                            }).join('')}
+                          </div>
+                        </td>
+                      `;
+                    }).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ตาราง Reconcile สำหรับ Na2SO4 และ H2SO4 -->
+          <div class="mt-6 pt-5 border-t border-slate-200">
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+              <div>
+                <h4 class="font-extrabold text-sm text-slate-800"><i class="fa-solid fa-flask-vial text-amber-600 mr-1.5"></i>2. ตาราง Reconcile ตัวอย่างเคมีและผลพลอยได้: Na2SO4 (เก็บ 7 วัน) & H2SO4 (เก็บ 3 วัน)</h4>
+                <p class="text-[11px] text-slate-500">ตั้งค่ารูปแบบการเก็บไว้ที่ตัวแปร <code>CHEMICAL_RECONCILE_CONFIG</code> (รองรับการปรับเพิ่มจุดเก็บหรือสลับโหมดรายกะ/รายวันในอนาคตได้ทันที)</p>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs border-collapse">
+                <thead>
+                  <tr class="bg-amber-50/80 text-slate-700 font-bold">
+                    <th class="border p-2.5 text-left sticky left-0 bg-amber-50 z-10">Product / จุดเก็บ</th>
+                    ${weekDates.map(d => `
+                      <th class="border p-2 text-center min-w-[110px]">
+                        <div class="font-extrabold">${esc(d.slice(5))}</div>
+                        <div class="text-[10px] text-slate-500 font-normal">กะ / รอบเก็บ</div>
+                      </th>
+                    `).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${renderChemicalReconcileRows(weekDates)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Part 2: การตรวจสภาพตัวอย่างตัวแทนทุก 6 เดือน + ผลทดสอบเปรียบเทียบ Original -> 24M -->
+        <div class="card p-5 shadow-sm">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-800"><i class="fa-solid fa-magnifying-glass-chart text-blue-600 mr-2"></i>การตรวจสภาพตัวอย่างตัวแทนทุก 6 เดือน & เปรียบเทียบผลทดสอบตามอายุเก็บ (0M → 6M → 12M → 18M → 24M)</h3>
+              <p class="text-xs text-slate-500">ติดตามทั้งสภาพทางกายภาพ (Condition Check) และแนวโน้มค่าทดสอบคุณภาพเทียบกับค่าตั้งต้น (Berger Whiteness, Denier, Tenacity, Elongation และพารามิเตอร์ที่เพิ่มเอง)</p>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-50 text-slate-600 border-b font-bold">
+                <tr>
+                  <th class="p-2.5">Sample ID</th>
+                  <th class="p-2.5">Category / MC</th>
+                  <th class="p-2.5">Prod. Date</th>
+                  <th class="p-2.5">Check Date ล่าสุด</th>
+                  <th class="p-2.5">สภาพตัวอย่าง (Condition)</th>
+                  <th class="p-2.5">ผลทดสอบเปรียบเทียบ (Original vs 6M/12M/18M/24M)</th>
+                  <th class="p-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${activeSamples.map(s => {
+                  const ageDays = calcDaysToDue(s.productionDate) ? Math.abs(calcDaysToDue(s.productionDate)) : 0;
+                  const needs6M = !s.conditionCheckDate && ageDays >= 180;
+                  return `
+                    <tr class="border-b last:border-0 hover:bg-slate-50">
+                      <td class="p-2.5 font-bold text-blue-700 whitespace-nowrap">
+                        ${esc(s.sampleId)}
+                        ${needs6M ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">ครบ 6 เดือน</span>` : ''}
+                      </td>
+                      <td class="p-2.5 whitespace-nowrap">
+                        <span class="font-bold">${esc(s.retentionCategory)}</span>
+                        <span class="text-slate-400">(${esc(s.mc)})</span>
+                      </td>
+                      <td class="p-2.5 whitespace-nowrap">${esc(s.productionDate)}</td>
+                      <td class="p-2.5 whitespace-nowrap">${esc(s.conditionCheckDate || '-')}</td>
+                      <td class="p-2.5 whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded font-bold ${s.conditionResult === 'Acceptable' ? 'bg-emerald-100 text-emerald-800' : s.conditionResult ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}">${esc(s.conditionResult || 'Pending')}</span>
+                      </td>
+                      <td class="p-2.5 min-w-[260px]">${formatStabilitySummaryChip(s)}</td>
+                      <td class="p-2.5 text-right whitespace-nowrap">
+                        <button onclick="openConditionCheckModal('${esc(s.sampleId)}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold shadow-sm transition">
+                          <i class="fa-solid fa-flask mr-1"></i>บันทึกผลตรวจ & ผลทดสอบ
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('') || `<tr><td colspan="7" class="p-8 text-center text-slate-400">ยังไม่มีรายการตัวอย่าง</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Modal บันทึกผลตรวจสภาพ 6 เดือน พร้อมตารางเปรียบเทียบผลทดสอบ Original -> 6M -> 12M -> 18M -> 24M และปุ่มกดเพิ่ม Parameter เองได้
+  let tempStabilityRows = [];
+  let tempCheckDatesByStage = { orig: '', m6: '', m12: '', m18: '', m24: '' };
+
+  window.openConditionCheckModal = function(sampleId) {
+    const s = state.f01.find(x => x.sampleId === sampleId);
+    if (!s) return;
+
+    // เตรียมรายการพารามิเตอร์เริ่มต้น 4 ตัว (Berger Whiteness, Denier, Tenacity, Elongation) + พารามิเตอร์ที่เคยบันทึกไว้แล้ว
+    const savedTests = Array.isArray(s.stabilityTests) ? JSON.parse(JSON.stringify(s.stabilityTests)) : [];
+    tempStabilityRows = DEFAULT_STABILITY_PARAMS.map(def => {
+      const match = savedTests.find(x => String(x.name || '').toLowerCase() === def.name.toLowerCase());
+      return {
+        name: def.name,
+        unit: match?.unit || def.unit,
+        isDefault: true,
+        orig: match?.orig ?? '',
+        m6: match?.m6 ?? '',
+        m12: match?.m12 ?? '',
+        m18: match?.m18 ?? '',
+        m24: match?.m24 ?? ''
+      };
+    });
+    // เติมพารามิเตอร์ที่ผู้ใช้เคยกดเพิ่มเองไว้ก่อนหน้า
+    savedTests.forEach(custom => {
+      const exists = tempStabilityRows.some(r => r.name.toLowerCase() === String(custom.name || '').toLowerCase());
+      if (!exists && custom.name) {
+        tempStabilityRows.push({
+          name: custom.name,
+          unit: custom.unit || '',
+          isDefault: false,
+          orig: custom.orig ?? '',
+          m6: custom.m6 ?? '',
+          m12: custom.m12 ?? '',
+          m18: custom.m18 ?? '',
+          m24: custom.m24 ?? ''
+        });
+      }
+    });
+
+    tempCheckDatesByStage = Object.assign(
+      { orig: s.productionDate || '', m6: '', m12: '', m18: '', m24: '' },
+      s.stabilityStageDates || {}
+    );
+
+    showModal(`
+      <form id="condCheckForm" class="p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div class="flex justify-between items-center border-b pb-3">
+          <div>
+            <h3 class="font-extrabold text-lg text-slate-800">บันทึกผลตรวจสภาพ 6 เดือน & ผลทดสอบตามระยะเวลา: ${esc(s.sampleId)}</h3>
+            <p class="text-xs text-slate-500">ประเภท: <b>${esc(s.retentionCategory)}</b> • วันผลิต: <b>${esc(s.productionDate)}</b> • ที่เก็บ: ${esc(s.storageLocation)}</p>
+          </div>
+          <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
+        </div>
+
+        <!-- ส่วนที่ 1: ผลตรวจสภาพทางกายภาพ (Condition Check) -->
+        <div class="grid sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+          <label class="block font-bold text-slate-700">วันที่ตรวจสภาพล่าสุด (Check Date) <span class="text-red-500">*</span>
+            <input type="date" name="conditionCheckDate" required value="${esc(s.conditionCheckDate || nowISO())}" class="w-full border border-slate-300 rounded-xl p-2 mt-1 bg-white">
+          </label>
+          <label class="block font-bold text-slate-700">ผลตรวจสภาพกายภาพ (Condition Result) <span class="text-red-500">*</span>
+            <select name="conditionResult" required class="w-full border border-slate-300 rounded-xl p-2 mt-1 bg-white font-bold">
+              <option value="Acceptable" ${s.conditionResult === 'Acceptable' ? 'selected' : ''}>Acceptable (สภาพปกติ สมบูรณ์)</option>
+              <option value="Deteriorated" ${s.conditionResult === 'Deteriorated' ? 'selected' : ''}>Deteriorated (เสื่อมสภาพ/ชื้น/เปลี่ยนสี)</option>
+              <option value="Damaged" ${s.conditionResult === 'Damaged' ? 'selected' : ''}>Damaged (ภาชนะ/ถุงชำรุด)</option>
+            </select>
+          </label>
+          <label class="block font-bold text-slate-700">รอบอายุที่ประเมินในครั้งนี้
+            <select name="currentEvaluationStage" id="condCurrentStage" class="w-full border border-blue-300 rounded-xl p-2 mt-1 bg-blue-50 font-extrabold text-blue-800">
+              <option value="6M" ${(s.lastStabilityStage || '6M') === '6M' ? 'selected' : ''}>รอบ 6 เดือน (6M)</option>
+              <option value="12M" ${s.lastStabilityStage === '12M' ? 'selected' : ''}>รอบ 12 เดือน (12M)</option>
+              <option value="18M" ${s.lastStabilityStage === '18M' ? 'selected' : ''}>รอบ 18 เดือน (18M)</option>
+              <option value="24M" ${s.lastStabilityStage === '24M' ? 'selected' : ''}>รอบ 24 เดือน (24M)</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- ส่วนที่ 2: ตารางเปรียบเทียบผลทดสอบ (Original vs 6M, 12M, 18M, 24M) -->
+        <div class="border border-blue-200 rounded-2xl p-4 bg-blue-50/30 space-y-3">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <h4 class="font-extrabold text-xs text-blue-950 uppercase tracking-wide">
+                <i class="fa-solid fa-chart-line text-blue-600 mr-1.5"></i>ตารางเปรียบเทียบผลทดสอบคุณภาพตามอายุการเก็บ (Traceability & Stability Matrix)
+              </h4>
+              <p class="text-[11px] text-slate-500">บังคับพารามิเตอร์หลัก 4 รายการ (Berger Whiteness, Denier, Tenacity, Elongation) และสามารถกดเพิ่มพารามิเตอร์อื่นๆ เองได้</p>
+            </div>
+            <button type="button" onclick="addCustomStabilityParamRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
+              <i class="fa-solid fa-plus mr-1"></i>+ เพิ่ม Parameter ทดสอบ
+            </button>
+          </div>
+
+          <div class="overflow-x-auto bg-white rounded-xl border border-slate-200">
+            <table class="w-full text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 font-bold border-b">
+                  <th class="p-2.5 text-left min-w-[160px]">Parameter</th>
+                  <th class="p-2 text-center w-20">หน่วย</th>
+                  ${STABILITY_INTERVALS.map(st => `
+                    <th class="p-2 text-center min-w-[105px]">
+                      <div>${esc(st.label)}</div>
+                      <input type="date" id="stageDate_${st.key}" value="${esc(tempCheckDatesByStage[st.key] || '')}" onchange="tempCheckDatesByStage['${st.key}']=this.value" title="วันที่ทดสอบรอบ ${esc(st.label)}" class="mt-1 w-full text-[10px] font-normal border border-slate-200 rounded px-1 py-0.5 bg-white">
+                    </th>
+                  `).join('')}
+                  <th class="p-2 text-center w-10">ลบ</th>
+                </tr>
+              </thead>
+              <tbody id="stabilityTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <label class="block text-xs font-bold text-slate-700">หมายเหตุเพิ่มเติม / สรุปแนวโน้มการเปลี่ยนแปลง (Remarks)
+          <input type="text" name="remarks" value="${esc(s.remarks || '')}" placeholder="ระบุสภาพที่พบ แนวโน้มผลทดสอบเทียบกับ Original หรือการแจ้ง Sr.Chem.QCL" class="w-full border border-slate-300 rounded-xl p-2.5 mt-1 font-normal">
+        </label>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl border text-xs font-bold">ยกเลิก</button>
+          <button type="submit" class="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow">
+            <i class="fa-solid fa-floppy-disk mr-1.5"></i>บันทึกผลตรวจสภาพ & ผลทดสอบลง F01
+          </button>
+        </div>
+      </form>
+    `);
+
+    window.renderStabilityRows = () => {
+      const tbody = document.getElementById('stabilityTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = tempStabilityRows.map((row, idx) => `
+        <tr class="border-b last:border-0 hover:bg-slate-50/80">
+          <td class="p-2">
+            ${row.isDefault
+              ? `<div class="font-extrabold text-slate-800 px-1">${esc(row.name)} <span class="text-[9px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 ml-1">บังคับ</span></div>`
+              : `<input type="text" value="${esc(row.name)}" oninput="tempStabilityRows[${idx}].name=this.value" placeholder="ชื่อ Parameter (เช่น Moisture)" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 font-bold text-slate-800">`
+            }
+          </td>
+          <td class="p-1.5">
+            <input type="text" value="${esc(row.unit || '')}" oninput="tempStabilityRows[${idx}].unit=this.value" placeholder="หน่วย" class="w-full border border-slate-200 rounded-lg px-1.5 py-1.5 text-center text-slate-600">
+          </td>
+          ${STABILITY_INTERVALS.map(st => `
+            <td class="p-1.5">
+              <input type="text" value="${esc(row[st.key] ?? '')}" oninput="tempStabilityRows[${idx}]['${st.key}']=this.value" placeholder="-" class="w-full border ${st.key === 'orig' ? 'border-slate-300 bg-slate-50 font-bold' : 'border-blue-200 bg-white font-bold text-blue-800'} rounded-lg px-2 py-1.5 text-center focus:border-blue-600 outline-none">
+            </td>
+          `).join('')}
+          <td class="p-1.5 text-center">
+            ${row.isDefault
+              ? `<span class="text-slate-300 text-xs" title="พารามิเตอร์บังคับ">🔒</span>`
+              : `<button type="button" onclick="removeCustomStabilityParamRow(${idx})" class="text-red-500 hover:bg-red-50 w-7 h-7 rounded-lg font-bold" title="ลบพารามิเตอร์นี้">✕</button>`
+            }
+          </td>
+        </tr>
+      `).join('');
+    };
+
+    window.addCustomStabilityParamRow = () => {
+      tempStabilityRows.push({
+        name: '',
+        unit: '',
+        isDefault: false,
+        orig: '',
+        m6: '',
+        m12: '',
+        m18: '',
+        m24: ''
+      });
+      renderStabilityRows();
+    };
+
+    window.removeCustomStabilityParamRow = idx => {
+      if (tempStabilityRows[idx]?.isDefault) return;
+      tempStabilityRows.splice(idx, 1);
+      renderStabilityRows();
+    };
+
+    renderStabilityRows();
+
+    document.getElementById('condCheckForm').onsubmit = async e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+      const cleanedTests = tempStabilityRows
+        .map(r => ({
+          name: String(r.name || '').trim(),
+          unit: String(r.unit || '').trim(),
+          isDefault: Boolean(r.isDefault),
+          orig: String(r.orig ?? '').trim(),
+          m6: String(r.m6 ?? '').trim(),
+          m12: String(r.m12 ?? '').trim(),
+          m18: String(r.m18 ?? '').trim(),
+          m24: String(r.m24 ?? '').trim()
+        }))
+        .filter(r => r.name !== '');
+
+      // อัปเดตวันที่ของรอบที่เลือกด้วยวันตรวจล่าสุดหากยังว่างอยู่
+      const stageKeyMap = { '6M': 'm6', '12M': 'm12', '18M': 'm18', '24M': 'm24' };
+      const activeStageKey = stageKeyMap[data.currentEvaluationStage] || 'm6';
+      if (!tempCheckDatesByStage[activeStageKey]) {
+        tempCheckDatesByStage[activeStageKey] = data.conditionCheckDate;
+      }
+
+      loading(true, 'กำลังบันทึกผลตรวจสภาพและผลทดสอบ...');
+      try {
+        await db.collection('retain_samples_f01').doc(sampleId).update({
+          conditionCheckDate: data.conditionCheckDate,
+          conditionResult: data.conditionResult,
+          lastStabilityStage: data.currentEvaluationStage,
+          stabilityTests: cleanedTests,
+          stabilityStageDates: tempCheckDatesByStage,
+          checkedBy: state.user.email,
+          remarks: data.remarks,
+          lastChangeReason: `6M Condition & Stability Check (${data.currentEvaluationStage}): ${data.conditionResult}`,
+          updatedBy: state.user.email,
+          updatedAt: SV.serverTimestamp()
+        });
+        await logAuditTrail(
+          'CONDITION_AND_STABILITY_CHECK',
+          'F01',
+          sampleId,
+          `Stage: ${data.currentEvaluationStage}, Condition: ${data.conditionResult} on ${data.conditionCheckDate}`
+        );
+        closeModal();
+        toast(`บันทึกผลตรวจสภาพและผลทดสอบ ${sampleId} (${data.currentEvaluationStage}) เรียบร้อย`);
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        loading(false);
+      }
+    };
   };
-};
 
 // =========================================================================
 // [ANCHOR: View-7-Settings-F00-Role-Separation-And-Audit-Trail]
 // =========================================================================
-function renderSettingsView() {
-  return `
-    <div class="space-y-6">
-      <div class="card p-5">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-          <div>
-            <h3 class="font-extrabold text-base text-slate-800">F00 มาตรฐานประเภทการเก็บ (Retention Requirements - LPM-1013 ข้อ 7.1)</h3>
-            <p class="text-xs text-slate-500">อัปเดตตาม Procedure LPM-1013 Rev.00 (Effective: 01-December-2026)</p>
+  function renderSettingsView() {
+    return `
+      <div class="space-y-6">
+        <div class="card p-5">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-800">F00 มาตรฐานประเภทการเก็บ (Retention Requirements - LPM-1013 ข้อ 7.1)</h3>
+              <p class="text-xs text-slate-500">อัปเดตตาม Procedure LPM-1013 Rev.00 (Effective: 01-December-2026)</p>
+            </div>
+            ${RETAIN_ROLES[state.retainRole]?.canManageRoles ? `
+            <button onclick="openRoleManagerModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm">
+              <i class="fa-solid fa-users-gear mr-1.5"></i>ตั้งค่าสิทธิ์ทีมงาน (แยกจากระบบ Audit)
+            </button>` : ''}
           </div>
-          ${RETAIN_ROLES[state.retainRole]?.canManageRoles ? `
-          <button onclick="openRoleManagerModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm">
-            <i class="fa-solid fa-users-gear mr-1.5"></i>ตั้งค่าสิทธิ์ทีมงาน (แยกจากระบบ Audit)
-          </button>` : ''}
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left">
-            <thead class="bg-slate-50 border-b font-bold">
-              <tr><th class="p-2.5">Category</th><th class="p-2.5">Product / Grade</th><th class="p-2.5">Retain Unit</th><th class="p-2.5 text-right">Minimum Quantity</th><th class="p-2.5 text-right">Minimum Retention</th><th class="p-2.5">Container / Status</th></tr>
-            </thead>
-            <tbody>
-              ${state.f00.map(c => `
-                <tr class="border-b last:border-0">
-                  <td class="p-2.5 font-extrabold text-blue-700">${esc(c.retentionCategory)}</td>
-                  <td class="p-2.5 font-semibold">${esc(c.productGrade)}</td>
-                  <td class="p-2.5">${esc(c.retainUnit)}</td>
-                  <td class="p-2.5 text-right font-bold">${c.maxQty ? `${c.minQty}–${c.maxQty}` : c.minQty} ${esc(c.unit)}</td>
-                  <td class="p-2.5 text-right font-extrabold text-emerald-700">${esc(c.retentionDisplay)}</td>
-                  <td class="p-2.5 text-slate-600">${esc(c.defaultPackaging)}</td>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-50 border-b font-bold">
+                <tr><th class="p-2.5">Category</th><th class="p-2.5">Product / Grade</th><th class="p-2.5">Retain Unit</th><th class="p-2.5 text-right">Minimum Quantity</th><th class="p-2.5 text-right">Minimum Retention</th><th class="p-2.5">Container / Status</th></tr>
+              </thead>
+              <tbody>
+                ${state.f00.map(c => `
+                  <tr class="border-b last:border-0">
+                    <td class="p-2.5 font-extrabold text-blue-700">${esc(c.retentionCategory)}</td>
+                    <td class="p-2.5 font-semibold">${esc(c.productGrade)}</td>
+                    <td class="p-2.5">${esc(c.retainUnit)}</td>
+                    <td class="p-2.5 text-right font-bold">${c.maxQty ? `${c.minQty}–${c.maxQty}` : c.minQty} ${esc(c.unit)}</td>
+                    <td class="p-2.5 text-right font-extrabold text-emerald-700">${esc(c.retentionDisplay)}</td>
+                    <td class="p-2.5 text-slate-600">${esc(c.defaultPackaging)}</td>
+                  </tr>
+                `).join('')}
+                <tr class="bg-red-50/50">
+                  <td class="p-2.5 font-extrabold text-red-700">HOLD</td>
+                  <td class="p-2.5 font-semibold">Any retain linked to open complaint, OOS/OOT, deviation or investigation</td>
+                  <td class="p-2.5">Existing retain unit</td>
+                  <td class="p-2.5 text-right font-bold">Remaining quantity</td>
+                  <td class="p-2.5 text-right font-extrabold text-red-700">Until case closure + 12 months</td>
+                  <td class="p-2.5 text-red-700 font-semibold">Original container with HOLD - DO NOT DISPOSE</td>
                 </tr>
-              `).join('')}
-              <tr class="bg-red-50/50">
-                <td class="p-2.5 font-extrabold text-red-700">HOLD</td>
-                <td class="p-2.5 font-semibold">Any retain linked to open complaint, OOS/OOT, deviation or investigation</td>
-                <td class="p-2.5">Existing retain unit</td>
-                <td class="p-2.5 text-right font-bold">Remaining quantity</td>
-                <td class="p-2.5 text-right font-extrabold text-red-700">Until case closure + 12 months</td>
-                <td class="p-2.5 text-red-700 font-semibold">Original container with HOLD - DO NOT DISPOSE</td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <div class="card p-5">
-        <h3 class="font-extrabold text-base text-slate-800 mb-3">ประวัติการปฏิบัติงานและแก้ไขข้อมูล (ALCOA+ Audit Trail)</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left">
-            <thead class="bg-slate-50 border-b font-bold"><tr><th class="p-2.5">เวลา</th><th class="p-2.5">ผู้ทำรายการ (Retain Role)</th><th class="p-2.5">Action</th><th class="p-2.5">Record</th><th class="p-2.5">รายละเอียด</th></tr></thead>
-            <tbody>
-              ${state.auditTrail.map(ev => `
-                <tr class="border-b last:border-0">
-                  <td class="p-2.5 text-slate-500 whitespace-nowrap">${ev.createdAt?.toDate ? ev.createdAt.toDate().toLocaleString('th-TH') : '-'}</td>
-                  <td class="p-2.5"><b>${esc(ev.user)}</b> <span class="text-[10px] text-blue-600">(${esc(ev.role || '-')})</span></td>
-                  <td class="p-2.5 font-mono text-[10px]">${esc(ev.action)}</td>
-                  <td class="p-2.5 font-bold text-blue-700">${esc(ev.recordId)}</td>
-                  <td class="p-2.5">${esc(ev.reason)}</td>
-                </tr>
-              `).join('') || `<tr><td colspan="5" class="p-8 text-center text-slate-400">ยังไม่มีประวัติการทำรายการ</td></tr>`}
-            </tbody>
-          </table>
+        <!-- [ANCHOR: On-Demand-Audit-Trail-Export-Zero-Idle-Read] -->
+        <div class="card p-5">
+          <div class="flex flex-wrap justify-between items-start gap-3 mb-4">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-800"><i class="fa-solid fa-file-shield text-emerald-600 mr-2"></i>ส่งออกประวัติการปฏิบัติงานและแก้ไขข้อมูล (ALCOA+ Audit Trail Export)</h3>
+              <p class="text-xs text-slate-500 mt-0.5">ระบบปิดการดึงข้อมูลอัตโนมัติหน้าจอเพื่อประหยัดโควต้า Firestore Read — เลือกช่วงวัน/เดือน/ปี ที่ต้องการแล้วกด Export CSV ได้ทันทีเมื่อผู้ตรวจประเมิน (Auditor) ขอดู</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <i class="fa-solid fa-leaf mr-1"></i>Zero Idle Read Mode
+            </span>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-wrap items-end gap-4 text-xs">
+            <label class="block font-bold text-slate-700">
+              ตั้งแต่วันที่ (Start Date)
+              <input type="date" id="auditStartInput" value="${esc(state.auditExportStart)}" onchange="state.auditExportStart=this.value" class="mt-1 block border border-slate-300 rounded-xl px-3 py-2 bg-white font-bold">
+            </label>
+            <label class="block font-bold text-slate-700">
+              ถึงวันที่ (End Date)
+              <input type="date" id="auditEndInput" value="${esc(state.auditExportEnd)}" onchange="state.auditExportEnd=this.value" class="mt-1 block border border-slate-300 rounded-xl px-3 py-2 bg-white font-bold">
+            </label>
+            <button type="button" onclick="exportAuditTrailByDateRange()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition">
+              <i class="fa-solid fa-file-csv mr-1.5"></i>ดึงข้อมูลและ Export ALCOA+ Audit Trail (CSV)
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
-}
+    `;
+  }
+
+  window.exportAuditTrailByDateRange = async function() {
+    const startStr = document.getElementById('auditStartInput')?.value || state.auditExportStart;
+    const endStr = document.getElementById('auditEndInput')?.value || state.auditExportEnd;
+    if (!startStr || !endStr) return toast('กรุณาเลือกช่วงวันที่เริ่มต้นและสิ้นสุด', 'warn');
+    if (startStr > endStr) return toast('วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด', 'error');
+
+    const startDate = new Date(startStr + 'T00:00:00+07:00');
+    const endDate = new Date(endStr + 'T23:59:59.999+07:00');
+
+    loading(true, `กำลังดึงประวัติ ALCOA+ ช่วง ${startStr} ถึง ${endStr}...`);
+    try {
+      const snap = await db.collection('retain_audit_events')
+        .where('createdAt', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+        .where('createdAt', '<=', firebase.firestore.Timestamp.fromDate(endDate))
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      if (snap.empty) {
+        toast(`ไม่พบประวัติการทำรายการในช่วง ${startStr} ถึง ${endStr}`, 'warn');
+        return;
+      }
+
+      const csvRows = [
+        ['Timestamp (TH)', 'User Email', 'Retain Role', 'Action', 'Entity Type', 'Record ID', 'Reason / Details', 'Changed Fields']
+      ];
+      snap.docs.forEach(doc => {
+        const ev = doc.data();
+        const dtStr = ev.createdAt?.toDate ? ev.createdAt.toDate().toLocaleString('th-TH') : '-';
+        const changed = Array.isArray(ev.changedFields) ? ev.changedFields.join('; ') : '';
+        csvRows.push([
+          dtStr,
+          ev.user || '',
+          ev.role || '',
+          ev.action || '',
+          ev.entityType || '',
+          ev.recordId || '',
+          ev.reason || '',
+          changed
+        ]);
+      });
+
+      const blob = new Blob(
+        ['\uFEFF' + csvRows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')],
+        { type: 'text/csv;charset=utf-8;' }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `LPM1013_ALCOA_AuditTrail_${startStr}_to_${endStr}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(`Export ประวัติ ALCOA+ จำนวน ${snap.size} รายการ เรียบร้อยแล้ว`);
+    } catch (err) {
+      toast(`ดึงข้อมูลไม่สำเร็จ: ${err.message}`, 'error');
+    } finally {
+      loading(false);
+    }
+  };
 
 // =========================================================================
 // [ANCHOR: Role-Separation-Manager-Modal]
@@ -2232,27 +2886,31 @@ window.openDailyGuideModal = function() {
 // =========================================================================
 // [ANCHOR: Export-CSV-And-Auth]
 // =========================================================================
-window.exportCurrentViewCSV = function() {
-  const rows = [['Sample ID', 'Product', 'Customer', 'Category', 'MC', 'Shift', 'Segment', 'SAP Lot/CoA', 'Production Date', 'Qty', 'Unit', 'Withdrawn', 'Remaining', 'Disposal Due Date', 'Hold Ref', 'Status', 'Storage Location']];
-  state.f01.forEach(s => rows.push([s.sampleId, s.product, s.customer, s.retentionCategory, s.mc, s.shift, s.timeRange || '', s.sapLot || s.coaRef || '', s.productionDate, s.quantity, s.unit, s.withdrawnQty, s.remainingQty, s.disposalDueDate, s.holdRef, s.status, s.storageLocation]));
-  const blob = new Blob(['\uFEFF' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `LPM1013_RetainSamples_${nowISO()}.csv`; a.click();
-  URL.revokeObjectURL(url);
-  toast('Export CSV เรียบร้อย');
-};
-
-function setupLiveFirestoreListeners() {
-  state.unsubscribe.forEach(u => u());
-  state.unsubscribe = [];
-  state.unsubscribe.push(db.collection('retain_samples_f01').orderBy('productionDate', 'desc').limit(500).onSnapshot(s => { state.f01 = s.docs.map(d => enrichF01Sample({ id: d.id, ...d.data() })); render(); }));
-  state.unsubscribe.push(db.collection('retain_withdrawals_f02').orderBy('withdrawalDate', 'desc').limit(500).onSnapshot(s => { state.f02 = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }));
-  state.unsubscribe.push(db.collection('retain_monitoring_f03').orderBy('recordDateTime', 'desc').limit(300).onSnapshot(s => { state.f03 = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }));
-  state.unsubscribe.push(db.collection('retain_disposals_f04').limit(300).onSnapshot(s => { state.f04 = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }));
-  state.unsubscribe.push(db.collection('retain_audit_events').orderBy('createdAt', 'desc').limit(100).onSnapshot(s => { state.auditTrail = s.docs.map(d => ({ id: d.id, ...d.data() })); if (state.view === 'settings') render(); }));
-  functions.httpsCallable('triggerRetainDailyCheck')().catch(() => {});
-}
+  window.exportCurrentViewCSV = function() {
+    const rows = [['Sample ID', 'Product', 'Customer', 'Category', 'MC', 'Shift', 'Segment', 'SAP Lot/CoA', 'Production Date', 'Qty', 'Unit', 'Withdrawn', 'Remaining', 'Disposal Due Date', 'Hold Ref', 'Status', 'Storage Location', 'Condition Check Date', 'Condition Result', 'Stability Test Results (0M-24M)']];
+    state.f01.forEach(s => {
+      const stabStr = Array.isArray(s.stabilityTests)
+        ? s.stabilityTests.map(p => `${p.name}(${p.unit || ''}): 0M=${p.orig || '-'} | 6M=${p.m6 || '-'} | 12M=${p.m12 || '-'} | 18M=${p.m18 || '-'} | 24M=${p.m24 || '-'}`).join(' ; ')
+        : '';
+      rows.push([s.sampleId, s.product, s.customer, s.retentionCategory, s.mc, s.shift, s.timeRange || '', s.sapLot || s.coaRef || '', s.productionDate, s.quantity, s.unit, s.withdrawnQty, s.remainingQty, s.disposalDueDate, s.holdRef, s.status, s.storageLocation, s.conditionCheckDate || '', s.conditionResult || '', stabStr]);
+    });
+    const blob = new Blob(['\uFEFF' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `LPM1013_RetainSamples_${nowISO()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast('Export CSV เรียบร้อย');
+  };
+  function setupLiveFirestoreListeners() {
+    state.unsubscribe.forEach(u => u());
+    state.unsubscribe = [];
+    state.unsubscribe.push(db.collection('retain_samples_f01').orderBy('productionDate', 'desc').limit(500).onSnapshot(s => { state.f01 = s.docs.map(d => enrichF01Sample({ id: d.id, ...d.data() })); render(); }));
+    state.unsubscribe.push(db.collection('retain_withdrawals_f02').orderBy('withdrawalDate', 'desc').limit(500).onSnapshot(s => { state.f02 = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }));
+    state.unsubscribe.push(db.collection('retain_monitoring_f03').orderBy('recordDateTime', 'desc').limit(300).onSnapshot(s => { state.f03 = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }));
+    state.unsubscribe.push(db.collection('retain_disposals_f04').limit(300).onSnapshot(s => { state.f04 = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }));
+    // ปิดการดึง retain_audit_events อัตโนมัติเพื่อประหยัด Read (ดึงเฉพาะตอนกดปุ่ม Export ตามช่วงวันที่)
+    functions.httpsCallable('triggerRetainDailyCheck')().catch(() => {});
+  }
 
 document.getElementById('loginForm').onsubmit = async e => {
   e.preventDefault();
