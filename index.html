@@ -346,6 +346,7 @@
                                         class="module-link"
                                         ><i class="fas fa-box-archive"></i> Retain Sample</a
                                     >
+
                                     <a href="Laboratory Self Learning.html" class="module-link">
                                         <i class="fas fa-book-open"></i> Laboratory Self Learning
                                     </a>
@@ -668,5 +669,303 @@
                 }
             });
         </script>
-    </body>
+    
+<!-- ============================================================================ -->
+<!-- 🧠 [ANCHOR: Q-INSIGHT-360-HUB-START] Cross-Module AI & Traceability 360° Hub -->
+<!-- เชื่อมต่อโดยตรงกับ modules/aiCrossModuleHub.js (askEnterpriseCrossModuleAI & getCrossModuleTraceability360) -->
+<!-- ============================================================================ -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+<style>
+  #q360-fab {
+    position: fixed; right: 20px; bottom: 20px; z-index: 9990;
+    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 55%, #0ea5e9 100%);
+    color: #fff; border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 9999px; padding: 10px 18px; font-weight: 700; font-size: 13px;
+    box-shadow: 0 10px 25px -5px rgba(29, 78, 216, 0.55);
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-family: 'Sarabun', 'Inter', sans-serif;
+  }
+  #q360-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -5px rgba(14, 165, 233, 0.65); }
+  #q360-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 520px;
+    background: #ffffff; z-index: 9995; box-shadow: -10px 0 35px rgba(15, 23, 42, 0.22);
+    transform: translateX(105%); transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column; font-family: 'Sarabun', 'Inter', sans-serif;
+    border-left: 1px solid #e2e8f0;
+  }
+  #q360-drawer.open { transform: translateX(0); }
+  .q360-tab-btn {
+    flex: 1; padding: 10px 8px; font-size: 12px; font-weight: 700; text-align: center;
+    border-bottom: 3px solid transparent; color: #64748b; cursor: pointer; background: #f8fafc;
+  }
+  .q360-tab-btn.active { color: #1d4ed8; border-bottom-color: #2563eb; background: #eff6ff; }
+  .q360-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700;
+    background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;
+  }
+  .q360-card {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 12px;
+  }
+</style>
+
+<!-- ปุ่มลอยเปิดระบบ Q-Insight 360° -->
+<button id="q360-fab" type="button" onclick="window.toggleQ360Drawer()" title="เปิดระบบ AI เชื่อมโยงข้อมูล 360° ข้ามทุกแผนก">
+  <span>🧠 Q-Insight 360°</span>
+  <span style="background:rgba(255,255,255,0.2);padding:2px 7px;border-radius:999px;font-size:10px;">AI + Traceability</span>
+</button>
+
+<!-- หน้าต่าง Slide-over Panel -->
+<aside id="q360-drawer" aria-label="Q-Insight 360 Cross-Module Hub">
+  <div style="background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;font-weight:800;">🧠 Q-Insight 360° Cross-Module Hub</span>
+        <span style="background:#22c55e;color:#052e16;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;">LIVE</span>
+      </div>
+      <div style="font-size:11px;color:#bfdbfe;margin-top:2px;">หน้าปัจจุบัน: <b>Main Laboratory Dashboard</b> • เชื่อมข้อมูล 6 โมดูลทั่วโรงงาน</div>
+    </div>
+    <button type="button" onclick="window.toggleQ360Drawer(false)" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-weight:bold;">✕</button>
+  </div>
+
+  <!-- แถบสลับโหมด: AI Chat vs 360° Traceability -->
+  <div style="display:flex;border-bottom:1px solid #e2e8f0;">
+    <button type="button" id="q360-tab-chat" class="q360-tab-btn active" onclick="window.switchQ360Tab('chat')">💬 ถาม-ตอบ & ทำนายด้วย AI กลาง</button>
+    <button type="button" id="q360-tab-trace" class="q360-tab-btn" onclick="window.switchQ360Tab('trace')">🔗 สืบย้อนกลับ 360° (Traceability)</button>
+  </div>
+
+  <!-- ตัวกรองบริบท (Context Filters) ใช้ร่วมกันทั้ง 2 โหมด -->
+  <div style="padding:10px 14px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span style="font-size:11px;font-weight:700;color:#334155;">🎯 ตัวกรองเชื่อมโยงข้อมูล (เว้นว่างเพื่อให้ AI สกัดจากคำถามอัตโนมัติได้)</span>
+      <button type="button" onclick="window.autoDetectQ360PageContext()" style="font-size:10px;background:#2563eb;color:#fff;border:none;padding:2px 8px;border-radius:6px;cursor:pointer;font-weight:700;">⚡ ดึงค่าจากหน้านี้</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+      <input id="q360-invoice" type="text" placeholder="Invoice No." style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11px;background:#fff;">
+      <input id="q360-do" type="text" placeholder="DO No." style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11px;background:#fff;">
+      <input id="q360-lot" type="text" placeholder="Lot / Batch No." style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11px;background:#fff;">
+      <input id="q360-sample" type="text" placeholder="Retain ID (F01)" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11px;background:#fff;">
+      <select id="q360-mc" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11px;background:#fff;">
+        <option value="">ทุกเครื่อง (All MC)</option>
+        <option value="MC2">MC2 (Modal)</option>
+        <option value="MC3">MC3 (Non-Woven)</option>
+        <option value="MC5">MC5 (Grey)</option>
+        <option value="MC6">MC6 (Non-Woven)</option>
+      </select>
+      <input id="q360-date" type="date" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11px;background:#fff;">
+    </div>
+    <input id="q360-dept" type="hidden" value="Laboratory">
+  </div>
+
+  <!-- โหมดที่ 1: AI Cross-Module Chat -->
+  <div id="q360-panel-chat" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div id="q360-chat-log" style="flex:1;overflow-y:auto;padding:12px 14px;background:#ffffff;">
+      <div class="q360-card" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a;">
+        <b>👋 สวัสดีครับคู่หู!</b> ผมคือ <b>Q-Insight 360°</b> ที่เชื่อมฐานข้อมูลทั้ง 6 โมดูลของโรงงานเข้าด้วยกัน:<br>
+        <span style="font-size:11px;color:#334155;">• Process/Product Lab/Pulp/NCF • FSC/PEFC & Traceability • Customer Complaint • Internal Audit • Retain Sample (LPM-1013) • Lab Chemicals</span>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
+          <button type="button" onclick="window.quickAskQ360('สรุปความเสี่ยงคุณภาพล่าสุดเชื่อมโยงระหว่าง Process, NCF, Complaint และ Retain Sample ให้หน่อย')" style="font-size:10px;background:#fff;border:1px solid #93c5fd;color:#1d4ed8;padding:3px 8px;border-radius:999px;cursor:pointer;">🔍 สรุปความเสี่ยง 360° วันนี้</button>
+          <button type="button" onclick="window.quickAskQ360('ตรวจสอบว่ามีเคสร้องเรียนลูกค้า หรือ Audit Finding ไหนที่เกี่ยวข้องกับเครื่องจักรและวันผลิตที่เลือกบ้าง')" style="font-size:10px;background:#fff;border:1px solid #93c5fd;color:#1d4ed8;padding:3px 8px;border-radius:999px;cursor:pointer;">🔗 เช็ค Complaint & Audit ที่เกี่ยวข้อง</button>
+          <button type="button" onclick="window.quickAskQ360('ตรวจสอบสถานะ Retain Sample (F01) และสารเคมีหมดอายุที่อาจกระทบคุณภาพล็อตนี้')" style="font-size:10px;background:#fff;border:1px solid #93c5fd;color:#1d4ed8;padding:3px 8px;border-radius:999px;cursor:pointer;">🧪 เช็ค Retain & สารเคมีแล็บ</button>
+        </div>
+      </div>
+    </div>
+    <div style="padding:10px 14px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;gap:8px;">
+      <input id="q360-question-input" type="text" placeholder="พิมพ์คำถามเชื่อมโยงข้ามแผนก หรือระบุเลข Invoice / Lot / MC..." style="flex:1;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;" onkeydown="if(event.key==='Enter')window.sendQ360Chat()">
+      <button type="button" id="q360-send-btn" onclick="window.sendQ360Chat()" style="background:#2563eb;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;">ส่งคำถาม</button>
+    </div>
+  </div>
+
+  <!-- โหมดที่ 2: 360° Traceability Explorer -->
+  <div id="q360-panel-trace" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+    <div style="padding:10px 14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;background:#fff;">
+      <span style="font-size:12px;font-weight:700;color:#1e293b;">ค้นหาเส้นทางเชื่อมโยงข้อมูล 360° (6 โมดูล)</span>
+      <button type="button" id="q360-trace-btn" onclick="window.runQ360Traceability()" style="background:#059669;color:#fff;border:none;padding:6px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;">🔎 ดึงกราฟข้อมูล 360°</button>
+    </div>
+    <div id="q360-trace-result" style="flex:1;overflow-y:auto;padding:12px 14px;background:#ffffff;font-size:12px;color:#334155;">
+      <div class="q360-card">กรอก <b>Invoice No.</b>, <b>DO No.</b>, <b>Lot/Batch No.</b>, <b>Retain Sample ID</b> หรือเลือก <b>MC + วันที่ผลิต</b> ด้านบน แล้วกดปุ่ม <b>"🔎 ดึงกราฟข้อมูล 360°"</b> เพื่อดูข้อมูลเชื่อมโยงข้ามทุกแผนกในคลิกเดียว</div>
+    </div>
+  </div>
+</aside>
+
+<script>
+(function() {
+  window.q360History = [];
+
+  // Helper เรียก Cloud Function ที่รองรับทั้ง Firebase Compat และ Modular SDK
+  async function invokeCloudFunction(fnName, payload) {
+    if (window.api && typeof window.api[fnName] === 'function') {
+      return await window.api[fnName](payload);
+    }
+    if (typeof functions !== 'undefined' && functions && typeof functions.httpsCallable === 'function') {
+      return await functions.httpsCallable(fnName)(payload);
+    }
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && typeof firebase.app().functions === 'function') {
+      return await firebase.app().functions('asia-southeast1').httpsCallable(fnName)(payload);
+    }
+    throw new Error('ไม่พบตัวเชื่อมต่อ Firebase Functions กรุณาตรวจสอบการโหลด SDK');
+  }
+
+  window.toggleQ360Drawer = function(forceState) {
+    const drawer = document.getElementById('q360-drawer');
+    if (!drawer) return;
+    const willOpen = typeof forceState === 'boolean' ? forceState : !drawer.classList.contains('open');
+    drawer.classList.toggle('open', willOpen);
+    if (willOpen) window.autoDetectQ360PageContext();
+  };
+
+  window.switchQ360Tab = function(tab) {
+    const isChat = tab === 'chat';
+    document.getElementById('q360-tab-chat').classList.toggle('active', isChat);
+    document.getElementById('q360-tab-trace').classList.toggle('active', !isChat);
+    document.getElementById('q360-panel-chat').style.display = isChat ? 'flex' : 'none';
+    document.getElementById('q360-panel-trace').style.display = isChat ? 'none' : 'flex';
+  };
+
+  // ดึงค่าจากช่อง Input บนหน้าเว็บปัจจุบันมาเติมให้อัตโนมัติ (ถ้ามี)
+  window.autoDetectQ360PageContext = function() {
+    const tryVal = (ids) => {
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.value && String(el.value).trim() !== '' && el.value !== 'ALL') return String(el.value).trim();
+      }
+      return '';
+    };
+    const inv = tryVal(['traceSearchInput', 'invoiceInput', 'f_invoice']);
+    const lot = tryVal(['searchInput', 'lotInput', 'f_lotBatchNo']);
+    const mc = tryVal(['machineSelect', 'filterMachine', 'f_mc']);
+    const dt = tryVal(['dateInput', 'startDate', 'f_productionDate']);
+    if (inv && !document.getElementById('q360-invoice').value) document.getElementById('q360-invoice').value = inv;
+    if (lot && !document.getElementById('q360-lot').value) document.getElementById('q360-lot').value = lot;
+    if (mc && !document.getElementById('q360-mc').value) {
+      const norm = mc.toUpperCase().replace(/\s|-/g, '');
+      if (['MC2','MC3','MC5','MC6'].includes(norm)) document.getElementById('q360-mc').value = norm;
+    }
+    if (dt && !document.getElementById('q360-date').value && /^\d{4}-\d{2}-\d{2}$/.test(dt)) {
+      document.getElementById('q360-date').value = dt;
+    }
+  };
+
+  function getQ360Filters() {
+    return {
+      invoiceNo: document.getElementById('q360-invoice').value.trim() || null,
+      doNo: document.getElementById('q360-do').value.trim() || null,
+      batchOrLotNo: document.getElementById('q360-lot').value.trim() || null,
+      sampleId: document.getElementById('q360-sample').value.trim() || null,
+      machineId: document.getElementById('q360-mc').value || null,
+      targetDate: document.getElementById('q360-date').value || null,
+      department: document.getElementById('q360-dept').value || null
+    };
+  }
+
+  window.quickAskQ360 = function(qText) {
+    document.getElementById('q360-question-input').value = qText;
+    window.sendQ360Chat();
+  };
+
+  window.sendQ360Chat = async function() {
+    const input = document.getElementById('q360-question-input');
+    const log = document.getElementById('q360-chat-log');
+    const btn = document.getElementById('q360-send-btn');
+    const q = (input.value || '').trim();
+    if (!q) return;
+
+    input.value = '';
+    btn.disabled = true;
+    btn.textContent = 'กำลังคิด...';
+
+    const userDiv = document.createElement('div');
+    userDiv.className = 'q360-card';
+    userDiv.style.cssText = 'background:#1d4ed8;color:#fff;margin-left:30px;border:none;';
+    userDiv.textContent = q;
+    log.appendChild(userDiv);
+
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'q360-card';
+    loadingDiv.innerHTML = '⏳ <b>Q-Insight 360°</b> กำลังสืบค้นข้อมูลข้าม 6 โมดูล...';
+    log.appendChild(loadingDiv);
+    log.scrollTop = log.scrollHeight;
+
+    try {
+      const filters = getQ360Filters();
+      const res = await invokeCloudFunction('askEnterpriseCrossModuleAI', {
+        question: q,
+        filters: filters,
+        history: window.q360History.slice(-6)
+      });
+      const data = res.data || {};
+      const answer = data.text || 'ไม่พบคำตอบจากระบบ';
+      window.q360History.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
+
+      const formatted = answer
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        .replace(/\n/g, '<br>');
+
+      loadingDiv.innerHTML = `<div style="font-size:10px;color:#2563eb;font-weight:700;margin-bottom:4px;">🧠 Q-Insight 360° Response</div><div>${formatted}</div>`;
+    } catch (err) {
+      loadingDiv.style.background = '#fef2f2';
+      loadingDiv.style.color = '#b91c1c';
+      loadingDiv.innerHTML = `❌ <b>เกิดข้อผิดพลาด:</b> ${err.message || err}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'ส่งคำถาม';
+      log.scrollTop = log.scrollHeight;
+    }
+  };
+
+  window.runQ360Traceability = async function() {
+    const box = document.getElementById('q360-trace-result');
+    const btn = document.getElementById('q360-trace-btn');
+    btn.disabled = true;
+    btn.textContent = 'กำลังดึงข้อมูล...';
+    box.innerHTML = '<div class="q360-card">⏳ กำลังรวบรวมกราฟความเชื่อมโยง 360° จากทุกแผนก...</div>';
+
+    try {
+      const filters = getQ360Filters();
+      const res = await invokeCloudFunction('getCrossModuleTraceability360', filters);
+      const d = (res.data && res.data.data) ? res.data.data : {};
+      const links = d.specificLinks || {};
+      const summaries = d.globalSummaries || {};
+
+      let html = `<div class="q360-card" style="background:#f0fdf4;border-color:#bbf7d0;">
+        <b>✅ ดึงข้อมูลเชื่อมโยงสำเร็จ</b> (เวลา: ${d.queriedAt ? new Date(d.queriedAt).toLocaleTimeString('th-TH') : '-'})<br>
+        <span style="font-size:11px;">พารามิเตอร์ที่ค้นหา: ${JSON.stringify(d.searchParameters || {})}</span>
+      </div>`;
+
+      const renderBlock = (title, obj) => {
+        const hasContent = obj && ((Array.isArray(obj) && obj.length > 0) || (!Array.isArray(obj) && Object.keys(obj).length > 0));
+        return `<div class="q360-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <b>${title}</b>
+            <span class="q360-badge" style="${hasContent ? 'background:#dcfce7;color:#166534;' : 'background:#f1f5f9;color:#64748b;'}">${hasContent ? 'พบข้อมูลเชื่อมโยง' : 'ไม่มีรายการเฉพาะเจาะจง'}</span>
+          </div>
+          <pre style="white-space:pre-wrap;font-size:10px;background:#fff;padding:6px;border-radius:6px;border:1px solid #e2e8f0;max-height:150px;overflow:auto;">${hasContent ? JSON.stringify(obj, null, 2) : '—'}</pre>
+        </div>`;
+      };
+
+      html += renderBlock('1️⃣ เส้นทาง Traceability 5 แผนก (FSC/PEFC Genealogy)', links.traceabilityGenealogy || links.warehouseDelivery);
+      html += renderBlock('2️⃣ ตัวอย่างเก็บสำรอง (Retain Sample F01 / การเบิก F02)', links.retainSampleDetail || links.retainSamplesByLot || links.retainOnDate);
+      html += renderBlock('3️⃣ ประวัติข้อร้องเรียนลูกค้า (Customer Complaints ที่ตรงล็อต/Invoice)', links.relatedComplaintsByInvoice || links.complaintsByLot);
+      html += renderBlock('4️⃣ ผลตรวจ Lab & พารามิเตอร์การผลิต (Viscose / Spinning / Product Lab)', {
+        viscose: links.processViscose, spinning: links.processSpinning, productLab: links.productLab, pulpCOA: links.pulpCoaByLot
+      });
+      html += renderBlock('5️⃣ ประเด็นตรวจติดตามภายในที่เปิดอยู่ (Open Internal Audit Findings)', links.openAuditFindings);
+      html += renderBlock('6️⃣ ภาพรวม Dashboard ทั้ง 6 โมดูล (Global Summaries)', summaries);
+
+      box.innerHTML = html;
+    } catch (err) {
+      box.innerHTML = `<div class="q360-card" style="background:#fef2f2;color:#b91c1c;">❌ <b>ดึงข้อมูลไม่สำเร็จ:</b> ${err.message || err}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔎 ดึงกราฟข้อมูล 360°';
+    }
+  };
+})();
+</script>
+<!-- ============================================================================ -->
+<!-- 🧠 [ANCHOR: Q-INSIGHT-360-HUB-END] -->
+<!-- ============================================================================ -->
+
+</body>
 </html>

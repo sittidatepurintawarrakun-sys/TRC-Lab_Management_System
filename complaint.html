@@ -2898,5 +2898,195 @@ async function saveCustomerReplyDraft() {
         </div>
       </div>
     </div>
+
+<!-- ============================================================================ -->
+<!-- 🧠 [ANCHOR: Q-INSIGHT-360-HUB-START] Autonomous Cross-Module AI Copilot -->
+<!-- เชื่อมต่อโดยตรงกับ modules/aiCrossModuleHub.js (askEnterpriseCrossModuleAI) -->
+<!-- ============================================================================ -->
+
+<style>
+  #q360-fab {
+    position: fixed; right: 20px; bottom: 20px; z-index: 9990;
+    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 55%, #0ea5e9 100%);
+    color: #fff; border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 9999px; padding: 11px 18px; font-weight: 700; font-size: 13px;
+    box-shadow: 0 10px 25px -5px rgba(29, 78, 216, 0.55);
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-family: 'Sarabun', 'Inter', sans-serif;
+  }
+  #q360-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -5px rgba(14, 165, 233, 0.65); }
+  #q360-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 480px;
+    background: #ffffff; z-index: 9995; box-shadow: -10px 0 35px rgba(15, 23, 42, 0.22);
+    transform: translateX(105%); transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column; font-family: 'Sarabun', 'Inter', sans-serif;
+    border-left: 1px solid #e2e8f0;
+  }
+  #q360-drawer.open { transform: translateX(0); }
+  .q360-msg-user {
+    background: #1d4ed8; color: #fff; border-radius: 14px 14px 2px 14px;
+    padding: 10px 14px; margin: 8px 0 8px 40px; font-size: 13px; line-height: 1.5;
+  }
+  .q360-msg-ai {
+    background: #f8fafc; color: #1e293b; border: 1px solid #e2e8f0;
+    border-radius: 14px 14px 14px 2px; padding: 12px 14px; margin: 8px 16px 8px 0;
+    font-size: 13px; line-height: 1.6;
+  }
+  .q360-tool-pill {
+    display: inline-block; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;
+    border-radius: 9999px; padding: 1px 8px; font-size: 10px; font-weight: 700; margin: 2px 3px 0 0;
+  }
+  .q360-chip {
+    font-size: 11px; background: #fff; border: 1px solid #bfdbfe; color: #1d4ed8;
+    padding: 5px 10px; border-radius: 9999px; cursor: pointer; text-align: left;
+    transition: background 0.15s;
+  }
+  .q360-chip:hover { background: #eff6ff; }
+</style>
+
+<!-- ปุ่มลอยเปิดระบบ AI กลาง -->
+<button id="q360-fab" type="button" onclick="window.toggleQ360Drawer()" title="ถาม AI วิเคราะห์ข้อมูลข้ามทุกแผนก">
+  <span>🧠 Q-Insight AI</span>
+  <span style="background:rgba(255,255,255,0.2);padding:2px 7px;border-radius:999px;font-size:10px;">360°</span>
+</button>
+
+<!-- หน้าต่าง Chat อัจฉริยะ (ไม่ต้องกรอกตัวกรองใดๆ ถามได้เลย) -->
+<aside id="q360-drawer" aria-label="Q-Insight 360 AI Copilot">
+  <div style="background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;font-weight:800;">🧠 Q-Insight 360° AI</span>
+        <span style="background:#22c55e;color:#052e16;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;">AUTONOMOUS</span>
+      </div>
+      <div style="font-size:11px;color:#bfdbfe;margin-top:2px;">หน้าปัจจุบัน: <b>Customer Complaint Intelligence (GQP-1007)</b> • ถามได้ทุกเรื่องข้ามทุกฐานข้อมูล</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button type="button" onclick="window.clearQ360Chat()" title="เริ่มบทสนทนาใหม่" style="background:rgba(255,255,255,0.12);border:none;color:#fff;padding:4px 8px;border-radius:8px;cursor:pointer;font-size:11px;">🗑️ ล้างแชท</button>
+      <button type="button" onclick="window.toggleQ360Drawer(false)" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-weight:bold;">✕</button>
+    </div>
+  </div>
+
+  <!-- พื้นที่แชท -->
+  <div id="q360-chat-log" style="flex:1;overflow-y:auto;padding:14px;background:#ffffff;">
+    <div class="q360-msg-ai" style="background:#eff6ff;border-color:#bfdbfe;">
+      <b>👋 สวัสดีครับคู่หู! ถามอะไรผมได้เลยครับ</b><br>
+      <span style="font-size:12px;color:#334155;">ผมเชื่อมโยงข้อมูลใน Firebase Project ของคุณไว้ทั้งหมดแล้ว ไม่ว่าจะเป็น <b>Invoice, DO, Lot/Batch, Production Date, Pulp COA, Process/Product Lab, Chemical Inventory, Retain Sample, NCF, Complaint และ Internal Audit</b> ผมจะเลือกไปดึงข้อมูลมาวิเคราะห์ให้เองอัตโนมัติครับ</span>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+        <button type="button" class="q360-chip" onclick="window.quickAskQ360('สรุปภาพรวมความเสี่ยงคุณภาพล่าสุดของทั้งโรงงาน (NCF, Complaint, Audit, Retain, Chemical) ให้หน่อย')">📊 สรุปภาพรวมความเสี่ยงทั้งโรงงานวันนี้</button>
+        <button type="button" class="q360-chip" onclick="window.quickAskQ360('ช่วยสืบย้อนกลับจาก Invoice หรือเคส Complaint ล่าสุด ไปถึง Pulp COA และค่า Process วันผลิตให้หน่อย')">🔎 ตัวอย่าง: Traceability ย้อนจาก Complaint / Invoice ไปถึง Pulp</button>
+        <button type="button" class="q360-chip" onclick="window.quickAskQ360('เช็ค Chemical Inventory ในแล็บตอนนี้หน่อยว่ามีสารเคมีตัวไหนใกล้หมดอายุ หรือหมดอายุไปแล้วบ้าง')">🧪 เช็คสารเคมีหมดอายุใน Chemical Inventory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ช่องพิมพ์คำถาม -->
+  <div style="padding:12px 14px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;gap:8px;align-items:center;">
+    <input id="q360-question-input" type="text" placeholder="พิมพ์ถามได้เลย เช่น 'เช็ค Invoice ...' หรือ 'วันที่ 2026-10-15 MC2 ใช้สารเคมีอะไรบ้าง'..." style="flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:13px;background:#fff;" onkeydown="if(event.key==='Enter')window.sendQ360Chat()">
+    <button type="button" id="q360-send-btn" onclick="window.sendQ360Chat()" style="background:#2563eb;color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">ส่ง</button>
+  </div>
+</aside>
+
+<script>
+(function() {
+  window.q360History = [];
+
+  async function invokeCloudFunction(fnName, payload) {
+    if (window.api && typeof window.api[fnName] === 'function') {
+      return await window.api[fnName](payload);
+    }
+    if (typeof functions !== 'undefined' && functions && typeof functions.httpsCallable === 'function') {
+      return await functions.httpsCallable(fnName)(payload);
+    }
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && typeof firebase.app().functions === 'function') {
+      return await firebase.app().functions('asia-southeast1').httpsCallable(fnName)(payload);
+    }
+    throw new Error('ไม่พบตัวเชื่อมต่อ Firebase Functions กรุณาตรวจสอบการโหลด SDK');
+  }
+
+  window.toggleQ360Drawer = function(forceState) {
+    const drawer = document.getElementById('q360-drawer');
+    if (!drawer) return;
+    const willOpen = typeof forceState === 'boolean' ? forceState : !drawer.classList.contains('open');
+    drawer.classList.toggle('open', willOpen);
+  };
+
+  window.clearQ360Chat = function() {
+    window.q360History = [];
+    const log = document.getElementById('q360-chat-log');
+    if (log && log.children.length > 1) {
+      while (log.children.length > 1) log.removeChild(log.lastChild);
+    }
+  };
+
+  window.quickAskQ360 = function(qText) {
+    document.getElementById('q360-question-input').value = qText;
+    window.sendQ360Chat();
+  };
+
+  window.sendQ360Chat = async function() {
+    const input = document.getElementById('q360-question-input');
+    const log = document.getElementById('q360-chat-log');
+    const btn = document.getElementById('q360-send-btn');
+    const q = (input.value || '').trim();
+    if (!q) return;
+
+    input.value = '';
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    const userDiv = document.createElement('div');
+    userDiv.className = 'q360-msg-user';
+    userDiv.textContent = q;
+    log.appendChild(userDiv);
+
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'q360-msg-ai';
+    loadingDiv.innerHTML = '⏳ <b>Q-Insight 360°</b> กำลังวิเคราะห์คำถามและดึงข้อมูลจากฐานข้อมูลที่เกี่ยวข้อง...';
+    log.appendChild(loadingDiv);
+    log.scrollTop = log.scrollHeight;
+
+    try {
+      const res = await invokeCloudFunction('askEnterpriseCrossModuleAI', {
+        question: q,
+        pageContext: 'Customer Complaint Intelligence (GQP-1007)',
+        history: window.q360History.slice(-8)
+      });
+      const data = res.data || {};
+      const answer = data.text || 'ไม่พบคำตอบจากระบบ';
+      const toolsUsed = Array.isArray(data.toolsUsed) ? data.toolsUsed : [];
+      window.q360History.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
+
+      const formatted = answer
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        .replace(/\n/g, '<br>');
+
+      let toolsHtml = '';
+      if (toolsUsed.length > 0) {
+        const uniqueTools = [...new Set(toolsUsed.map(t => t.tool))];
+        toolsHtml = `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed #cbd5e1;">
+          <span style="font-size:10px;color:#64748b;font-weight:700;">🗄️ ฐานข้อมูลที่ AI เรียกตรวจสอบ:</span><br>
+          ${uniqueTools.map(name => `<span class="q360-tool-pill">${name}</span>`).join('')}
+        </div>`;
+      }
+
+      loadingDiv.innerHTML = `<div>${formatted}</div>${toolsHtml}`;
+    } catch (err) {
+      loadingDiv.style.background = '#fef2f2';
+      loadingDiv.style.color = '#b91c1c';
+      loadingDiv.innerHTML = `❌ <b>เกิดข้อผิดพลาด:</b> ${err.message || err}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'ส่ง';
+      log.scrollTop = log.scrollHeight;
+    }
+  };
+})();
+</script>
+<!-- ============================================================================ -->
+<!-- 🧠 [ANCHOR: Q-INSIGHT-360-HUB-END] -->
+<!-- ============================================================================ -->
+
 </body>
 </html>
